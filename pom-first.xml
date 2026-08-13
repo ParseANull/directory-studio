@@ -34,7 +34,7 @@
   <!--
     Only the target-platform module still needs a first pass: it builds a
     local p2 repository out of third-party/ASF library jars that aren't
-    natively OSGi bundles (see eclipse-trgt-platform/pom-first.xml -- it
+    natively OSGi bundles (see eclipse-trgt-platform/pom-first.xml: it
     uses copy-dependencies + publish-features-and-bundles, unrelated to
     manifest generation). The plugins/helps/tests manifest-generation
     passes that used to live here were retired: every module's
