@@ -127,3 +127,36 @@ Bumping pinned third-party library versions (BouncyCastle 1.62, httpclient
 bytecode runs fine on JDK 25 regardless of compile-time version, so none of
 these block this migration — they're flagged as a future hygiene pass, not
 addressed here.
+
+## Progress log
+
+**2026-08-13 — Phase 1 complete (toolchain), pending real-build validation.**
+
+- `tycho.version` 2.3.0 → 5.0.3; `maven.compiler.release` → 25 on both
+  `tycho-compiler-plugin` and `maven-compiler-plugin`. Done in isolation from
+  the target-platform bump (Phase 2), which hasn't started — still pointed at
+  Eclipse 4.24.
+- Manifest generation migrated off the `pom-first.xml`/Felix `maven-bundle-plugin`
+  two-pass hack. All 31 plugin/help/test modules now have a static, checked-in
+  `META-INF/MANIFEST.MF`, mechanically derived from each module's old
+  `pom-first.xml` `<instructions>` block (verified beforehand: every
+  Export-Package/Import-Package/Require-Bundle in this project was already
+  fully hand-declared, never a bnd bytecode-scanning wildcard — safe to do
+  without a live build). Maven `${...}` property placeholders (bundle-version
+  pins) resolved to literal values from the top-level `pom.xml`.
+- `eclipse-trgt-platform/pom-first.xml` (builds a local p2 repo for
+  third-party library jars — unrelated mechanism) was deliberately left
+  alone. `build.sh` is still a two-invocation build, just for that narrower
+  reason now.
+- **Not yet validated against a real build** — this sandbox has no network
+  access to Maven Central or Eclipse's p2 repositories, so none of Phase 1
+  has been compiled/tested for real yet. Everything above is correct by
+  construction (mechanical transformation from already-known, explicit
+  data) and by inspection, not by a passing build.
+- Deferred: `RELEASE.md`'s version-bump step for `pom-first.xml` files will
+  now only touch 2 files instead of 33; likely fine since
+  `tycho-versions-plugin:set-version` (used later in the same doc) handles
+  `MANIFEST.MF` Bundle-Version bumps automatically, but unverified.
+
+Next: Phase 2 (target platform rewrite — Eclipse 4.24 → 2026-06, Orbit,
+SWTBot, drop Babel).
