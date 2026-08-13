@@ -3,7 +3,6 @@
 .settings
 .pmd
 target/
-META-INF/
 eclipse-trgt-platform/org.apache.directory.studio.eclipse-trgt-platform.target
 plugins/ldapbrowser.core/lib/
 plugins/ldapservers.apacheds/resources/libs/

@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: org.apache.directory.studio.ldifparser;singleton:=true
+Bundle-Version: 2.0.0.qualifier
+Bundle-Localization: plugin
+Eclipse-LazyStart: true
+Export-Package: org.apache.directory.studio.ldifparser,
+ org.apache.directory.studio.ldifparser.model,
+ org.apache.directory.studio.ldifparser.model.container,
+ org.apache.directory.studio.ldifparser.model.lines,
+ org.apache.directory.studio.ldifparser.parser
+Import-Package: org.apache.commons.codec.binary
+Require-Bundle: org.apache.directory.api.ldap.model;bundle-version="2.1.0"

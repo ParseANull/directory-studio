@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: org.apache.directory.studio.common.ui;singleton:=true
+Bundle-Version: 2.0.0.qualifier
+Bundle-Localization: plugin
+Eclipse-LazyStart: true
+Bundle-Activator: org.apache.directory.studio.common.ui.CommonUIPlugin
+Export-Package: org.apache.directory.studio.common.ui,
+ org.apache.directory.studio.common.ui.dialogs,
+ org.apache.directory.studio.common.ui.filesystem,
+ org.apache.directory.studio.common.ui.widgets,
+ org.apache.directory.studio.common.ui.wrappers
+Require-Bundle: org.eclipse.core.runtime,org.eclipse.ui,
+ org.eclipse.ui.editors,org.eclipse.ui.forms
