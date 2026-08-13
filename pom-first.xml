@@ -31,30 +31,18 @@
   <name>Apache Directory Studio Setup Parent</name>
   <packaging>pom</packaging>
 
+  <!--
+    Only the target-platform module still needs a first pass: it builds a
+    local p2 repository out of third-party/ASF library jars that aren't
+    natively OSGi bundles (see eclipse-trgt-platform/pom-first.xml -- it
+    uses copy-dependencies + publish-features-and-bundles, unrelated to
+    manifest generation). The plugins/helps/tests manifest-generation
+    passes that used to live here were retired: every module's
+    META-INF/MANIFEST.MF is now a real, checked-in file.
+  -->
   <modules>
     <module>eclipse-trgt-platform/pom-first.xml</module>
-    <module>plugins/pom-first.xml</module>
-    <module>helps/pom-first.xml</module>
-    <module>tests/pom-first.xml</module>
   </modules>
-
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.apache.felix</groupId>
-          <artifactId>maven-bundle-plugin</artifactId>
-          <extensions>true</extensions>
-          <configuration>
-            <manifestLocation>META-INF</manifestLocation>
-            <instructions>
-              <_noee>true</_noee>
-            </instructions>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
 
 </project>
 

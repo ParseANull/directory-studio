@@ -16,6 +16,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This script do a full build of Studio (including the MANIFEST generation and the P2 local repository construction)
+# This script does a full build of Studio. The first pass builds the local
+# P2 repository for third-party library jars that aren't natively OSGi
+# bundles (see eclipse-trgt-platform/pom-first.xml); it no longer generates
+# MANIFEST.MF files -- those are static, checked-in files as of the
+# Eclipse-2026/Java-25 modernization.
 
 mvn -f pom-first.xml clean install && mvn clean install

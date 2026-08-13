@@ -39,7 +39,8 @@ You can use either of those two methods to build the project :
 
 #### Do it manually
 
-Build the 'Eclipse Target Platform' and generate MANIFEST.MF files first
+Build the 'Eclipse Target Platform', including the local P2 repository for
+third-party library jars, first
 
     mvn -f pom-first.xml clean install
 
