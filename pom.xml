@@ -66,10 +66,15 @@
     <!-- Disable Java 8 Javadoc linter -->
     <doclint>none</doclint>
 
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <!--
+      Java release used both for plain-Maven modules (packaging=bundle, e.g.
+      the pom-first.xml manifest-generation pass) and, via tycho-compiler-plugin
+      below, for the actual Tycho/OSGi bundle compilation. Using <release>
+      instead of separate source/target so this stays a single knob.
+    -->
+    <maven.compiler.release>25</maven.compiler.release>
 
-    <tycho.version>2.3.0</tycho.version>
+    <tycho.version>5.0.3</tycho.version>
 
     <!-- Set versions for dependencies -->
     <antlr.version>2.7.7</antlr.version>
@@ -139,8 +144,7 @@
         <groupId>org.eclipse.tycho</groupId>
         <artifactId>tycho-compiler-plugin</artifactId>
         <configuration>
-          <source>11</source>
-          <target>11</target>
+          <release>${maven.compiler.release}</release>
         </configuration>
       </plugin>
 
@@ -223,8 +227,7 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
-            <source>1.8</source>
-            <target>1.8</target>
+            <release>${maven.compiler.release}</release>
           </configuration>
         </plugin>
 
