@@ -160,3 +160,24 @@ addressed here.
 
 Next: Phase 2 (target platform rewrite — Eclipse 4.24 → 2026-06, Orbit,
 SWTBot, drop Babel).
+
+**2026-08-13 — Phase 2 complete (target platform), pending real-build validation.**
+
+- Platform/RCP/JDT/PDE/Equinox → 2026-06 (4.40), via the SimRel aggregate
+  (`download.eclipse.org/releases/2026-06/`) rather than the old
+  Eclipse-Project-specific update site.
+- Orbit → `orbit-legacy/release/4.40.0` (https), matching Orbit's
+  restructuring into Platform-version-aligned sub-repos.
+- SWTBot → 4.1.0. Still the single biggest open unknown — SWTBot's own
+  docs only claim verified compatibility through 2023-06. Not resolved
+  by this change, just flagged again for Phase 4.
+- Babel dropped entirely, per decision.
+- All units switched to `version="0.0.0"` (Tycho 5.x unversioned-unit
+  support) instead of hand-pinned qualifiers.
+- Verified well-formed XML and that the existing filtering/copy-rename
+  mechanism (`.template` → `.target`) is unaffected. Not yet build-tested
+  — same network constraint as Phase 1.
+
+Next: get Phase 1 + 2 through a real build (in progress on the user's
+machine, JDK 25 installed locally). Phase 3 (fixing whatever the build
+turns up) depends on that feedback.
