@@ -65,4 +65,7 @@ public final class CommonUIConstants
 
     public static final String IMG_INFORMATION = "resources/icons/information.gif"; //$NON-NLS-1$
 
+    /** Preference key that remembers the last applied Base16 color scheme id. */
+    public static final String COLOR_SCHEME_ID = "colorSchemeId";
+
 }
