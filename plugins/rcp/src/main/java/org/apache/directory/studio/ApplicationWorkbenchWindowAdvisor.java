@@ -133,7 +133,7 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor
         configurer.setShowStatusLine( false );
         configurer.setShowPerspectiveBar( true );
         configurer.setShowProgressIndicator( true );
-        configurer.setShowFastViewBars( true );
+        // setShowFastViewBars removed in Eclipse 4 — fast view bars no longer exist
 
         // hopk up the listeners to update the window title
         // adapted from org.eclipse.ui.internal.ide.application.IDEWorkbenchWindowAdvisor 

@@ -30,12 +30,13 @@
 
   <artifactId>org.apache.directory.studio.eclipse-trgt-platform</artifactId>
   <name>Apache Directory Studio Target Platform for Eclipse</name>
-  <packaging>eclipse-target-definition</packaging>
+  <packaging>pom</packaging>
 
   <!-- Step 1: Define the Maven artifacts, that should be added to a P2 repository. -->
   <dependencies>
 
-    <!-- Exclude slf4j, reuse org.slf4j.api provided by Eclipse, see DIRSTUDIO-1068 -->
+    <!-- SLF4J 2.x is provided by Eclipse 2026-06 (slf4j.api bundle); Studio's
+         LDAP API bundles use Import-Package so they work with any SLF4J version. -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
@@ -98,6 +99,43 @@
       <groupId>org.apache.mina</groupId>
       <artifactId>mina-core</artifactId>
       <version>${org.apache.mina.version}</version>
+    </dependency>
+
+    <!-- JUnit 5 — not in Eclipse 2026-06 SimRel; needed by test.integration modules -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>${junit.jupiter.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <version>${junit.jupiter.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.jupiter.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-commons</artifactId>
+      <version>${junit.platform.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-engine</artifactId>
+      <version>${junit.platform.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <version>${junit.platform.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opentest4j</groupId>
+      <artifactId>opentest4j</artifactId>
+      <version>1.3.0</version>
     </dependency>
 
     <!-- Caffeine module -->
@@ -604,6 +642,35 @@ project.properties['basedirUri']=project.basedir.toURI().toString();
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
+          <execution>
+            <!-- Create a shim bundle that re-exports javax.xml.stream at version 1.0.1.
+                 Eclipse Orbit dropped this bundle for 2026-06 (JDK 11+ provides the packages),
+                 but the ServiceMix dom4j wrapper still imports javax.xml.stream;version=[1.0,2)
+                 which requires a provider at that version.
+                 Using Fragment-Host: system.bundle;extension:=framework merges these exports
+                 into the system bundle, preventing the uses-constraint split that would occur
+                 if dom4j wired to this shim while other bundles wired to the system bundle. -->
+            <id>create-javax-xml-stream-shim</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <jar destfile="${project.basedir}/target/source/plugins/javax.xml.stream-1.0.1.jar">
+                  <manifest>
+                    <attribute name="Manifest-Version" value="1.0"/>
+                    <attribute name="Bundle-ManifestVersion" value="2"/>
+                    <attribute name="Bundle-SymbolicName" value="javax.xml.stream"/>
+                    <attribute name="Bundle-Version" value="1.0.1"/>
+                    <attribute name="Fragment-Host" value="system.bundle;extension:=framework"/>
+                    <attribute name="Export-Package" value="javax.xml.stream;version=&quot;1.0.1&quot;,javax.xml.stream.events;version=&quot;1.0.1&quot;,javax.xml.stream.util;version=&quot;1.0.1&quot;"/>
+                    <attribute name="Bundle-Name" value="javax.xml.stream (OSGi version shim)"/>
+                  </manifest>
+                </jar>
+              </target>
+            </configuration>
+          </execution>
           <execution>
             <id>rename-resources</id>
             <phase>generate-resources</phase>

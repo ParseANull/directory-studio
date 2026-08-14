@@ -40,14 +40,16 @@
 
   <build>
     <plugins>
+      <!-- antlr-maven-plugin 2.2 uses System.setSecurityManager() which is
+           unsupported in Java 17+. Generated sources (AntlrAclLexer.java,
+           AntlrAclParser.java, AntlrAclLexerTokenTypes.java) are committed
+           to src/main/java so code generation is skipped at build time. -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>antlr-maven-plugin</artifactId>
-        <configuration>
-          <grammars>*.g</grammars>
-        </configuration>
         <executions>
           <execution>
+            <phase>none</phase>
             <goals>
               <goal>generate</goal>
             </goals>

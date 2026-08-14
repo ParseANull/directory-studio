@@ -193,6 +193,7 @@
               <arch>aarch64</arch>
             </environment>
           </environments>
+
         </configuration>
       </plugin>
     </plugins>

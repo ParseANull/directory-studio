@@ -13,8 +13,10 @@ Import-Package: org.apache.commons.codec.digest,
  org.bouncycastle.operator,org.bouncycastle.operator.jcajce,
  org.bouncycastle.x509,org.dom4j,org.dom4j.io
 Require-Bundle: org.hamcrest.library;bundle-version="1.3.0",
- org.junit.jupiter.api;bundle-version="5.7.0",
- org.junit.jupiter.params;bundle-version="5.7.0",
+ junit-jupiter-api;bundle-version="5.10.0",
+ junit-jupiter-params;bundle-version="5.10.0",
+ junit-jupiter-engine;bundle-version="5.10.0",
+ junit-platform-launcher;bundle-version="1.10.0",
  org.opentest4j;bundle-version="1.2.0",
  org.apache.directory.server.apacheds-test-framework;bundle-version="2.0.0.AM26",
  org.apache.directory.server.annotations;bundle-version="2.0.0.AM26",
@@ -40,4 +42,4 @@ Require-Bundle: org.hamcrest.library;bundle-version="1.3.0",
  org.apache.directory.studio.common.core,
  org.apache.directory.studio.ldapbrowser.core,
  org.apache.directory.studio.ldifparser,org.eclipse.core.runtime,
- org.eclipse.ui,javax.annotation
+ org.eclipse.ui
