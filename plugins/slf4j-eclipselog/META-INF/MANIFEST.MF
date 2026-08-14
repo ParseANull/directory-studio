@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-SymbolicName: org.apache.directory.studio.slf4j-eclipselog;singleton:=true
-Bundle-Version: 2.0.0.qualifier
+Bundle-Version: 2026.8.14.qualifier
 Export-Package: org.slf4j.impl
 Require-Bundle: slf4j.api,org.eclipse.core.runtime
