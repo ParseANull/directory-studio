@@ -27,7 +27,7 @@
 #/usr/lib/jvm/java-11-openjdk/bin/java
       </programArgs>
       <vmArgs>-Dosgi.requiredJavaVersion=11
--Djdk.tls.client.protocols=TLSv1.2,TLSv1.3
+-Djdk.tls.client.protocols=TLSv1.2
 ###
 #Uncomment_to_configure_heap_memory
 #https://directory.apache.org/studio/faqs.html#how-to-increase-the-heap-memory
