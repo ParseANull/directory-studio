@@ -34,10 +34,10 @@
 #-Xms1g
 #-Xmx2g
 ###
-#If your LDAP server only supports TLS 1.0 or 1.1 (very old servers), replace the
-#line above with:
+#For_TLS_1.0/1.1_only_servers,_replace_the_line_above_with:
 #-Djdk.tls.client.protocols=TLSv1,TLSv1.1,TLSv1.2,TLSv1.3
-#and also add: -Djdk.tls.disabledAlgorithms=RC4,DES,MD5withRSA,DSA,3DES_EDE_CBC
+#and_add:
+#-Djdk.tls.disabledAlgorithms=RC4,DES,MD5withRSA,DSA,3DES_EDE_CBC
       </vmArgs>
       <vmArgsMac>-XstartOnFirstThread -Dorg.eclipse.swt.internal.carbon.smallFonts
       </vmArgsMac>
