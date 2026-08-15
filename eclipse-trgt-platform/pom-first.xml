@@ -157,6 +157,13 @@
       <version>${org.apache.httpcomponents.httpcore.version}</version>
     </dependency>
 
+    <!-- Jackson JSON modules — required by scim.client for SCIM JSON parsing -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${com.fasterxml.jackson.version}</version>
+    </dependency>
+
     <!-- LDAP API modules -->
     <dependency>
       <groupId>org.apache.directory.api</groupId>

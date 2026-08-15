@@ -34,6 +34,11 @@
       <unit id="org.apache.httpcomponents.httpclient" version="${org.apache.httpcomponents.httpclient.bundleversion}"/>
       <unit id="org.apache.httpcomponents.httpcore" version="${org.apache.httpcomponents.httpcore.bundleversion}"/>
 
+      <!-- Jackson JSON modules -->
+      <unit id="com.fasterxml.jackson.core" version="${com.fasterxml.jackson.bundleversion}"/>
+      <unit id="com.fasterxml.jackson.annotation" version="${com.fasterxml.jackson.bundleversion}"/>
+      <unit id="com.fasterxml.jackson.databind" version="${com.fasterxml.jackson.bundleversion}"/>
+
       <!-- Commons jars -->
       <unit id="org.apache.commons.commons-codec" version="${org.apache.commons.codec.bundleversion}"/>
       <unit id="org.apache.commons.commons-collections4" version="${org.apache.commons.collections4.bundleversion}"/>

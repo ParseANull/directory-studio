@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: org.apache.directory.studio.scim.provider.azure;singleton:=true
+Bundle-Version: 2026.8.14.qualifier
+Bundle-Localization: plugin
+Eclipse-LazyStart: true
+Require-Bundle: org.apache.directory.studio.scim.core,
+ org.apache.directory.studio.scim.client,
+ org.eclipse.core.runtime

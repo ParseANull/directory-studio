@@ -24,6 +24,7 @@ package org.apache.directory.studio.connection.ui.widgets;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.directory.studio.connection.core.Connection;
 import org.apache.directory.studio.connection.core.ConnectionFolder;
+import org.apache.directory.studio.connection.core.ConnectionParameter.ConnectionProtocol;
 import org.apache.directory.studio.connection.core.ConnectionParameter.EncryptionMethod;
 import org.apache.directory.studio.connection.ui.ConnectionUIConstants;
 import org.apache.directory.studio.connection.ui.ConnectionUIPlugin;
@@ -102,6 +103,11 @@ public class ConnectionLabelProvider extends LabelProvider
         else if ( obj instanceof Connection )
         {
             Connection conn = ( Connection ) obj;
+
+            if ( conn.getConnectionParameter().getConnectionProtocol() == ConnectionProtocol.SCIM )
+            {
+                return ConnectionUIPlugin.getDefault().getImage( ConnectionUIConstants.IMG_SCIM_CONNECTION );
+            }
 
             boolean isConnected = conn.getConnectionWrapper().isConnected();
             boolean isSecured = conn.getConnectionWrapper().isSecured();

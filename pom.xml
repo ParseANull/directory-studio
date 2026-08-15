@@ -116,6 +116,8 @@
     <org.xpp3.bundleversion>1.1.4.c</org.xpp3.bundleversion>
     <xerces.xercesimpl.version>2.11.0</xerces.xercesimpl.version>
     <xerces.xercesimpl.bundleversion>2.11.0</xerces.xercesimpl.bundleversion>
+    <com.fasterxml.jackson.version>2.17.2</com.fasterxml.jackson.version>
+    <com.fasterxml.jackson.bundleversion>2.17.2</com.fasterxml.jackson.bundleversion>
 
     <!-- Set versions for skins -->
     <skin.version>1.0.2</skin.version>

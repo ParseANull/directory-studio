@@ -56,6 +56,13 @@
     <module>templateeditor</module>
     <module>combinededitor</module>
     <module>slf4j-eclipselog</module>
+    <module>scim.core</module>
+    <module>scim.client</module>
+    <module>scim.ui</module>
+    <module>scim.provider.generic</module>
+    <module>scim.provider.okta</module>
+    <module>scim.provider.azure</module>
+    <module>scim.provider.onelogin</module>
   </modules>
 
   <build>

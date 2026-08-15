@@ -1,0 +1,16 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: org.apache.directory.studio.scim.core;singleton:=true
+Bundle-Version: 2026.8.14.qualifier
+Bundle-Localization: plugin
+Eclipse-LazyStart: true
+Bundle-Activator: org.apache.directory.studio.scim.core.ScimCorePlugin
+Export-Package: org.apache.directory.studio.scim.core,
+ org.apache.directory.studio.scim.core.adapter,
+ org.apache.directory.studio.scim.core.connection,
+ org.apache.directory.studio.scim.core.exception,
+ org.apache.directory.studio.scim.core.model,
+ org.apache.directory.studio.scim.core.schema
+Require-Bundle: org.eclipse.core.runtime,
+ org.eclipse.osgi.services,
+ org.apache.directory.studio.connection.core

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+  <extension point="org.apache.directory.studio.scimAdapters">
+    <scimAdapter
+        class="org.apache.directory.studio.scim.provider.azure.AzureScimAdapterFactory"
+        id="org.apache.directory.studio.scim.provider.azure"
+        name="Azure AD SCIM"/>
+  </extension>
+</plugin>

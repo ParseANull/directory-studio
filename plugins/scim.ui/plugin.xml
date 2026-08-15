@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+  <extension point="org.apache.directory.studio.connectionlistener">
+    <connectionListener class="org.apache.directory.studio.scim.ui.ScimBrowserConnectionManager"/>
+  </extension>
+  <extension point="org.eclipse.ui.newWizards">
+    <wizard category="org.apache.directory.studio"
+            class="org.apache.directory.studio.scim.ui.wizards.NewScimConnectionWizard"
+            id="org.apache.directory.studio.scim.ui.NewScimConnectionWizard"
+            name="New SCIM Connection"/>
+  </extension>
+  <extension point="org.eclipse.ui.preferencePages">
+    <page category="org.apache.directory.studio.StudioPreferencePage"
+          class="org.apache.directory.studio.scim.ui.preferences.ScimPreferencePage"
+          id="org.apache.directory.studio.scim.ui.ScimPreferencePage"
+          name="SCIM"/>
+  </extension>
+  <extension point="org.eclipse.core.runtime.preferences">
+    <initializer class="org.apache.directory.studio.scim.ui.preferences.ScimPreferencesInitializer"/>
+  </extension>
+</plugin>
