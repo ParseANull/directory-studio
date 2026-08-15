@@ -6,6 +6,7 @@ Bundle-Localization: plugin
 Eclipse-LazyStart: true
 Bundle-Activator: org.apache.directory.studio.scim.ui.ScimUIPlugin
 Export-Package: org.apache.directory.studio.scim.ui,
+ org.apache.directory.studio.scim.ui.jobs,
  org.apache.directory.studio.scim.ui.model
 Require-Bundle: org.apache.directory.studio.scim.core,
  org.apache.directory.studio.scim.client,

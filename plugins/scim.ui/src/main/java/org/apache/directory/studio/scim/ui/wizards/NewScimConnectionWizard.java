@@ -70,12 +70,12 @@ public class NewScimConnectionWizard extends Wizard implements INewWizard
         params.setExtendedProperty( "scim.providerId", connectionPage.getProviderId() );
         params.setExtendedProperty( "scim.authMethod", authPage.getAuthMethod() );
         params.setExtendedProperty( "scim.bearerToken", authPage.getBearerToken() );
-        params.setExtendedProperty( "scim.oauth2.tokenEndpoint", authPage.getOauth2TokenEndpoint() );
-        params.setExtendedProperty( "scim.oauth2.clientId", authPage.getOauth2ClientId() );
-        params.setExtendedProperty( "scim.oauth2.clientSecret", authPage.getOauth2ClientSecret() );
-        params.setExtendedProperty( "scim.oauth2.scope", authPage.getOauth2Scope() );
-        params.setExtendedProperty( "scim.basic.username", authPage.getBasicUsername() );
-        params.setExtendedProperty( "scim.basic.password", authPage.getBasicPassword() );
+        params.setExtendedProperty( "scim.oauthTokenEndpoint", authPage.getOauth2TokenEndpoint() );
+        params.setExtendedProperty( "scim.oauthClientId", authPage.getOauth2ClientId() );
+        params.setExtendedProperty( "scim.oauthClientSecret", authPage.getOauth2ClientSecret() );
+        params.setExtendedProperty( "scim.oauthScope", authPage.getOauth2Scope() );
+        params.setExtendedProperty( "scim.basicUsername", authPage.getBasicUsername() );
+        params.setExtendedProperty( "scim.basicPassword", authPage.getBasicPassword() );
         params.setExtendedProperty( "scim.capabilityProfile", capabilityPage.getCapabilityProfileJson() );
 
         Connection connection = new Connection( params );

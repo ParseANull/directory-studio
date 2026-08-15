@@ -27,6 +27,8 @@ import org.apache.directory.studio.common.core.jobs.StudioProgressMonitor;
 import org.apache.directory.studio.connection.core.Connection;
 import org.apache.directory.studio.connection.core.ConnectionParameter.ConnectionProtocol;
 import org.apache.directory.studio.connection.core.IConnectionListener;
+import org.apache.directory.studio.connection.core.jobs.StudioConnectionJob;
+import org.apache.directory.studio.scim.ui.jobs.InitializeScimRootRunnable;
 import org.apache.directory.studio.scim.ui.model.ScimBrowserConnection;
 
 
@@ -46,7 +48,9 @@ public class ScimBrowserConnectionManager implements IConnectionListener
     {
         if ( connection.getConnectionParameter().getConnectionProtocol() == ConnectionProtocol.SCIM )
         {
-            cache.put( connection.getId(), new ScimBrowserConnection( connection ) );
+            ScimBrowserConnection browserConn = new ScimBrowserConnection( connection );
+            cache.put( connection.getId(), browserConn );
+            new StudioConnectionJob( new InitializeScimRootRunnable( browserConn ) ).execute();
         }
     }
 

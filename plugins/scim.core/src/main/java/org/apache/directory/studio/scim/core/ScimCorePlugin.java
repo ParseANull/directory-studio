@@ -20,10 +20,10 @@
 package org.apache.directory.studio.scim.core;
 
 
-import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.eclipse.core.runtime.Plugin;
 
 
-public class ScimCorePlugin extends AbstractUIPlugin
+public class ScimCorePlugin extends Plugin
 {
 
     private static ScimCorePlugin plugin;

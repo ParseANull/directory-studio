@@ -20,7 +20,7 @@
 package org.apache.directory.studio.scim.client;
 
 
-import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.eclipse.core.runtime.Plugin;
 import org.osgi.framework.BundleContext;
 
 
@@ -29,7 +29,7 @@ import org.osgi.framework.BundleContext;
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
-public class ScimClientPlugin extends AbstractUIPlugin
+public class ScimClientPlugin extends Plugin
 {
     private static ScimClientPlugin plugin;
 

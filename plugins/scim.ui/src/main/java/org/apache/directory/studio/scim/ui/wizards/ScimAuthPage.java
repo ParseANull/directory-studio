@@ -144,7 +144,7 @@ public class ScimAuthPage extends WizardPage
         String selected = authMethodCombo.getText();
         if ( AUTH_OAUTH2.equals( selected ) )
         {
-            return "oauth2";
+            return "oauth2cc";
         }
         if ( AUTH_BASIC.equals( selected ) )
         {

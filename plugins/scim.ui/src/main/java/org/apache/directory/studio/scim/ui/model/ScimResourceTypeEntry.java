@@ -49,6 +49,7 @@ public class ScimResourceTypeEntry implements IEntry
     private final List<IAttribute> attributes = new ArrayList<>();
     private boolean childrenInitialized;
     private boolean attributesInitialized;
+    private StudioConnectionBulkRunnableWithProgress topPageChildrenRunnable;
 
 
     public ScimResourceTypeEntry( ScimBrowserConnection browserConnection, ScimRootEntry parent,
@@ -183,13 +184,14 @@ public class ScimResourceTypeEntry implements IEntry
     @Override
     public StudioConnectionBulkRunnableWithProgress getTopPageChildrenRunnable()
     {
-        return null;
+        return topPageChildrenRunnable;
     }
 
 
     @Override
     public void setTopPageChildrenRunnable( StudioConnectionBulkRunnableWithProgress topPageChildrenRunnable )
     {
+        this.topPageChildrenRunnable = topPageChildrenRunnable;
     }
 
 

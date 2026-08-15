@@ -44,6 +44,7 @@ public class ScimRootEntry implements IRootDSE
     private final ScimBrowserConnection browserConnection;
     private final List<IEntry> children = new ArrayList<>();
     private boolean childrenInitialized;
+    private StudioConnectionBulkRunnableWithProgress topPageChildrenRunnable;
 
 
     public ScimRootEntry( ScimBrowserConnection browserConnection )
@@ -194,13 +195,14 @@ public class ScimRootEntry implements IRootDSE
     @Override
     public StudioConnectionBulkRunnableWithProgress getTopPageChildrenRunnable()
     {
-        return null;
+        return topPageChildrenRunnable;
     }
 
 
     @Override
     public void setTopPageChildrenRunnable( StudioConnectionBulkRunnableWithProgress topPageChildrenRunnable )
     {
+        this.topPageChildrenRunnable = topPageChildrenRunnable;
     }
 
 

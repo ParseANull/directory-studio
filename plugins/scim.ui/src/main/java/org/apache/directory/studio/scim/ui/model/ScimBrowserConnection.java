@@ -39,6 +39,7 @@ import org.apache.directory.studio.scim.core.adapter.IScimAdapter;
 import org.apache.directory.studio.scim.core.adapter.IScimAdapterFactory;
 import org.apache.directory.studio.scim.core.connection.IScimConnectionParameters;
 import org.apache.directory.studio.scim.core.connection.ScimConnectionParameters;
+import org.apache.directory.studio.scim.ui.jobs.InitializeScimRootRunnable;
 
 
 public class ScimBrowserConnection implements IBrowserConnection
@@ -58,6 +59,7 @@ public class ScimBrowserConnection implements IBrowserConnection
         IScimAdapterFactory factory = ScimAdapterRegistry.findFactory( params.getProviderId() );
         this.adapter = ( factory != null ) ? factory.create( params ) : null;
         this.rootDSE = new ScimRootEntry( this );
+        this.rootDSE.setTopPageChildrenRunnable( new InitializeScimRootRunnable( this ) );
     }
 
 
