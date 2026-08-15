@@ -38,6 +38,7 @@
     <module>schemaeditor.feature</module>
     <module>openldap.feature</module>
     <module>nls.feature</module>
+    <module>scim.feature</module>
   </modules>
   
   <build>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="org.apache.directory.studio.scim.feature"
+      label="Apache Directory Studio SCIM"
+      version="2026.8.14.qualifier"
+      provider-name="Apache Software Foundation">
+
+   <description>
+      Apache Directory Studio SCIM - Tools for browsing and managing SCIM 1.1 and 2.0 endpoints.
+   </description>
+
+   <copyright>
+      Copyright © 2006-2024 The Apache Software Foundation, Licensed under the Apache License, Version 2.0.
+   </copyright>
+
+   <license url="http://www.apache.org/licenses/LICENSE-2.0.html">
+      Apache License
+Version 2.0, January 2004
+http://www.apache.org/licenses/
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions.
+
+"License" shall mean the terms and conditions for use, reproduction,
+and distribution as defined by Sections 1 through 9 of this document.
+
+"Licensor" shall mean the copyright owner or entity authorized by
+the copyright owner that is granting the License.
+
+"You" (or "Your") shall mean an individual or Legal Entity
+exercising permissions granted by this License.
+
+The Apache License, Version 2.0 is the full license text, available
+at http://www.apache.org/licenses/LICENSE-2.0.html.
+   </license>
+
+   <plugin
+         id="org.apache.directory.studio.scim.core"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.apache.directory.studio.scim.client"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.apache.directory.studio.scim.ui"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.apache.directory.studio.scim.provider.generic"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.apache.directory.studio.scim.provider.okta"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.apache.directory.studio.scim.provider.azure"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.apache.directory.studio.scim.provider.onelogin"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>
