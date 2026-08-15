@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration.editor;
 
@@ -66,23 +66,20 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 
 
-// ── CLASS: ServerConfigurationEditorPage — THE IMPERIAL ENGINEERING SCHEMATIC BASE PLATE ─────────
-// Every wing of the Death Star follows the same engineering protocol: shared tools, shared
-// controls, shared wiring diagrams.  The weapons team, the vault architects, the comms
-// engineers — all of them use the same port-field widget, the same address validator,
-// the same "mark the schematics dirty" callback.
-// This abstract class is that shared protocol: the standard base plate from which every
-// specialist tab in the ServerConfigurationEditor is stamped.  Subclasses add their own
-// controls and implement createFormContent + refreshUI; this class handles the shared toolkit.
-// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// ── CLASS: ServerConfigurationEditorPage — DEATH STAR WORKSTATION BASE PLATE ─────────────
+// Each engineering workstation inside the Death Star's command center (the FormEditor) is
+// built on the same base frame: it knows which director to report changes to, how to mark
+// itself dirty, how to build validated port/address/thread-count text boxes, and how to
+// add the Import/Export toolbar buttons that every tab shares.
+// Concrete pages (OverviewPage, LdapLdapsServersPage, PartitionsPage, ...) extend this class
+// and inherit all those common services, filling in only the content specific to their tab.
+// ─────────────────────────────────────────────────────────────────────────────────────────
 /**
- * Abstract base class for all tab pages in the {@link ServerConfigurationEditor}.
- * Provides the shared scaffolding: convenience methods for creating validated text fields
- * (port, address, thread count, backlog size), safe add/remove listener helpers that guard
- * against disposed controls, and a standard "dirty" listener trio that marks the editor
- * as needing save whenever any field changes.
- * Think of it as the Imperial engineering schematic base plate: every specialist department
- * stamps its own section onto this shared template.
+ * Abstract base class for all tabs in the {@link ServerConfigurationEditor}.
+ * Provides shared infrastructure: dirty-listener wiring, access to the config/directory-service
+ * beans, validated input factory methods (port, address, thread count, backlog), section
+ * builders, and safe widget-update helpers that check for disposal before touching the UI.
+ * Think of it as the base frame every Death Star engineering workstation is bolted onto.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -90,21 +87,21 @@ public abstract class ServerConfigurationEditorPage extends FormPage
 {
     /** The default LDAP port */
     protected static final int DEFAULT_PORT_LDAP = 10389;
-    
+
     /** The default LDAPS port */
     protected static final int DEFAULT_PORT_LDAPS = 10636;
-    
+
     /** The default Kerberos port */
     protected static final int DEFAULT_PORT_KERBEROS = 60088;
-    
+
     /** The default LDAPS port */
     protected static final int DEFAULT_PORT_CHANGE_PASSWORD = 60464;
-    
+
     /** The default IPV4 address for servers */
     protected static final String DEFAULT_ADDRESS = "0.0.0.0"; //$NON-NLS-1$
-    
+
     protected static final String TABULATION = "      "; //$NON-NLS-1$
-    
+
     /** A flag to indicate if the page is initialized */
     protected boolean isInitialized = false;
 
@@ -116,8 +113,8 @@ public abstract class ServerConfigurationEditorPage extends FormPage
             setEditorDirty();
         }
     };
-    
-    
+
+
     private SelectionListener dirtySelectionListener = new SelectionAdapter()
     {
         public void widgetSelected( SelectionEvent e )
@@ -125,8 +122,8 @@ public abstract class ServerConfigurationEditorPage extends FormPage
             setEditorDirty();
         }
     };
-    
-    
+
+
     private ISelectionChangedListener dirtySelectionChangedListener = new ISelectionChangedListener()
     {
         public void selectionChanged( SelectionChangedEvent event )
@@ -136,16 +133,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     };
 
 
-    // ── Stamping This Page Into The Editor ────────────────────────────────────────────────────
-    // Each specialist department registers itself: "I am the Kerberos wing, ID=KerberosPage,
-    // title='Kerberos Server'."  The editor receives all three and wires this page into the tab strip.
+    // ── Wiring A Page Into Its Parent Editor ──────────────────────────────────────────────────
+    // Each page reports dirty state and fetches config beans through the parent editor.
+    // This constructor gives Eclipse the id and title it needs to manage the tab.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new editor page and associates it with the given editor.
-     * Passes the id and title to the Eclipse forms framework.
+     * Creates a new page and registers it with the given editor.
      *
-     * @param editor  the parent {@link ServerConfigurationEditor}
-     * @param id      the unique page identifier (typically the class name)
+     * @param editor  the parent {@link ServerConfigurationEditor} that hosts this page
+     * @param id      a unique string identifier for this page (used by Eclipse internally)
      * @param title   the tab title shown in the editor
      */
     public ServerConfigurationEditorPage( ServerConfigurationEditor editor, String id, String title )
@@ -154,14 +150,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Looking Up The Parent Engineering Control Room ────────────────────────────────────────
-    // Every wing has a direct line back to the main control room (the ServerConfigurationEditor).
-    // This method returns that control room reference.
+    // ── Getting A Reference Back To The Parent Editor ─────────────────────────────────────────
+    // Subclasses need to call editor-level operations (setDirty, getConfiguration).
+    // This helper casts the generic FormPage editor reference to the concrete type.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
      * Returns the {@link ServerConfigurationEditor} that hosts this page.
+     * Convenience cast of {@link FormPage#getEditor()}.
      *
-     * @return the parent editor, cast from the Eclipse FormEditor
+     * @return the parent editor
      */
     public ServerConfigurationEditor getServerConfigurationEditor()
     {
@@ -169,13 +166,13 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Marking The Schematics As Modified ────────────────────────────────────────────────────
-    // When an engineer changes any field on the schematic, the control room logs that the
-    // document has unsaved changes — the "dirty" flag lights up on the editor tab.
+    // ── Marking The Editor As Having Unsaved Changes ──────────────────────────────────────────
+    // When the user changes any widget value, we need the editor's title bar asterisk to appear
+    // and the Save button to become enabled.  This delegates to the editor's setDirty method.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Marks the parent {@link ServerConfigurationEditor} as having unsaved changes.
-     * Called by the shared dirty listeners whenever any widget value changes.
+     * Marks the parent editor as dirty (unsaved changes pending).
+     * Call this from any widget listener that the user can change.
      */
     protected void setEditorDirty()
     {
@@ -183,15 +180,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Retrieving The Full Death Star Specification ───────────────────────────────────────────
-    // The control room keeps the master spec document ({@link ConfigBean}).  If it doesn't exist
-    // yet, we create a fresh empty one and register it before returning.
+    // ── Fetching The Root Configuration Bean ──────────────────────────────────────────────────
+    // All pages work off the same ConfigBean stored in the editor.  If none exists yet,
+    // we create a default one so the page can populate its widgets without NPEs.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the {@link ConfigBean} holding the full server configuration in memory.
-     * Creates and registers an empty bean if one does not yet exist.
+     * Returns the {@link ConfigBean} from the editor's current {@link Configuration}.
+     * Creates and registers a new empty {@code Configuration} if none exists yet.
      *
-     * @return the live configuration bean; never {@code null}
+     * @return the current config bean; never {@code null}
      */
     public ConfigBean getConfigBean()
     {
@@ -207,15 +204,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Retrieving The Directory Service Specification ────────────────────────────────────────
-    // The directory service section of the spec covers partitions, interceptors, and general
-    // server behaviour.  We create it on-demand if it hasn't been initialised yet.
+    // ── Fetching The Directory Service Bean ───────────────────────────────────────────────────
+    // Most pages configure the DirectoryService: replication, interceptors, partitions, etc.
+    // This helper unwraps it from the ConfigBean, creating a default one if needed.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the {@link DirectoryServiceBean} from the current configuration.
-     * Creates and registers a fresh one if none exists yet.
+     * Returns the {@link DirectoryServiceBean} from the current config bean.
+     * Creates and registers a default bean if none is present.
      *
-     * @return the directory service bean; never {@code null}
+     * @return the current directory-service bean; never {@code null}
      */
     public DirectoryServiceBean getDirectoryServiceBean()
     {
@@ -231,15 +228,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Retrieving The Live LDAP Connection ───────────────────────────────────────────────────
-    // If the editor was opened against a live server (not a file), there's a Connection object
-    // embedded in the editor input.  This method extracts it; returns null for file-based inputs.
+    // ── Fetching The Live LDAP Connection (If Any) ────────────────────────────────────────────
+    // When the editor is backed by a live server connection, pages can call live API operations.
+    // If the editor was opened from a file, this returns null and pages operate offline.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the live LDAP {@link Connection} backing this editor, if any.
-     * Returns {@code null} if the editor is backed by a file rather than a connection.
+     * Returns the {@link Connection} associated with this editor input, or {@code null}
+     * if the editor was opened from a file rather than a live server connection.
      *
-     * @return the connection, or {@code null} for file-based editor inputs
+     * @return the connection, or {@code null}
      */
     public Connection getConnection()
     {
@@ -254,17 +251,17 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Building The Standard Page Frame ─────────────────────────────────────────────────────
-    // Each page starts with the same standard frame: title, toolbar (import/export), a grid
-    // layout — then delegates to the subclass to fill in its own controls.
+    // ── Building The Page's Scrolled Form And Adding The Toolbar ──────────────────────────────
+    // Eclipse calls this when the page's tab is first activated.  We set up the title, add
+    // the Import/Export toolbar buttons that every page shares, then delegate to the subclass
+    // to build its specific form content.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Builds the standard page frame: sets the title, adds the Import/Export toolbar actions,
-     * lays out the body with a single-column grid, then delegates to
-     * {@link #createFormContent(Composite, FormToolkit)} for subclass-specific controls.
-     * Sets {@link #isInitialized} to {@code true} at the end.
+     * Called by Eclipse to build the page's scrolled form.
+     * Sets the form title, adds the Import/Export toolbar buttons, calls the subclass
+     * {@link #createFormContent(Composite, FormToolkit)} method, and sets the initialized flag.
      *
-     * @param managedForm  the managed form provided by the Eclipse forms framework
+     * @param managedForm  the managed form provided by the Eclipse Forms framework
      */
     protected void createFormContent( IManagedForm managedForm )
     {
@@ -292,41 +289,36 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── The Subclass Fills In Its Own Specialist Controls ─────────────────────────────────────
-    // The weapons team fills in the superlaser settings; the comms team fills in port fields.
-    // Each subclass implements this to build its own widget tree inside the shared frame.
+    // ── Subclass Builds Its Specific Form Content ─────────────────────────────────────────────
+    // Each concrete page overrides this to lay out its own sections, labels, and controls.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Subclasses must implement this to build the page's SWT widget tree inside the
-     * shared form frame created by {@link #createFormContent(IManagedForm)}.
+     * Subclasses implement this to build their page-specific form content.
      *
-     * @param parent   the parent composite to add widgets into
-     * @param toolkit  the form toolkit for creating themed widgets
+     * @param parent   the parent composite inside the scrolled form body
+     * @param toolkit  the form toolkit for creating styled widgets
      */
     protected abstract void createFormContent( Composite parent, FormToolkit toolkit );
 
 
-    // ── Refreshing The Page After The Config Changes ──────────────────────────────────────────
-    // When the configuration object is replaced (e.g., after import), every page must
-    // re-read the new values and repaint its widgets.  This abstract method enforces that.
+    // ── Refreshing The UI From The Current Model State ────────────────────────────────────────
+    // After a configuration load or reset, all pages need to repopulate their widgets.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Subclasses must implement this to re-read all values from the current configuration
-     * and update the page's widgets accordingly.
-     * Called by the editor after the configuration is loaded or replaced.
+     * Subclasses implement this to refresh all their widgets from the current model state.
+     * Called after a configuration is loaded or reset.
      */
     protected abstract void refreshUI();
 
 
     // ── Checking Whether The Page Has Been Initialised ────────────────────────────────────────
-    // The editor must not call refreshUI() before the page's widgets are built.
-    // isInitialized gates that call: true once createFormContent has finished.
+    // refreshUI() is unsafe to call before createFormContent() has run — controls don't exist.
+    // The editor checks this flag before calling refreshUI() on a page.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns {@code true} if this page's widgets have been fully initialised
-     * (i.e., {@link #createFormContent(IManagedForm)} has completed).
+     * Returns whether this page's form has been built and is safe to call {@link #refreshUI()} on.
      *
-     * @return {@code true} if the page is ready for refreshUI() calls
+     * @return {@code true} if the form has been initialised; {@code false} otherwise
      */
     public boolean isInitialized()
     {
@@ -334,17 +326,17 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Creating A Validated Port Number Field ────────────────────────────────────────────────
-    // Port numbers are integers between 0 and 65535.  The field rejects any non-digit keystroke.
-    // Maximum 5 characters keeps it within the valid range.
+    // ── Creating A Validated Port Number Text Box ─────────────────────────────────────────────
+    // Port numbers must be 0-65535.  We attach a VerifyListener that rejects non-digit input
+    // before it reaches the text, and limit the field to 5 characters.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and returns a port-number text widget that accepts only digits (0–65535),
-     * limited to 5 characters.
+     * Creates a port-number {@link Text} widget that only accepts digits (0–65535).
+     * Fixed width of 42px; limited to 5 characters.
      *
-     * @param toolkit  the form toolkit for theming
+     * @param toolkit  the form toolkit
      * @param parent   the parent composite
-     * @return the configured port text widget
+     * @return a ready-to-use port text widget
      */
     protected Text createPortText( FormToolkit toolkit, Composite parent )
     {
@@ -352,7 +344,7 @@ public abstract class ServerConfigurationEditorPage extends FormPage
         GridData gd = new GridData( SWT.NONE, SWT.NONE, false, false );
         gd.widthHint = 42;
         portText.setLayoutData( gd );
-        
+
         portText.addVerifyListener( new VerifyListener()
         {
             public void verifyText( VerifyEvent e )
@@ -376,8 +368,8 @@ public abstract class ServerConfigurationEditorPage extends FormPage
                 }
             }
         } );
-        
-        
+
+
         // the port can only have 5 chars max
         portText.setTextLimit( 5 );
 
@@ -385,19 +377,19 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Creating An Address Field With Live Validation ────────────────────────────────────────
-    // If the engineer types a bad IP/hostname, the field turns red immediately — no waiting
-    // until they click Save to find out something is wrong.
+    // ── Creating A Validated IP Address Text Box ──────────────────────────────────────────────
+    // We can't block bad input keystroke-by-keystroke (addresses have non-numeric characters),
+    // so instead we turn the text red while the address is invalid and restore it when it
+    // parses correctly.  Width 200px; limit 256 characters.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and returns a host-address text widget that turns the text red when the
-     * entered value fails a DNS/IP resolution check, and reverts to the default colour
-     * when the address becomes valid again.
-     * Maximum 256 characters.
+     * Creates an IP address {@link Text} widget that turns red when the entered address is invalid.
+     * Uses {@link InetAddress#getAllByName(String)} to validate on every keystroke.
+     * Fixed width 200px; limited to 256 characters.
      *
-     * @param toolkit  the form toolkit for theming
+     * @param toolkit  the form toolkit
      * @param parent   the parent composite
-     * @return the configured address text widget
+     * @return a ready-to-use address text widget with live validation colouring
      */
     protected Text createAddressText( FormToolkit toolkit, Composite parent )
     {
@@ -405,7 +397,7 @@ public abstract class ServerConfigurationEditorPage extends FormPage
         GridData gd = new GridData( SWT.NONE, SWT.NONE, false, false );
         gd.widthHint = 200;
         addressText.setLayoutData( gd );
-        
+
         addressText.addModifyListener( new ModifyListener()
         {
             Display display = addressText.getDisplay();
@@ -415,7 +407,7 @@ public abstract class ServerConfigurationEditorPage extends FormPage
             {
                 Text addressText = (Text)e.widget;
                 String address = addressText.getText();
-                
+
                 try
                 {
                     InetAddress.getAllByName( address );
@@ -427,7 +419,7 @@ public abstract class ServerConfigurationEditorPage extends FormPage
                 }
             }
         } );
-        
+
         // An address can be fairly long...
         addressText.setTextLimit( 256 );
 
@@ -435,16 +427,16 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Creating A Thread-Count Field ─────────────────────────────────────────────────────────
-    // The thread pool size is an integer 0–999.  Three digits max keeps it within range.
+    // ── Creating A Validated Thread-Count Text Box ────────────────────────────────────────────
+    // Thread counts must be 0-999.  Digits only; limited to 3 characters.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and returns a thread-count text widget that accepts only digits (0–999),
-     * limited to 3 characters.
+     * Creates a thread-count {@link Text} widget that only accepts digits (0–999).
+     * Fixed width of 42px; limited to 3 characters.
      *
-     * @param toolkit  the form toolkit for theming
+     * @param toolkit  the form toolkit
      * @param parent   the parent composite
-     * @return the configured thread-count text widget
+     * @return a ready-to-use thread-count text widget
      */
     protected Text createNbThreadsText( FormToolkit toolkit, Composite parent )
     {
@@ -452,7 +444,7 @@ public abstract class ServerConfigurationEditorPage extends FormPage
         GridData gd = new GridData( SWT.NONE, SWT.NONE, false, false );
         gd.widthHint = 42;
         nbThreadsText.setLayoutData( gd );
-        
+
         nbThreadsText.addVerifyListener( new VerifyListener()
         {
             public void verifyText( VerifyEvent e )
@@ -476,8 +468,8 @@ public abstract class ServerConfigurationEditorPage extends FormPage
                 }
             }
         } );
-        
-        
+
+
         // We can't have more than 999 threads
         nbThreadsText.setTextLimit( 3 );
 
@@ -485,16 +477,16 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Creating A Backlog-Size Field ─────────────────────────────────────────────────────────
-    // The TCP accept backlog is an integer 0–99999.  Five digits max keeps it in range.
+    // ── Creating A Validated Backlog-Size Text Box ────────────────────────────────────────────
+    // Backlog sizes must be 0-99999.  Digits only; limited to 5 characters.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and returns a TCP accept-backlog-size text widget that accepts only digits
-     * (0–99999), limited to 5 characters.
+     * Creates a connection-backlog-size {@link Text} widget that only accepts digits (0–99999).
+     * Fixed width of 42px; limited to 5 characters.
      *
-     * @param toolkit  the form toolkit for theming
+     * @param toolkit  the form toolkit
      * @param parent   the parent composite
-     * @return the configured backlog-size text widget
+     * @return a ready-to-use backlog-size text widget
      */
     protected Text createBackLogSizeText( FormToolkit toolkit, Composite parent )
     {
@@ -502,7 +494,7 @@ public abstract class ServerConfigurationEditorPage extends FormPage
         GridData gd = new GridData( SWT.NONE, SWT.NONE, false, false );
         gd.widthHint = 42;
         backLogSizetText.setLayoutData( gd );
-        
+
         backLogSizetText.addVerifyListener( new VerifyListener()
         {
             public void verifyText( VerifyEvent e )
@@ -526,8 +518,8 @@ public abstract class ServerConfigurationEditorPage extends FormPage
                 }
             }
         } );
-        
-        
+
+
         // the backlog size can only have 5 chars max
         backLogSizetText.setTextLimit( 5 );
 
@@ -535,18 +527,18 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Creating A "Default Value" Hint Label ─────────────────────────────────────────────────
-    // Below a port field we often show "Default: 10389" in the engineering-spec colour so the
-    // engineer knows what value they're overriding.
+    // ── Creating A Coloured Default-Value Label ────────────────────────────────────────────────
+    // Some fields show a "(default: X)" hint in the keyword colour to help the engineer know
+    // what the out-of-the-box value is without having to look it up.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a styled "Default: {value}" hint label below a field.
-     * Uses the Studio keyword colour so it stands out from regular labels.
+     * Creates a label showing the default value for a setting, styled in the keyword colour.
+     * The text is formatted as the localised "Default: {value}" pattern.
      *
-     * @param toolkit  the form toolkit for theming
+     * @param toolkit  the form toolkit
      * @param parent   the parent composite
-     * @param text     the default value string to embed in the "Default: {text}" message
-     * @return the styled hint label
+     * @param text     the default value to display
+     * @return the styled default-value label
      */
     protected Label createDefaultValueLabel( FormToolkit toolkit, Composite parent, String text )
     {
@@ -558,15 +550,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Making A Section Header Bold ──────────────────────────────────────────────────────────
-    // Section headers in the Imperial schematics are in bold so they're easy to scan.
+    // ── Making A Label Bold ────────────────────────────────────────────────────────────────────
+    // Section header labels or important hints get bolded by swapping in the JFace bold font.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Applies a bold font to the given label and returns it.
-     * Uses JFace's font registry to find the bold variant of the label's current font.
+     * Sets the given label's font to bold and returns it.
+     * Looks up the bold variant of the label's current font via the JFace font registry.
      *
-     * @param label  the label to make bold
-     * @return the same label, now with a bold font applied
+     * @param label  the label to embolden
+     * @return the same label, now with a bold font
      */
     protected Label setBold( Label label )
     {
@@ -579,13 +571,12 @@ public abstract class ServerConfigurationEditorPage extends FormPage
 
 
     // ── Safely Adding A Modify Listener ───────────────────────────────────────────────────────
-    // We guard against null controls and disposed widgets — a disposed SWT widget will throw
-    // if you try to add a listener to it.  These helpers make all callers safe.
+    // Widget disposal races are common in Eclipse editors; we check before adding to avoid NPEs.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a {@link ModifyListener} to a Text widget only if the widget is non-null and not disposed.
+     * Adds a {@link ModifyListener} to the given {@link Text}, guarding against null or disposed widgets.
      *
-     * @param text      the Text control to listen on
+     * @param text      the text widget
      * @param listener  the listener to add
      */
     protected void addModifyListener( Text text, ModifyListener listener )
@@ -597,10 +588,14 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Safely Adding A Selection-Changed Listener ────────────────────────────────────────────
+    // Same disposal-safe guard for viewers.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds an {@link ISelectionChangedListener} to a Viewer only if it is non-null and not disposed.
+     * Adds an {@link ISelectionChangedListener} to the given {@link Viewer}, guarding against
+     * null or disposed controls.
      *
-     * @param viewer    the viewer to listen on
+     * @param viewer    the viewer
      * @param listener  the listener to add
      */
     protected void addSelectionChangedListener( Viewer viewer, ISelectionChangedListener listener )
@@ -613,11 +608,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Safely Adding A Double-Click Listener ─────────────────────────────────────────────────
+    // Guard pattern for double-click listeners on structured viewers.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds an {@link IDoubleClickListener} to a StructuredViewer only if it is non-null and not disposed.
+     * Adds an {@link IDoubleClickListener} to the given {@link StructuredViewer}, guarding against
+     * null or disposed controls.
      *
-     * @param viewer    the structured viewer to listen on
-     * @param listener  the double-click listener to add
+     * @param viewer    the structured viewer
+     * @param listener  the listener to add
      */
     protected void addDoubleClickListener( StructuredViewer viewer, IDoubleClickListener listener )
     {
@@ -629,11 +628,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Safely Adding A Selection Listener To A Button ────────────────────────────────────────
+    // Guard pattern for button selection listeners.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a {@link SelectionListener} to a Button only if it is non-null and not disposed.
+     * Adds a {@link SelectionListener} to the given {@link Button}, guarding against null or
+     * disposed controls.
      *
-     * @param button    the button to listen on
-     * @param listener  the selection listener to add
+     * @param button    the button
+     * @param listener  the listener to add
      */
     protected void addSelectionListener( Button button, SelectionListener listener )
     {
@@ -644,14 +647,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Safely Removing Listeners ─────────────────────────────────────────────────────────────
-    // The page is refreshed by first removing all dirty listeners, updating widgets silently,
-    // then re-adding them.  These remove helpers guard against disposed controls.
+    // ── Safely Removing A Modify Listener ─────────────────────────────────────────────────────
+    // Guard pattern for removing modify listeners — needed when refreshUI() temporarily
+    // detaches dirty listeners while repopulating widgets.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a {@link ModifyListener} from a Text widget only if non-null and not disposed.
+     * Removes a {@link ModifyListener} from the given {@link Text}, guarding against null or
+     * disposed controls.
      *
-     * @param text      the Text control
+     * @param text      the text widget
      * @param listener  the listener to remove
      */
     protected void removeModifyListener( Text text, ModifyListener listener )
@@ -663,10 +667,14 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Safely Removing A Selection-Changed Listener ──────────────────────────────────────────
+    // Guard pattern for viewer selection-changed listeners.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes an {@link ISelectionChangedListener} from a Viewer only if non-null and not disposed.
+     * Removes an {@link ISelectionChangedListener} from the given {@link Viewer}, guarding against
+     * null or disposed controls.
      *
-     * @param viewer    the viewer control
+     * @param viewer    the viewer
      * @param listener  the listener to remove
      */
     protected void removeSelectionChangedListener( Viewer viewer, ISelectionChangedListener listener )
@@ -679,11 +687,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Safely Removing A Double-Click Listener ───────────────────────────────────────────────
+    // Guard pattern for double-click listener removal.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes an {@link IDoubleClickListener} from a StructuredViewer only if non-null and not disposed.
+     * Removes an {@link IDoubleClickListener} from the given {@link StructuredViewer}, guarding
+     * against null or disposed controls.
      *
      * @param viewer    the structured viewer
-     * @param listener  the double-click listener to remove
+     * @param listener  the listener to remove
      */
     protected void removeDoubleClickListener( StructuredViewer viewer, IDoubleClickListener listener )
     {
@@ -695,11 +707,15 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Safely Removing A Selection Listener From A Button ────────────────────────────────────
+    // Guard pattern for button selection listener removal.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a {@link SelectionListener} from a Button only if non-null and not disposed.
+     * Removes a {@link SelectionListener} from the given {@link Button}, guarding against null or
+     * disposed controls.
      *
-     * @param button    the button control
-     * @param listener  the selection listener to remove
+     * @param button    the button
+     * @param listener  the listener to remove
      */
     protected void removeSelectionListener( Button button, SelectionListener listener )
     {
@@ -710,16 +726,14 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Wiring A Control Into The Unsaved-Changes Alarm ──────────────────────────────────────
-    // Whenever an engineer touches a field on the Death Star schematics, the control room's
-    // "unsaved changes" alarm trips.  These helpers wire the shared dirty listeners into Text,
-    // Button, and Viewer controls so that any change automatically marks the editor dirty.
+    // ── Attaching The Shared Dirty Listener To A Text Widget ──────────────────────────────────
+    // Delegates to addModifyListener with the shared dirtyModifyListener instance.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Attaches the shared dirty {@link ModifyListener} to a Text widget so that any text
-     * change immediately marks the editor as having unsaved changes.
+     * Attaches the shared dirty modify listener to the given {@link Text}.
+     * Any change to this text will mark the editor dirty.
      *
-     * @param text  the Text control to monitor for changes
+     * @param text  the text widget to watch
      */
     protected void addDirtyListener( Text text )
     {
@@ -727,11 +741,14 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Attaching The Shared Dirty Listener To A Button ───────────────────────────────────────
+    // Delegates to addSelectionListener with the shared dirtySelectionListener instance.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Attaches the shared dirty {@link SelectionListener} to a Button widget so that any
-     * selection change immediately marks the editor as having unsaved changes.
+     * Attaches the shared dirty selection listener to the given {@link Button}.
+     * Any click on this button will mark the editor dirty.
      *
-     * @param button  the Button control to monitor for changes
+     * @param button  the button to watch
      */
     protected void addDirtyListener( Button button )
     {
@@ -739,11 +756,14 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Attaching The Shared Dirty Listener To A Viewer ───────────────────────────────────────
+    // Delegates to addSelectionChangedListener with the shared dirtySelectionChangedListener.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Attaches the shared dirty {@link ISelectionChangedListener} to a Viewer so that any
-     * selection change immediately marks the editor as having unsaved changes.
+     * Attaches the shared dirty selection-changed listener to the given {@link Viewer}.
+     * Any selection change will mark the editor dirty.
      *
-     * @param viewer  the Viewer to monitor for selection changes
+     * @param viewer  the viewer to watch
      */
     protected void addDirtyListener( Viewer viewer )
     {
@@ -751,16 +771,13 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Silencing The Alarm Before A Silent Update ────────────────────────────────────────────
-    // When refreshUI() reloads config values into the widgets, we don't want every setText()
-    // call to trip the "unsaved changes" alarm.  These helpers detach the shared dirty listeners
-    // so we can update controls silently, then re-attach them once the refresh is done.
+    // ── Detaching The Shared Dirty Listener From A Text Widget ────────────────────────────────
+    // Used during refreshUI() to prevent repopulation from triggering dirty.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Detaches the shared dirty {@link ModifyListener} from a Text widget so that the
-     * next programmatic text change does not mark the editor dirty.
+     * Removes the shared dirty modify listener from the given {@link Text}.
      *
-     * @param text  the Text control to stop monitoring
+     * @param text  the text widget to stop watching
      */
     protected void removeDirtyListener( Text text )
     {
@@ -768,11 +785,13 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Detaching The Shared Dirty Listener From A Button ────────────────────────────────────
+    // Used during refreshUI() to silence selection events triggered by programmatic updates.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Detaches the shared dirty {@link SelectionListener} from a Button so that the
-     * next programmatic selection change does not mark the editor dirty.
+     * Removes the shared dirty selection listener from the given {@link Button}.
      *
-     * @param button  the Button control to stop monitoring
+     * @param button  the button to stop watching
      */
     protected void removeDirtyListener( Button button )
     {
@@ -780,11 +799,13 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Detaching The Shared Dirty Listener From A Viewer ────────────────────────────────────
+    // Used during refreshUI() to silence selection events triggered by programmatic selection.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Detaches the shared dirty {@link ISelectionChangedListener} from a Viewer so that
-     * the next programmatic selection change does not mark the editor dirty.
+     * Removes the shared dirty selection-changed listener from the given {@link Viewer}.
      *
-     * @param viewer  the Viewer to stop monitoring
+     * @param viewer  the viewer to stop watching
      */
     protected void removeDirtyListener( Viewer viewer )
     {
@@ -792,17 +813,14 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Moving A Control's Indicator To A New Position ───────────────────────────────────────
-    // When refreshUI() reloads the config, each checkbox and list must be positioned to reflect
-    // the current setting.  These helpers move the Button or Viewer selection safely, guarding
-    // against disposed controls so a partially-built page never throws.
+    // ── Safely Setting A Button's Selected State ──────────────────────────────────────────────
+    // Used in refreshUI() when repopulating checkboxes/radio buttons from model state.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the checked/selected state of a Button widget only if it is non-null and not disposed.
-     * Safe to call during refreshUI() even if the widget hasn't been created yet.
+     * Sets the selection state of a {@link Button}, guarding against null or disposed controls.
      *
-     * @param button    the Button control (checkbox or radio)
-     * @param selected  the new selection state to apply
+     * @param button    the button to update
+     * @param selected  the new selection state
      */
     protected void setSelection( Button button, boolean selected )
     {
@@ -813,12 +831,14 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
+    // ── Safely Setting A Viewer's Selected Item ────────────────────────────────────────────────
+    // Used in refreshUI() when repopulating viewers from model state.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the selection of a Viewer to the given object, wrapping it in a
-     * {@link StructuredSelection}.  Only applied if the viewer and its control are non-null
-     * and not disposed.
+     * Sets the selected item in a {@link Viewer}, guarding against null or disposed controls.
+     * Wraps the value in a {@link StructuredSelection}.
      *
-     * @param viewer     the Viewer to update
+     * @param viewer     the viewer to update
      * @param selection  the object to select
      */
     protected void setSelection( Viewer viewer, Object selection )
@@ -830,16 +850,16 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Writing A New Value Into A Schematic Field ────────────────────────────────────────────
-    // When the config is refreshed, each text field gets the latest value written into it.
-    // A null string is treated as empty so the field is never left in an undefined state.
+    // ── Safely Setting A Text Widget's Content ────────────────────────────────────────────────
+    // Used in refreshUI() when populating text fields from model state.
+    // Null model values become empty strings so the widget doesn't blow up.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the text content of a Text widget only if it is non-null and not disposed.
-     * A {@code null} string is normalised to an empty string before assignment.
+     * Sets the content of a {@link Text} widget, guarding against null or disposed controls.
+     * A null string value is treated as an empty string.
      *
-     * @param text    the Text control to update
-     * @param string  the new value to write; {@code null} is treated as {@code ""}
+     * @param text    the text widget to update
+     * @param string  the new text (may be {@code null})
      */
     protected void setText( Text text, String string )
     {
@@ -855,15 +875,13 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Directing The Engineer's Attention To A Specific Control ─────────────────────────────
-    // On the Death Star bridge, when a fault is detected the duty officer directs all eyes to
-    // the relevant panel.  setFocus() does the same: keyboard focus lands on the given widget.
+    // ── Safely Focusing A Control ─────────────────────────────────────────────────────────────
+    // Used when directing keyboard focus to a specific field after opening a section.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Moves keyboard focus to the given control only if it is non-null and not disposed.
-     * Safe to call during page initialisation before all widgets exist.
+     * Requests focus for the given {@link Control}, guarding against null or disposed controls.
      *
-     * @param control  the control that should receive keyboard focus
+     * @param control  the control to focus
      */
     protected void setFocus( Control control )
     {
@@ -874,17 +892,14 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Powering A System On Or Off ───────────────────────────────────────────────────────────
-    // When Kerberos is disabled in the config, the Kerberos port field greys out — the system
-    // is powered down.  When it's re-enabled, the field lights up again.  setEnabled() handles
-    // this safely: if the control is gone we simply do nothing.
+    // ── Safely Enabling Or Disabling A Control ────────────────────────────────────────────────
+    // Used when a checkbox state changes and dependent fields need to be enabled/disabled.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the enabled state of a control only if it is non-null and not disposed.
-     * Disabled controls are greyed out and not interactive.
+     * Sets the enabled state of a {@link Control}, guarding against null or disposed controls.
      *
      * @param control  the control to enable or disable
-     * @param enabled  {@code true} to enable the control; {@code false} to grey it out
+     * @param enabled  {@code true} to enable; {@code false} to disable
      */
     protected void setEnabled( Control control, boolean enabled )
     {
@@ -895,48 +910,37 @@ public abstract class ServerConfigurationEditorPage extends FormPage
     }
 
 
-    // ── Fitting A Control Into A Standardised Grid Slot ──────────────────────────────────────
-    // The schematic template mandates a standard minimum width (50 pixels) for all data fields
-    // so the page looks uniform regardless of which specialist filled it in.
+    // ── Applying A GridData With A Standard Default Width ─────────────────────────────────────
+    // A convenience method for controls that should use a 50px width hint.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Applies the given {@link GridData} to a control and sets its width hint to the standard
-     * default of 50 pixels before attaching it.
-     * Ensures a consistent minimum field width across all tab pages.
+     * Applies the given {@link GridData} to the control and sets the width hint to 50px.
      *
-     * @param control  the control to lay out
-     * @param gd       the GridData to configure and attach (its widthHint is overwritten to 50)
+     * @param control  the control to configure
+     * @param gd       the grid data to apply (width hint will be set to 50)
      */
     protected void setGridDataWithDefaultWidth( Control control, GridData gd )
     {
         gd.widthHint = 50;
         control.setLayoutData( gd );
     }
-    
-    
-    // ── Stamping A New Wing Onto The Schematic Page ───────────────────────────────────────────
-    // Each tab page is divided into named sections: "LDAP Server", "LDAPS Server", "Advanced".
-    // This helper stamps a new section block onto the page with a standard grid layout inside,
-    // ready for the specialist team to fill in their controls.
+
+
+    // ── Creating A Titled Section With A Grid Layout Inside ───────────────────────────────────
+    // Almost every page section follows the same pattern: a titled Section widget, a Composite
+    // inside with a GridLayout, and a bit of border painting.  This factory does it all.
     // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a titled, bordered {@link Section} and returns the inner {@link Composite}
-     * laid out with an {@code nbColumns}-column {@link GridLayout}.
-     * All tab pages use this helper to build their named sub-sections uniformly.
+     * Creates a titled {@link Section} with a grid-layout composite inside it.
+     * The section title is looked up via {@link Messages#getString(String)}, so pass the
+     * message key rather than the raw string.
      *
-     * <p>For example — the Kerberos page stamps its server section:</p>
-     * <pre>
-     *   Composite kerberosSection = createSection(toolkit, parent,
-     *       "KerberosServerPage.ServerSection", 2, Section.TITLE_BAR);
-     *   // then adds port label + field into kerberosSection
-     * </pre>
-     *
-     * @param toolkit    the form toolkit for themed widget creation
-     * @param parent     the composite to add the section into
-     * @param title      i18n key for the section heading (looked up via {@link Messages})
-     * @param nbColumns  number of columns in the inner grid
-     * @param style      SWT/Section style flags (e.g. {@code Section.TITLE_BAR | Section.TWISTIE})
-     * @return the inner composite, ready for child controls
+     * @param toolkit     the form toolkit
+     * @param parent      the parent composite to attach the section to
+     * @param title       the message key for the section title
+     * @param nbColumns   number of columns in the section's inner GridLayout
+     * @param style       section style flags (e.g. {@code Section.TITLE_BAR | Section.EXPANDED})
+     * @return the inner composite that page content should be added to
      */
     protected Composite createSection( FormToolkit toolkit, Composite parent, String title, int nbColumns, int style )
     {
