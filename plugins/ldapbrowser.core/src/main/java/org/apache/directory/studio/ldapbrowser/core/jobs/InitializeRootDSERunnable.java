@@ -322,7 +322,7 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
             {
                 for ( String namingContext : namingContextSet )
                 {
-                    if ( namingContext.length() > 0 && namingContext.charAt( namingContext.length() - 1 ) == ' ' )
+                    if ( namingContext.length() > 0 && namingContext.charAt( namingContext.length() - 1 ) == ' ' )
                     {
                         namingContext = namingContext.substring( 0, namingContext.length() - 1 );
                     }
