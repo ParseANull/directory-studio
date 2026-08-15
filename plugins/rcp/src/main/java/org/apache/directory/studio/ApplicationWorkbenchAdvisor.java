@@ -26,8 +26,8 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.TrayDialog;
-import org.eclipse.jface.preference.IPreferenceManager;
 import org.eclipse.jface.preference.IPreferenceNode;
+import org.eclipse.jface.preference.PreferenceManager;
 import org.eclipse.jface.preference.PreferenceNode;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
@@ -137,7 +137,7 @@ public class ApplicationWorkbenchAdvisor extends WorkbenchAdvisor
 
     private void replaceAppearancePage()
     {
-        IPreferenceManager manager = PlatformUI.getWorkbench().getPreferenceManager();
+        PreferenceManager manager = PlatformUI.getWorkbench().getPreferenceManager();
         IPreferenceNode general = manager.find( "org.eclipse.ui.preferencePages.Workbench" );
         if ( general == null )
         {
