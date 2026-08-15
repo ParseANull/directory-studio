@@ -3,7 +3,7 @@ Bundle-ManifestVersion: 2
 Bundle-SymbolicName: org.apache.directory.studio.scim.ui;singleton:=true
 Bundle-Version: 2026.8.14.qualifier
 Bundle-Localization: plugin
-Eclipse-LazyStart: true
+Eclipse-LazyStart: false
 Bundle-Activator: org.apache.directory.studio.scim.ui.ScimUIPlugin
 Service-Component: OSGI-INF/scim-connection-contribution.xml
 Export-Package: org.apache.directory.studio.scim.ui,
