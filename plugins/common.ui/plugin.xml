@@ -26,12 +26,6 @@
             id="org.apache.directory.studio.StudioPreferencePage"
             name="%Pref_StudioPage_name">
       </page>
-      <page
-            category="org.apache.directory.studio.StudioPreferencePage"
-            class="org.apache.directory.studio.common.ui.colorschemes.ColorSchemePreferencePage"
-            id="org.apache.directory.studio.ColorSchemePreferencePage"
-            name="Color Schemes (Base16)">
-      </page>
    </extension>
    <extension
          point="org.eclipse.core.runtime.preferences">
