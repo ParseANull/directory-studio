@@ -5,6 +5,7 @@ Bundle-Version: 2026.8.14.qualifier
 Bundle-Localization: plugin
 Eclipse-LazyStart: true
 Bundle-Activator: org.apache.directory.studio.scim.ui.ScimUIPlugin
+Service-Component: OSGI-INF/scim-connection-contribution.xml
 Export-Package: org.apache.directory.studio.scim.ui,
  org.apache.directory.studio.scim.ui.jobs,
  org.apache.directory.studio.scim.ui.model

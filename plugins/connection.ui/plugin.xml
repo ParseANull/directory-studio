@@ -21,21 +21,7 @@
 <plugin>
   <extension-point id="org.apache.directory.studio.connectionparameterpages" name="%ExtensionPoint_ConnectionParameterPages_name" schema="src/main/resources/connectionParameterPages.exsd"/>
 
-  <!-- Extension point for connection-type wizards. Any bundle can contribute a new
-       connection type by registering here; NewConnectionAction automatically picks
-       it up and presents a type-picker dialog when more than one type is available. -->
-  <extension-point id="org.apache.directory.studio.connection.ui.connectionWizards"
-                   name="Connection Type Wizards"/>
-
-  <extension point="org.apache.directory.studio.connection.ui.connectionWizards">
-    <connectionWizard
-        class="org.apache.directory.studio.connection.ui.wizards.NewConnectionWizard"
-        icon="resources/icons/connection_add.gif"
-        id="org.apache.directory.studio.connection.ui.wizards.NewConnectionWizard"
-        label="LDAP Connection"/>
-  </extension>
-
-  <extension 
+  <extension
       point="org.eclipse.ui.propertyPages">
     <page
         class="org.apache.directory.studio.connection.ui.properties.ConnectionPropertyPage"

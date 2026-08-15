@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.4.0"
+    name="org.apache.directory.studio.connection.ui.LdapConnectionTypeContribution">
+  <implementation class="org.apache.directory.studio.connection.ui.LdapConnectionTypeContribution"/>
+  <service>
+    <provide interface="org.apache.directory.studio.connection.ui.IConnectionTypeContribution"/>
+  </service>
+</scr:component>

@@ -28,14 +28,8 @@ import java.util.List;
 
 import org.apache.directory.studio.connection.ui.ConnectionUIConstants;
 import org.apache.directory.studio.connection.ui.ConnectionUIPlugin;
+import org.apache.directory.studio.connection.ui.IConnectionTypeContribution;
 import org.apache.directory.studio.connection.ui.wizards.NewConnectionWizard;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.FileLocator;
-import org.eclipse.core.runtime.IConfigurationElement;
-import org.eclipse.core.runtime.IExtensionPoint;
-import org.eclipse.core.runtime.IExtensionRegistry;
-import org.eclipse.core.runtime.Path;
-import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.StructuredSelection;
@@ -45,12 +39,11 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.INewWizard;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.dialogs.ElementListSelectionDialog;
-import org.osgi.framework.Bundle;
 
 
 /**
  * Launches the appropriate New Connection wizard. When more than one connection
- * type is registered via the {@code connectionWizards} extension point a
+ * type is registered as an OSGi {@link IConnectionTypeContribution} service, a
  * type-picker dialog is shown first; otherwise the single registered wizard
  * opens directly.
  *
@@ -58,34 +51,30 @@ import org.osgi.framework.Bundle;
  */
 public class NewConnectionAction extends StudioAction
 {
-    private static final String EP_ID =
-        "org.apache.directory.studio.connection.ui.connectionWizards"; //$NON-NLS-1$
-
-
     /**
      * {@inheritDoc}
      */
     public void run()
     {
-        List<IConfigurationElement> wizards = getRegisteredWizards();
+        List<IConnectionTypeContribution> contributions =
+            ConnectionUIPlugin.getDefault().getConnectionTypeContributions();
 
-        IConfigurationElement choice;
-        if ( wizards.isEmpty() )
+        IConnectionTypeContribution choice;
+        if ( contributions.isEmpty() )
         {
-            // No contributions yet (e.g. first startup) — fall back to built-in LDAP wizard.
             openBuiltInLdapWizard();
             return;
         }
-        else if ( wizards.size() == 1 )
+        else if ( contributions.size() == 1 )
         {
-            choice = wizards.get( 0 );
+            choice = contributions.get( 0 );
         }
         else
         {
-            choice = promptForType( wizards );
+            choice = promptForType( contributions );
             if ( choice == null )
             {
-                return; // user cancelled
+                return;
             }
         }
 
@@ -93,59 +82,35 @@ public class NewConnectionAction extends StudioAction
     }
 
 
-    private List<IConfigurationElement> getRegisteredWizards()
-    {
-        List<IConfigurationElement> result = new ArrayList<>();
-        IExtensionRegistry registry = Platform.getExtensionRegistry();
-        IExtensionPoint ep = registry.getExtensionPoint( EP_ID );
-        if ( ep != null )
-        {
-            for ( IConfigurationElement ce : ep.getConfigurationElements() )
-            {
-                result.add( ce );
-            }
-        }
-        return result;
-    }
-
-
-    private IConfigurationElement promptForType( List<IConfigurationElement> wizards )
+    private IConnectionTypeContribution promptForType( List<IConnectionTypeContribution> contributions )
     {
         ElementListSelectionDialog dialog = new ElementListSelectionDialog(
-            getShell(), new WizardTypeLabelProvider() );
+            getShell(), new ContributionLabelProvider() );
         dialog.setTitle( Messages.getString( "NewConnectionAction.NewConnection" ) ); //$NON-NLS-1$
         dialog.setMessage( Messages.getString( "NewConnectionAction.SelectConnectionType" ) ); //$NON-NLS-1$
-        dialog.setElements( wizards.toArray() );
-        dialog.setInitialSelections( wizards.get( 0 ) );
+        dialog.setElements( contributions.toArray() );
+        dialog.setInitialSelections( contributions.get( 0 ) );
         dialog.setMultipleSelection( false );
 
         if ( dialog.open() != Window.OK )
         {
             return null;
         }
-        return ( IConfigurationElement ) dialog.getFirstResult();
+        return ( IConnectionTypeContribution ) dialog.getFirstResult();
     }
 
 
-    private void openWizard( IConfigurationElement ce )
+    private void openWizard( IConnectionTypeContribution contribution )
     {
-        try
-        {
-            INewWizard wizard = ( INewWizard ) ce.createExecutableExtension( "class" ); //$NON-NLS-1$
-            List<Object> selection = new ArrayList<>();
-            selection.addAll( Arrays.asList( getSelectedConnectionFolders() ) );
-            selection.addAll( Arrays.asList( getSelectedConnections() ) );
-            wizard.init( PlatformUI.getWorkbench(), new StructuredSelection( selection ) );
-            WizardDialog dialog = new WizardDialog( getShell(), wizard );
-            dialog.setBlockOnOpen( true );
-            dialog.create();
-            dialog.open();
-        }
-        catch ( CoreException e )
-        {
-            ConnectionUIPlugin.getDefault().getLog().error(
-                "Failed to open connection wizard", e ); //$NON-NLS-1$
-        }
+        List<Object> selection = new ArrayList<>();
+        selection.addAll( Arrays.asList( getSelectedConnectionFolders() ) );
+        selection.addAll( Arrays.asList( getSelectedConnections() ) );
+        INewWizard wizard = contribution.createWizard();
+        wizard.init( PlatformUI.getWorkbench(), new StructuredSelection( selection ) );
+        WizardDialog dialog = new WizardDialog( getShell(), wizard );
+        dialog.setBlockOnOpen( true );
+        dialog.create();
+        dialog.open();
     }
 
 
@@ -203,7 +168,7 @@ public class NewConnectionAction extends StudioAction
 
     // --- Inner label provider for the type-picker dialog ----------------------
 
-    private static final class WizardTypeLabelProvider extends LabelProvider
+    private static final class ContributionLabelProvider extends LabelProvider
     {
         private final List<Image> created = new ArrayList<>();
 
@@ -211,25 +176,14 @@ public class NewConnectionAction extends StudioAction
         @Override
         public String getText( Object element )
         {
-            return ( ( IConfigurationElement ) element ).getAttribute( "label" ); //$NON-NLS-1$
+            return ( ( IConnectionTypeContribution ) element ).getLabel();
         }
 
 
         @Override
         public Image getImage( Object element )
         {
-            String iconPath = ( ( IConfigurationElement ) element ).getAttribute( "icon" ); //$NON-NLS-1$
-            if ( iconPath == null )
-            {
-                return null;
-            }
-            String contributorId = ( ( IConfigurationElement ) element ).getContributor().getName();
-            Bundle bundle = Platform.getBundle( contributorId );
-            if ( bundle == null )
-            {
-                return null;
-            }
-            URL url = FileLocator.find( bundle, new Path( iconPath ), null );
+            URL url = ( ( IConnectionTypeContribution ) element ).getIconUrl();
             if ( url == null )
             {
                 return null;

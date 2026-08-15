@@ -23,6 +23,9 @@ package org.apache.directory.studio.connection.ui;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.PropertyResourceBundle;
 
 import org.apache.directory.studio.connection.core.ConnectionCorePlugin;
@@ -34,6 +37,7 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
 
 
 /**
@@ -54,6 +58,9 @@ public class ConnectionUIPlugin extends AbstractUIPlugin
 
     /** The plugin properties */
     private PropertyResourceBundle properties;
+
+    /** Tracks OSGi services that contribute connection types to the New Connection picker. */
+    private ServiceTracker<IConnectionTypeContribution, IConnectionTypeContribution> contributionTracker;
 
 
     /**
@@ -88,6 +95,9 @@ public class ConnectionUIPlugin extends AbstractUIPlugin
         defaultPlugin.setAuthHandler( new UIAuthHandler() );
         defaultPlugin.setReferralHandler( new ConnectionUIReferralHandler() );
         defaultPlugin.setCertificateHandler( new ConnectionUICertificateHandler() );
+
+        contributionTracker = new ServiceTracker<>( context, IConnectionTypeContribution.class, null );
+        contributionTracker.open();
     }
 
 
@@ -97,6 +107,12 @@ public class ConnectionUIPlugin extends AbstractUIPlugin
     @Override
     public void stop( BundleContext context ) throws Exception
     {
+        if ( contributionTracker != null )
+        {
+            contributionTracker.close();
+            contributionTracker = null;
+        }
+
         plugin = null;
         super.stop( context );
 
@@ -124,8 +140,34 @@ public class ConnectionUIPlugin extends AbstractUIPlugin
 
 
     /**
+     * Returns all currently registered connection-type contributions, in service-registration order.
+     * Never returns {@code null}; returns an empty list when no contributions are registered.
+     *
+     * @return unmodifiable list of contributions
+     */
+    public List<IConnectionTypeContribution> getConnectionTypeContributions()
+    {
+        if ( contributionTracker == null )
+        {
+            return Collections.emptyList();
+        }
+        Object[] services = contributionTracker.getServices();
+        if ( services == null )
+        {
+            return Collections.emptyList();
+        }
+        List<IConnectionTypeContribution> result = new ArrayList<>( services.length );
+        for ( Object s : services )
+        {
+            result.add( ( IConnectionTypeContribution ) s );
+        }
+        return Collections.unmodifiableList( result );
+    }
+
+
+    /**
      * Gets the exception handler.
-     * 
+     *
      * @return the exception handler
      */
     public ExceptionHandler getExceptionHandler()
