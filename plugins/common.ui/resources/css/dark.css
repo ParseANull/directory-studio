@@ -18,6 +18,40 @@
  *  
  */
 
+/* =====================================================================
+ * Studio content widget theming — Eclipse dark theme overlay.
+ *
+ * Named widgets use #3C3F41 — slightly lighter than the Eclipse
+ * workbench chrome (#2B2B2B) to visually separate content from chrome.
+ * CSS class names are assigned via setData() at widget-creation time.
+ * ===================================================================== */
+
+/* LDAP browser tree and connection list */
+.studio-browser-tree,
+.studio-connection-tree {
+    background-color: #3C3F41;
+    color: #BBBBBB;
+}
+
+/* Entry editor — attribute/value tree with column headers */
+.studio-entry-tree {
+    background-color: #3C3F41;
+    color: #BBBBBB;
+    swt-header-color: #BBBBBB;
+    swt-header-background-color: #313335;
+}
+
+/* Search results table — also override the active-stack rule
+ * (.MPartStack.active Table { background-color: #2F2F2F }) */
+.studio-search-table,
+.MPartStack.active .studio-search-table {
+    background-color: #3C3F41;
+    color: #BBBBBB;
+    swt-header-color: #BBBBBB;
+    swt-header-background-color: #313335;
+}
+
+/* ===================================================================== */
 /* Overrides default preference values defined in CommonUIPreferencesInitializer */
 
 IEclipsePreferences#org-apache-directory-studio-common-ui {

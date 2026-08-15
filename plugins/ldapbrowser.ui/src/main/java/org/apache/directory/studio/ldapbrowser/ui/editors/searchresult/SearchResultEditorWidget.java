@@ -78,6 +78,7 @@ public class SearchResultEditorWidget extends ViewFormWidget
 
         // create table widget and viewer
         table = new Table( parent, SWT.BORDER | SWT.HIDE_SELECTION | SWT.VIRTUAL );
+        table.setData( "org.eclipse.e4.ui.css.CssClassName", "studio-search-table" );
         table.setHeaderVisible( true );
         table.setLinesVisible( true );
         table.setLayoutData( new GridData( GridData.FILL_BOTH ) );
