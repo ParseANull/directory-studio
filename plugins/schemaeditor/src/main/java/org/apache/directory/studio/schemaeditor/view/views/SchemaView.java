@@ -73,6 +73,7 @@ public class SchemaView extends ViewPart
     private void initViewer( Composite parent )
     {
         treeViewer = new TreeViewer( parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL | SWT.BORDER );
+        treeViewer.getTree().setData( "org.eclipse.e4.ui.css.CssClassName", "studio-schema-tree" );
         treeViewer.setContentProvider( new SchemaViewContentProvider() );
         treeViewer.setLabelProvider( new DecoratingLabelProvider( new SchemaViewLabelProvider(), Activator.getDefault()
             .getWorkbench().getDecoratorManager().getLabelDecorator() ) );

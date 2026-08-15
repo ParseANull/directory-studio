@@ -26,9 +26,10 @@
  * CSS class names are assigned via setData() at widget-creation time.
  * ===================================================================== */
 
-/* LDAP browser tree and connection list */
+/* LDAP browser tree, connection list, and schema browser */
 .studio-browser-tree,
-.studio-connection-tree {
+.studio-connection-tree,
+.studio-schema-tree {
     background-color: #3C3F41;
     color: #BBBBBB;
 }

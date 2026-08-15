@@ -104,6 +104,7 @@ public class HierarchyView extends ViewPart
     private void initViewer( Composite parent )
     {
         viewer = new TreeViewer( parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL );
+        viewer.getTree().setData( "org.eclipse.e4.ui.css.CssClassName", "studio-schema-tree" );
         viewer.setContentProvider( new HierarchyViewContentProvider() );
         viewer.setLabelProvider( new DecoratingLabelProvider( new HierarchyViewLabelProvider( viewer ), Activator
             .getDefault().getWorkbench().getDecoratorManager().getLabelDecorator() ) );
