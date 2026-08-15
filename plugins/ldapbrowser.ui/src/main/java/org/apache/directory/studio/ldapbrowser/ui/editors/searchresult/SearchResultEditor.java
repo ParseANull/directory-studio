@@ -21,8 +21,8 @@
 package org.apache.directory.studio.ldapbrowser.ui.editors.searchresult;
 
 
-import org.apache.directory.studio.connection.ui.RunnableContextRunner;
 import org.apache.directory.studio.ldapbrowser.common.BrowserCommonActivator;
+import org.apache.directory.studio.ldapbrowser.core.jobs.StudioBrowserJob;
 import org.apache.directory.studio.ldapbrowser.core.events.EntryModificationEvent;
 import org.apache.directory.studio.ldapbrowser.core.events.EntryUpdateListener;
 import org.apache.directory.studio.ldapbrowser.core.events.EventRegistry;
@@ -129,7 +129,7 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
                     // save
                     UpdateEntryRunnable runnable = new UpdateEntryRunnable( originalEntry, diff
                         .toFormattedString( LdifFormatParameters.DEFAULT ) );
-                    RunnableContextRunner.execute( runnable, null, true );
+                    new StudioBrowserJob( runnable ).execute();
                 }
                 configuration.getCursor( mainWidget.getViewer() ).resetCopies();
             }

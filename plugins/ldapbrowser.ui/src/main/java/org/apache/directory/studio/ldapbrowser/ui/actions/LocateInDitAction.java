@@ -22,13 +22,16 @@ package org.apache.directory.studio.ldapbrowser.ui.actions;
 
 
 import org.apache.directory.api.ldap.model.name.Dn;
-import org.apache.directory.studio.connection.ui.RunnableContextRunner;
 import org.apache.directory.studio.ldapbrowser.common.actions.BrowserAction;
 import org.apache.directory.studio.ldapbrowser.core.jobs.ReadEntryRunnable;
+import org.apache.directory.studio.ldapbrowser.core.jobs.StudioBrowserJob;
 import org.apache.directory.studio.ldapbrowser.core.model.IBrowserConnection;
 import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 import org.apache.directory.studio.ldapbrowser.ui.BrowserUIConstants;
 import org.apache.directory.studio.ldapbrowser.ui.views.browser.BrowserView;
+import org.eclipse.core.runtime.jobs.IJobChangeEvent;
+import org.eclipse.core.runtime.jobs.JobChangeAdapter;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
@@ -54,35 +57,52 @@ public abstract class LocateInDitAction extends BrowserAction
             Dn dn = connectionAndDn.dn;
 
             IEntry entry = connection.getEntryFromCache( dn );
-            if ( entry == null )
-            {
-                ReadEntryRunnable runnable = new ReadEntryRunnable( connection, dn );
-                RunnableContextRunner.execute( runnable, null, true );
-                entry = runnable.getReadEntry();
-            }
-
             if ( entry != null )
             {
-                String targetId = BrowserView.getId();
-                IViewPart targetView = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().findView(
-                    targetId );
-                if ( targetView == null )
-                {
-                    try
-                    {
-                        targetView = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(
-                            targetId, null, IWorkbenchPage.VIEW_ACTIVATE );
-                    }
-                    catch ( PartInitException e )
-                    {
-                    }
-                }
-                if ( targetView instanceof BrowserView )
-                {
-                    ( ( BrowserView ) targetView ).select( entry );
-                    PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().activate( targetView );
-                }
+                openInBrowser( entry );
             }
+            else
+            {
+                ReadEntryRunnable runnable = new ReadEntryRunnable( connection, dn );
+                StudioBrowserJob job = new StudioBrowserJob( runnable );
+                job.addJobChangeListener( new JobChangeAdapter()
+                {
+                    @Override
+                    public void done( IJobChangeEvent event )
+                    {
+                        IEntry readEntry = runnable.getReadEntry();
+                        if ( readEntry != null )
+                        {
+                            Display.getDefault().asyncExec( () -> openInBrowser( readEntry ) );
+                        }
+                    }
+                } );
+                job.execute();
+            }
+        }
+    }
+
+
+    private void openInBrowser( IEntry entry )
+    {
+        String targetId = BrowserView.getId();
+        IViewPart targetView = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().findView(
+            targetId );
+        if ( targetView == null )
+        {
+            try
+            {
+                targetView = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(
+                    targetId, null, IWorkbenchPage.VIEW_ACTIVATE );
+            }
+            catch ( PartInitException e )
+            {
+            }
+        }
+        if ( targetView instanceof BrowserView )
+        {
+            ( ( BrowserView ) targetView ).select( entry );
+            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().activate( targetView );
         }
     }
 

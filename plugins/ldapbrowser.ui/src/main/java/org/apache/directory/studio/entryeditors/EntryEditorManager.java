@@ -454,7 +454,7 @@ public class EntryEditorManager
                     autoSaveSharedWorkingCopies.remove( originalEntry );
                     UpdateEntryRunnable runnable = new UpdateEntryRunnable( originalEntry, diff
                         .toFormattedString( LdifFormatParameters.DEFAULT ) );
-                    RunnableContextRunner.execute( runnable, null, true );
+                    new StudioBrowserJob( runnable ).execute();
                     // put entry back to map
                     autoSaveSharedReferenceCopies.put( originalEntry, autoSaveSharedReferenceCopy );
                     autoSaveSharedWorkingCopies.put( originalEntry, autoSaveSharedWorkingCopy );
