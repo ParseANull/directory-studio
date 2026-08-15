@@ -73,6 +73,13 @@ public class SearchScimRunnable implements StudioConnectionBulkRunnableWithProgr
 
 
     @Override
+    public Object[] getLockedObjects()
+    {
+        return new Object[]{ browserConnection.getConnection() };
+    }
+
+
+    @Override
     public void run( StudioProgressMonitor monitor )
     {
         IScimAdapter adapter = browserConnection.getAdapter();

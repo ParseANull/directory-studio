@@ -67,6 +67,13 @@ public class InitializeScimRootRunnable implements StudioConnectionBulkRunnableW
 
 
     @Override
+    public Object[] getLockedObjects()
+    {
+        return new Object[]{ browserConnection.getConnection() };
+    }
+
+
+    @Override
     public void run( StudioProgressMonitor monitor )
     {
         IScimAdapter adapter = browserConnection.getAdapter();

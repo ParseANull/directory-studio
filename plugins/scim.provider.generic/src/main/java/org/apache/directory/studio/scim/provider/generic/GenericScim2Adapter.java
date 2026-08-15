@@ -20,15 +20,11 @@
 package org.apache.directory.studio.scim.provider.generic;
 
 
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.directory.studio.scim.client.adapter.AbstractScim2Adapter;
 import org.apache.directory.studio.scim.core.connection.IScimConnectionParameters;
 import org.apache.directory.studio.scim.core.exception.ScimException;
 import org.apache.directory.studio.scim.core.model.BulkRequest;
 import org.apache.directory.studio.scim.core.model.BulkResponse;
-import org.apache.directory.studio.scim.core.model.ScimSchema;
 
 
 public class GenericScim2Adapter extends AbstractScim2Adapter
@@ -47,10 +43,5 @@ public class GenericScim2Adapter extends AbstractScim2Adapter
     }
 
 
-    @Override
-    public List<ScimSchema> getBundledSchemas()
-    {
-        return Collections.emptyList();
-    }
 
 }
