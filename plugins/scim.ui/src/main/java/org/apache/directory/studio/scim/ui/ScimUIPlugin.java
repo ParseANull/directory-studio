@@ -22,11 +22,13 @@ package org.apache.directory.studio.scim.ui;
 
 import java.net.URL;
 
+import org.apache.directory.studio.connection.ui.IConnectionTypeContribution;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
 
 
 public class ScimUIPlugin extends AbstractUIPlugin
@@ -35,18 +37,27 @@ public class ScimUIPlugin extends AbstractUIPlugin
 
     private static ScimUIPlugin plugin;
 
+    private ServiceRegistration<IConnectionTypeContribution> contributionRegistration;
+
 
     @Override
     public void start( BundleContext context ) throws Exception
     {
         super.start( context );
         plugin = this;
+        contributionRegistration = context.registerService(
+            IConnectionTypeContribution.class, new ScimConnectionTypeContribution(), null );
     }
 
 
     @Override
     public void stop( BundleContext context ) throws Exception
     {
+        if ( contributionRegistration != null )
+        {
+            contributionRegistration.unregister();
+            contributionRegistration = null;
+        }
         plugin = null;
         super.stop( context );
     }
