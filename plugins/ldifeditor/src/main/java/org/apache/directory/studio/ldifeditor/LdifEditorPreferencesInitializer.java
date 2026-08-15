@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor;
@@ -30,15 +30,37 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 
 
+// ── CLASS: LdifEditorPreferencesInitializer — REBEL BASE CONFIGURATION DEFAULTS
+// Before the fleet deploys the Alliance quartermaster sets every console
+// to factory defaults: folding enabled, auto-wrap on, colours calibrated
+// to the standard war-room palette.
+// This initializer does the same thing for the LDIF editor: it writes the
+// out-of-the-box default values to the Eclipse preference store so the editor
+// is usable the moment a user installs the plugin.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to set default preference values for the LDIF editor.
+ * {@link AbstractPreferenceInitializer} that writes factory-default values
+ * for every LDIF editor preference into the plugin's {@link IPreferenceStore}.
+ * Eclipse calls this once when the store is first accessed with no persisted
+ * values present.
+ * Think of this as the Rebel quartermaster calibrating every console before
+ * the fleet ships out.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LdifEditorPreferencesInitializer extends AbstractPreferenceInitializer
 {
+    // ── WRITE ALL DEFAULT PREFERENCES ─────────────────────────────────────────
+    // The quartermaster walks every console in order — folding, double-click,
+    // content assist, execute options, then syntax colours — and sets the dials.
+    // We call store.setDefault() for each preference key defined in
+    // LdifEditorConstants.
     /**
      * {@inheritDoc}
+     *
+     * <p>Writes factory-default values for all LDIF editor preferences including
+     * folding, double-click behaviour, content-assist, execute options, and all
+     * syntax colouring preferences.</p>
      */
     public void initializeDefaultPreferences()
     {
@@ -111,6 +133,18 @@ public class LdifEditorPreferencesInitializer extends AbstractPreferenceInitiali
     }
 
 
+    // ── RESOLVE AND STORE A DEFAULT COLOUR ────────────────────────────────────
+    // The technician looks up the named colour in the common palette and
+    // converts it to the RGB triple the preference store needs.
+    /**
+     * Looks up a named colour from the common UI plugin and stores its RGB
+     * triple as the default value for {@code preferenceName}.
+     * If the colour is not found the store retains its built-in string default.
+     *
+     * @param store           the preference store to update
+     * @param preferenceName  the preference key to set
+     * @param colorName       the common-UI colour name to resolve
+     */
     private void setDefaultColor( IPreferenceStore store, String preferenceName, String colorName )
     {
         Color color = CommonUIPlugin.getDefault().getColor( colorName );

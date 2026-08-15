@@ -6,20 +6,31 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.jobs;
 
 
+// ── CLASS: PartitionsDiffComputer — The Death Star's Strategic Comparison Room ──
+// Before the Death Star fires, its strategic room compares the current battle
+// plan against a revised one and produces a precise list of changes: new
+// targets added, old targets removed, and modified attack parameters.
+// PartitionsDiffComputer does exactly that for two LDAP partitions: it walks
+// the original partition tree, compares each entry with its counterpart in the
+// modified partition, and emits LDIF change records (Add, Delete, Modify) that
+// describe the delta.  The comparison skips operational attributes — only
+// userApplications attributes are compared.  The objectClass attribute is also
+// skipped on modify because OpenLDAP does not allow it to be changed.
+// ─────────────────────────────────────────────────────────────────────────────
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,16 +61,25 @@ import org.apache.directory.server.core.api.partition.Partition;
 
 /**
  * An utility class that computes the difference between two Partitions.
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class PartitionsDiffComputer
 {
+    // ── Private Constructor — Utility Class, Not Instantiated ─────────────────
+    // The strategic comparison room is a facility, not an object — all methods
+    // are static.
+    // ─────────────────────────────────────────────────────────────────────────
     private PartitionsDiffComputer()
     {
         // Nothing to do
     }
-    
+
+
+    // ── computeModifications (2-arg) — Compare All Attributes ─────────────────
+    // The strategic officers compare all user and operational attributes
+    // (using SchemaConstants.ALL_ATTRIBUTES_ARRAY) between the two partitions.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Compute the difference between two partitions :
      * <ul>
@@ -80,7 +100,7 @@ public class PartitionsDiffComputer
      * </ul>
      * @param originalPartition The original partition
      * @param modifiedPartition The modified partition
-     * @return A list of LDIF Additions, Deletions or Modifications 
+     * @return A list of LDIF Additions, Deletions or Modifications
      * @throws Exception If something went wrong
      */
     public static List<LdifEntry> computeModifications( Partition originalPartition, Partition modifiedPartition ) throws Exception
@@ -90,6 +110,10 @@ public class PartitionsDiffComputer
     }
 
 
+    // ── computeModifications (attributeIds) — Compare Selected Attributes ─────
+    // The strategic officers narrow the comparison to a specific set of
+    // attribute IDs, rooted at the original partition's suffix DN.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Compute the difference between two partitions :
      * <ul>
@@ -111,7 +135,7 @@ public class PartitionsDiffComputer
      * @param originalPartition The original partition
      * @param modifiedPartition The modified partition
      * @param attributeIds The list of attributes we want to compare
-     * @return A list of LDIF Additions, Deletions or Modifications 
+     * @return A list of LDIF Additions, Deletions or Modifications
      * @throws Exception If something went wrong
      */
     public static List<LdifEntry> computeModifications(  Partition originalPartition, Partition modifiedPartition, String[] attributeIds ) throws Exception
@@ -120,7 +144,11 @@ public class PartitionsDiffComputer
     }
 
 
-    /** 
+    // ── computeModifications (baseDn + attributeIds) — Actual Diff Driver ─────
+    // The strategic officers validate both partitions, then hand off the
+    // actual comparison to comparePartitions.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
      * Compute the actual diff.
      */
     private static List<LdifEntry> computeModifications( Partition originalPartition, Partition modifiedPartition, Dn baseDn, String[] attributeIds ) throws Exception
@@ -132,6 +160,10 @@ public class PartitionsDiffComputer
     }
 
 
+    // ── checkPartitions — Validate That Both Partitions Are Usable ───────────
+    // The strategic officers reject the comparison immediately if either
+    // partition is null, uninitialized, or missing a suffix DN.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Checks the partitions.
      */
@@ -173,6 +205,13 @@ public class PartitionsDiffComputer
     }
 
 
+    // ── comparePartitions — Walk Both Trees and Collect Changes ───────────────
+    // First pass: walk the original tree.  For each original entry, look it up
+    // in the modified partition — if found, compare attributes; if absent, mark
+    // it and all its children for deletion.
+    // Second pass: walk the modified tree.  For each modified entry that has no
+    // counterpart in the original, emit an Add change record.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Compare two partitions.
      *
@@ -193,7 +232,7 @@ public class PartitionsDiffComputer
         {
             // Looking up the original base entry
             Entry originalBaseEntry = originalPartition.lookup( new LookupOperationContext( null, baseDn, attributeIds ) );
-            
+
             if ( originalBaseEntry == null )
             {
                 throw new PartitionsDiffException( "Unable to find the base entry in the original partition." );
@@ -206,7 +245,7 @@ public class PartitionsDiffComputer
 
             // Looping until all original entries are being processed. We will read all the children,
             // adding each of them at the end of the list, consuming the first element of the list
-            // at every iteration. When we have processed all the tree in depth, we should not have 
+            // at every iteration. When we have processed all the tree in depth, we should not have
             // any left entries in the list.
             // We don't dereference aliases and referrals.
             while ( !originalEntries.isEmpty() )
@@ -221,7 +260,7 @@ public class PartitionsDiffComputer
                 // Looking for the equivalent entry in the destination partition
                 Entry modifiedEntry = modifiedPartition.lookup( new LookupOperationContext( null, originalEntry
                     .getDn(), attributeIds ) );
-                
+
                 if ( modifiedEntry != null )
                 {
                     // Setting the changeType to Modify atm
@@ -235,20 +274,20 @@ public class PartitionsDiffComputer
                     // The entry has been deleted from the partition. It has to be deleted.
                     // Note : we *must* delete all of it's children first !!!
                     List<LdifEntry> deletions = deleteEntry( originalPartition, originalEntry.getDn() );
-                    
+
                     // Append the children
                     modifications.addAll( deletions );
 
                     // and add the parent entry
                     ldifEntry.setChangeType( ChangeType.Delete );
-                    
+
                     // And go on with the remaining entries
                     continue;
                 }
 
                 // Checking if modifications occurred on the original entry
                 ChangeType modificationEntryChangeType = ldifEntry.getChangeType();
-                
+
                 if ( modificationEntryChangeType != ChangeType.None )
                 {
                     if ( modificationEntryChangeType == ChangeType.Delete
@@ -267,7 +306,7 @@ public class PartitionsDiffComputer
 
                 // Looking for the children of the current entry
                 EntryFilteringCursor cursor = originalPartition.search( soc );
-                
+
                 while ( cursor.next() )
                 {
                     originalEntries.add( cursor.get() );
@@ -278,7 +317,7 @@ public class PartitionsDiffComputer
             // been added.
             Entry destinationBaseEntry = modifiedPartition
                 .lookup( new LookupOperationContext( null, baseDn, attributeIds ) );
-            
+
             if ( destinationBaseEntry == null )
             {
                 throw new PartitionsDiffException( "Unable to find the base entry in the destination partition." );
@@ -298,8 +337,8 @@ public class PartitionsDiffComputer
                 // Looking for the equivalent entry in the destination partition
                 Entry originalEntry = originalPartition.lookup( new LookupOperationContext( null, modifiedEntry
                     .getDn(), attributeIds ) );
-                
-                // We're only looking for new entries, modified or removed 
+
+                // We're only looking for new entries, modified or removed
                 // entries have already been computed
                 if ( originalEntry == null )
                 {
@@ -343,14 +382,19 @@ public class PartitionsDiffComputer
         return modifications;
     }
 
-    
+
+    // ── deleteEntry — Recursively Emit Deletion Records ───────────────────────
+    // The strategic officers recursively discover all children of a deleted
+    // entry and emit deletion change records for them (deepest first) before
+    // the parent is deleted.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Delete recursively the entries under a parent
      */
     private static List<LdifEntry> deleteEntry( Partition originalPartition, Dn parentDn ) throws LdapException, ParseException, CursorException
     {
         List<LdifEntry> deletions = new ArrayList<>();
-        
+
         // Lookup for the children
         SearchOperationContext soc = new SearchOperationContext( null, parentDn,
             SearchScope.ONELEVEL,
@@ -363,28 +407,36 @@ public class PartitionsDiffComputer
         while ( cursor.next() )
         {
             LdifEntry deletion = new LdifEntry( cursor.get().getDn() );
-            
-            // Iterate 
+
+            // Iterate
             List<LdifEntry> childrenDeletions = deleteEntry( originalPartition, deletion.getDn() );
             deletions.addAll( childrenDeletions );
             deletions.add( deletion );
         }
-        
+
         return deletions;
     }
 
+
+    // ── compareEntries — Detect Modified and Deleted Attributes ───────────────
+    // For each userApplications attribute in the original entry, the officer
+    // checks whether it still exists in the modified entry — emitting a
+    // REMOVE_ATTRIBUTE modification if absent, or comparing values via
+    // compareAttributes if present.  A second loop adds any attributes that
+    // appear only in the modified entry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Compares the two given entries.
      *
      * @param originalEntry the original entry
      * @param modifiedEntry the destination entry
      * @param modificationEntry the modification LDIF entry holding the modifications between both entries
-     * @throws LdapInvalidAttributeValueException 
+     * @throws LdapInvalidAttributeValueException
      */
-    private static void compareEntries( Entry originalEntry, Entry modifiedEntry, LdifEntry modificationEntry ) 
+    private static void compareEntries( Entry originalEntry, Entry modifiedEntry, LdifEntry modificationEntry )
         throws LdapInvalidAttributeValueException
     {
-        // We loop on all the attributes of the original entries, to detect the 
+        // We loop on all the attributes of the original entries, to detect the
         // modified ones and the deleted ones
         for ( Attribute originalAttribute : originalEntry )
         {
@@ -394,7 +446,7 @@ public class PartitionsDiffComputer
             if ( originalAttributeType.getUsage() == UsageEnum.USER_APPLICATIONS )
             {
                 Attribute modifiedAttribute = modifiedEntry.get( originalAttributeType );
-                
+
                 if ( modifiedAttribute == null )
                 {
                     // The attribute has been deleted
@@ -425,7 +477,7 @@ public class PartitionsDiffComputer
                 if ( !originalEntry.containsAttribute( destinationAttributeType ) )
                 {
                     // Creating a modification for the added AT
-                    Modification modification = new DefaultModification( 
+                    Modification modification = new DefaultModification(
                         ModificationOperation.ADD_ATTRIBUTE,
                         destinationAttribute );
 
@@ -436,6 +488,12 @@ public class PartitionsDiffComputer
     }
 
 
+    // ── compareAttributes — Emit a Replace Modification When Values Differ ────
+    // The officer compares two attribute instances.  If they differ, a
+    // REPLACE_ATTRIBUTE modification is emitted for the modified value set.
+    // The objectClass attribute is excluded because OpenLDAP does not allow
+    // it to be modified via a change record.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Compares two attributes.
      *

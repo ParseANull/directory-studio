@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifparser.model;
@@ -33,8 +33,28 @@ import org.apache.directory.studio.ldifparser.model.container.LdifModSpec;
 import org.apache.directory.studio.ldifparser.model.container.LdifRecord;
 
 
+// ── CLASS: LdifFile — REBEL DATA SMUGGLING MANIFEST ──────────────────────────
+// The Rebellion's data-smuggling network keeps a manifest of every communiqué
+// being carried: you can look up a record by its byte offset, splice new
+// records in, or ask the manifest to print itself in formatted or raw form.
+// LdifFile is that manifest: a serialisable list of LdifContainers (version,
+// comment, content record, change record, separator, EOF) with static helpers
+// for position-based container/part lookup and in-place container replacement.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A LDIF file, as we manipulate it in Studio. It's a list of LdifContainer.
+ * The in-memory model of a parsed LDIF document.
+ * Holds an ordered list of {@link LdifContainer} objects (version, comments,
+ * content records, change records, separators, and EOF markers) and exposes:
+ * <ul>
+ *   <li>type queries ({@link #isContentType()}, {@link #isChangeType()})</li>
+ *   <li>static position-based lookups ({@link #getContainer},
+ *       {@link #getContainerContent}, {@link #getParts})</li>
+ *   <li>in-place replacement ({@link #replace}) for editor-driven splicing</li>
+ *   <li>full serialisation ({@link #toRawString()},
+ *       {@link #toFormattedString})</li>
+ * </ul>
+ * Think of this as the Rebel data-smuggling manifest — every transmitted
+ * record is listed, locatable by offset, and replaceable in place.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -43,25 +63,31 @@ public class LdifFile implements Serializable
     /** The serialVersionUID */
     private static final long serialVersionUID = 846864138240517008L;
 
-    /** The list of container constituting this LDIF file */
+    /** Ordered list of all parsed containers (including separators, EOF, etc.). */
     private List<LdifContainer> containerList = new ArrayList<LdifContainer>();
-    
-    /** A flag which is set if a LdifChange is added into the LdifFile */
+
+    /**
+     * Set to {@code true} when a {@link LdifChangeRecord} is added, marking
+     * this as a change-type LDIF file.
+     */
     private boolean hasChanges = false;
 
 
+    // ── CONSTRUCT ─────────────────────────────────────────────────────────────
     /**
-     * Create an instance of a LdifFile.
+     * Creates an empty LDIF file model with no containers.
      */
     public LdifFile()
     {
     }
 
 
+    // ── TYPE QUERIES ─────────────────────────────────────────────────────────
     /**
-     * Tells if the LDIF file is a Content LDIF (there will be no changes)
+     * Returns {@code true} if this file contains only content records (no
+     * changetype operations).
      *
-     * @return true if the LDIF file does not contain any change
+     * @return {@code true} if no change records have been added
      */
     public boolean isContentType()
     {
@@ -70,9 +96,10 @@ public class LdifFile implements Serializable
 
 
     /**
-     * Tells if the LDIF file is a Change LDIF (there will be no changes)
+     * Returns {@code true} if this file contains at least one changetype
+     * operation (add, modify, delete, or moddn).
      *
-     * @return true if the LDIF file is a Change LDIF
+     * @return {@code true} if any change record has been added
      */
     public boolean isChangeType()
     {
@@ -80,15 +107,18 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── ADD A CONTAINER ───────────────────────────────────────────────────────
     /**
-     * Add a new LdifContainer to the LdifFile
-     * 
-     * @param container The added LdifContainer
+     * Appends {@code container} to the end of the container list.
+     * If {@code container} is a {@link LdifChangeRecord}, also sets the
+     * {@link #hasChanges} flag.
+     *
+     * @param container  the container to add
      */
     public void addContainer( LdifContainer container )
     {
         containerList.add( container );
-        
+
         if ( container instanceof LdifChangeRecord )
         {
             hasChanges = true;
@@ -96,8 +126,12 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── GET ALL CONTAINERS ────────────────────────────────────────────────────
     /**
-     * @return A list of LdifContainers, including version, comments, records and unknown
+     * Returns the full ordered list of containers (version headers, comments,
+     * records, separators, and EOF markers).
+     *
+     * @return the live container list
      */
     public List<LdifContainer> getContainers()
     {
@@ -105,8 +139,12 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── GET RECORDS ONLY ──────────────────────────────────────────────────────
     /**
-     * @return An array of LdifRecords (even invalid), no LdifVersion, LdifComments, or LdifUnknown
+     * Returns an array of all {@link LdifRecord} containers (both valid and
+     * invalid records), excluding version headers, comments, and separators.
+     *
+     * @return array of {@link LdifRecord} instances in document order
      */
     public LdifRecord[] getRecords()
     {
@@ -124,8 +162,12 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── GET THE LAST CONTAINER ────────────────────────────────────────────────
     /**
-     * @return the last LdifContainer, or null
+     * Returns the last container in the list, or {@code null} if the list is
+     * empty.
+     *
+     * @return the last {@link LdifContainer}, or {@code null}
      */
     public LdifContainer getLastContainer()
     {
@@ -140,6 +182,12 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── SERIALISATION ─────────────────────────────────────────────────────────
+    /**
+     * Returns the raw (unformatted) LDIF text of all containers concatenated.
+     *
+     * @return the full raw LDIF string
+     */
     public String toRawString()
     {
         StringBuilder sb = new StringBuilder();
@@ -153,6 +201,14 @@ public class LdifFile implements Serializable
     }
 
 
+    /**
+     * Returns the formatted LDIF text of all containers concatenated using
+     * {@code formatParameters}.
+     *
+     * @param formatParameters  the line-width, space-after-colon, and
+     *                          line-separator settings to apply
+     * @return the full formatted LDIF string
+     */
     public String toFormattedString( LdifFormatParameters formatParameters )
     {
         StringBuilder sb = new StringBuilder();
@@ -166,6 +222,9 @@ public class LdifFile implements Serializable
     }
 
 
+    /**
+     * Returns a debug-friendly string listing all containers.
+     */
     public String toString()
     {
         StringBuilder sb = new StringBuilder();
@@ -179,12 +238,14 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── STATIC LOOKUP: CONTAINER AT OFFSET ────────────────────────────────────
     /**
-     * Retrieve the container at the given offset
+     * Returns the {@link LdifContainer} in {@code model} whose range covers
+     * {@code offset}, or {@code null} if none does.
      *
-     * @param model The Ldif file containing the containers
-     * @param offset The position in the file
-     * @return The container if we found one
+     * @param model   the LDIF file to search
+     * @param offset  the byte offset to look up
+     * @return the container at {@code offset}, or {@code null}
      */
     public static LdifContainer getContainer( LdifFile model, int offset )
     {
@@ -211,6 +272,15 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── STATIC LOOKUP: INNER MODSPEC AT OFFSET ────────────────────────────────
+    /**
+     * Returns the {@link LdifModSpec} part inside {@code container} whose range
+     * covers {@code offset}, or {@code null} if none does.
+     *
+     * @param container  the containing {@link LdifContainer}
+     * @param offset     the byte offset to look up
+     * @return the nested {@link LdifModSpec}, or {@code null}
+     */
     public static LdifModSpec getInnerContainer( LdifContainer container, int offset )
     {
         if ( ( container == null ) ||
@@ -242,6 +312,16 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── STATIC LOOKUP: CONTAINERS OVERLAPPING A RANGE ─────────────────────────
+    /**
+     * Returns all {@link LdifContainer}s in {@code model} whose ranges overlap
+     * the region {@code [offset, offset+length)}.
+     *
+     * @param model   the LDIF file to search
+     * @param offset  the start of the region
+     * @param length  the length of the region
+     * @return array of overlapping containers, or {@code null} on bad input
+     */
     public static LdifContainer[] getContainers( LdifFile model, int offset, int length )
     {
         if ( ( model == null ) || ( offset < 0 ) )
@@ -270,6 +350,18 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── STATIC LOOKUP: PARTS OVERLAPPING A RANGE (from model) ─────────────────
+    /**
+     * Returns all {@link LdifPart}s in {@code model} that overlap the region
+     * {@code [offset, offset+length)}.  Recurses into {@link LdifModSpec}
+     * containers.  For consecutive invalid parts the preceding valid part is
+     * substituted.
+     *
+     * @param model   the LDIF file to search
+     * @param offset  the start of the region
+     * @param length  the length of the region
+     * @return array of overlapping parts, or {@code null} on bad input
+     */
     public static LdifPart[] getParts( LdifFile model, int offset, int length )
     {
         if ( ( model == null ) || ( offset < 0 ) )
@@ -284,6 +376,17 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── STATIC LOOKUP: PARTS OVERLAPPING A RANGE (from list) ──────────────────
+    /**
+     * Returns all {@link LdifPart}s in {@code containers} that overlap the
+     * region {@code [offset, offset+length)}.  Recurses into
+     * {@link LdifModSpec} parts.
+     *
+     * @param containers  the container list to search
+     * @param offset      the start of the region
+     * @param length      the length of the region
+     * @return array of overlapping parts, or {@code null} on bad input
+     */
     public static LdifPart[] getParts( List<LdifContainer> containers, int offset, int length )
     {
         if ( ( containers == null ) || ( offset < 0 ) )
@@ -314,7 +417,7 @@ public class LdifFile implements Serializable
                             LdifModSpec spec = ( LdifModSpec ) ldifPart;
                             List<LdifContainer> newLdifContainer = new ArrayList<LdifContainer>();
                             newLdifContainer.add( spec );
-                            
+
                             partList.addAll( Arrays.asList( getParts( newLdifContainer, offset, length ) ) );
                         }
                         else
@@ -338,6 +441,16 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── STATIC LOOKUP: PART AT OFFSET WITHIN CONTAINER ────────────────────────
+    /**
+     * Returns the {@link LdifPart} inside {@code container} whose range covers
+     * {@code offset}, recursing into {@link LdifModSpec} containers.
+     * Returns {@code null} if {@code offset} is outside the container's range.
+     *
+     * @param container  the container to search
+     * @param offset     the byte offset to look up
+     * @return the part at {@code offset}, or {@code null}
+     */
     public static LdifPart getContainerContent( LdifContainer container, int offset )
     {
         int containerOffset = container.getOffset();
@@ -374,6 +487,22 @@ public class LdifFile implements Serializable
     }
 
 
+    // ── IN-PLACE CONTAINER REPLACEMENT ───────────────────────────────────────
+    // Remove old containers, insert new ones at the same position, then
+    // shift the offsets of all subsequent containers to reflect the delta.
+    /**
+     * Replaces {@code oldContainers} in the container list with
+     * {@code newContainers}, adjusting the absolute offsets of all containers
+     * that follow the replaced region.
+     *
+     * <p>The first element of {@code oldContainers} determines the insertion
+     * index.  All new containers are positioned starting from the offset of
+     * the first removed container.</p>
+     *
+     * @param oldContainers  the containers to remove (must be in the list)
+     * @param newContainers  the replacement containers (offsets will be
+     *                       adjusted to the insertion point)
+     */
     public void replace( LdifContainer[] oldContainers, List<LdifContainer> newContainers )
     {
         // find index

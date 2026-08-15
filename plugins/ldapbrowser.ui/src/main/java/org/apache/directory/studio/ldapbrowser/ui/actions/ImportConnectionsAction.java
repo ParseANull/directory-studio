@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.actions;
@@ -32,15 +32,32 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: ImportConnectionsAction — CLONE TROOPER EXECUTES IMPORT ORDER ────
+// The Emperor's order arrives: "Import the new assets." Clone trooper CT-9904
+// receives the signal, mobilises immediately, and launches the import operation
+// without hesitation. This action does the same: the user triggers "Import
+// Connections" and we immediately open the import wizard, no questions asked,
+// always ready.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This Action launches the Import Connections Wizard.
+ * Launches the {@link ImportConnectionsWizard}, which guides the user through
+ * importing LDAP connection definitions from a file into Directory Studio.
+ * Always enabled — you can import connections at any point regardless of what
+ * is currently selected.
+ * Think of this as the clone trooper who stands ready for the import mission
+ * twenty-four hours a day, no conditions attached.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ImportConnectionsAction extends BrowserAction
 {
+    // ── Trooper Reports for Import Duty ──────────────────────────────────────
+    // CT-9904 snaps to attention — no configuration, he's already trained
+    // and ready for the import mission.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ImportConnectionsAction.
+     * Creates a new {@code ImportConnectionsAction} ready to launch the import
+     * wizard on demand.
      */
     public ImportConnectionsAction()
     {
@@ -48,8 +65,14 @@ public class ImportConnectionsAction extends BrowserAction
     }
 
 
+    // ── Trooper Executes the Import Mission ──────────────────────────────────
+    // The signal fires: initialise the wizard with the active workbench, open
+    // the dialog, block until it closes. The trooper does not return early.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Launches the {@link ImportConnectionsWizard} in a blocking {@link WizardDialog}.
+     * The wizard is initialised with the active workbench window and its current
+     * selection. The dialog blocks until the user finishes or cancels.
      */
     public void run()
     {
@@ -63,8 +86,13 @@ public class ImportConnectionsAction extends BrowserAction
     }
 
 
+    // ── Trooper Announces the Mission Name ───────────────────────────────────
+    // "Import Connections" — the trooper repeats the order back as the menu label.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the localised display name "Import Connections" for this action.
+     *
+     * @return  the menu label; never {@code null}
      */
     public String getText()
     {
@@ -72,8 +100,14 @@ public class ImportConnectionsAction extends BrowserAction
     }
 
 
+    // ── Trooper Shows His Import Badge ───────────────────────────────────────
+    // The trooper displays the import-connections insignia so the user can spot
+    // this menu item at a glance.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the image descriptor for the "import connections" icon.
+     *
+     * @return  the {@link ImageDescriptor} for the icon; never {@code null}
      */
     public ImageDescriptor getImageDescriptor()
     {
@@ -81,8 +115,14 @@ public class ImportConnectionsAction extends BrowserAction
     }
 
 
+    // ── Trooper Checks the Command Registry ──────────────────────────────────
+    // No registered keyboard shortcut for this import mission.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code null} because this action has no registered Eclipse
+     * command ID and therefore no keyboard shortcut.
+     *
+     * @return  {@code null} always
      */
     public String getCommandId()
     {
@@ -90,8 +130,13 @@ public class ImportConnectionsAction extends BrowserAction
     }
 
 
+    // ── Trooper Is Always Ready ───────────────────────────────────────────────
+    // Clone troopers never stand down — this action is always enabled.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code true} unconditionally — import connections is always available.
+     *
+     * @return  {@code true} always
      */
     public boolean isEnabled()
     {

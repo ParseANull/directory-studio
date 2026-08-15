@@ -41,8 +41,20 @@ import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 
 
+// ── CLASS: ConnectionManager — CHEWIE MAINTAINS THE FALCON'S KNOWN-ROUTE LOG ──
+// Chewie keeps a battered datapad listing every hyperspace route the crew has
+// ever plotted: add a new route, remove an old one, look one up by name or ID,
+// and save the whole list to the hold so it survives across trips.
+// This class does exactly that for {@link Connection} objects — it is the live
+// registry of all saved connections and persists them to connections.xml on disk.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to manage {@link Connection}s.
+ * The central registry and persistence manager for all saved {@link Connection}s.
+ * We load connections from disk at startup, keep them in memory, write them back
+ * whenever anything changes, and fire events so the UI stays in sync.
+ * Think of this class as Chewie's hyperspace-route datapad: every known server
+ * is an entry, and Chewie saves the list after every change so nothing is lost
+ * if the Falcon has to make an emergency jump.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -66,8 +78,19 @@ public class ConnectionManager implements ConnectionUpdateListener
     private Set<Connection> connectionList;
 
 
+    // ── CONSTRUCTOR — CHEWIE LOADS THE DATAPAD FROM THE HOLD ─────────────────────
+    // At the start of every mission Chewie retrieves the datapad from the ship's
+    // hold, powers it on, and reads in all the known routes; if it's a brand-new
+    // datapad he runs the fleet initializers to seed it with starter routes.
+    // We load connections from disk, run Eclipse extension initializers if first
+    // launch, and register as a listener so we auto-save on every change.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ConnectionManager.
+     * Creates a new {@link ConnectionManager} and wires it up.
+     * On first run (no connections.xml on disk) we ask Eclipse extension initializers
+     * to seed the connection list with default connections — handy for product distros
+     * that want to ship with a pre-configured test server.
+     * After that we listen to the event bus and auto-save on every connection change.
      */
     public ConnectionManager()
     {
@@ -78,9 +101,16 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── LOAD INITIALIZERS — CHEWIE CHECKS FOR FACTORY-DEFAULT ROUTES ──────────────
+    // If the datapad is brand new (no saved file on disk) Chewie loads the
+    // factory-default routes that shipped with the unit.
+    // We only run Eclipse "connectionInitializer" extensions if connections.xml
+    // doesn't exist yet — we don't want to add duplicates on every restart.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the Connection Initializers. This happens only for the first time, 
-     * which is determined by whether or not the connectionStore file is present.
+     * Runs Eclipse extension-point initializers to pre-populate connections on first launch.
+     * We skip this if connections.xml already exists — initializers are only meant to
+     * run once, on a fresh installation.
      */
     private void loadInitializers()
     {
@@ -104,10 +134,19 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── ADD INITIAL CONNECTION — CHEWIE COPIES A FACTORY ROUTE ONTO THE DATAPAD ───
+    // Chewie instantiates one factory-default route from the configuration chip
+    // and adds it to the datapad's known-routes list.
+    // We instantiate the ConnectionParameter from the Eclipse IConfigurationElement
+    // and register the resulting Connection.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the ConnectionParameter from the configElement and creates the connection.
-     * 
-     * @param configurationElement The configuration element
+     * Instantiates and registers a single connection from an Eclipse extension-point element.
+     * We call this once per initializer element during first-launch setup.
+     * If the extension class can't be instantiated, we log the error and move on.
+     *
+     * @param configurationElement  The Eclipse config element that references
+     *                              a {@link ConnectionParameter} implementation class.
      */
     private void addInitialConnection( IConfigurationElement configurationElement )
     {
@@ -127,13 +166,25 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── GET MODIFICATION LOG FILENAME — CHEWIE FINDS THE CHANGE-LOG SLOT ─────────
+    // Every route on Chewie's datapad has a corresponding change-log tab where
+    // every modification is recorded in LDIF format.
+    // We compute the OS path to the per-connection modification log file.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Modification Log filename for the corresponding connection.
+     * Returns the file path for the LDIF modification log of the given connection.
+     * This log records every LDAP write operation in LDIF format — handy for auditing
+     * or replaying changes.
+     * The logs/ directory is created on demand if it doesn't exist yet.
      *
-     * @param connection
-     *      the connection
-     * @return
-     *      the Modification Log filename
+     * <p>For example — Chewie looks up the log slot:</p>
+     * <pre>
+     *   String path = ConnectionManager.getModificationLogFileName(myConn);
+     *   // → ".../logs/modifications-{uuid}-%u-%g.ldiflog"
+     * </pre>
+     *
+     * @param connection  The connection whose log path we need.
+     * @return  The absolute OS path string for the modification log file.
      */
     public static final String getModificationLogFileName( Connection connection )
     {
@@ -148,13 +199,18 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── GET SEARCH LOG FILENAME — CHEWIE FINDS THE SEARCH-LOG SLOT ───────────────
+    // Every route also has a search-log tab recording LDAP search requests.
+    // We compute the OS path to the per-connection search log file.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Search Log filename for the corresponding connection.
+     * Returns the file path for the LDIF search log of the given connection.
+     * This log captures every search request and its result summary in LDIF format —
+     * useful for diagnosing what the browser is sending.
+     * The logs/ directory is created on demand if it doesn't exist yet.
      *
-     * @param connection
-     *      the connection
-     * @return
-     *      the Search Log filename
+     * @param connection  The connection whose search-log path we need.
+     * @return  The absolute OS path string for the search log file.
      */
     public static final String getSearchLogFileName( Connection connection )
     {
@@ -169,11 +225,17 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── GET CONNECTION STORE FILENAME — WHERE CHEWIE KEEPS THE DATAPAD FILE ───────
+    // Chewie keeps the master datapad file in a known slot in the ship's state
+    // partition — the Eclipse plugin state directory.
+    // We return the absolute path to connections.xml.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the filename of the Connection Store.
+     * Returns the absolute path to the connections.xml persistence file.
+     * This file lives in the Eclipse plugin state directory, which persists
+     * across workspace sessions.
      *
-     * @return
-     *      the filename of the Connection Store
+     * @return  The OS path to connections.xml.
      */
     public static final String getConnectionStoreFileName()
     {
@@ -181,11 +243,25 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── ADD CONNECTION — CHEWIE ADDS A NEW ROUTE TO THE DATAPAD ──────────────────
+    // Chewie writes a new destination onto the datapad; if a route by the same name
+    // already exists he appends "copy" or a number to avoid confusion.
+    // We add the Connection to our set, auto-renaming on name collision, and fire
+    // an event so the Connections view refreshes.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the connection to the end of the connection list. If there is
-     * already a connection with this name, the new connection is renamed.
+     * Adds a {@link Connection} to the managed set.
+     * If a connection with the same display name already exists, we auto-rename the
+     * new one ("Copy of X", "2 Copy of X", etc.) to avoid confusion.
+     * We fire a {@code connectionAdded} event after adding so the UI updates.
      *
-     * @param connection the connection to add
+     * <p>For example — Chewie adds the route:</p>
+     * <pre>
+     *   manager.addConnection(newConn);
+     *   // connectionList now contains newConn; Connections view refreshes
+     * </pre>
+     *
+     * @param connection  The new connection to register.
      */
     public void addConnection( Connection connection )
     {
@@ -206,13 +282,18 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── GET CONNECTION BY ID — CHEWIE LOOKS UP A ROUTE BY HULL REGISTRATION ──────
+    // Chewie scans the datapad for the route whose hull registration matches
+    // the given UUID — unique, doesn't change even if the route is renamed.
+    // We search connectionList by connection ID (UUID) and return the match.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a connection from its id.
+     * Finds and returns the {@link Connection} with the given unique ID.
+     * We use the ID (a UUID) rather than the name when we need a stable reference
+     * that survives rename operations.
      *
-     * @param id
-     *      the id of the Connection
-     * @return
-     *      the corresponding Connection
+     * @param id  The UUID string of the connection to find.
+     * @return  The matching {@link Connection}, or {@code null} if not found.
      */
     public Connection getConnectionById( String id )
     {
@@ -227,13 +308,17 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── GET CONNECTION BY NAME — CHEWIE LOOKS UP A ROUTE BY ITS LABEL ────────────
+    // Chewie scans the datapad for the route whose label matches the given name.
+    // We search connectionList by the display name.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a connection from its name.
+     * Finds and returns the {@link Connection} with the given display name.
+     * Display names are not guaranteed to be unique (though we try to keep them so),
+     * so this returns only the first match.
      *
-     * @param name
-     *      the name of the Connection
-     * @return
-     *      the corresponding Connection
+     * @param name  The display name to search for.
+     * @return  The matching {@link Connection}, or {@code null} if not found.
      */
     public Connection getConnectionByName( String name )
     {
@@ -248,11 +333,17 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── REMOVE CONNECTION — CHEWIE ERASES A ROUTE FROM THE DATAPAD ───────────────
+    // Chewie crosses a route off the datapad and broadcasts to the crew that
+    // it's gone so they stop trying to jump there.
+    // We remove the Connection from our set and fire a connectionRemoved event.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the given Connection from the Connection list.
+     * Removes the given {@link Connection} from the managed set.
+     * We fire a {@code connectionRemoved} event so the UI (and other listeners)
+     * can clean up any state tied to this connection.
      *
-     * @param connection
-     *      the connection to remove
+     * @param connection  The connection to deregister and remove.
      */
     public void removeConnection( Connection connection )
     {
@@ -261,11 +352,16 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── GET CONNECTIONS — CHEWIE HANDS OVER THE FULL ROUTE MANIFEST ──────────────
+    // Chewie rips out the full list of routes from the datapad and hands it over.
+    // We return all managed connections as a plain array.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets an array containing all the Connections.
+     * Returns all managed connections as an array.
+     * The order is not guaranteed (we use a HashSet internally).
+     * Callers typically use this to populate the Connections view.
      *
-     * @return
-     *      an array containing all the Connections
+     * @return  An array of all current {@link Connection}s (may be empty, never {@code null}).
      */
     public Connection[] getConnections()
     {
@@ -273,11 +369,16 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── GET CONNECTION COUNT — CHEWIE COUNTS THE ROUTES ON THE DATAPAD ────────────
+    // Chewie counts the entries on the datapad to report how many routes
+    // are currently stored.
+    // We return the size of our connection set.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the number of Connections.
+     * Returns the number of connections currently managed.
+     * Useful for display in status bars or for deciding whether to show "no connections" hints.
      *
-     * @return
-     *      the number of Connections
+     * @return  The count of managed connections.
      */
     public int getConnectionCount()
     {
@@ -285,8 +386,17 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION ADDED EVENT — CHEWIE AUTO-SAVES WHEN A ROUTE IS ADDED ─────────
+    // When a new route appears on the datapad, Chewie automatically writes the
+    // updated manifest to the hold so nothing is lost.
+    // We call saveConnections() to persist the change to disk.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionAdded(org.apache.directory.studio.connection.core.Connection)
+     * Responds to a {@code connectionAdded} event by saving all connections to disk.
+     * We implement {@link ConnectionUpdateListener} so we auto-save whenever any
+     * part of the application adds a connection.
+     *
+     * @param connection  The connection that was just added (we don't need it — we save everything).
      */
     public void connectionAdded( Connection connection )
     {
@@ -294,8 +404,14 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION REMOVED EVENT — CHEWIE AUTO-SAVES WHEN A ROUTE IS ERASED ──────
+    // When a route is crossed off the datapad, Chewie saves the updated manifest.
+    // We call saveConnections() to persist the removal to disk.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionRemoved(org.apache.directory.studio.connection.core.Connection)
+     * Responds to a {@code connectionRemoved} event by saving all connections to disk.
+     *
+     * @param connection  The connection that was just removed.
      */
     public void connectionRemoved( Connection connection )
     {
@@ -303,8 +419,16 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION UPDATED EVENT — CHEWIE AUTO-SAVES WHEN A ROUTE CHANGES ─────────
+    // When a route entry changes (renamed, new password, different port) Chewie
+    // writes the updated manifest to the hold immediately.
+    // We call saveConnections() to persist the update to disk.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionUpdated(org.apache.directory.studio.connection.core.Connection)
+     * Responds to a {@code connectionUpdated} event by saving all connections to disk.
+     * This fires whenever any property of a connection changes — name, host, auth, etc.
+     *
+     * @param connection  The connection whose properties just changed.
      */
     public void connectionUpdated( Connection connection )
     {
@@ -312,48 +436,95 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION OPENED EVENT — CHEWIE NOTES THE JUMP BUT DOESN'T SAVE ─────────
+    // Chewie notes that the Falcon made the jump, but opening a connection doesn't
+    // change the manifest so there's nothing to persist.
+    // We intentionally do nothing here.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionOpened(org.apache.directory.studio.connection.core.Connection)
+     * Responds to a {@code connectionOpened} event.
+     * Opening a live connection doesn't change the persisted parameters,
+     * so we do nothing here.
+     *
+     * @param connection  The connection that was opened.
      */
     public void connectionOpened( Connection connection )
     {
     }
 
 
+    // ── CONNECTION CLOSED EVENT — CHEWIE NOTES THE DROP-OUT BUT DOESN'T SAVE ─────
+    // Chewie notes the Falcon dropped out of hyperspace, but closing a connection
+    // doesn't change the manifest.
+    // We intentionally do nothing here.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionClosed(org.apache.directory.studio.connection.core.Connection)
+     * Responds to a {@code connectionClosed} event.
+     * Closing a connection doesn't change the persisted parameters,
+     * so we do nothing here.
+     *
+     * @param connection  The connection that was closed.
      */
     public void connectionClosed( Connection connection )
     {
     }
 
 
+    // ── FOLDER MODIFIED EVENT — NOT OUR CONCERN ────────────────────────────────────
+    // Chewie doesn't manage folders — that's the ConnectionFolderManager's job.
+    // We intentionally do nothing here.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionFolderModified(org.apache.directory.studio.connection.core.ConnectionFolder)
+     * Responds to a {@code connectionFolderModified} event.
+     * The {@link ConnectionManager} only persists connections, not folders,
+     * so we do nothing here.
+     *
+     * @param connectionFolder  The folder that was modified.
      */
     public void connectionFolderModified( ConnectionFolder connectionFolder )
     {
     }
 
 
+    // ── FOLDER ADDED EVENT — NOT OUR CONCERN ──────────────────────────────────────
+    // Chewie doesn't manage folders. We intentionally do nothing here.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionFolderAdded(org.apache.directory.studio.connection.core.ConnectionFolder)
+     * Responds to a {@code connectionFolderAdded} event.
+     * Folder changes don't affect the connections.xml file, so we do nothing.
+     *
+     * @param connectionFolder  The folder that was added.
      */
     public void connectionFolderAdded( ConnectionFolder connectionFolder )
     {
     }
 
 
+    // ── FOLDER REMOVED EVENT — NOT OUR CONCERN ────────────────────────────────────
+    // Chewie doesn't manage folders. We intentionally do nothing here.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionFolderRemoved(org.apache.directory.studio.connection.core.ConnectionFolder)
+     * Responds to a {@code connectionFolderRemoved} event.
+     * Folder changes don't affect the connections.xml file, so we do nothing.
+     *
+     * @param connectionFolder  The folder that was removed.
      */
     public void connectionFolderRemoved( ConnectionFolder connectionFolder )
     {
     }
 
 
+    // ── SAVE CONNECTIONS — CHEWIE WRITES THE MANIFEST TO THE HOLD ────────────────
+    // Chewie writes the full route manifest to a temp file first; if the write
+    // succeeds he atomically replaces the live file — no partial-write corruption.
+    // We serialize all ConnectionParameters to connections.xml using the same
+    // write-to-temp-then-rename strategy.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the Connections
+     * Persists all connections to connections.xml on disk.
+     * We write to a temp file first and only replace the live file if the write
+     * succeeds — this prevents data loss if the app crashes mid-save.
+     * The method is {@code synchronized} so concurrent saves don't corrupt the file.
      */
     public synchronized void saveConnections()
     {
@@ -367,7 +538,7 @@ public class ConnectionManager implements ConnectionUpdateListener
         File file = new File( getConnectionStoreFileName() );
         File tempFile = new File( getConnectionStoreFileName() + TEMP_SUFFIX );
 
-        // To avoid a corrupt file, save object to a temp file first 
+        // To avoid a corrupt file, save object to a temp file first
         try ( FileOutputStream fileOutputStream = new FileOutputStream( tempFile ) )
         {
             ConnectionIO.save( connectionParameters, fileOutputStream );
@@ -401,8 +572,17 @@ public class ConnectionManager implements ConnectionUpdateListener
     }
 
 
+    // ── LOAD CONNECTIONS — CHEWIE READS THE MANIFEST FROM THE HOLD ───────────────
+    // At startup, Chewie opens the hold, pulls out the route manifest file, and
+    // reads every entry back into the datapad's active memory.
+    // We deserialize connections.xml into Connection objects and add them to our set.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the Connections
+     * Loads connections from connections.xml into memory.
+     * Called once during construction. If the file doesn't exist (first launch) we
+     * simply start with an empty set. Any parse error is logged but not rethrown —
+     * a corrupt file leaves us with zero connections rather than crashing.
+     * The method is {@code synchronized} so it doesn't race with a concurrent save.
      */
     private synchronized void loadConnections()
     {

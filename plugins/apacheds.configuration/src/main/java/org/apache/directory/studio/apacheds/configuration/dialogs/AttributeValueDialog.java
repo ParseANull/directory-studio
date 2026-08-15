@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration.dialogs;
 
@@ -35,8 +35,19 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: AttributeValueDialog — IMPERIAL BUREAUCRAT FILLS OUT A FORM ───────────────────
+// An Imperial bureaucrat sits down at a desk to fill in two fields on a requisition form:
+// the attribute type they need and the value they want to assign.
+// Once the form is complete and signed (OK clicked), it goes into the partition's record.
+// This dialog does exactly that: a two-field form for editing an LDAP attribute-value pair.
+// ─────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Dialog for Attribute Value.
+ * Simple two-field dialog for editing an {@link AttributeValueObject} — one field for the
+ * attribute name and one for the value.
+ * Sets the dirty flag whenever either field is changed; on OK writes both fields back
+ * to the model object.
+ * Think of it as the Imperial bureaucrat's requisition form: fill in attribute and value,
+ * click OK, and the entry goes into the record.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -53,8 +64,15 @@ public class AttributeValueDialog extends Dialog
     private Text valueText;
 
 
+    // ── Opening The Form Pre-Populated From The Model Object ──────────────────────────────────
+    // We receive the model object up front so we can pre-populate both text fields and write
+    // back to the same object when OK is clicked.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AttributeValueDialog.
+     * Creates the dialog backed by the given attribute-value pair.
+     * The dialog will pre-populate from the object and write back to it on OK.
+     *
+     * @param attributeValueObject  the attribute-value pair to edit (must not be null)
      */
     public AttributeValueDialog( AttributeValueObject attributeValueObject )
     {
@@ -63,8 +81,13 @@ public class AttributeValueDialog extends Dialog
     }
 
 
+    // ── Setting The Dialog Window Title ───────────────────────────────────────────────────────
+    // This is the title that appears in the dialog's title bar.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Sets the dialog window title to the localised "Attribute/Value Dialog" string.
+     *
+     * @param newShell  the shell being configured
      */
     protected void configureShell( Shell newShell )
     {
@@ -73,15 +96,22 @@ public class AttributeValueDialog extends Dialog
     }
 
 
+    // ── Building The Two-Field Form ───────────────────────────────────────────────────────────
+    // Lay out the two text fields (attribute, value) side-by-side in a two-column grid.
+    // Pre-populate both from the model object; attach modify listeners to track changes.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * This create a dialog like :
-     * 
+     * Builds the form body with two labelled text fields.
+     *
+     * <p>For example — the resulting form:</p>
      * <pre>
      *   +------------------------------------------------+
      *   | Attribute: [           ]  Value: [           ] |
      *   +------------------------------------------------+
      * </pre>
-     * {@inheritDoc}
+     *
+     * @param parent  the parent composite provided by the Dialog framework
+     * @return the created composite
      */
     protected Control createDialogArea( Composite parent )
     {
@@ -109,8 +139,13 @@ public class AttributeValueDialog extends Dialog
     }
 
 
+    // ── Pre-Populating The Fields From The Model Object ───────────────────────────────────────
+    // Pull the current attribute name and value from the model and stuff them into the text
+    // fields.  Null values become empty strings so the text widgets don't blow up.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the UI from the input.
+     * Populates the attribute and value text fields from the current state of
+     * {@link #attributeValueObject}.  Null fields are replaced by empty strings.
      */
     private void initFromInput()
     {
@@ -122,8 +157,13 @@ public class AttributeValueDialog extends Dialog
     }
 
 
+    // ── Attaching Change Listeners To Mark The Form Dirty ────────────────────────────────────
+    // Any keystroke in either field sets dirty=true so the caller can tell whether
+    // something actually changed when the dialog is closed.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds listeners to the UI Fields.
+     * Attaches {@link ModifyListener}s to both text fields; each listener sets the dirty
+     * flag to {@code true} when the field content changes.
      */
     private void addListeners()
     {
@@ -145,8 +185,13 @@ public class AttributeValueDialog extends Dialog
     }
 
 
+    // ── Writing The Form Values Back To The Model Object ─────────────────────────────────────
+    // When the engineer clicks OK, we pull both field values out of the text boxes and write
+    // them back to the AttributeValueObject before closing.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Writes the current text field values back to the {@link AttributeValueObject} and
+     * then closes the dialog via the superclass.
      */
     protected void okPressed()
     {
@@ -157,10 +202,14 @@ public class AttributeValueDialog extends Dialog
     }
 
 
+    // ── Exposing The Edited Model Object To The Caller ────────────────────────────────────────
+    // After the dialog closes the caller retrieves the updated object from here.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Attribute Value Object.
+     * Returns the {@link AttributeValueObject} that was edited in this dialog.
+     * After the dialog closes with OK, this object contains the updated values.
      *
-     * @return the Attribute Value Object
+     * @return the attribute-value pair, updated with the values the user entered
      */
     public AttributeValueObject getAttributeValueObject()
     {
@@ -168,10 +217,14 @@ public class AttributeValueDialog extends Dialog
     }
 
 
+    // ── Reporting Whether The User Changed Anything ───────────────────────────────────────────
+    // The caller can skip expensive model updates if dirty is still false.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the dirty flag of the dialog.
+     * Returns whether the user changed anything in either text field.
      *
-     * @return the dirty flag of the dialog
+     * @return {@code true} if any field was modified; {@code false} if the dialog was
+     *         opened and closed without changes
      */
     public boolean isDirty()
     {

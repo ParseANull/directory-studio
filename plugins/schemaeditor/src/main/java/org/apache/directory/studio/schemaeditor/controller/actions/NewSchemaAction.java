@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.controller.actions;
 
@@ -33,15 +33,36 @@ import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: NewSchemaAction — Construction of the Second Death Star ────────────
+// Deep in the Endor system, Imperial engineers receive the order to begin the
+// second Death Star: gather the crew, lay the structural foundation, and open
+// the blast doors so construction can proceed under Palpatine's watchful eye.
+// We do the same thing here — when the user fires "New Schema," we spin up the
+// wizard, initialize it with an empty selection, and open it so they can lay
+// the foundation for a new schema container.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This action launches the NewSchemaWizard.
+ * Launches the {@link NewSchemaWizard} so the user can create a brand-new schema.
+ * This is the action wired to the "New Schema" toolbar button and menu entry in the
+ * Schema Editor plugin.
+ * Think of this class as the Imperial construction crew receiving the order to build:
+ * it assembles the wizard, initializes the worksite (empty selection), and opens
+ * the door so the user can start laying schema foundations.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class NewSchemaAction extends Action implements IWorkbenchWindowActionDelegate
 {
+    // ── Engineering Crew Reports For Duty ────────────────────────────────────────
+    // The Imperial construction chief arrives at the Endor site and reads out the
+    // standing orders: here is the label, here is the tooltip, here is your station ID.
+    // Before the first girder goes up, every role must be assigned — that's what this
+    // constructor does, mapping label, tooltip, command ID, icon, and initial state.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of NewSchemaAction.
+     * Creates a new instance of NewSchemaAction and configures all the visual properties.
+     * We set the label, tooltip, command ID (so keybindings work), and the icon, then
+     * start the action disabled — it only makes sense once a project is open.
      */
     public NewSchemaAction()
     {
@@ -54,8 +75,17 @@ public class NewSchemaAction extends Action implements IWorkbenchWindowActionDel
     }
 
 
+    // ── Blast Doors Open, Construction Begins ────────────────────────────────────
+    // The Emperor's signal reaches Endor: the blast doors grind open, the engineering
+    // team pours onto the scaffolding, and the second Death Star's superstructure
+    // begins to take shape under the foreman's direction.
+    // Here we instantiate the wizard, hand it an empty workbench selection, wrap it
+    // in a WizardDialog, and open it — the user steps inside and starts building.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Opens the New Schema wizard so the user can define and name a new schema.
+     * We create the wizard, initialize it with an empty selection (no pre-selected
+     * elements needed), wrap it in a {@link WizardDialog}, and call {@code open()}.
      */
     public void run()
     {
@@ -69,8 +99,17 @@ public class NewSchemaAction extends Action implements IWorkbenchWindowActionDel
     }
 
 
+    // ── Foreman Relays The Order ──────────────────────────────────────────────────
+    // A junior officer relays the Emperor's construction mandate down the chain —
+    // the foreman just calls through to the crew without adding anything extra.
+    // This IAction-flavored overload lets Eclipse's command framework invoke us;
+    // we simply delegate to our no-arg run().
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Delegates to {@link #run()} so Eclipse's workbench action framework can invoke us.
+     * The {@code action} parameter is unused — we don't need it here.
+     *
+     * @param action  the IAction proxy passed by the framework; we ignore it
      */
     public void run( IAction action )
     {
@@ -78,8 +117,14 @@ public class NewSchemaAction extends Action implements IWorkbenchWindowActionDel
     }
 
 
+    // ── Construction Site Decommissioned ─────────────────────────────────────────
+    // The Death Star is destroyed; the construction site is cleared and the crew
+    // stand down — no ongoing resources to release here.
+    // This action holds no listeners or heavy resources, so dispose is a no-op.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Cleans up any resources held by this action when the workbench disposes it.
+     * We have nothing to release, so this is intentionally empty.
      */
     public void dispose()
     {
@@ -87,8 +132,17 @@ public class NewSchemaAction extends Action implements IWorkbenchWindowActionDel
     }
 
 
+    // ── Engineering Chief Receives Window Assignment ──────────────────────────────
+    // The Imperial construction chief is handed a datapad listing which sector window
+    // they are responsible for — but our crew needs no window-specific wiring.
+    // We implement this IWorkbenchWindowActionDelegate method as required by the
+    // interface; there's no per-window setup needed.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when this action is bound to a workbench window.
+     * We don't need the window reference for anything, so this is intentionally empty.
+     *
+     * @param window  the workbench window we're being initialized into; unused
      */
     public void init( IWorkbenchWindow window )
     {
@@ -96,8 +150,17 @@ public class NewSchemaAction extends Action implements IWorkbenchWindowActionDel
     }
 
 
+    // ── Scout Reports Back, Construction Continues Regardless ────────────────────
+    // A scout droid reports a change in which sector the Rebels are attacking, but
+    // the Death Star construction crew keeps welding — the selection in the UI
+    // doesn't affect whether we can create a new schema.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse whenever the workbench selection changes.
+     * We don't gate "New Schema" on what's selected, so we ignore this notification.
+     *
+     * @param action     the IAction proxy; unused
+     * @param selection  the current workbench selection; unused
      */
     public void selectionChanged( IAction action, ISelection selection )
     {

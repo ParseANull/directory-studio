@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.widget;
 
@@ -56,11 +56,22 @@ import org.eclipse.swt.widgets.ToolItem;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: DifferencesWidget — THE TANTIVE IV BRIDGE IN TWO STATIONS ─────────
+// On the Tantive IV, the bridge has two distinct stations operating side by side:
+// one for navigation (the tree on the left showing which schemas changed) and one
+// for weapons/communications (the table on the right listing the exact property
+// deltas). Both stations are coordinated — selecting something on the left updates
+// the right, exactly as a tree selection here refreshes the properties table.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the DifferencesWidget.
- * <p>
- * It is used to display a List of Difference given in input.
- * 
+ * A composite widget that displays a set of {@link SchemaDifference} objects in a
+ * two-panel layout: a tree on the left groups differences by schema, and a table on
+ * the right shows the individual property-level changes for whatever is selected.
+ * Think of it as the Tantive IV bridge: the left panel is navigation (schema tree),
+ * the right panel is tactical readout (property detail table), and both panels
+ * share the same preference store so they stay in sync with the user's sorting and
+ * grouping preferences.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DifferencesWidget
@@ -93,8 +104,16 @@ public class DifferencesWidget
     private MenuItem groupByProperty;
 
 
+    // ── THE CREW REPORTS FOR DUTY: CONSTRUCTING THE WIDGET ───────────────────────
+    // The bridge crew assembles before the Tantive IV leaves port — here we initialise
+    // the shared preference store that both the tree and table panels will consult.
+    // Everything else is deferred until createWidget() is called with a parent composite.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DifferencesWidget.
+     * Creates a new DifferencesWidget and wires it to the plugin's preference store.
+     * We grab the store here so both panels created later in
+     * {@link #createWidget(Composite)} can share it. No SWT widgets are created yet —
+     * those come when the caller provides a parent composite.
      */
     public DifferencesWidget()
     {
@@ -102,11 +121,28 @@ public class DifferencesWidget
     }
 
 
+    // ── BOTH BRIDGE STATIONS COME ONLINE ─────────────────────────────────────────
+    // Captain Antilles gives the order and both bridge stations light up: the left
+    // navigation station (tree viewer showing schema differences) and the right
+    // tactical station (table viewer listing property changes). Each station has its
+    // own toolbar menu for sorting and grouping, and they talk to each other — a
+    // selection on the left automatically updates what the right station shows.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
-     * 
-     * @param parent
-     *            the parent Composite
+     * Builds the two-panel UI — a tree viewer on the left and a table viewer on the
+     * right — and attaches everything to {@code parent}. We also wire up the
+     * preference listener so display changes (label format, sorting, grouping)
+     * propagate to both panels without requiring a manual refresh.
+     * Call this once after construction; calling it again will create duplicate widgets.
+     *
+     * <p>For example — the Tantive IV bridge comes to life:</p>
+     * <pre>
+     *   Left station: tree of SchemaDifference nodes, collapsible by double-click.
+     *   Right station: table of PropertyDifference rows for whatever is selected.
+     *   Each station has a menu for "Sorting..." and "Preferences..." options.
+     * </pre>
+     *
+     * @param parent  the SWT composite that will host both panels side by side
      */
     public void createWidget( Composite parent )
     {
@@ -294,11 +330,24 @@ public class DifferencesWidget
     }
 
 
+    // ── NEW MISSION BRIEFING ARRIVES AT THE BRIDGE ────────────────────────────────
+    // A new set of orders comes in from command: here is the updated list of schema
+    // differences to analyse. We hand them directly to the tree viewer and let the
+    // content provider do the work of unpacking the hierarchy.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the Input of the DifferencesWidget.
-     * 
-     * @param input
-     *            the input
+     * Feeds a fresh list of {@link SchemaDifference} objects into the tree viewer on
+     * the left panel. The right-panel table is cleared automatically because the tree
+     * selection resets. Call this whenever you have a new comparison result to display.
+     *
+     * <p>For example — the Rebel briefing officer hands new intel to the bridge:</p>
+     * <pre>
+     *   List&lt;SchemaDifference&gt; diffs = comparator.compare(local, remote);
+     *   widget.setInput(diffs);
+     *   // Tree now shows each schema with its ADDED / MODIFIED / REMOVED status.
+     * </pre>
+     *
+     * @param input  the list of schema-level differences to display; may be empty but not null
      */
     public void setInput( List<SchemaDifference> input )
     {
@@ -306,11 +355,25 @@ public class DifferencesWidget
     }
 
 
+    // ── SWITCHING TACTICAL READOUT MODE: GROUPING OPTIONS ────────────────────────
+    // The right station officer says "give me readouts grouped by property" or "by
+    // change type." We update the preference store so the change persists across
+    // sessions, sync the menu checkmarks, then refresh the table to apply the new layout.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Changes the Grouping option.
-     * 
-     * @param value
-     *            the value to store in the PreferenceStore
+     * Persists a new grouping preference and refreshes the right-panel table so it
+     * immediately reflects the new layout. We write to the preference store so the
+     * choice survives until the user changes it again.
+     *
+     * <p>For example — the right-station officer changes the display mode:</p>
+     * <pre>
+     *   changeGrouping(PREFS_DIFFERENCES_WIDGET_GROUPING_PROPERTY)
+     *     →  "Group by Property" checked, "Group by Type" unchecked, table refreshes.
+     * </pre>
+     *
+     * @param value  the grouping constant to store —
+     *               {@code PREFS_DIFFERENCES_WIDGET_GROUPING_PROPERTY} or
+     *               {@code PREFS_DIFFERENCES_WIDGET_GROUPING_TYPE}
      */
     private void changeGrouping( int value )
     {
@@ -320,9 +383,22 @@ public class DifferencesWidget
     }
 
 
+    // ── SYNCING THE BRIDGE CONSOLE LIGHTS ────────────────────────────────────────
+    // The status lights on both bridge stations need to match the actual preference
+    // value. We read the current setting from the store and update the checkmarks on
+    // both "Group By Property" and "Group By Type" menu items accordingly.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the MenuItmes 'check' state according to the value from the
-     * PreferenceStore.
+     * Reads the current grouping preference and updates the check state on the two
+     * grouping menu items so the UI accurately reflects what is stored. We call this
+     * after every grouping change and also during initial widget setup.
+     *
+     * <p>For example — Captain Antilles checks all console lights are consistent:</p>
+     * <pre>
+     *   pref == GROUPING_PROPERTY  →  groupByProperty checked,  groupByType unchecked
+     *   pref == GROUPING_TYPE      →  groupByProperty unchecked, groupByType checked
+     *   pref == anything else      →  both unchecked
+     * </pre>
      */
     private void updateMenuItemsCheckStatus()
     {
@@ -345,8 +421,21 @@ public class DifferencesWidget
     }
 
 
+    // ── AUTHORISING WHICH SIGNALS THE BRIDGE MONITORS ────────────────────────────
+    // Not every preference change should trigger a tree refresh — only the ones
+    // relevant to how schema items are labelled and sorted. We build a whitelist here
+    // so the listener ignores unrelated preference changes and avoids unnecessary redraws.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Authorized Prefs IDs.
+     * Builds the whitelist of preference keys that the tree viewer should react to.
+     * Any preference change whose key is not in this list is ignored by our listener,
+     * so we only refresh when something visual actually changed (labels, sorting, grouping).
+     *
+     * <p>For example — the bridge only monitors channels relevant to navigation:</p>
+     * <pre>
+     *   authorizedPrefs includes PREFS_SCHEMA_VIEW_LABEL, PREFS_SCHEMA_VIEW_GROUPING, etc.
+     *   A change to an unrelated pref (e.g. connection timeout) is silently skipped.
+     * </pre>
      */
     private void initAuthorizedPrefs()
     {
@@ -364,8 +453,16 @@ public class DifferencesWidget
     }
 
 
+    // ── OPENING THE COMM CHANNEL TO FLEET COMMAND ────────────────────────────────
+    // Obi-Wan senses every disturbance in the Force — we register our listener on the
+    // preference store so we are notified whenever a relevant preference changes and
+    // can refresh the tree viewer to reflect the new display settings.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the listener on the preferences store
+     * Registers our {@link IPropertyChangeListener} on the preference store so we
+     * receive a callback whenever a watched preference changes. This keeps the tree
+     * viewer in sync with user settings without requiring a manual refresh.
+     * Always paired with the removal in {@link #dispose()}.
      */
     private void initPreferencesListener()
     {
@@ -373,8 +470,20 @@ public class DifferencesWidget
     }
 
 
+    // ── THE TANTIVE IV GOES DOWN: RELEASING BRIDGE RESOURCES ─────────────────────
+    // When the Tantive IV is boarded by the Empire, everything shuts down gracefully.
+    // Here we remove our preference listener from the store so we do not leave a
+    // dangling reference that could cause updates after the widget is gone.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes the SWT resources allocated by this widget.
+     * Releases this widget's preference listener from the store, preventing memory
+     * leaks and stale callbacks after the widget is removed from the UI. Call this
+     * from the owning dialog or view's {@code dispose()} method.
+     *
+     * <p>For example — the bridge shuts down in an orderly fashion:</p>
+     * <pre>
+     *   widget.dispose();  // listener removed, no further callbacks
+     * </pre>
      */
     public void dispose()
     {

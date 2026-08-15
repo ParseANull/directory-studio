@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.controller.actions;
 
@@ -38,8 +38,21 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 
 
+// ── CLASS: RenameProjectAction — Clone Troopers Execute Order 66 ──────────────
+// On Coruscant, Commander Fox receives Order 66 with a specific target: a named
+// Jedi whose identity must be changed in every Imperial record — the old name
+// struck out, a new designation written in. The troopers don't freelance;
+// they confirm the target, open the rename dialog with the current name,
+// and apply the new one only if the operator confirms.
+// We do the same: show the current project name in the dialog, commit the rename
+// only on Dialog.OK, and cancel cleanly if the user backs out.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This action launches the NewProjectWizard.
+ * Renames the selected project by showing a {@link RenameProjectDialog} pre-filled
+ * with the project's current name, then committing the new name if confirmed.
+ * We enable ourselves only when exactly one project is selected in the Projects View.
+ * Think of this as the Imperial records office receiving the rename order: confirm
+ * the single target, open the form, and apply it only on approval.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -52,11 +65,17 @@ public class RenameProjectAction extends Action implements IWorkbenchWindowActio
     private ProjectsHandler projectsHandler;
 
 
+    // ── Commander Fox Reads The Target List And Stands Ready ─────────────────────
+    // Fox reviews the manifest: one target at a time, one rename at a time. He hooks
+    // up a scanner that watches the selection in the projects roster — as soon as
+    // exactly one project is highlighted, the rename option goes live.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of RenameProjectAction.
+     * Creates a new RenameProjectAction tied to the given project table viewer.
+     * We wire a selection listener so we enable ourselves when exactly one project
+     * is selected, and start disabled.
      *
-     * @param view
-     *      the associate view
+     * @param viewer  the Projects View table viewer we watch for selection changes
      */
     public RenameProjectAction( TableViewer viewer )
     {
@@ -79,8 +98,17 @@ public class RenameProjectAction extends Action implements IWorkbenchWindowActio
     }
 
 
+    // ── Fox Opens The Imperial Record And Awaits Confirmation ────────────────────
+    // Commander Fox identifies the target in the roster (the one selected project),
+    // opens the rename form pre-filled with the project's current designation, and
+    // waits. If the operator signs off (Dialog.OK), Fox transmits the new name to
+    // the central record system. If the operator cancels, nothing changes.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Opens the rename dialog pre-populated with the current project name, then
+     * applies the new name via {@link ProjectsHandler#renameProject} if the user
+     * clicks OK.
+     * Nothing happens if the selection is empty or the user cancels the dialog.
      */
     public void run()
     {
@@ -97,8 +125,13 @@ public class RenameProjectAction extends Action implements IWorkbenchWindowActio
     }
 
 
+    // ── Fox Relays The Order Down The Chain ──────────────────────────────────────
+    // A subordinate repeats the rename order verbatim — no deviation.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Delegates to {@link #run()} so Eclipse's command framework can invoke us.
+     *
+     * @param action  the IAction proxy; unused
      */
     public void run( IAction action )
     {
@@ -106,8 +139,11 @@ public class RenameProjectAction extends Action implements IWorkbenchWindowActio
     }
 
 
+    // ── Records Office Closes For The Day ────────────────────────────────────────
+    // Once the rename is processed, the records office shuts down — nothing to release.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Releases any resources held by this action. We hold none, so this is a no-op.
      */
     public void dispose()
     {
@@ -115,8 +151,13 @@ public class RenameProjectAction extends Action implements IWorkbenchWindowActio
     }
 
 
+    // ── Fox Receives His Post Assignment ─────────────────────────────────────────
+    // The commander is assigned to the Coruscant garrison — no per-window setup needed.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called when this action is bound to a workbench window. No per-window setup needed.
+     *
+     * @param window  the workbench window; unused
      */
     public void init( IWorkbenchWindow window )
     {
@@ -124,8 +165,16 @@ public class RenameProjectAction extends Action implements IWorkbenchWindowActio
     }
 
 
+    // ── Roster Changes, Enable State Managed By Listener ────────────────────────
+    // The garrison roster shifts as troopers rotate — but our selection listener on
+    // the table viewer already handles enable/disable, so nothing extra needed here.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the workbench selection changes. Our table viewer's
+     * selection listener already handles enable/disable; nothing extra needed here.
+     *
+     * @param action     the IAction proxy; unused
+     * @param selection  the current selection; unused
      */
     public void selectionChanged( IAction action, ISelection selection )
     {

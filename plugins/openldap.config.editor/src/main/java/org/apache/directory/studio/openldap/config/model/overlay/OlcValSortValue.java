@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.model.overlay;
 
@@ -28,9 +28,22 @@ import org.apache.directory.api.util.Position;
 import org.apache.directory.api.util.Strings;
 
 
+// ── CLASS: OlcValSortValue — Lando's Single Ledger Entry with Sort Rule ───────
+// Each entry in Lando's Cloud City trade ledger says: "for THIS attribute, under
+// THESE entries (the base DN), sort the values using THIS algorithm — alpha-ascend,
+// numeric-descend, etc." And optionally, values can carry their own weight tags
+// so the most important ones always float to the top.
+// OlcValSortValue represents a single such entry: the attribute name, the base DN
+// scope, whether weighting is in play, and the sort method. It parses itself from
+// the raw olcValSortAttr string format that OpenLDAP stores in cn=config.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents 'OlcValSortOverlay' value.
- * 
+ * Represents a single {@code olcValSortAttr} value, which defines one sort rule
+ * for the valsort overlay. The format is:
+ * {@code <attribute> "<baseDn>" [weighted] <sortMethod>}
+ * Think of this as one entry in Lando's Cloud City trade ledger — attribute name,
+ * scope, and ordering preference.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OlcValSortValue
@@ -50,10 +63,18 @@ public class OlcValSortValue
     private boolean isWeighted = false;
 
 
+    // ── getAttribute — Lando Reads Which Attribute This Rule Covers ───────────────
+    // Lando checks which attribute's values this sort rule applies to.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the attribute.
+     * Returns the attribute type name this sort rule applies to.
      *
-     * @return the attribute
+     * <p>For example — Lando reads the attribute:</p>
+     * <pre>
+     *   String attr = valSortValue.getAttribute(); // "member"
+     * </pre>
+     *
+     * @return  the attribute type name string
      */
     public String getAttribute()
     {
@@ -61,10 +82,21 @@ public class OlcValSortValue
     }
 
 
+    // ── getBaseDn — Lando Reads the Ledger Scope ──────────────────────────────────
+    // Lando checks which subtree this sort rule governs — only entries under this
+    // DN get their attribute values sorted.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the base DN.
+     * Returns the base DN that scopes this sort rule.
+     * Only entries at or below this DN will have their attribute values sorted.
      *
-     * @return the base DN
+     * <p>For example — Lando reads the scope:</p>
+     * <pre>
+     *   Dn base = valSortValue.getBaseDn();
+     *   // e.g., ou=groups,dc=example,dc=com
+     * </pre>
+     *
+     * @return  the base Dn for this sort rule
      */
     public Dn getBaseDn()
     {
@@ -72,10 +104,20 @@ public class OlcValSortValue
     }
 
 
+    // ── getSortMethod — Lando Reads the Ordering Algorithm ────────────────────────
+    // Lando checks which ordering algorithm applies to this ledger entry:
+    // alpha-ascend, alpha-descend, numeric-ascend, or numeric-descend.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the sort method.
+     * Returns the sort method (algorithm) for this rule.
      *
-     * @return the sort method
+     * <p>For example — Lando reads the ordering algorithm:</p>
+     * <pre>
+     *   OlcValSortMethodEnum method = valSortValue.getSortMethod();
+     *   // e.g., ALPHA_ASCEND
+     * </pre>
+     *
+     * @return  the OlcValSortMethodEnum for this sort rule
      */
     public OlcValSortMethodEnum getSortMethod()
     {
@@ -83,11 +125,23 @@ public class OlcValSortValue
     }
 
 
+    // ── isWeighted — Lando Checks if Values Carry Their Own Priority Tags ─────────
+    // Lando checks whether individual values in this attribute carry their own weight
+    // tags (integer prefixes like "10:cn=admin,...") that override the global ordering.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Return whether or the selected sort method is weighted.
+     * Returns whether this sort rule uses weighted ordering.
+     * In weighted mode, attribute values carry integer prefix weights that determine
+     * their position in the sorted output rather than the sort method alone.
      *
-     * @return <code>true</code> if the sort method is weighted,
-     *         <code>false</code> if not
+     * <p>For example — Lando checks for weighted mode:</p>
+     * <pre>
+     *   if ( valSortValue.isWeighted() ) {
+     *       // values have "10:..." integer prefix weights
+     *   }
+     * </pre>
+     *
+     * @return  true if weighted mode is enabled, false otherwise
      */
     public boolean isWeighted()
     {
@@ -95,10 +149,18 @@ public class OlcValSortValue
     }
 
 
+    // ── setAttribute — Lando Sets the Attribute for This Sort Rule ────────────────
+    // Lando records which attribute this ledger entry governs.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the attribute.
+     * Sets the attribute type name this sort rule applies to.
      *
-     * @param attribute the attribute
+     * <p>For example — Lando sets the attribute:</p>
+     * <pre>
+     *   valSortValue.setAttribute( "member" );
+     * </pre>
+     *
+     * @param attribute  the attribute type name
      */
     public void setAttribute( String attribute )
     {
@@ -106,10 +168,18 @@ public class OlcValSortValue
     }
 
 
+    // ── setBaseDn — Lando Sets the Scope for This Sort Rule ──────────────────────
+    // Lando records the subtree DN that scopes this ledger sort rule.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the base DN.
+     * Sets the base DN that scopes this sort rule.
      *
-     * @param baseDn the base DN
+     * <p>For example — Lando sets the scope:</p>
+     * <pre>
+     *   valSortValue.setBaseDn( new Dn( "ou=groups,dc=example,dc=com" ) );
+     * </pre>
+     *
+     * @param baseDn  the Dn scoping this sort rule
      */
     public void setBaseDn( Dn baseDn )
     {
@@ -117,10 +187,18 @@ public class OlcValSortValue
     }
 
 
+    // ── setSortMethod — Lando Sets the Ordering Algorithm ────────────────────────
+    // Lando sets which ordering algorithm to use for this ledger entry's values.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the sort method.
+     * Sets the sort method (algorithm) for this rule.
      *
-     * @param sortMethod the sort method
+     * <p>For example — Lando sets the ordering algorithm:</p>
+     * <pre>
+     *   valSortValue.setSortMethod( OlcValSortMethodEnum.NUMERIC_DESCEND );
+     * </pre>
+     *
+     * @param sortMethod  the OlcValSortMethodEnum to use
      */
     public void setSortMethod( OlcValSortMethodEnum sortMethod )
     {
@@ -128,10 +206,18 @@ public class OlcValSortValue
     }
 
 
+    // ── setWeighted — Lando Enables or Disables Priority Tags ────────────────────
+    // Lando marks this sort rule as using value-level integer weight tags.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets whether or the selected sort method is weighted..
+     * Sets whether this sort rule uses weighted ordering.
      *
-     * @param isWeighted the value
+     * <p>For example — Lando enables weighted mode:</p>
+     * <pre>
+     *   valSortValue.setWeighted( true );
+     * </pre>
+     *
+     * @param isWeighted  true to enable weighted mode, false to disable
      */
     public void setWeighted( boolean isWeighted )
     {
@@ -139,8 +225,21 @@ public class OlcValSortValue
     }
 
 
+    // ── toString — Lando Writes the Sort Rule Back to LDAP Format ────────────────
+    // Lando formats this ledger entry back into the compact string the valsort overlay
+    // expects in the olcValSortAttr attribute.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns this sort rule as a string in the olcValSortAttr format:
+     * {@code <attribute> "<baseDn>" [weighted] <sortMethod>}
+     *
+     * <p>For example — Lando formats the entry:</p>
+     * <pre>
+     *   valSortValue.toString();
+     *   // e.g., "member \"ou=groups,dc=example,dc=com\" alpha-ascend"
+     * </pre>
+     *
+     * @return  the formatted olcValSortAttr value string
      */
     public String toString()
     {
@@ -195,12 +294,16 @@ public class OlcValSortValue
     }
 
 
+    // ── needsEscaping — Lando Checks if the DN Needs Quotes ──────────────────────
+    // Lando checks whether a DN string contains spaces and therefore needs to be
+    // wrapped in double quotes in the attribute value string.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the given string needs escaping.
+     * Returns true if the given string contains spaces and needs to be quoted
+     * in the serialized olcValSortAttr value.
      *
-     * @param s the string
-     * @return <code>true</code> if the given string needs escaping
-     *         <code>false</code> if not.
+     * @param s  the string to check
+     * @return   true if quoting is needed
      */
     private boolean needsEscaping( String s )
     {
@@ -213,12 +316,27 @@ public class OlcValSortValue
     }
 
 
+    // ── parse — Lando Reads a Raw Sort Rule from the LDAP Attribute ──────────────
+    // Lando reads a raw olcValSortAttr string from the LDAP attribute and parses it
+    // into a structured OlcValSortValue object, handling quoted DNs, optional
+    // "weighted" keywords, and sort method identification.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Parses a OlcValSortValue value.
+     * Parses a raw {@code olcValSortAttr} attribute value string into an OlcValSortValue.
+     * The format is: {@code <attribute> "<baseDn>" [weighted] <sortMethod>}
+     * This method is synchronized because it uses a shared Position object.
      *
-     * @param s the string to be parsed
-     * @return the associated OlcValSortValue object
-     * @throws ParseException if there are any recognition errors (bad syntax)
+     * <p>For example — Lando reads a raw sort rule:</p>
+     * <pre>
+     *   OlcValSortValue val = OlcValSortValue.parse(
+     *       "member \"ou=groups,dc=example,dc=com\" alpha-ascend" );
+     *   val.getAttribute();   // "member"
+     *   val.getSortMethod();  // ALPHA_ASCEND
+     * </pre>
+     *
+     * @param s  the raw olcValSortAttr value string
+     * @return   the parsed OlcValSortValue, or null if the string is null
+     * @throws ParseException  if the string doesn't match the expected format
      */
     public static synchronized OlcValSortValue parse( String s ) throws ParseException
     {
@@ -243,13 +361,19 @@ public class OlcValSortValue
     }
 
 
+    // ── parseInternal — Lando's Internal Token Parser ────────────────────────────
+    // Lando's internal loop reads tokens one at a time: attribute, base DN, optional
+    // "weighted", and sort method. He handles the tricky logic of distinguishing
+    // "weighted" from a sort method keyword.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Parses the given string.
+     * Internal parse implementation for OlcValSortValue. Reads tokens sequentially
+     * from the character array using a Position cursor.
      *
-     * @param chars the characters
-     * @param pos the position
-     * @return the associated OlcValSortValue object
-     * @throws ParseException
+     * @param chars  the character array to parse
+     * @param pos    the current position (mutated in place)
+     * @return       the parsed OlcValSortValue, or null if input is empty
+     * @throws ParseException  if any required token is missing or unrecognized
      */
     private static OlcValSortValue parseInternal( char[] chars, Position pos ) throws ParseException
     {

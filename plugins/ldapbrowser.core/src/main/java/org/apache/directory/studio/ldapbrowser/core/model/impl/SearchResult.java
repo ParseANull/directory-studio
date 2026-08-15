@@ -35,8 +35,21 @@ import org.apache.directory.studio.ldapbrowser.core.model.ISearchResult;
 import org.eclipse.search.ui.ISearchPageScoreComputer;
 
 
+// ── CLASS: SearchResult — ONE ENTRY RETURNED BY HAN'S SEARCH RUN ─────────────
+// When Han's search mission returns, each entry that matched comes back as a
+// SearchResult: the entry itself plus a reference to the search that produced
+// it.  When someone asks "what attributes did you return?", the result filters
+// the entry's attributes down to only the ones the search declared it wanted.
+// This is the package Han hands back to the display layer.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Default implementation of ISearchResult.
+ * Default implementation of {@link ISearchResult}.
+ * Pairs an {@link IEntry} with the {@link ISearch} that returned it.
+ * The {@link #getAttributes()} method filters the entry's attributes to only
+ * those listed in the search's returning-attributes declaration.
+ *
+ * <p>Think of this as the package Han hands back at the end of a search run —
+ * one entry plus a pointer to the search mission that found it.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -52,16 +65,18 @@ public class SearchResult implements ISearchResult
     private IEntry entry;
 
 
+    // ── No-Arg Constructor For Serialisation ─────────────────────────────────────
     protected SearchResult()
     {
     }
 
 
+    // ── Han Packages Up One Matched Entry With Its Search Context ────────────────
     /**
      * Creates a new instance of SearchResult.
-     * 
-     * @param entry the entry
-     * @param search the search
+     *
+     * @param entry the matched entry
+     * @param search the search that produced this result
      */
     public SearchResult( IEntry entry, ISearch search )
     {

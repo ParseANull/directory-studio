@@ -6,32 +6,47 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.valueeditors;
 
 
+// ── CLASS: ValueEditorsConstants — THE REBEL ALLIANCE EQUIPMENT MANIFEST ─────
+// Before every mission, the Rebel quartermaster hands out a laminated parts list:
+// every tool, every gadget, every bay number is on that sheet so the crew never
+// argues about where the ion cannon is stored.  Every plugin in the codebase can
+// look up image paths and setting keys from this single source of truth.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Contains constants for the value editors.
- * Final reference -> class shouldn't be extended
+ * Holds shared constants — image resource paths, plugin ID, and dialog-settings
+ * keys — for the entire valueeditors plugin.
+ * Rather than scattering magic strings across a dozen files, we centralise them
+ * here so a single rename fixes everything.  Think of this as the Rebel Alliance's
+ * equipment manifest: every item has a canonical label, and the crew just looks it up.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public final class ValueEditorsConstants
 {
+    // ── Private Constructor: Sealing the Manifest ────────────────────────────
+    // The Rebel quartermaster never lets anyone edit the master parts list
+    // directly — it's printed and sealed under glass.
+    // We enforce the same rule by making this class non-instantiable; it's
+    // purely a namespace for constants, not an object to be created.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     *  Ensures no construction of this class, also ensures there is no need for final keyword above
-     *  (Implicit super constructor is not visible for default constructor),
-     *  but is still self documenting.
+     * Private constructor — prevents anyone from creating an instance of this
+     * constants-only class.
+     * All members are {@code static final}; there is never a reason to instantiate it.
      */
     private ValueEditorsConstants()
     {

@@ -6,23 +6,36 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.model.database;
 
 
+// ── CLASS: OlcBdbConfigLockDetectEnum — Mace Windu Choosing Who Gets Removed ──
+// When two Jedi and two Sith walk into the same room and create a deadlock —
+// nobody yields, nobody moves — Mace Windu has to decide who gets escorted out.
+// He has a policy: oldest troublemaker, the youngest, the one with fewest allies,
+// a random pick, or just let the system default.
+// That's the BDB lock detection algorithm. BerkeleyDB can detect transaction
+// deadlocks and needs to know which transaction to abort to break the deadlock.
+// OLDEST aborts the longest-running, YOUNGEST the newest, FEWEST the one with
+// the fewest locks, RANDOM picks arbitrarily, and DEFAULT uses BDB's built-in choice.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This enum represents the various values for the  'olcDbLockDetect' attribute.
- * 
+ * Enum representing the valid values for the {@code olcDbLockDetect} attribute,
+ * which controls BerkeleyDB's deadlock detection algorithm — specifically, which
+ * transaction gets aborted when a deadlock is detected.
+ * Think of this as Mace Windu's policy for resolving deadlocked standoffs.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public enum OlcBdbConfigLockDetectEnum
@@ -58,11 +71,23 @@ public enum OlcBdbConfigLockDetectEnum
     private static final String DEFAULT_STRING = "default";
 
 
+    // ── fromString — Mace Windu Reads the Policy from the LDAP Attribute ─────────
+    // Mace reads the written policy keyword and translates it into the corresponding
+    // Java constant so the system knows which algorithm to apply.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the associated enum element.
+     * Parses the string value of the {@code olcDbLockDetect} attribute into this enum.
+     * Comparison is case-insensitive ("Oldest" and "OLDEST" both work).
      *
-     * @param s the string
-     * @return the associated enum element
+     * <p>For example — Mace reads the policy keyword:</p>
+     * <pre>
+     *   OlcBdbConfigLockDetectEnum alg =
+     *       OlcBdbConfigLockDetectEnum.fromString( "fewest" );
+     *   // returns FEWEST
+     * </pre>
+     *
+     * @param s  the olcDbLockDetect attribute value string
+     * @return   the matching enum constant, or null if unrecognized
      */
     public static OlcBdbConfigLockDetectEnum fromString( String s )
     {
@@ -91,8 +116,20 @@ public enum OlcBdbConfigLockDetectEnum
     }
 
 
+    // ── toString — Mace Windu Records the Policy in the LDAP Attribute ────────────
+    // Mace writes the policy keyword back into the olcDbLockDetect attribute value
+    // in the exact lowercase format BDB and OpenLDAP expect.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the string representation suitable for the {@code olcDbLockDetect} attribute.
+     *
+     * <p>For example — Mace records the policy:</p>
+     * <pre>
+     *   OlcBdbConfigLockDetectEnum.OLDEST.toString();   // "oldest"
+     *   OlcBdbConfigLockDetectEnum.DEFAULT.toString();  // "default"
+     * </pre>
+     *
+     * @return  the lowercase policy keyword for the LDAP attribute
      */
     @Override
     public String toString()

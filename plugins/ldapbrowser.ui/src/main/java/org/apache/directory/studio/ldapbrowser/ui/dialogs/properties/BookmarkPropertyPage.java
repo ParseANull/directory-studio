@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.dialogs.properties;
@@ -37,9 +37,23 @@ import org.eclipse.ui.IWorkbenchPropertyPage;
 import org.eclipse.ui.dialogs.PropertyPage;
 
 
+// ── CLASS: BookmarkPropertyPage — LUKE'S BINARY SUNSET ON TATOOINE ────────────
+// Luke watches the twin suns dip below the Tatooine horizon — both orbs fully
+// visible, the whole picture laid out before him: name of the planet, location
+// in the galaxy, and exactly where it sits in his journey.
+// A bookmark in Directory Studio is the same kind of orientation marker: a named
+// pointer to a specific DN in the directory tree.  This property page shows you
+// the full picture — the bookmark's name and the DN it points to — and lets you
+// edit both fields if needed.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This page shows some info about the selected Bookmark.
- * 
+ * Eclipse property page for viewing and editing a directory bookmark.
+ * A bookmark is just a named shortcut to a specific DN; this page shows both
+ * the name and the target DN and lets the user change them, subject to basic
+ * validation (name non-empty, DN resolvable, name unique).
+ * Think of this page as Luke's binary sunset — the complete, clear picture of
+ * where a bookmark points before you commit to using it.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class BookmarkPropertyPage extends PropertyPage implements IWorkbenchPropertyPage
@@ -55,8 +69,21 @@ public class BookmarkPropertyPage extends PropertyPage implements IWorkbenchProp
     private EntryWidget bookmarkEntryWidget;
 
 
+    // ── LUKE STEPS INTO HIS VIEWING SPOT ─────────────────────────────────────
+    // Luke doesn't need Apply or Defaults on this particular hillside — he's
+    // going to see the sunset, take it in, and decide.  We suppress the default
+    // and apply buttons because changes here are saved via performOk only.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BookmarkPropertyPage.
+     * Creates the property page and hides the Default and Apply buttons.
+     * The page uses a single OK action (via {@link #performOk()} called by the
+     * dialog framework) rather than an Apply button, because bookmark edits are
+     * low-risk and don't need incremental saves.
+     *
+     * <p>For example — Luke settles in without distractions:</p>
+     * <pre>
+     *   no "Apply" button → no "Restore Defaults" → just view/edit and confirm
+     * </pre>
      */
     public BookmarkPropertyPage()
     {
@@ -65,8 +92,28 @@ public class BookmarkPropertyPage extends PropertyPage implements IWorkbenchProp
     }
 
 
+    // ── LUKE SEES THE HORIZON — BOTH SUNS, FULL PICTURE ───────────────────────
+    // Luke gazes at the full sunset: both suns clearly visible, horizon stretching
+    // from left to right.  We build the equivalent view: the bookmark's name
+    // at the top, its target DN below it, both editable, both wired to validate
+    // so the OK button only enables when both fields are valid.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the property page UI: a name text field and an entry-widget DN picker.
+     * If the selection element adapts to {@link IBookmark} we pre-populate both
+     * fields from the existing bookmark; otherwise we leave them blank.
+     * Modify listeners on both fields call {@link #validate()} immediately so the
+     * page's validity tracks user input in real time.
+     *
+     * <p>For example — Luke sees the full bookmark picture:</p>
+     * <pre>
+     *   Bookmark Name: "My Admin Entry"
+     *   Bookmark DN:   cn=admin,dc=example,dc=com
+     *   → both correct → OK enabled
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse's property dialog.
+     * @return        The inner composite we built.
      */
     protected Control createContents( Composite parent )
     {
@@ -114,8 +161,25 @@ public class BookmarkPropertyPage extends PropertyPage implements IWorkbenchProp
     }
 
 
+    // ── LUKE DECIDES TO STAY OR LEAVE ─────────────────────────────────────────
+    // If the picture is complete and makes sense, Luke can commit; if it's broken
+    // — a sun missing, the horizon wrong — he hesitates.
+    // performOk is where we actually persist the changes back to the bookmark
+    // object, and only if the bookmark is non-null (i.e. we had a valid selection).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves the edited name and DN back to the underlying {@link IBookmark} object
+     * and persists the entry widget's dialog settings for future use.
+     * Does nothing if {@code bookmark} is null (can happen if the selection element
+     * didn't adapt to {@link IBookmark}).
+     *
+     * <p>For example — Luke commits to staying on Tatooine (for now):</p>
+     * <pre>
+     *   OK clicked → bookmark.setName("New Name") → bookmark.setDn(cn=admin,…) →
+     *   bookmarkEntryWidget.saveDialogSettings() → changes persisted
+     * </pre>
+     *
+     * @return  Always {@code true}.
      */
     public boolean performOk()
     {
@@ -130,8 +194,26 @@ public class BookmarkPropertyPage extends PropertyPage implements IWorkbenchProp
     }
 
 
+    // ── LUKE CHECKS THE SUNSET IS ACTUALLY COMPLETE ───────────────────────────
+    // If only one sun appears — or neither — the binary sunset isn't the full
+    // picture, and Luke knows something is off.  We run three distinct validation
+    // checks and surface a specific error message for each failure case.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Validates the input fields.
+     * Validates the name and DN fields and enables/disables the page (and OK button)
+     * accordingly.
+     * Three specific checks in priority order: DN must be non-null, name must be
+     * non-empty, and the name must be unique among existing bookmarks (unless we're
+     * keeping the original name).
+     * Called by modify listeners on both input fields.
+     *
+     * <p>For example — Luke checks both suns are visible:</p>
+     * <pre>
+     *   DN = null           → setValid(false), error "Please enter a DN"
+     *   name = ""           → setValid(false), error "Please enter a bookmark name"
+     *   name already exists → setValid(false), error "Bookmark already exists"
+     *   all clear           → setValid(true), error cleared
+     * </pre>
      */
     private void validate()
     {

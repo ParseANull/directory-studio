@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.dialogs;
@@ -36,6 +36,24 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: EncoderDecoderDialog — LEIA'S HOLOGRAM MESSAGE ────────────────────
+// Princess Leia recorded her desperate plea inside R2-D2: a single message that
+// could be decoded by whoever received it and presented in multiple forms —
+// audio, holographic projection, text transcript.  This dialog does the same for
+// LDAP attribute values: enter the data in any encoding (ISO-8859-1, UTF-8,
+// Base64) and we instantly project all the other representations side-by-side.
+// Like Leia trusting R2 with her most sensitive data, we trust this dialog to
+// faithfully translate between every encoding form without corrupting a byte.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * A utility dialog that lets users convert a byte string between ISO-8859-1,
+ * UTF-8, hex, and Base64 representations live as they type.
+ * We need this because LDAP attribute values can be stored in any of these
+ * encodings, and developers often need to quickly cross-check or translate a
+ * value without reaching for an external tool.
+ * Think of this dialog as Leia's hologram: the same data projected in every
+ * form the receiver might need — hologram, audio, text — all at once.
+ */
 public class EncoderDecoderDialog extends Dialog
 {
 
@@ -54,6 +72,27 @@ public class EncoderDecoderDialog extends Dialog
     private boolean inModify = false;
 
 
+    // ── LEIA RECORDS HER MESSAGE INTO R2 ──────────────────────────────────────
+    // Leia approaches R2-D2 in the Tantive IV corridor, about to record her
+    // holographic plea to Obi-Wan; before she can speak, she has to initialize
+    // R2's memory slot and configure the projection settings.
+    // We do the same here: configure the dialog shell to be resizable and wire
+    // it up to the parent window so it appears in the right place on screen.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Creates a new {@code EncoderDecoderDialog} attached to the given parent shell.
+     * We make the shell resizable right away because the text fields here can get
+     * wide for long Base64 or hex strings.
+     *
+     * <p>For example — Leia initializes R2's recording module:</p>
+     * <pre>
+     *   Leia selects "record hologram" → R2 allocates memory →
+     *   dialog is constructed and registered with Eclipse's window manager
+     * </pre>
+     *
+     * @param parentShell  The Eclipse shell that owns this dialog; used for
+     *                     centering and focus management.
+     */
     public EncoderDecoderDialog( Shell parentShell )
     {
         super( parentShell );
@@ -61,6 +100,26 @@ public class EncoderDecoderDialog extends Dialog
     }
 
 
+    // ── R2 LABELS THE HOLOGRAM RECORDING ──────────────────────────────────────
+    // R2-D2 stamps the recording with a title so whoever receives it knows what
+    // it contains before they play it; without the label it's just an anonymous
+    // data cylinder in a sea of other cylinders.
+    // We set the window title here so the user sees "LDAP Encode/Decoder" in
+    // the title bar rather than a blank or generic "Dialog" label.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Sets the dialog window title to the localized "LDAP Encode/Decoder" string.
+     * Eclipse calls this before the dialog becomes visible; if we skip it the
+     * window has no title, which looks broken.
+     *
+     * <p>For example — R2 labels the data cylinder:</p>
+     * <pre>
+     *   stamp("SECRET PLANS") → cylinder is labeled → Obi-Wan knows what he's looking at
+     *   configureShell(shell) → shell.setText("LDAP Encode/Decoder")
+     * </pre>
+     *
+     * @param shell  The SWT Shell whose title bar we're setting.
+     */
     protected void configureShell( Shell shell )
     {
         super.configureShell( shell );
@@ -69,6 +128,32 @@ public class EncoderDecoderDialog extends Dialog
     }
 
 
+    // ── LEIA'S MESSAGE IS PROJECTED IN EVERY FORM ─────────────────────────────
+    // R2 projects the hologram; simultaneously the Rebellion's comm system
+    // renders the same message as audio, text transcript, and encrypted data —
+    // every representation derived live from the same source bytes.
+    // We build the dialog's text fields here, one per encoding, and attach
+    // modify listeners so typing in any field immediately updates all the others.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Builds the dialog's UI: five text fields showing the same data in
+     * ISO-8859-1, ISO hex, UTF-8, UTF-8 hex, and Base64, plus an error display.
+     * Modify listeners on the editable fields keep every representation in sync
+     * as the user types — changing ISO text instantly recomputes UTF-8 and Base64.
+     * The {@code inModify} flag prevents listener re-entrancy when we programmatically
+     * set field values during a listener callback.
+     *
+     * <p>For example — R2 projects all representations simultaneously:</p>
+     * <pre>
+     *   User types "Ä" in ISO field →
+     *     ISO hex updates to "c4"
+     *     UTF-8 field shows "Ä" (different bytes)
+     *     Base64 updates to "xA=="
+     * </pre>
+     *
+     * @param parent  The parent composite provided by JFace's dialog framework.
+     * @return        The top-level composite we built; JFace adds it to the dialog.
+     */
     protected Control createDialogArea( Composite parent )
     {
 

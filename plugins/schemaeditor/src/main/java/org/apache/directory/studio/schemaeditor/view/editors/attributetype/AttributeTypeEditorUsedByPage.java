@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 
 package org.apache.directory.studio.schemaeditor.view.editors.attributetype;
@@ -53,8 +53,27 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: AttributeTypeEditorUsedByPage — LANDO SURVEYS CLOUD CITY'S MANIFEST ───────
+// Lando Calrissian stands on Cloud City's observation deck and looks out over his domain.
+// He can see at a glance which areas of the station depend on which services — "the
+// life-support wing makes the pressuriser mandatory; the carbonite bay uses it optionally."
+// He keeps two up-to-date lists: mandatory dependencies and optional ones.  If a new
+// tenant moves in, both lists update immediately.
+// This page is Lando's observation deck.  It shows two tables: object classes that
+// require this attribute type (MUST list), and object classes that optionally allow it
+// (MAY list).  Double-clicking a row opens that object class's editor — Lando's way of
+// drilling down into a specific dependent area.
+// ─────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class is the Used By Page of the Attribute Type Editor
+ * The "Used By" tab page of the Attribute Type Editor.
+ * It displays two read-only tables showing which object classes reference this attribute
+ * type: the mandatory-attribute table (object classes that MUST include this attribute on
+ * every entry) and the optional-attribute table (object classes that MAY include it).
+ * The page reacts to schema handler events so the tables stay current when the schema
+ * changes while the editor is open.  Double-clicking a row opens the corresponding
+ * object class editor.
+ * Think of this as Lando's observation deck: a live, up-to-date view of every dependent
+ * in the station.
  */
 public class AttributeTypeEditorUsedByPage extends AbstractAttributeTypeEditorPage
 {
@@ -192,11 +211,25 @@ public class AttributeTypeEditorUsedByPage extends AbstractAttributeTypeEditorPa
     };
 
 
+    // ── Lando Opens the Observation Deck and Registers with Station Control ───────────
+    // Lando steps onto the observation deck, identifies which attribute type he's
+    // watching over, and registers himself with Cloud City's central monitoring system
+    // so he'll be notified whenever the tenant roster changes.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Default constructor.
-     * 
-     * @param editor
-     *      the associated editor
+     * Creates a new "Used By" page and registers a schema handler listener so the
+     * tables stay current as the schema changes.
+     * The listener is registered here (in the constructor) so it's active before the
+     * form is built; {@link #dispose()} removes it symmetrically.
+     *
+     * <p>For example — Lando takes his post:</p>
+     * <pre>
+     *   // Constructor runs: register schemaHandlerListener → any future schema event
+     *   // triggers refreshTableViewers() → tables stay up-to-date.
+     * </pre>
+     *
+     * @param editor  the {@link AttributeTypeEditor} that owns this page; provides
+     *                access to the attribute type we're tracking
      */
     public AttributeTypeEditorUsedByPage( AttributeTypeEditor editor )
     {
@@ -205,8 +238,25 @@ public class AttributeTypeEditorUsedByPage extends AbstractAttributeTypeEditorPa
     }
 
 
+    // ── Lando Arranges the Two Display Boards ────────────────────────────────────────
+    // Lando installs two side-by-side display boards on the observation deck:
+    // the left one shows tenants that have this attribute as mandatory access,
+    // the right one shows tenants with optional access.  Both boards get filled
+    // immediately and start listening for external updates.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the "Used By" page UI — two side-by-side table sections.
+     * We create a two-column grid layout and place the mandatory-attribute section on
+     * the left and the optional-attribute section on the right.  Both tables are
+     * immediately populated and mouse listeners are attached for double-click navigation.
+     *
+     * <p>For example — Lando's two display boards:</p>
+     * <pre>
+     *   // Left board: "Used as Mandatory Attribute" → object classes with AT in MUST
+     *   // Right board: "Used as Optional Attribute"  → object classes with AT in MAY
+     * </pre>
+     *
+     * @param managedForm  the Eclipse-managed form container for this page
      */
     protected void createFormContent( IManagedForm managedForm )
     {
@@ -236,13 +286,25 @@ public class AttributeTypeEditorUsedByPage extends AbstractAttributeTypeEditorPa
     }
 
 
+    // ── Lando Installs the Mandatory-Access Board ────────────────────────────────────
+    // Lando installs the left display board: "Which areas require this access card?"
+    // The board has a title and a description that names the attribute type, and a
+    // scrollable list of dependent object classes below it.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the As Mandatory Attribute Section.
+     * Creates the "Used As Mandatory Attribute" section with its table viewer.
+     * The section title and description are dynamically set to reference the attribute
+     * type's name (or OID if it has no names) so the user knows exactly which AT we're
+     * talking about.  We attach the mandatory content provider and shared label provider.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the FormToolKit to use
+     * <p>For example — the mandatory board installation:</p>
+     * <pre>
+     *   // Section description: "The following object classes use 'cn' as a mandatory attribute"
+     *   // Table: populated by ATEUsedByMandatoryTableContentProvider
+     * </pre>
+     *
+     * @param parent   the parent SWT composite (the form body)
+     * @param toolkit  the FormToolkit used to create Forms-styled widgets
      */
     private void createAsMandatoryAttributeSection( Composite parent, FormToolkit toolkit )
     {
@@ -285,13 +347,24 @@ public class AttributeTypeEditorUsedByPage extends AbstractAttributeTypeEditorPa
     }
 
 
+    // ── Lando Installs the Optional-Access Board ─────────────────────────────────────
+    // Lando installs the right display board: "Which areas optionally support this
+    // access card?"  Same structure as the mandatory board, different content provider.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the As Optional Attribute Section.
+     * Creates the "Used As Optional Attribute" section with its table viewer.
+     * Mirrors {@link #createAsMandatoryAttributeSection} but uses
+     * {@link ATEUsedByOptionalTableContentProvider} to populate with object classes
+     * whose MAY list (rather than MUST list) includes this attribute type.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the FormToolKit to use
+     * <p>For example — the optional board installation:</p>
+     * <pre>
+     *   // Section description: "The following object classes use 'cn' as an optional attribute"
+     *   // Table: populated by ATEUsedByOptionalTableContentProvider
+     * </pre>
+     *
+     * @param parent   the parent SWT composite (the form body)
+     * @param toolkit  the FormToolkit used to create Forms-styled widgets
      */
     private void createAsOptionalAttributeSection( Composite parent, FormToolkit toolkit )
     {
@@ -334,8 +407,15 @@ public class AttributeTypeEditorUsedByPage extends AbstractAttributeTypeEditorPa
     }
 
 
+    // ── Lando Updates Both Display Boards with Current Data ─────────────────────────
+    // Lando refreshes both display boards by feeding them the current attribute type —
+    // the content providers will query the schema for the current MUST/MAY relationships.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Updates both table viewers with the current working-copy attribute type.
+     * We set the same modified attribute type as the input for both viewers; each
+     * viewer's content provider then queries the schema handler independently to
+     * discover which object classes reference it in their MUST or MAY lists.
      */
     protected void fillInUiFields()
     {
@@ -346,8 +426,13 @@ public class AttributeTypeEditorUsedByPage extends AbstractAttributeTypeEditorPa
     }
 
 
+    // ── Lando Stations Guards at Both Display Boards ─────────────────────────────────
+    // Lando assigns a guard at each display board who watches for double-clicks (someone
+    // wanting to drill into a specific object class) and opens the corresponding editor.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Attaches double-click mouse listeners to both tables so the user can navigate
+     * directly to an object class editor by double-clicking its row.
      */
     protected void addListeners()
     {
@@ -356,8 +441,14 @@ public class AttributeTypeEditorUsedByPage extends AbstractAttributeTypeEditorPa
     }
 
 
+    // ── Lando Stands Down the Guards ─────────────────────────────────────────────────
+    // Between schema reloads, Lando recalls the guards so they don't fire double-click
+    // events while the tables are being repopulated.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Detaches the double-click listeners from both tables.
+     * Called before a UI refresh so that programmatic table updates don't trigger
+     * navigation events.
      */
     protected void removeListeners()
     {
@@ -366,8 +457,23 @@ public class AttributeTypeEditorUsedByPage extends AbstractAttributeTypeEditorPa
     }
 
 
+    // ── Lando Orders an Immediate Update to Both Boards ─────────────────────────────
+    // When Cloud City's central monitoring system fires an alert (schema changed),
+    // Lando immediately orders both boards refreshed without waiting for the next
+    // regular update cycle.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes the Table Viewers
+     * Refreshes both table viewers from the schema immediately.
+     * Called from the schema handler listener when any relevant schema event fires
+     * (object class added/modified/removed, attribute type added/modified/removed,
+     * or schema added/removed).
+     * We null-guard each viewer in case this is called before the form has been created.
+     *
+     * <p>For example — Lando orders an immediate board refresh:</p>
+     * <pre>
+     *   // Schema event: "objectClass 'person' was modified" → refreshTableViewers()
+     *   // Both tables re-query the schema and update their displayed rows.
+     * </pre>
      */
     public void refreshTableViewers()
     {
@@ -382,8 +488,16 @@ public class AttributeTypeEditorUsedByPage extends AbstractAttributeTypeEditorPa
     }
 
 
+    // ── Lando Closes the Observation Deck ───────────────────────────────────────────
+    // When the attribute type editor closes, Lando deregisters from the central
+    // monitoring system — no point receiving alerts for a page that no longer exists.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Cleans up on page disposal: removes the schema handler listener (symmetrically
+     * matching the registration done in the constructor) and delegates to the parent
+     * dispose for SWT resource cleanup.
+     * Always remove the listener before calling super.dispose() to avoid a listener
+     * callback arriving after the widgets are gone.
      */
     public void dispose()
     {

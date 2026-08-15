@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.dialogs.preferences;
@@ -38,9 +38,20 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
 
+// ── CLASS: SyntaxValueEditorDialog — C-3PO PICKS THE LANGUAGE MODE FOR A SPECIES ──
+// C-3PO arrives at the entrance to Jabba's Palace.  A Gamorrean Guard grunts at
+// him — not in Basic, not in Huttese.  C-3PO doesn't panic: he looks up the OID
+// for "Gamorrean grunts" in his registry, pairs it with the correct translation
+// module from his plugin list, and locks in the mapping before proceeding.
+// This dialog does the same thing for LDAP syntaxes: the user picks a syntax OID
+// (the species identifier) and matches it to the right value editor plugin
+// (the translation module).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The SyntaxValueEditorDialog is used to specify
- * value editors for syntaxes.
+ * A modal dialog for creating or editing a pairing between an LDAP syntax OID
+ * and the value editor plugin that should handle it.
+ * Think of this class as C-3PO's species-to-language-mode lookup — pick the
+ * syntax OID, pick the editor, confirm.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -71,13 +82,30 @@ public class SyntaxValueEditorDialog extends Dialog
     private Button okButton;
 
 
+    // ── C-3PO LOADS THE SPECIES-TO-MODULE REGISTRY ───────────────────────────────
+    // C-3PO powers up at the palace gate, loads his full registry of known syntax
+    // OIDs and their matching translation modules, pre-selects the current pairing
+    // so the operator can review it, and builds a reverse index for the combo UI.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SyntaxValueEditorDialog.
-     * 
-     * @param parentShell the parent shell
-     * @param relation the initial syntax to value editor relation
-     * @param class2ValueEditorExtensionMap Map with class name => value editor extension
-     * @param syntaxOids the syntax OIDs
+     * Constructs the dialog pre-loaded with the existing syntax-to-editor relation
+     * (if any), the full plugin registry, and the list of known syntax OIDs to
+     * offer in the first combo.  We invert the class-to-extension map into a
+     * name-to-class map so the UI can show friendly editor names.
+     *
+     * <p>For example — C-3PO at the gate:</p>
+     * <pre>
+     *   relation            = ("1.3.6.1.4.1.1466.115.121.1.5", "InPlaceImageValueEditor")
+     *   class2EditorMap     = { "InPlaceImageValueEditor" -> extension, ... }
+     *   veName2classMap     = { "Image Editor" -> "InPlaceImageValueEditor", ... }
+     * </pre>
+     *
+     * @param parentShell                   The shell that owns this dialog.
+     * @param relation                      The existing syntax-to-editor pair, or
+     *                                      null if we're adding a new one.
+     * @param class2ValueEditorExtensionMap Map from class name to editor extension
+     *                                      metadata — our plugin registry.
+     * @param syntaxOids                    All syntax OIDs the user can choose from.
      */
     public SyntaxValueEditorDialog( Shell parentShell, SyntaxValueEditorRelation relation,
         SortedMap<String, ValueEditorExtension> class2ValueEditorExtensionMap, String[] syntaxOids )
@@ -96,8 +124,14 @@ public class SyntaxValueEditorDialog extends Dialog
     }
 
 
+    // ── C-3PO ANNOUNCES THE MAPPING SESSION ──────────────────────────────────────
+    // C-3PO straightens up, adjusts his photoreceptors, and announces: "Attribute
+    // Value Editor configuration."  Just a title bar, but protocol requires it.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Sets the dialog's title bar text before it becomes visible.
+     *
+     * @param newShell  The shell provided by the Eclipse dialog framework.
      */
     protected void configureShell( Shell newShell )
     {
@@ -106,8 +140,17 @@ public class SyntaxValueEditorDialog extends Dialog
     }
 
 
+    // ── C-3PO ARMS THE CONFIRM AND ABORT CONTROLS ────────────────────────────────
+    // C-3PO primes two buttons — lock in the pairing (OK) or discard (Cancel).
+    // Both start in their initial state; validate() immediately disables OK
+    // until both combos have a selection.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the OK and Cancel buttons and immediately calls {@link #validate()}
+     * so OK starts disabled.  Both a syntax OID and a value editor must be chosen
+     * before the mapping can be committed.
+     *
+     * @param parent  The button bar composite provided by Eclipse.
      */
     protected void createButtonsForButtonBar( Composite parent )
     {
@@ -118,8 +161,21 @@ public class SyntaxValueEditorDialog extends Dialog
     }
 
 
+    // ── C-3PO COMMITS THE OID-TO-MODULE MAPPING ──────────────────────────────────
+    // The operator confirms the selection.  C-3PO writes the OID-to-module pairing
+    // into his active translation table and tells the guard to let the party through.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called when the user clicks OK.  We read the OID from the first combo and
+     * look up the class name from our {@code veName2classMap}, then wrap them into
+     * a new {@link SyntaxValueEditorRelation} for the caller to retrieve.
+     *
+     * <p>For example — C-3PO commits the mapping:</p>
+     * <pre>
+     *   oid         = "1.3.6.1.4.1.1466.115.121.1.5"
+     *   editorClass = "org.apache.directory.studio.valueeditors.image.InPlaceImageValueEditor"
+     *   returnRelation = new SyntaxValueEditorRelation(oid, editorClass)
+     * </pre>
      */
     protected void okPressed()
     {
@@ -129,8 +185,25 @@ public class SyntaxValueEditorDialog extends Dialog
     }
 
 
+    // ── C-3PO PROJECTS THE TWO-COMBO SELECTION INTERFACE ─────────────────────────
+    // C-3PO projects two holographic menus: the first lists all known syntax OIDs,
+    // the second lists all translation modules.  He pre-selects current values
+    // so the operator doesn't have to scroll from scratch when editing.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the dialog's content area with two labeled combo boxes: one for the
+     * syntax OID and one for the value editor.  If we have an existing relation we
+     * pre-fill both combos.  Both combos have modify listeners that recheck whether
+     * OK should be enabled.
+     *
+     * <p>For example — C-3PO's two-step console:</p>
+     * <pre>
+     *   Syntax OID:   [1.3.6.1.4.1.1466.115.121.1.5 ▼]
+     *   Value Editor: [Image Editor ▼]
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse.
+     * @return        The composite containing all our widgets.
      */
     protected Control createDialogArea( Composite parent )
     {
@@ -178,10 +251,17 @@ public class SyntaxValueEditorDialog extends Dialog
     }
 
 
+    // ── C-3PO HANDS OVER THE CONFIRMED SYNTAX-TO-EDITOR MAPPING ─────────────────
+    // The operator asks what was decided.  C-3PO retrieves the committed OID-to-module
+    // relation from his buffer.  If the session was aborted (Cancel), the buffer is
+    // empty — null comes back.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the selected syntax to value editor relation.
-     * 
-     * @return the selected syntax to value editor relation
+     * Returns the {@link SyntaxValueEditorRelation} committed when the user clicked
+     * OK.  Returns null if the dialog was cancelled, because we only populate
+     * {@code returnRelation} inside {@link #okPressed()}.
+     *
+     * @return  The confirmed syntax-to-editor relation, or null if cancelled.
      */
     public SyntaxValueEditorRelation getRelation()
     {

@@ -19,23 +19,23 @@ From: 'an unknown organization'
     License: LGPL-2.1-or-later  (https://www.gnu.org/licenses/old-licenses/lgpl-2.1)
     License: Apache-2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
 
-  - Apache Directory Studio Common Core  org.apache.directory.studio:org.apache.directory.studio.common.core:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio Common Core  org.apache.directory.studio:org.apache.directory.studio.common.core:jar:2026.8.14-SNAPSHOT
 
-  - Apache Directory Studio Common UI  org.apache.directory.studio:org.apache.directory.studio.common.ui:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio Common UI  org.apache.directory.studio:org.apache.directory.studio.common.ui:jar:2026.8.14-SNAPSHOT
 
-  - Apache Directory Studio Connection Core  org.apache.directory.studio:org.apache.directory.studio.connection.core:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio Connection Core  org.apache.directory.studio:org.apache.directory.studio.connection.core:jar:2026.8.14-SNAPSHOT
 
-  - Apache Directory Studio Connection UI  org.apache.directory.studio:org.apache.directory.studio.connection.ui:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio Connection UI  org.apache.directory.studio:org.apache.directory.studio.connection.ui:jar:2026.8.14-SNAPSHOT
 
-  - Apache Directory Studio LDAP Browser Common  org.apache.directory.studio:org.apache.directory.studio.ldapbrowser.common:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio LDAP Browser Common  org.apache.directory.studio:org.apache.directory.studio.ldapbrowser.common:jar:2026.8.14-SNAPSHOT
 
-  - Apache Directory Studio LDAP Browser Core  org.apache.directory.studio:org.apache.directory.studio.ldapbrowser.core:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio LDAP Browser Core  org.apache.directory.studio:org.apache.directory.studio.ldapbrowser.core:jar:2026.8.14-SNAPSHOT
 
-  - Apache Directory Studio LDIF Parser  org.apache.directory.studio:org.apache.directory.studio.ldifparser:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio LDIF Parser  org.apache.directory.studio:org.apache.directory.studio.ldifparser:jar:2026.8.14-SNAPSHOT
 
-  - Apache Directory Studio Schema Editor  org.apache.directory.studio:org.apache.directory.studio.schemaeditor:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio Schema Editor  org.apache.directory.studio:org.apache.directory.studio.schemaeditor:jar:2026.8.14-SNAPSHOT
 
-  - Apache Directory Studio Schema Editor Help  org.apache.directory.studio:org.apache.directory.studio.schemaeditor.help:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio Schema Editor Help  org.apache.directory.studio:org.apache.directory.studio.schemaeditor.help:jar:2026.8.14-SNAPSHOT
 
   - Bouncy Castle OpenPGP APIs (https://www.bouncycastle.org/download/bouncy-castle-java/) org.bouncycastle:bcpg-jdk18on:jar:1.84
     License: Bouncy Castle Licence  (https://www.bouncycastle.org/licence.html)

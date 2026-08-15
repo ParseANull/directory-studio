@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -35,9 +35,15 @@ import org.eclipse.swt.widgets.Text;
 import org.apache.directory.studio.openldap.config.OpenLdapConfigurationPluginUtils;
 
 
+// Like Princess Leia projecting her hologram with the complete
+// technical readout of the BDB database configuration, we open
+// a text editor dialog so the operator can read and modify the
+// raw configuration lines directly before confirming their changes.
 /**
- * The DbConfigurationDialog is used to edit the (BDB) database configuration.
- * 
+ * A dialog for editing the raw BDB database configuration as a
+ * multi-line text block. We strip the ordering prefixes before
+ * displaying the lines, then re-number them when the operator hits OK.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DbConfigurationDialog extends Dialog
@@ -52,11 +58,17 @@ public class DbConfigurationDialog extends Dialog
     private Text text;
 
 
+    // Like Leia loading the complete technical readout into R2 before
+    // transmitting, we initialize the dialog with the existing config
+    // lines and set the RESIZE style so the operator can make the
+    // text area as large as they need it.
     /**
-     * Creates a new instance of DbConfigurationDialog.
-     * 
-     * @param parentShell the parent shell
-     * @param initialConfiguration the initial configuration
+     * Creates a new DbConfigurationDialog with the given initial configuration
+     * lines. We store them so we can display them in the text area when
+     * the dialog opens.
+     *
+     * @param parentShell the parent shell this dialog belongs to
+     * @param initialConfiguration the existing configuration lines to edit
      */
     public DbConfigurationDialog( Shell parentShell, String[] initialConfiguration )
     {
@@ -66,8 +78,14 @@ public class DbConfigurationDialog extends Dialog
     }
 
 
+    // Like labeling the holographic display so the Rebellion knows
+    // exactly what they're looking at, we stamp the dialog title
+    // with "Database Configuration Editor" for clarity.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to
+     * "Database Configuration Editor".
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -77,8 +95,14 @@ public class DbConfigurationDialog extends Dialog
     }
 
 
+    // Like adding the Rebellion's confirmation and abort buttons to
+    // the hologram transmitter panel, we wire up OK and Cancel so
+    // the operator can either commit their edits or walk away cleanly.
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createButtonsForButtonBar(org.eclipse.swt.widgets.Composite)
+     * Builds the button bar for this dialog, adding the standard
+     * OK and Cancel buttons.
+     *
+     * @param parent the button bar composite to add buttons to
      */
     @Override
     protected void createButtonsForButtonBar( Composite parent )
@@ -88,8 +112,14 @@ public class DbConfigurationDialog extends Dialog
     }
 
 
+    // Like Leia finalizing the message and sending it off encrypted,
+    // we capture whatever the operator typed, split it into lines,
+    // stamp each line with its ordering prefix, and store the result
+    // so the caller can retrieve it after the dialog closes.
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#okPressed()
+     * Handles the OK press by parsing the text area content into
+     * ordered configuration lines, then closing the dialog. Each line
+     * gets a {@code {n}} ordering prefix so OpenLDAP can sort them correctly.
      */
     @Override
     protected void okPressed()
@@ -111,8 +141,17 @@ public class DbConfigurationDialog extends Dialog
     }
 
 
+    // Like the hologram projector materializing the full technical
+    // blueprint in the room for the Rebellion engineers to study,
+    // we build the text editor area here and pre-fill it with the
+    // cleaned-up configuration lines so the operator can start editing.
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     * Builds the dialog content area, creating a scrollable multi-line
+     * text widget and pre-populating it with the current database
+     * configuration (ordering prefixes stripped for readability).
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -136,10 +175,16 @@ public class DbConfigurationDialog extends Dialog
     }
 
 
+    // Like C-3PO stripping the encrypted header off each configuration
+    // line so it reads cleanly, we remove the ordering prefixes and
+    // join the lines into a single human-readable string that the
+    // text editor widget can display without confusing the operator.
     /**
-     * Prepares the initial configuration string.
+     * Prepares the initial text area content by stripping ordering
+     * prefixes from each configuration line and joining them with
+     * line separators.
      *
-     * @return the initial configuration string
+     * @return the prepared configuration string ready to display in the text area
      */
     private String prepareInitialConfiguration()
     {
@@ -158,10 +203,14 @@ public class DbConfigurationDialog extends Dialog
     }
 
 
+    // Like R2-D2 finally handing over the complete technical readout
+    // once the operator has confirmed they want it, we return the
+    // configuration array so the caller can persist it.
     /**
-     * Gets the configuration.
-     * 
-     * @return the configuration
+     * Returns the current configuration lines, updated with any edits
+     * the operator made before pressing OK.
+     *
+     * @return the configuration line array, each line prefixed with its ordering index
      */
     public String[] getConfiguration()
     {

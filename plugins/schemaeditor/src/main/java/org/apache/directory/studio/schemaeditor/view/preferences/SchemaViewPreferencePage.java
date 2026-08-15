@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.preferences;
 
@@ -42,9 +42,27 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: SchemaViewPreferencePage — PALPATINE ISSUING ORDER 66 ─────────────
+// Palpatine stands before his holographic command interface, each clone
+// trooper's channel open and waiting. He dials in the exact configuration he
+// wants — label format, length limits, secondary labels, schema name visibility
+// — and when he presses the final control every trooper in the Schema View
+// executes the directive simultaneously.
+// This preference page works the same way: the administrator configures how
+// the Schema View should label its nodes, and when they click Apply every
+// setting is written to the preference store and the view updates accordingly.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Preference page for the Schema View
- * 
+ * The Eclipse preference page that controls how schema elements are labelled
+ * in the Schema View — label format (first alias, all aliases, or OID),
+ * maximum label length, secondary label options, and whether to display
+ * the schema name alongside each element.
+ * It extends {@link PreferencePage} and implements
+ * {@link IWorkbenchPreferencePage} so Eclipse wires it into
+ * Window → Preferences → Schema Editor → Schema View.
+ * Think of this as Palpatine's personal command panel: every knob and dial
+ * here is an Order that the Schema View will execute the moment Apply is pressed.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SchemaViewPreferencePage extends PreferencePage implements IWorkbenchPreferencePage
@@ -63,8 +81,26 @@ public class SchemaViewPreferencePage extends PreferencePage implements IWorkben
     private Button schemaLabelButtonDisplay;
 
 
+    // ── PALPATINE ACTIVATES THE SCHEMA VIEW COMMAND CHANNEL ──────────────────
+    // Palpatine opens a dedicated channel specifically for Schema View orders —
+    // a separate frequency from the Hierarchy View, calibrated for a different
+    // battalion of clone troopers.
+    // We wire this preference page to the plugin's preference store and set the
+    // page description text that appears at the top of the preference panel.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SchemaViewPreferencePage.
+     * Creates a new {@link SchemaViewPreferencePage} and connects it to the
+     * plugin's preference store.
+     * Eclipse instantiates this via the preferences extension point; we call
+     * {@code super()} to initialise the JFace preference-page machinery, then
+     * attach the store and write the description shown at the top of the page.
+     *
+     * <p>For example — Palpatine opens the Schema View command channel:</p>
+     * <pre>
+     *   new SchemaViewPreferencePage()
+     *   // wired to plugin preference store
+     *   // description: "General settings for the Schema View."
+     * </pre>
      */
     public SchemaViewPreferencePage()
     {
@@ -74,8 +110,34 @@ public class SchemaViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE LAYS OUT THE SCHEMA VIEW CONTROL PANELS ────────────────────
+    // Palpatine has three sets of controls arranged in front of him for the
+    // Schema View battalion: primary label dials, secondary label dials, and
+    // a schema-name visibility toggle. Each is clearly labelled and positioned
+    // so his fingers never reach for the wrong lever.
+    // We build those three groups as SWT composites with their associated
+    // combos, checkboxes, and length text fields.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the preference page UI inside the provided parent composite.
+     * Eclipse calls this when the user navigates to this preference page; we
+     * construct three groups of controls: primary label, secondary label, and
+     * schema-label visibility, then load current values and wire up listeners.
+     *
+     * <p>For example — Palpatine's Schema View war room is prepared:</p>
+     * <pre>
+     *   Label Group:
+     *     Use [First Name | All Aliases | OID] as label
+     *     [ ] Limit label length to [___] characters
+     *   Secondary Label Group:
+     *     [ ] Display secondary label
+     *     Use [First Name | All Aliases | OID] as secondary label
+     *   Schema Label Group:
+     *     [ ] Display schema label
+     * </pre>
+     *
+     * @param parent  the SWT composite Eclipse provides as the parent container
+     * @return        the outermost control we created, handed back to Eclipse
      */
     protected Control createContents( Composite parent )
     {
@@ -268,8 +330,27 @@ public class SchemaViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE READS THE SCHEMA VIEW INTELLIGENCE BRIEFING ────────────────
+    // Palpatine reviews the current Schema View battalion's status report —
+    // exactly which label format they are using, what their length limits are,
+    // whether secondary labels are active — before deciding what to change.
+    // We read those values from the preference store and populate every UI
+    // control so the page accurately reflects the current configuration.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the fields from the preferences store.
+     * Reads all Schema View preferences from the plugin's preference store and
+     * pushes those values into the UI controls so the page opens showing the
+     * current configuration rather than blank defaults.
+     * We also update dependent widget enablement (e.g. the length text field
+     * is disabled when abbreviation is turned off) so the page is consistent
+     * from the moment the user first sees it.
+     *
+     * <p>For example — Palpatine reads the Schema View status report:</p>
+     * <pre>
+     *   store: label=ALL_ALIASES, abbreviate=false, secondaryDisplay=true
+     *   → labelCombo selects index 1, limitButton unchecked (lengthText disabled),
+     *     secondaryLabelButtonDisplay checked
+     * </pre>
      */
     private void initFieldsFromPreferences()
     {
@@ -305,8 +386,26 @@ public class SchemaViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE ACTIVATES EACH TROOPER'S COMLINK RECEIVER ──────────────────
+    // Palpatine configures each clone trooper's helmet comlink to respond the
+    // moment it receives a changed directive — no delay, no polling.
+    // We attach selection listeners to the checkboxes so dependent widgets
+    // enable or disable the instant the user toggles a control.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the listeners.
+     * Attaches selection listeners to the checkbox buttons so they can enable
+     * or disable dependent widgets in real time as the user interacts with
+     * the preference page.
+     * This gives the page a responsive feel: toggling "Display secondary label"
+     * immediately greys out or activates the secondary label controls without
+     * requiring the user to press Apply first.
+     *
+     * <p>For example — Palpatine's comlinks activate:</p>
+     * <pre>
+     *   limitButton checked   → lengthText enabled
+     *   secondaryLabelButtonDisplay unchecked
+     *     → secondaryLabelCombo, secondaryLabelLimitButton, secondaryLabelLengthText disabled
+     * </pre>
      */
     private void initListeners()
     {
@@ -347,8 +446,25 @@ public class SchemaViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE RECALLS THE BASE SCHEMA VIEW PLAN ──────────────────────────
+    // When Palpatine determines the Schema View battalion has drifted too far
+    // from optimal configuration, he recalls every trooper to the base plan —
+    // the factory defaults that were established when the plugin was first
+    // installed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Resets all UI controls to the plugin's default Schema View preference
+     * values when the user clicks "Restore Defaults."
+     * We read defaults from the preference store rather than hard-coding them
+     * here, then update dependent widget enablement so the page looks correct
+     * after the reset, and delegate to the parent for any remaining JFace work.
+     *
+     * <p>For example — Palpatine recalls the Schema View base plan:</p>
+     * <pre>
+     *   Default: label=FIRST_NAME, no abbreviation, no secondary label,
+     *            schema label hidden
+     *   → All controls snap back when user clicks "Restore Defaults"
+     * </pre>
      */
     protected void performDefaults()
     {
@@ -387,8 +503,28 @@ public class SchemaViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE TRANSMITS THE SCHEMA VIEW ORDERS ───────────────────────────
+    // "It is done, then." Palpatine closes the comm channel and the Schema View
+    // battalion executes: label format locked in, abbreviation rules active,
+    // secondary label and schema name display configured exactly as specified.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Persists all current UI control values to the plugin's preference store
+     * when the user clicks OK or Apply.
+     * We translate combo selections back to their integer preference constants
+     * and write everything — label format, abbreviation, secondary label
+     * settings, schema label visibility — in one pass.
+     * The Schema View listens for preference change events and will refresh
+     * its labels automatically once these values are committed.
+     *
+     * <p>For example — Palpatine transmits the Schema View order:</p>
+     * <pre>
+     *   user selected "All Aliases", limit=true, length="30", schemaLabel=true
+     *   → store: LABEL=ALL_ALIASES, ABBREVIATE=true, MAX_LENGTH="30",
+     *            SCHEMA_LABEL_DISPLAY=true
+     * </pre>
+     *
+     * @return  {@code true} always; we write everything to the store successfully
      */
     public boolean performOk()
     {
@@ -446,8 +582,17 @@ public class SchemaViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE'S WAR ROOM IS READY — NOTHING FROM THE WORKBENCH NEEDED ────
+    // Palpatine doesn't need a briefing from the workbench; everything this
+    // page requires comes directly from the preference store and the plugin
+    // registry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the workbench initialises this preference page;
+     * we have nothing to do here because all state comes from the preference
+     * store, not from the workbench instance.
+     *
+     * @param workbench  the current Eclipse workbench instance; not used here
      */
     public void init( IWorkbench workbench )
     {

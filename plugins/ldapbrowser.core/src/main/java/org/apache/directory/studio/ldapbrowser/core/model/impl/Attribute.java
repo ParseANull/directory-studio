@@ -47,8 +47,25 @@ import org.apache.directory.studio.ldapbrowser.core.model.schema.SchemaUtils;
 import org.eclipse.search.ui.ISearchPageScoreComputer;
 
 
+// ── CLASS: Attribute — ONE BLUEPRINT PANEL ON THE DEATH STAR ─────────────────
+// Each room on the Death Star blueprint has panels: power coupling, ventilation
+// shaft, turret status.  Each panel (attribute) has a description (like
+// "cn;lang-en"), an entry it belongs to, and a list of value slots.  You can
+// add and remove values, and each change fires an event back to the display.
+// Han shoots first: if a value is null or belongs to the wrong attribute, the
+// IllegalArgumentException fires before anything gets written.
+// Attribute is the concrete IAttribute: an AttributeDescription + an IEntry +
+// a List<IValue> that fires model events on every modification.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Default implementation of IAttribute.
+ * Default implementation of {@link IAttribute}.
+ * Holds an {@link AttributeDescription}, a reference to the owning
+ * {@link IEntry}, and a list of {@link IValue} objects.  Every mutating method
+ * fires a {@link EntryModificationEvent} through {@link EventRegistry}.
+ *
+ * <p>Think of this as one blueprint panel on the Death Star entry — named,
+ * entry-scoped, and firing events every time a value is added, changed, or
+ * removed.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -68,14 +85,13 @@ public class Attribute implements IAttribute
     private List<IValue> valueList;
 
 
+    // ── Blueprint Panel Constructor: Entry + Description Required ────────────────
     /**
-     * Creates an new instance of Attribute with the given description
-     * and no value.
-     * 
-     * @param entry
-     *                The entry of this attribute, mustn't be null
-     * @param description
-     *                The attribute descrption, mustn't be null.
+     * Creates a new instance of Attribute with the given description and no
+     * value.
+     *
+     * @param entry the entry this attribute belongs to; must not be {@code null}
+     * @param description the attribute description string; must not be {@code null}
      */
     public Attribute( IEntry entry, String description )
     {
@@ -212,10 +228,11 @@ public class Attribute implements IAttribute
     }
 
 
+    // ── Obi-Wan Senses An Attribute Change And Notifies The Force ────────────────
     /**
      * Fires an EntryModificationEvent.
      *
-     * @param event the EntryModificationEvent
+     * @param event the EntryModificationEvent to broadcast
      */
     private void attributeModified( EntryModificationEvent event )
     {
@@ -223,11 +240,14 @@ public class Attribute implements IAttribute
     }
 
 
+    // ── Han Shoots First: Validate The Value Before Accepting It ─────────────────
     /**
      * Checks if the given value is valid.
      *
-     * @param value the value to check
-     * @throws IllegalArgumentException if the value is not valid
+     * @param value the value to check; must not be {@code null} and must
+     *              belong to this attribute
+     * @throws IllegalArgumentException if the value is null or belongs to a
+     *                                  different attribute
      */
     private void checkValue( IValue value ) throws IllegalArgumentException
     {
@@ -242,11 +262,12 @@ public class Attribute implements IAttribute
     }
 
 
+    // ── R2-D2 Removes The Value From The Internal List Without Firing Events ──────
     /**
      * Deletes the given value from value list.
      *
      * @param valueToDelete the value to delete
-     * @return true if deleted
+     * @return {@code true} if a matching value was found and removed
      */
     private boolean internalDeleteValue( IValue valueToDelete )
     {

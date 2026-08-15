@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 package org.apache.directory.studio.schemaeditor;
 
@@ -57,21 +57,47 @@ import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 
 
+// ── CLASS: PluginUtils — R2-D2 Plugs Into The Death Star Computer ─────────────
+// R2-D2 trundles up to a Death Star terminal, extends his interface arm, and
+// starts doing the messy behind-the-scenes work: pulling the prison cell map,
+// killing the tractor beam, calculating escape routes. He handles all the dirty
+// I/O so the humans upstairs can stay focused. PluginUtils is R2: it handles
+// file I/O, cloning, logging, connector discovery, and dialog-settings history
+// so every other class stays clean.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class contains helper methods.
+ * A collection of static utility methods used throughout the Schema Editor plugin.
+ * Think of this as R2-D2 interfacing with the Death Star: it does the fiddly,
+ * error-prone work (loading and saving projects, cloning schema objects, looking
+ * up connections, discovering extension connectors) so the higher-level classes
+ * can stay focused on what they care about.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class PluginUtils
 {
+    // ── R2 Validates The Access Code Before Opening The Door ──────────────────────
+    // R2 checks the Death Star's access-code format against a known pattern before
+    // submitting it — a malformed code would trigger an alert and blow the mission.
+    // verifyName does the same check: it rejects names that don't match the RFC 2252
+    // pattern before we try to register them in the schema.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Verifies that the given name is syntaxely correct according to the RFC 2252
-     * (Lightweight Directory Access Protocol (v3): Attribute Syntax Definitions).
+     * Checks whether a schema element name is syntactically valid according to RFC 2252
+     * (LDAP attribute syntax definitions). We need this before accepting user-typed names
+     * for attribute types or object classes — an invalid name would be rejected by any
+     * real LDAP server anyway, so we catch it early in the UI.
      *
-     * @param name
-     *      the name to test
-     * @return
-     *      true if the name is correct, false if the name is not correct.
+     * <p>For example — R2 validates the access code:</p>
+     * <pre>
+     *   "cn"           → valid   (letters only)
+     *   "my-attr2"     → valid   (letter start, then letters/digits/hyphens)
+     *   "2bad"         → invalid (starts with a digit)
+     *   "bad name"     → invalid (space not allowed)
+     * </pre>
+     *
+     * @param name  the candidate name string to test — must not be null.
+     * @return      true if the name matches the RFC 2252 pattern, false otherwise.
      */
     public static boolean verifyName( String name )
     {
@@ -79,13 +105,28 @@ public class PluginUtils
     }
 
 
+    // ── R2 Copies The Schematics Before Handing Them Over ─────────────────────────
+    // R2 never hands anyone the original Death Star blueprints — he makes a copy
+    // first so the originals stay intact regardless of what the rebels do with the
+    // printout. getClone(AttributeType) does the same: it makes a full independent
+    // copy of an attribute type so edits in a dialog don't accidentally mutate the
+    // live schema object.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns a clone of the given attribute type.
+     * Creates a fully independent copy of the given AttributeType, copying every
+     * property field by value. We need this because the schema editor lets the user
+     * edit a draft copy and only commits changes back when they save — working directly
+     * on the live object would make every keystroke an immediate mutation.
      *
-     * @param at
-     *      the attribute type to clone
-     * @return
-     *      a clone of the given attribute type
+     * <p>For example — R2 duplicates the schematics:</p>
+     * <pre>
+     *   AttributeType live = schemaHandler.getAttributeType("cn");
+     *   AttributeType draft = PluginUtils.getClone(live);
+     *   // user edits draft freely; live is unaffected until save
+     * </pre>
+     *
+     * @param at  the AttributeType to clone — must not be null.
+     * @return    a new AttributeType instance with all properties copied from {@code at}.
      */
     public static AttributeType getClone( AttributeType at )
     {
@@ -109,13 +150,19 @@ public class PluginUtils
     }
 
 
+    // ── R2 Copies The Object Class Schematics ─────────────────────────────────────
+    // Same discipline as with the attribute type blueprint: R2 copies the structural
+    // class definitions before handing them out, so the originals stay safe in the
+    // archive while the rebels experiment with the copy.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns a clone of the given object class.
+     * Creates a fully independent copy of the given ObjectClass, copying every property
+     * field by value. Same motivation as the AttributeType overload: the editor works
+     * on a draft that only gets committed when the user saves, so we need a clean copy
+     * that is isolated from the live schema object.
      *
-     * @param oc
-     *      the object class to clone
-     * @return
-     *      a clone of the given object class
+     * @param oc  the ObjectClass to clone — must not be null.
+     * @return    a new ObjectClass instance with all properties copied from {@code oc}.
      */
     public static ObjectClass getClone( ObjectClass oc )
     {
@@ -133,11 +180,20 @@ public class PluginUtils
     }
 
 
+    // ── R2 Locates The Primary Data Storage Bay ───────────────────────────────────
+    // R2 navigates the Death Star's corridor map to find the main data storage bay
+    // where the mission-critical files are kept. getProjectsFile() does the same:
+    // it computes the canonical path of the projects XML file inside the plugin's
+    // OSGi state area — the one true place where project data lives on disk.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the projects file (where is stored information about the loaded projects).
+     * Returns a File pointing to {@code projects.xml} inside the plugin's persistent
+     * state area (provided by OSGi). This is the primary file that holds the serialized
+     * list of all schema projects across sessions. The path is computed fresh each call
+     * from the plugin's current state location, so it handles workspace relocation.
      *
-     * @return
-     *      the projects File
+     * @return  the File handle for {@code projects.xml} — the file may not exist yet
+     *          on a fresh installation.
      */
     private static File getProjectsFile()
     {
@@ -145,11 +201,19 @@ public class PluginUtils
     }
 
 
+    // ── R2 Flags The Backup Data Cartridge Location ───────────────────────────────
+    // R2 always knows where the backup copy is stored — when the main data bank is
+    // corrupted, he goes straight to the secondary cartridge bay. getTempProjectsFile
+    // is that backup: we write here first so a crash mid-write doesn't corrupt the
+    // primary file.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the temporary projects file.
+     * Returns a File pointing to {@code projects-temp.xml}, the intermediate staging
+     * file we write to before copying over the primary projects file. This two-step
+     * write pattern protects against data loss if the process crashes mid-save —
+     * the primary file is only overwritten once the temp write has fully succeeded.
      *
-     * @return
-     *      the temporary projects file
+     * @return  the File handle for {@code projects-temp.xml}.
      */
     private static File getTempProjectsFile()
     {
@@ -157,8 +221,18 @@ public class PluginUtils
     }
 
 
+    // ── R2 Restores The Mission Briefing From The Data Core ───────────────────────
+    // R2 slots into the briefing room terminal and pulls up the mission files —
+    // primary source first, backup cartridge if the main is unreadable, and a
+    // loud error message if both are gone. loadProjects mirrors that resilience:
+    // it tries the main projects file, falls back to the temp, and reports clearly
+    // when neither works.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the projects saved in the Projects File.
+     * Reads all saved schema projects from disk and registers them with the
+     * ProjectsHandler. We try the primary projects file first; if that fails we fall
+     * back to the temp file (which was the last successful write); if both fail we
+     * report an error dialog and bail out. This is called once at plugin startup.
      */
     public static void loadProjects()
     {
@@ -239,8 +313,18 @@ public class PluginUtils
     }
 
 
+    // ── R2 Commits The Updated Mission Files To Secure Storage ────────────────────
+    // Before leaving the Death Star terminal, R2 writes the updated data to a
+    // temporary cartridge, verifies it, then overwrites the primary archive — so
+    // the archive is never left in a half-written state. saveProjects does the same
+    // two-stage write, falling back to a direct write if the staging step fails.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the projects in the Projects File.
+     * Serializes all current projects to disk using a safe two-stage write: first to
+     * the temp file, then copied over the primary file. If the staging write fails we
+     * attempt a direct write to the primary file. If that also fails we show an error
+     * dialog. This is called every time a project is added, removed, or the open
+     * project changes.
      */
     public static void saveProjects()
     {
@@ -283,13 +367,20 @@ public class PluginUtils
     }
 
 
+    // ── R2 Beams A Distress Signal To The Rebel Fleet ─────────────────────────────
+    // When R2 detects a critical system failure he immediately sends an ERROR-level
+    // distress signal through the ship's comm system — logged and visible to anyone
+    // monitoring. logError is that distress signal: it writes an ERROR entry to the
+    // Eclipse platform log so ops or developers can see exactly what went wrong.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Logs the given message and exception with the ERROR status level.
-     * 
-     * @param message
-     *      the message
-     * @param exception
-     *      the exception
+     * Writes a message and optional exception to the Eclipse platform error log at
+     * ERROR severity. Use this for failures that are unexpected or that the user
+     * should know about — they'll show up in the Error Log view if the user has it
+     * open.
+     *
+     * @param message    a human-readable description of what failed.
+     * @param exception  the exception that caused the failure, or null if none.
      */
     public static void logError( String message, Throwable exception )
     {
@@ -299,13 +390,22 @@ public class PluginUtils
     }
 
 
+    // ── R2 Logs A Status Update To The Navicomputer ───────────────────────────────
+    // R2 periodically writes informational progress notes to the navicomputer's log —
+    // not errors, just useful context for anyone reviewing the flight record later.
+    // logInfo does the same: INFO-level log entries for non-critical events we want
+    // to be able to trace after the fact.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Logs the given message and exception with the INFO status level.
-     * 
-     * @param message
-     *      the message
-     * @param exception
-     *      the exception
+     * Writes a message and optional exception to the Eclipse platform log at INFO
+     * severity. The message is a {@link java.text.MessageFormat} pattern, so callers
+     * can pass in positional arguments ({@code {0}}, {@code {1}}, etc.) and they get
+     * formatted before logging — handy for including variable details without building
+     * strings when logging is disabled.
+     *
+     * @param exception  the associated exception, or null if this is a pure info entry.
+     * @param message    a MessageFormat pattern string.
+     * @param args       optional positional arguments substituted into the pattern.
      */
     public static void logInfo( Throwable exception, String message, Object... args )
     {
@@ -315,13 +415,20 @@ public class PluginUtils
     }
 
 
+    // ── R2 Raises A Yellow-Level Caution Flag ─────────────────────────────────────
+    // R2's sensor array picks up something unusual — not a full alarm, but worth
+    // flagging so the crew can decide whether to act. logWarning is that yellow
+    // flag: the situation is recoverable, but we want a record in the log in case
+    // it becomes a pattern.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Logs the given message and exception with the WARNING status level.
-     * 
-     * @param message
-     *      the message
-     * @param exception
-     *      the exception
+     * Writes a message and optional exception to the Eclipse platform log at WARNING
+     * severity. Use this for conditions that are unexpected but not fatal — the
+     * operation can continue, but the entry in the log may help diagnose a larger
+     * problem later.
+     *
+     * @param message    a human-readable description of the unusual condition.
+     * @param exception  the associated exception, or null if there is none.
      */
     public static void logWarning( String message, Throwable exception )
     {
@@ -331,13 +438,25 @@ public class PluginUtils
     }
 
 
+    // ── R2 Pulls The Core Schema Files From The Archive ───────────────────────────
+    // R2 navigates to the correct archive drawer, pulls the right data cartridge,
+    // and hands the schema file to whoever asked for it. loadCoreSchema resolves
+    // the server-type folder and schema name to a bundle resource URL, parses the
+    // XML schema file, and returns the Schema object — or shows an error dialog if
+    // anything along that path goes wrong.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the 'core' corresponding to the given name.
+     * Loads a built-in "core" schema from the plugin's resources directory, identified
+     * by the server type (ApacheDS or OpenLDAP) and the schema file name. Core schemas
+     * are the baseline definitions that ship with the plugin and can be imported into
+     * a project without connecting to a live server. Returns null if loading fails
+     * (an error dialog is shown to the user in that case).
      *
-     * @param schemaName
-     *      the name of the 'core' schema
-     * @return
-     *      the corresponding schema, or null if no schema has been found
+     * @param serverType  the server flavor that determines which resource sub-folder
+     *                    to look in ({@code apacheds} or {@code openldap}).
+     * @param schemaName  the base name of the schema file (without extension) to load.
+     * @return            the parsed Schema, or null if the resource could not be found
+     *                    or parsed.
      */
     public static Schema loadCoreSchema( ServerTypeEnum serverType, String schemaName )
     {
@@ -382,19 +501,24 @@ public class PluginUtils
     }
 
 
+    // ── R2 Sounds The Alarm And Displays The Damage Report ───────────────────────
+    // When R2 detects a failure he does two things at once: he logs the technical
+    // details to the ship's computer (for engineers) and displays a plain-language
+    // alert on the cockpit screen (for the crew). reportError does both: it logs
+    // to the Eclipse log and shows a user-facing error dialog.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Reports an error.
-     * <p>
-     * Logs a message and an exception, and displays a Error Dialog with title and message.
+     * Logs an error to the platform log and shows an error dialog to the user.
+     * We centralise this two-step pattern here so callers don't have to repeat the
+     * log-then-dialog boilerplate everywhere something can fail. Either argument can
+     * be null: null loggerMessage skips logging; null dialogMessage skips the dialog.
      *
-     * @param loggerMessage
-     *      the message for the logger
-     * @param e
-     *      the exception to log
-     * @param dialogTitle
-     *      the title of the Error Dialog (empty string used if <code>null</code>)
-     * @param dialogMessage
-     *      the message to display in the Error Dialog
+     * @param loggerMessage  the message to write to the platform error log, or null to
+     *                       skip logging.
+     * @param e              the exception to include in the log entry, or null if none.
+     * @param dialogTitle    the title of the error dialog shown to the user; an empty
+     *                       string is used if null.
+     * @param dialogMessage  the body text of the error dialog, or null to skip the dialog.
      */
     private static void reportError( String loggerMessage, Exception e, String dialogTitle, String dialogMessage )
     {
@@ -410,13 +534,21 @@ public class PluginUtils
     }
 
 
+    // ── R2 Checks Which Archive Drawer Holds The Requested Files ──────────────────
+    // The Death Star archive has separate drawers for each fleet type — R2 knows
+    // exactly which drawer to open based on the ship class requested. getFolderName
+    // maps a ServerTypeEnum value to the corresponding resource sub-folder name so
+    // we can build the correct URL to the bundled schema files.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * The name of the folder for the given Server Type.
+     * Maps a ServerTypeEnum to the name of the sub-folder under
+     * {@code resources/schemas/} where that server's core schema files are stored.
+     * Returns null for an unrecognized server type, which will cause the URL lookup
+     * in {@link #loadCoreSchema} to fail gracefully.
      *
-     * @param serverType
-     *      the Server Type
-     * @return
-     *      the name of the folder for the given Server Type
+     * @param serverType  the server flavor to look up.
+     * @return            the folder name string ({@code "apacheds"} or {@code "openldap"}),
+     *                    or null if the type is not recognized.
      */
     private static String getFolderName( ServerTypeEnum serverType )
     {
@@ -434,13 +566,20 @@ public class PluginUtils
     }
 
 
+    // ── R2 Locates The Correct Ship In The Docking Bay ───────────────────────────
+    // R2 scans the docking bay manifest, matches the requested ship ID, and returns
+    // the berth assignment — or null if that ship isn't docked. getConnection does
+    // the same: it queries the ConnectionManager for a Connection that matches the
+    // given ID, returning null if no match is found.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a Connection from the given id.
+     * Looks up a saved LDAP Connection by its unique ID from the Connection Manager.
+     * We use this to resolve a stored connection ID (e.g. from a project file) to an
+     * actual live Connection object. Returns null if no connection with that ID exists —
+     * the caller should check for null and handle the "connection not found" case.
      *
-     * @param id
-     *      the id of the Connection
-     * @return
-     *      the corresponding Connection, or null if no connection was found.
+     * @param id  the unique identifier of the connection to look up.
+     * @return    the matching Connection, or null if no connection has that ID.
      */
     public static Connection getConnection( String id )
     {
@@ -456,11 +595,22 @@ public class PluginUtils
     }
 
 
+    // ── R2 Queries The Ship Registry For All Authorized Connectors ────────────────
+    // R2 polls the station registry to get the full list of docking adapters that
+    // are cleared to dock — each one has a name, an ID, and a capability description.
+    // getSchemaConnectors does the same for Eclipse extension points: it reads all
+    // SchemaConnector contributions, instantiates them, and returns the ready-to-use
+    // list.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the List of SchemaConnectors defined using the ExtensionPoint.
+     * Discovers and instantiates all SchemaConnector implementations registered via
+     * the {@code schemaConnectors} Eclipse extension point. SchemaConnectors are the
+     * adapters that know how to talk to a specific type of LDAP server (ApacheDS,
+     * OpenLDAP, generic, etc.) to read its live schema. Each contribution is
+     * instantiated reflectively; any that fail to load are logged and skipped.
      *
-     * @return
-     *      the List of SchemaConnectors defined using the ExtensionPoint
+     * @return  a list of ready-to-use SchemaConnector instances; may be empty if no
+     *          contributions are registered or all failed to instantiate.
      */
     public static List<SchemaConnector> getSchemaConnectors()
     {
@@ -497,13 +647,21 @@ public class PluginUtils
     }
 
 
+    // ── R2 Updates The Mission History Log ────────────────────────────────────────
+    // R2 keeps a rolling log of the last twenty mission objectives — if the same
+    // objective comes up again he moves it to the top, and if the log fills up he
+    // drops the oldest entry. saveDialogSettingsHistory is that rolling log for
+    // dialog inputs, keeping the most-recently-used values at the front.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the the given value under the given key in the dialog settings.
+     * Adds a value to the MRU (most-recently-used) history list stored under the given
+     * key in the plugin's dialog settings. If the value is already in the list it is
+     * moved to position 0 rather than duplicated. The list is capped at 20 entries;
+     * the oldest is dropped when the cap is exceeded. This is used for things like
+     * search-box history so the user can re-select recent inputs quickly.
      *
-     * @param key
-     *      the key
-     * @param value
-     *      the value
+     * @param key    the dialog-settings key that namespaces this history list.
+     * @param value  the new value to record at the front of the history.
      */
     public static void saveDialogSettingsHistory( String key, String value )
     {
@@ -530,11 +688,19 @@ public class PluginUtils
     }
 
 
+    // ── R2 Retrieves The Stored Mission History ────────────────────────────────────
+    // R2 reads back the mission history from the navicomputer — if nothing has been
+    // logged yet he returns an empty list rather than crashing. loadDialogSettingsHistory
+    // does the same: it returns whatever is stored under the key, or an empty array if
+    // nothing has been saved yet.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the value of the given key from the dialog settings.
+     * Reads the MRU history list stored under the given key from the plugin's dialog
+     * settings. Returns an empty array (never null) if nothing has been stored under
+     * that key yet — callers can iterate the result safely without a null check.
      *
-     * @param key the key
-     * @return the value
+     * @param key  the dialog-settings key that namespaces the history list.
+     * @return     the stored history entries, oldest last; an empty array if none exist.
      */
     public static String[] loadDialogSettingsHistory( String key )
     {

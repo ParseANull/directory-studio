@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.editor.widgets;
 
@@ -52,8 +52,21 @@ import org.apache.directory.studio.templateeditor.EntryTemplatePluginUtils;
 import org.apache.directory.studio.templateeditor.model.widgets.TemplateFileChooser;
 
 
+// ── CLASS: EditorFileChooser — THE TANTIVE IV DATA TRANSFER STATION ──────────────
+// On the Tantive IV, the data transfer station lets crew members load files from
+// a data cartridge into the ship's memory banks, save stored files back to a
+// cartridge, or clear the stored data. An icon shows what's docked, a size
+// readout tells you how much data is stored, and the toolbar offers Save As,
+// Clear, and Browse actions. This class is that station: it displays the current
+// binary LDAP attribute (file content) with a size label, and provides optional
+// toolbar actions for transferring the file to/from disk.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an Editor FileChooser.
+ * A file-chooser widget bound to a single binary LDAP attribute. Displays an
+ * optional icon (from the template or a default file icon), a file-size label,
+ * and an optional toolbar with Save As, Clear, and Browse actions. The binary
+ * content is stored in the LDAP attribute's working copy.
+ * Think of this as the Tantive IV data transfer station.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -79,17 +92,21 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
 
     /** The file data as bytes array */
     private byte[] fileBytes;
-    
+
     /** The icon Image we might have to create */
     private Image iconImage;
 
 
+    // ── CONSTRUCTOR: INSTALL THE DATA TRANSFER STATION ───────────────────────────
+    // The technician installs the file chooser panel. It binds to the binary LDAP
+    // attribute declared in templateFileChooser.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EditorFileChooser.
-     * 
-     * @param editor the associated editor
-     * @param templateFileChooser the associated template file chooser
-     * @param toolkit the associated toolkit
+     * Creates a new {@code EditorFileChooser} bound to the given template model.
+     *
+     * @param editor               the owning entry editor
+     * @param templateFileChooser  the template model specifying attribute type, buttons, icon
+     * @param toolkit              the form toolkit
      */
     public EditorFileChooser( IEntryEditor editor, TemplateFileChooser templateFileChooser, FormToolkit toolkit )
     {
@@ -97,8 +114,13 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── CREATE WIDGET: BUILD THE DATA TRANSFER STATION ───────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the widget UI, fills it with the current LDAP attribute value, and
+     * attaches toolbar button listeners.
+     *
+     * @param parent  the parent composite
+     * @return the file chooser composite
      */
     public Composite createWidget( Composite parent )
     {
@@ -115,11 +137,18 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── INIT WIDGET: BUILD THE STATION DISPLAY ────────────────────────────────────
+    // We create a composite containing: an optional icon label (showing a file icon
+    // or a custom Base64-decoded image), a size label, and an optional toolbar with
+    // Save As / Clear / Browse buttons.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and initializes the widget UI.
+     * Builds the composite: optional icon label, size readout label, and optional
+     * Save As / Clear / Browse toolbar. The icon image is decoded from Base64 if
+     * configured in the template, or a default file icon is used.
      *
-     * @param parent the parent composite
-     * @return the associated composite
+     * @param parent  the parent composite
+     * @return the file chooser composite
      */
     private Composite initWidget( Composite parent )
     {
@@ -142,7 +171,7 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
             // Getting the icon (if available)
             ImageData iconData = null;
             String icon = getWidget().getIcon();
-            
+
             if ( ( icon != null ) && ( !icon.equals( "" ) ) ) //$NON-NLS-1$
             {
                 try
@@ -208,10 +237,12 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── GET LAYOUT NUMBER OF COLUMNS: COUNT VISIBLE SECTIONS ─────────────────────
     /**
-     * Gets the number of columns needed for the layout.
+     * Returns the number of columns needed for the composite layout — 1 for the size
+     * label, plus 1 for the optional icon, plus 1 for the optional toolbar.
      *
-     * @return the number of columns needed
+     * @return the number of columns (1, 2, or 3)
      */
     private int getLayoutNumberOfColumns()
     {
@@ -222,7 +253,7 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
         {
             numberOfColumns++;
         }
-        
+
         // Toolbar
         if ( needsToolbar() )
         {
@@ -233,11 +264,11 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── NEEDS TOOLBAR: CHECK IF ANY BUTTONS ARE CONFIGURED ───────────────────────
     /**
-     * Indicates if the widget needs a toolbar for actions.
+     * Returns {@code true} if at least one toolbar action button is configured.
      *
-     * @return<code>true</code> if the widget needs a toolbar for actions,
-     * <code>false</code> if not
+     * @return {@code true} if a toolbar should be created
      */
     private boolean needsToolbar()
     {
@@ -245,8 +276,10 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── UPDATE WIDGET: REFRESH THE STATION STATE ──────────────────────────────────
     /**
-     * Updates the widget's content.
+     * Re-reads the binary LDAP attribute, updates the size label, and refreshes
+     * the enabled/disabled states of the toolbar buttons.
      */
     private void updateWidget()
     {
@@ -261,14 +294,16 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── INIT IMAGE BYTES FROM ENTRY: READ BINARY DATA FROM ATTRIBUTE ─────────────
     /**
-     * Initializes the image bytes from the given entry.
+     * Reads the binary LDAP attribute value into {@code fileBytes}. Sets
+     * {@code fileBytes} to {@code null} if the attribute doesn't exist.
      */
     private void initImageBytesFromEntry()
     {
         // Getting the file bytes in the attribute
         IAttribute attribute = getAttribute();
-        
+
         if ( ( attribute != null ) && ( attribute.isBinary() ) && ( attribute.getValueSize() > 0 ) )
         {
             fileBytes = attribute.getBinaryValues()[0];
@@ -279,8 +314,9 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── UPDATE SIZE LABEL: SHOW HOW MUCH DATA IS STORED ──────────────────────────
     /**
-     * Updates the "Size" label.
+     * Updates the size label text with a human-readable file size string.
      */
     private void updateSizeLabel()
     {
@@ -289,8 +325,10 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── ADD LISTENERS: WIRE ALL TOOLBAR BUTTON HANDLERS ──────────────────────────
     /**
-     * Adds the listeners.
+     * Attaches selection listeners to the Save As, Clear, and Browse toolbar
+     * buttons (if present).
      */
     private void addListeners()
     {
@@ -332,17 +370,19 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── GET FILE SIZE STRING: HUMAN-READABLE BYTE COUNT ──────────────────────────
     /**
-     * Gets the size string.
-     * 
-     * @return the size string
+     * Returns a human-readable string for the current file size (bytes, KB, or MB).
+     * Returns a "no value" message if no file is loaded.
+     *
+     * @return a human-readable size string
      */
     private String getFileSizeString()
     {
         if ( fileBytes != null )
         {
             int length = fileBytes.length;
-            
+
             if ( length > 1000000 )
             {
                 return NLS.bind( Messages.getString( "EditorFileChooser.MB" ), new Object[] //$NON-NLS-1$
@@ -366,20 +406,22 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── SAVE AS TOOL ITEM ACTION: SAVE FILE TO DISK ───────────────────────────────
     /**
-     * This method is called when the 'Save As...' toolbar item is clicked.
+     * Opens a Save file dialog and writes the current {@code fileBytes} to the
+     * selected path. Shows an error dialog if writing fails.
      */
     private void saveAsToolItemAction()
     {
         // Launching a FileDialog to select where to save the file
         FileDialog fd = new FileDialog( PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), SWT.SAVE );
         String selected = fd.open();
-        
+
         if ( selected != null )
         {
             // Getting the selected file
             File selectedFile = new File( selected );
-            
+
             if ( ( !selectedFile.exists() ) || ( selectedFile.canWrite() ) )
             {
                 try
@@ -405,8 +447,10 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── CLEAR TOOL ITEM ACTION: REMOVE THE STORED FILE ───────────────────────────
     /**
-     * This method is called when the 'Clear...' toolbar item is clicked.
+     * Asks for confirmation, then clears the file bytes and updates the LDAP
+     * attribute accordingly.
      */
     private void clearToolItemAction()
     {
@@ -430,20 +474,22 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── BROWSE TOOL ITEM ACTION: LOAD A FILE FROM DISK ───────────────────────────
     /**
-     * This method is called when the 'Browse...' toolbar item is clicked.
+     * Opens an Open file dialog, reads the selected file into {@code fileBytes},
+     * updates the size label and button states, then writes to the LDAP attribute.
      */
     private void browseToolItemAction()
     {
         // Launching a FileDialog to select the file to load
         FileDialog fd = new FileDialog( PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), SWT.OPEN );
         String selected = fd.open();
-        
+
         if ( selected != null )
         {
             // Getting the selected file
             File selectedFile = new File( selected );
-            
+
             if ( ( selectedFile.exists() ) && ( selectedFile.canRead() ) )
             {
                 try
@@ -457,12 +503,12 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
                         baos = new ByteArrayOutputStream( ( int ) selectedFile.length() );
                         byte[] buf = new byte[4096];
                         int len;
-                        
+
                         while ( ( len = fis.read( buf ) ) > 0 )
                         {
                             baos.write( buf, 0, len );
                         }
-    
+
                         fileBytes = baos.toByteArray();
                     }
                     finally
@@ -471,7 +517,7 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
                         {
                             fis.close();
                         }
-                        
+
                         if ( baos != null )
                         {
                             baos.close();
@@ -517,14 +563,16 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── UPDATE ENTRY: WRITE FILE BYTES TO THE LDAP ATTRIBUTE ─────────────────────
     /**
-     * This method is called when the entry has been updated in the UI.
+     * Writes the current {@code fileBytes} to the LDAP attribute. Creates, modifies,
+     * or deletes the attribute based on whether bytes are present.
      */
     private void updateEntry()
     {
         // Getting the attribute
         IAttribute attribute = getAttribute();
-        
+
         if ( attribute == null )
         {
             if ( ( fileBytes != null ) && ( fileBytes.length != 0 ) )
@@ -549,8 +597,10 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── UPDATE BUTTONS STATES: ENABLE/DISABLE BASED ON DATA PRESENCE ─────────────
     /**
-     * Updates the states of the buttons.
+     * Enables Save As and Clear buttons when file data is present; disables them
+     * when no data is loaded. Browse is always enabled so the user can load a file.
      */
     private void updateButtonsStates()
     {
@@ -591,8 +641,9 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── UPDATE: REFRESH THE STATION STATE ────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Refreshes the widget from the current LDAP attribute value.
      */
     public void update()
     {
@@ -600,8 +651,10 @@ public class EditorFileChooser extends EditorWidget<TemplateFileChooser>
     }
 
 
+    // ── DISPOSE: RELEASE ICON IMAGE ───────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Disposes the custom icon {@link Image} if one was created from a Base64 string.
+     * Standard SWT controls are disposed by their parent composite.
      */
     public void dispose()
     {

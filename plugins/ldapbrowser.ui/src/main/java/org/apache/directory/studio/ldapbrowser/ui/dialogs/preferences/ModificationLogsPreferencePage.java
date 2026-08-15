@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.dialogs.preferences;
@@ -36,9 +36,21 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: ModificationLogsPreferencePage — PALPATINE CONFIGURES THE SURVEILLANCE SYSTEM ──
+// Palpatine's Order 66 didn't just direct who to hunt — it also configured how
+// the Empire tracked every LDAP modification: which attributes to mask (passwords,
+// sensitive data), how many rolling log files to keep, and how large each file
+// could grow before rotating.  This preference page is that configuration panel:
+// flip the switch to enable modification logging, redact sensitive attributes,
+// and tune the file rotation so the logs don't eat the disk.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The modification logs preference page contains settings of the 
- * modification logs view.
+ * Eclipse preference page for configuring the Modification Logs view behavior.
+ * Controls whether modifications are logged at all, which attributes are masked
+ * in the log (e.g. {@code userPassword}), and how log file rotation works
+ * (count × size limit).
+ * Think of this page as Palpatine's surveillance configuration: decide what gets
+ * recorded, what gets redacted, and how long the records are kept.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -50,8 +62,22 @@ public class ModificationLogsPreferencePage extends PreferencePage implements IW
     private Text logFileSizeText;
     private Text maskedAttributesText;
 
+    // ── PALPATINE OPENS THE SURVEILLANCE CONFIGURATION PANEL ─────────────────
+    // The Emperor doesn't want a generic title on his surveillance room door —
+    // he wants it labeled "Modification Logs" and with a description that tells
+    // every officer exactly what they're configuring when they walk in.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ModificationLogsPreferencePage.
+     * Constructs the preference page with a localized title and description,
+     * and wires it to the BrowserUI plugin's preference store.
+     * Eclipse calls this constructor when the user navigates to this page in
+     * the Preferences dialog.
+     *
+     * <p>For example — Palpatine labels the room:</p>
+     * <pre>
+     *   title: "Modification Logs"
+     *   description: "General settings for the Modification Logs view"
+     * </pre>
      */
     public ModificationLogsPreferencePage()
     {
@@ -61,16 +87,45 @@ public class ModificationLogsPreferencePage extends PreferencePage implements IW
     }
 
 
+    // ── PALPATINE'S AIDE CONFIRMS READINESS ───────────────────────────────────
+    // An aide pokes their head in — "Ready, my Lord?" — but there's nothing to
+    // do in this room before the meeting starts; all setup is in the UI build.
+    // IWorkbenchPreferencePage requires this method but we have no workbench
+    // initialization to perform, so we leave it empty.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Required by {@link IWorkbenchPreferencePage} but we have nothing to do here.
+     * All initialization happens in the constructor and {@link #createContents}.
+     *
+     * @param workbench  The Eclipse workbench; ignored.
      */
     public void init( IWorkbench workbench )
     {
     }
 
 
+    // ── PALPATINE LAYS OUT THE SURVEILLANCE CONFIGURATION CONTROLS ────────────
+    // The surveillance room has three stations: a master enable switch, a list of
+    // attributes to redact, and a log rotation panel specifying how many files to
+    // keep and at what size they roll over.  Each station has its own widget,
+    // wired to validate() so the OK button only lights up when inputs are legal.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the preference page UI: an enable checkbox, a masked-attributes
+     * text field, and a log file rotation group with count and size text fields.
+     * Numeric-only verification listeners guard the count and size fields.
+     * {@link #setValues()} is called at the end to populate the widgets from
+     * the currently stored preferences.
+     *
+     * <p>For example — Palpatine configures the surveillance station:</p>
+     * <pre>
+     *   [✓] Enable modification logging
+     *   Masked attributes: userPassword, unicodePwd
+     *   Log file rotation: Use [5] log files each [1000] KB
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse's preference dialog.
+     * @return        The root composite of our UI.
      */
     protected Control createContents( Composite parent )
     {
@@ -133,6 +188,24 @@ public class ModificationLogsPreferencePage extends PreferencePage implements IW
     }
 
 
+    // ── PALPATINE LOADS THE CURRENT SURVEILLANCE SETTINGS ────────────────────
+    // Before the briefing, an aide reads the current surveillance configuration
+    // into the Emperor's notes so the discussion starts from the real current
+    // state rather than guesswork.
+    // We populate all four widgets from the ConnectionCorePlugin's stored prefs.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Populates all UI widgets from the currently stored preference values.
+     * Called once during {@link #createContents} and again after a "Restore Defaults"
+     * to reset the display without rebuilding the whole UI.
+     *
+     * <p>For example — Palpatine reads from the current configuration:</p>
+     * <pre>
+     *   logging enabled: true → checkbox checked
+     *   masked attributes: "userPassword" → text field populated
+     *   log file count: 5, size: 1000 → rotation fields populated
+     * </pre>
+     */
     private void setValues()
     {
         enableModificationLogging.setSelection( ConnectionCorePlugin.getDefault().isModificationLogsEnabled() );
@@ -142,14 +215,46 @@ public class ModificationLogsPreferencePage extends PreferencePage implements IW
     }
 
 
+    // ── PALPATINE CHECKS THE INPUTS ARE IN RANGE ─────────────────────────────
+    // Before signing off on the surveillance directives, the Emperor checks that
+    // the file count and size fields contain actual numbers — a blank or zero
+    // would break log rotation entirely, which would be embarrassing.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Validates that both the file count and file size fields contain valid
+     * positive integers, then enables or disables the page (and its OK button)
+     * accordingly.
+     * Called by the modify listeners on both text fields.
+     *
+     * <p>For example — Palpatine checks the numbers before approving:</p>
+     * <pre>
+     *   logFileCountText = "5", logFileSizeText = "1000" → setValid(true)
+     *   logFileCountText = "" → setValid(false) → OK grayed out
+     * </pre>
+     */
     public void validate()
     {
         setValid( logFileCountText.getText().matches( "[0-9]+" ) && logFileSizeText.getText().matches( "[0-9]+" ) );
     }
 
 
+    // ── PALPATINE TRANSMITS THE UPDATED SURVEILLANCE DIRECTIVES ──────────────
+    // Once the briefing concludes and the commander approves, Palpatine transmits
+    // all four configuration values to the instance-scoped preference store and
+    // flushes it to disk so the changes survive a restart.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves the current UI values to the instance-scoped Eclipse preferences and
+     * flushes them to disk.
+     * Instance-scope preferences survive across IDE restarts and are per-workspace,
+     * which is what we want for connection-specific logging behavior.
+     *
+     * <p>For example — Palpatine transmits the finalized directives:</p>
+     * <pre>
+     *   enabled=true, masked="userPassword", count=5, size=1000 → stored + flushed
+     * </pre>
+     *
+     * @return  Always {@code true}; we always accept the save.
      */
     public boolean performOk()
     {
@@ -167,8 +272,23 @@ public class ModificationLogsPreferencePage extends PreferencePage implements IW
     }
 
 
+    // ── PALPATINE REVOKES HIS CUSTOM SURVEILLANCE DIRECTIVES ─────────────────
+    // When the custom surveillance configuration is revoked, Palpatine removes
+    // all his overrides from the instance-scope store and the system falls back
+    // to whatever defaults the plugin declares.
+    // We remove all four instance-scope keys, flush, and repopulate the UI from
+    // the now-reverted (default) values.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Removes all instance-scope preference overrides for modification logging,
+     * flushes the store, then repopulates the UI from the resulting default values.
+     * After this the page shows exactly what the plugin ships with.
+     *
+     * <p>For example — Palpatine's surveillance overrides are revoked:</p>
+     * <pre>
+     *   custom keys removed → flushed → setValues() reads plugin defaults →
+     *   UI shows: logging=false, masked="", count=10, size=100
+     * </pre>
      */
     protected void performDefaults()
     {

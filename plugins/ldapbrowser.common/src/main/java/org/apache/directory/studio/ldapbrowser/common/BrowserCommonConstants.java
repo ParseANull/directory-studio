@@ -6,32 +6,50 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.ldapbrowser.common;
 
 
+// ── CLASS: BrowserCommonConstants — THE JEDI ARCHIVES ────────────────────────
+// Deep in the Jedi Temple on Coruscant sit the Archives: floor-to-ceiling
+// holocrons holding every known piece of galactic knowledge, frozen and
+// immutable. No one writes new entries mid-battle — they just look things up.
+// This class is our Archives: every string key, plugin ID, preference name,
+// and image path lives here as an unchanging constant. Other classes consult
+// it but never modify it.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * 
- * Final reference -> class shouldn't be extended
+ * Holds every well-known string constant used across the ldapbrowser.common
+ * plugin: plugin IDs, preference keys, dialog setting keys, command IDs,
+ * image paths, and wizard IDs. Nothing here changes at runtime — it's the
+ * single source of truth for magic strings.
+ * Think of this class as the Jedi Archives — a read-only, authoritative
+ * record that every part of the system consults.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public final class BrowserCommonConstants
 {
+    // ── SEALING THE ARCHIVES — CONSTRUCTION FORBIDDEN ────────────────────────
+    // Jocasta Nu seals the Archive entrance: "If it is not in the Archives,
+    // it does not exist." This private constructor enforces the same rule for
+    // instantiation — this class exists only as a namespace for constants,
+    // not as objects.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     *  Ensures no construction of this class, also ensures there is no need for final keyword above
-     *  (Implicit super constructor is not visible for default constructor),
-     *  but is still self documenting.
+     * Private constructor — this class is a constants holder and must never
+     * be instantiated. The {@code final} modifier on the class and this
+     * constructor together make that explicit and self-documenting.
      */
     private BrowserCommonConstants()
     {
@@ -216,6 +234,6 @@ public final class BrowserCommonConstants
     public static final String WIZARD_ATTRIBUTE_WIZARD = PLUGIN_ID + ".wizards.AttributeWizard"; //$NON-NLS-1$
 
     public static final String WIZARD_NEW_ENTRY_WIZARD = PLUGIN_ID + ".wizards.NewEntryWizard"; //$NON-NLS-1$
-    public static final String WIZARD_NEW_CONTEXT_ENTRY_WIZARD = 
+    public static final String WIZARD_NEW_CONTEXT_ENTRY_WIZARD =
         "org.apache.directory.studio.ldapbrowser.common.wizards.NewContextEntryWizard"; //$NON-NLS-1$
 }

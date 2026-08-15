@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.actions;
 
@@ -38,9 +38,22 @@ import org.apache.directory.studio.templateeditor.editor.TemplateEditorWidget;
 import org.apache.directory.studio.templateeditor.model.Template;
 
 
+// ── CLASS: DisplayEntryInTemplateMenuManager — CLONE TROOPERS ASSEMBLING THE BRIEFING ─
+// Before a mission launch, clone troopers assemble in the hangar bay and sort
+// themselves by unit — Alpha, Beta, Gamma — so the commanding officer can see
+// exactly what's available at a glance. Every time the briefing room doors open
+// (the menu is shown) they snap back to formation. This dynamic menu manager does
+// the same: each time the user opens the "Display Entry In" dropdown, it rebuilds
+// the list of available templates (sorted by title), marks the currently selected
+// one, and always adds a preferences action at the bottom.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the menu manager which is used in the Template Editor to
- * allow to switch templates and open preferences.
+ * A dynamic {@link MenuManager} that builds the "Display Entry In [template]" menu
+ * on-demand every time it is about to be shown. It lists all templates that match
+ * the current LDAP entry, sorted alphabetically, with the active template checked.
+ * A separator and a link to the preferences page are appended at the bottom.
+ * Think of this as clone troopers snapping to formation every time the briefing
+ * room doors open — always accurate, always sorted.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -50,11 +63,24 @@ public class DisplayEntryInTemplateMenuManager extends MenuManager implements IM
     private TemplateEditorWidget templateEditorPage;
 
 
+    // ── CONSTRUCTOR: TROOPER UNIT FORMS UP FOR THE FIRST TIME ────────────────────
+    // The unit commander (this object) is assigned to a specific editor widget.
+    // We register ourselves as a menu listener so we can rebuild the formation
+    // every time the dropdown is opened — because the list of available templates
+    // can change as the user navigates to different LDAP entries.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DisplayEntryInTemplateMenuManager.
+     * Creates the menu manager and wires it to the given editor widget. Registers
+     * {@code this} as its own menu listener so {@link #menuAboutToShow(IMenuManager)}
+     * fires every time the dropdown opens, keeping the template list current.
      *
-     * @param templateEditorPage
-     *      the associated editor page
+     * <p>For example — the unit forms up for the first time:</p>
+     * <pre>
+     *   new DisplayEntryInTemplateMenuManager(templateEditorWidget);
+     *   // "Unit assembled, reporting to editor widget, ready for dynamic rebuilds."
+     * </pre>
+     *
+     * @param templateEditorPage  the editor widget whose templates populate this menu
      */
     public DisplayEntryInTemplateMenuManager( TemplateEditorWidget templateEditorPage )
     {
@@ -66,8 +92,18 @@ public class DisplayEntryInTemplateMenuManager extends MenuManager implements IM
     }
 
 
+    // ── MENU ABOUT TO SHOW: TROOPERS SNAP TO FORMATION ───────────────────────────
+    // The briefing room doors swing open. Every trooper snaps into position:
+    // ranks sorted, helmets on, the right units checked. We delegate to
+    // fillInMenuManager() which does the actual work of building the current list.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by JFace just before the dropdown menu is displayed. Delegates to
+     * {@link #fillInMenuManager(IMenuManager, TemplateEditorWidget)} to rebuild
+     * the template list from scratch on every open so it always reflects the
+     * current entry's available templates.
+     *
+     * @param manager  the menu manager being populated; same as {@code this}
      */
     public void menuAboutToShow( IMenuManager manager )
     {
@@ -75,8 +111,15 @@ public class DisplayEntryInTemplateMenuManager extends MenuManager implements IM
     }
 
 
+    // ── IS VISIBLE: UNIT IS ALWAYS ON DUTY ───────────────────────────────────────
+    // This unit is permanently visible in the menu — it never hides itself.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Always returns {@code true} — this menu item is always visible in the
+     * parent menu, whether or not templates exist. The menu itself handles the
+     * empty-list case with a disabled placeholder.
+     *
+     * @return {@code true} always
      */
     public boolean isVisible()
     {
@@ -84,8 +127,16 @@ public class DisplayEntryInTemplateMenuManager extends MenuManager implements IM
     }
 
 
+    // ── IS DYNAMIC: FORMATION CHANGES WITH EVERY BRIEFING ────────────────────────
+    // Different missions, different troopers — the formation is rebuilt from scratch
+    // every time the doors open. Returning true here tells JFace to always call
+    // menuAboutToShow() rather than caching the menu from the last open.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code true} so JFace knows to call {@link #menuAboutToShow(IMenuManager)}
+     * every time the menu is shown rather than using a cached version.
+     *
+     * @return {@code true} always
      */
     public boolean isDynamic()
     {
@@ -93,13 +144,31 @@ public class DisplayEntryInTemplateMenuManager extends MenuManager implements IM
     }
 
 
+    // ── FILL IN MENU MANAGER: ASSEMBLE THE FULL FORMATION ────────────────────────
+    // The sergeant calls roll: clear the formation, sort the units alphabetically
+    // by name, mark the active unit with a checkmark, fall back to a "No template"
+    // placeholder if the hangar is empty, and always append a Preferences link at
+    // the bottom. This static method is also called directly by
+    // DisplayEntryInTemplateAction.run() when building a fresh context menu.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Fill the menu manager in with one menu item for each available template.
+     * Populates {@code menuManager} with one checkable action per available template,
+     * sorted alphabetically by title, with the currently selected template checked.
+     * If no templates are available a single disabled "No template" item is shown.
+     * A separator and a link to the preferences page are always appended at the end.
+     * This is static so {@link DisplayEntryInTemplateAction} can call it too.
      *
-     * @param menuManager
-     *      the menu manager
-     * @param templateEditorWidget
-     *      the associated editor widget
+     * <p>For example — the sergeant calls roll and assembles the formation:</p>
+     * <pre>
+     *   // 1. Clear any stale items from the previous open.
+     *   // 2. Sort templates A → Z.
+     *   // 3. Create one checked/unchecked action per template.
+     *   // 4. Append separator + Preferences link.
+     * </pre>
+     *
+     * @param menuManager           the menu manager to populate; cleared before filling
+     * @param templateEditorWidget  the editor widget providing the template list and
+     *                              current selection
      */
     protected static void fillInMenuManager( IMenuManager menuManager, TemplateEditorWidget templateEditorWidget )
     {
@@ -151,7 +220,7 @@ public class DisplayEntryInTemplateMenuManager extends MenuManager implements IM
             };
         } );
 
-        // As the Menu Manager is dynamic, we need to 
+        // As the Menu Manager is dynamic, we need to
         // remove all the previously added actions
         menuManager.removeAll();
 
@@ -184,18 +253,27 @@ public class DisplayEntryInTemplateMenuManager extends MenuManager implements IM
     }
 
 
+    // ── CREATE ACTION: TROOPER TAKES THEIR ASSIGNED POSITION ─────────────────────
+    // Each trooper is assigned a slot and told whether to stand at attention
+    // (checked = currently active template) or at ease (unchecked). We wrap
+    // a SwitchTemplateAction in the right checked state so the UI shows a
+    // tick next to the currently displayed template.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Created the action.
+     * Creates a checkable {@link SwitchTemplateAction} for the given template and
+     * sets its checked state to {@code isChecked}. This is the individual menu
+     * item for one template in the chooser.
      *
-     * @param templateEditorWidget
-     *      the template editor widget
-     * @param template
-     *      the template
-     * @param isChecked
-     *      <code>true</code> if the action is checked,
-     *      <code>false</code> if not
-     * @return
-     *      the associated action
+     * <p>For example — a trooper takes their assigned position:</p>
+     * <pre>
+     *   IAction action = createAction(widget, userAccountTemplate, true);
+     *   // action.isChecked() == true  →  tick appears next to "User Account" in the menu
+     * </pre>
+     *
+     * @param templateEditorWidget  the editor widget to switch when this action fires
+     * @param template              the template this action represents
+     * @param isChecked             {@code true} if this template is currently active
+     * @return the configured checkable action
      */
     private static IAction createAction( TemplateEditorWidget templateEditorWidget, Template template, boolean isChecked )
     {

@@ -28,8 +28,24 @@ import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 import org.apache.directory.studio.ldapbrowser.core.model.IValue;
 
 
+// ── CLASS: ValueModifiedEvent — LANDO ALTERS THE DEAL ───────────────────────
+// Lando Calrissian made a deal with Darth Vader: hand over the Rebels in
+// exchange for Cloud City's independence.  Then Vader alters the deal.  The
+// deal still exists — the same attribute, the same slot — but its terms (its
+// value) have been replaced.  "I am altering the deal.  Pray I don't alter it
+// any further."
+// This event fires when a single existing LDAP value is replaced with a new
+// one in the same attribute slot — a modification, not an add-then-delete.
+// Listeners receive both the old value and the new value so they can update
+// the specific table cell without reloading the whole attribute.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An ValueModifiedEvent indicates that an {@link IValue} was modified.
+ * Signals that an existing {@link IValue} was replaced with a new value in the
+ * same attribute slot on an {@link IEntry}.
+ * This fires when the user edits a value in place — the attribute (the "deal")
+ * remains, but its content changed from {@code oldValue} to {@code newValue}.
+ * Listeners receive both so they can diff-update the UI rather than refreshing
+ * the entire entry.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -46,14 +62,25 @@ public class ValueModifiedEvent extends EntryModificationEvent
     private IValue newValue;
 
 
+    // ── Vader Alters The Terms: Old Deal, New Deal, Same Contract ────────────────
+    // "The deal WAS: hand over Solo.  The deal IS NOW: hand over everyone."
+    // Both the old and new terms are recorded alongside the contract reference
+    // (attribute) and the signatory (entry).  The listener can show a diff
+    // in the UI: strike through the old value, display the new one.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ValueModifiedEvent.
+     * Creates a new ValueModifiedEvent.
      *
-     * @param connection the connection
-     * @param modifiedEntry the modified entry
-     * @param modifiedAttribute the modified attribute
-     * @param oldValue the old value
-     * @param newValue the new value
+     * <p>For example — a user's phone number is corrected:</p>
+     * <pre>
+     *   new ValueModifiedEvent(conn, userEntry, phoneAttr, oldPhone, newPhone);
+     * </pre>
+     *
+     * @param connection         the browser connection through which the change was made.
+     * @param modifiedEntry      the LDAP entry whose attribute value changed.
+     * @param modifiedAttribute  the attribute that holds the changed value.
+     * @param oldValue           the value as it was before the modification.
+     * @param newValue           the value as it is after the modification.
      */
     public ValueModifiedEvent( IBrowserConnection connection, IEntry modifiedEntry, IAttribute modifiedAttribute,
         IValue oldValue, IValue newValue )
@@ -65,10 +92,14 @@ public class ValueModifiedEvent extends EntryModificationEvent
     }
 
 
+    // ── Identify Which Contract Slot Was Altered ──────────────────────────────────
+    // "The deal was in section 3 — telephone numbers."  The listener needs the
+    // attribute to find the right section of the attribute table.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the modified attribute.
+     * Returns the attribute that contains the modified value.
      *
-     * @return the modified attribute
+     * @return the {@link IAttribute}; never {@code null}.
      */
     public IAttribute getModifiedAttribute()
     {
@@ -76,10 +107,15 @@ public class ValueModifiedEvent extends EntryModificationEvent
     }
 
 
+    // ── Retrieve The Original Terms ───────────────────────────────────────────────
+    // "The old deal said: +1-555-0100."  Needed to locate the row in the UI
+    // and display what changed (or animate the transition from old to new).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the old value.
+     * Returns the value as it was before the modification.
+     * Use this to identify which row in the attribute table to update.
      *
-     * @return the old value
+     * @return the old {@link IValue}; never {@code null}.
      */
     public IValue getOldValue()
     {
@@ -87,10 +123,15 @@ public class ValueModifiedEvent extends EntryModificationEvent
     }
 
 
+    // ── Retrieve The Altered Terms ────────────────────────────────────────────────
+    // "The new deal says: +1-555-0199."  This is what the listener renders
+    // in the table cell after the edit.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the new value.
+     * Returns the value as it is after the modification.
+     * Use this to update the UI row with the new data.
      *
-     * @return the new value
+     * @return the new {@link IValue}; never {@code null}.
      */
     public IValue getNewValue()
     {
@@ -98,8 +139,14 @@ public class ValueModifiedEvent extends EntryModificationEvent
     }
 
 
+    // ── Lando Logs The Altered Deal ───────────────────────────────────────────────
+    // "Replaced '+1-555-0100' with '+1-555-0199' at 'telephoneNumber' for 'cn=Lando,...'"
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns a human-readable description of this event, suitable for logs and
+     * the status bar.
+     *
+     * @return a localised string like "Replaced 'old' with 'new' at 'telephoneNumber' for 'cn=Lando,...'".
      */
     public String toString()
     {

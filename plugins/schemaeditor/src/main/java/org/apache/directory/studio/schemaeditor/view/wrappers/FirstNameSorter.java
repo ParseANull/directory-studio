@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.schemaeditor.view.wrappers;
@@ -28,13 +28,50 @@ import org.apache.directory.api.ldap.model.schema.AttributeType;
 import org.apache.directory.api.ldap.model.schema.ObjectClass;
 
 
+// ── CLASS: FirstNameSorter — Mace Windu Confronting Palpatine in His Office ──
+// In Palpatine's office, Mace Windu stands across from the Chancellor and makes
+// a decisive judgement call — "I have fought many times, Chancellor, and always
+// on the side of the Republic." He sizes up his opponent and, without hesitation,
+// determines who stands where in the order of things.
+// FirstNameSorter does the same: it looks at two tree nodes, extracts the first
+// name from each schema element, and makes a definitive judgement about which one
+// comes before the other alphabetically — no ambiguity, no deferral.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to compare and sort ascending two TreeNode.
+ * Sorts {@link TreeNode} objects in ascending alphabetical order by the first name
+ * of the schema element they wrap.
+ * LDAP schema elements (attribute types and object classes) can have multiple names,
+ * but for display purposes we sort by the first name in the list — the "primary" label.
+ * This comparator is case-insensitive, so "cn" and "CN" are treated as equivalent.
+ * Think of Mace Windu sizing up his opponent: a quick, firm judgement of who stands
+ * first in the order, with no second-guessing.
  */
 public class FirstNameSorter implements Comparator<TreeNode>
 {
+    // ── Mace Windu Sizes Up the Two Opponents and Declares a Verdict ─────────
+    // In Palpatine's office, Mace looks from one face to the other — assessing
+    // status, rank, name — and determines the order instantly: this one stands
+    // to my right, that one to my left. Neither one is left without a position.
+    // compare() does the same for two tree nodes: extract names, compare first names.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Compares two {@link TreeNode} objects by the first name of the schema element each wraps.
+     * Both nodes must wrap the same type (both {@link AttributeTypeWrapper} or both
+     * {@link ObjectClassWrapper}), or one of each — we handle all four combinations.
+     * Falls back to {@code toString()} comparison if neither node is a recognised wrapper type.
+     *
+     * <p>For example — Mace Windu ordering the two figures in Palpatine's office:</p>
+     * <pre>
+     *   sorter.compare( cnWrapper, snWrapper );
+     *   // Returns negative: "cn" comes before "sn" alphabetically
+     *   sorter.compare( personWrapper, cnWrapper );
+     *   // Mixed types: compares "person" vs "cn" — "cn" wins alphabetically
+     * </pre>
+     *
+     * @param o1  the first tree node to compare; must wrap an {@link AttributeType} or {@link ObjectClass}
+     * @param o2  the second tree node to compare; must wrap an {@link AttributeType} or {@link ObjectClass}
+     * @return    a negative integer if {@code o1} sorts before {@code o2}, zero if equal,
+     *            positive if {@code o1} sorts after {@code o2}
      */
     public int compare( TreeNode o1, TreeNode o2 )
     {

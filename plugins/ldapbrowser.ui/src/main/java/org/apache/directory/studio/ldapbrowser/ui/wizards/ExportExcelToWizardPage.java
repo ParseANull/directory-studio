@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -32,8 +32,17 @@ import org.eclipse.swt.widgets.Link;
 import org.eclipse.ui.dialogs.PreferencesUtil;
 
 
+// ── CLASS: ExportExcelToWizardPage — YODA SETS THE EXCEL X-WING DOWN ─────────
+// Yoda sets the X-wing down on the Excel landing pad: a *.xls file.
+// The page includes a "See Text Formats" link that opens the XLS preference
+// tab and a warning that Excel has row/column limits — so Yoda reminds us
+// that even the Force has practical constraints when dealing with Office formats.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the page to select the target Excel file.
+ * The "To" page of the Excel export wizard: picks the destination .xls file.
+ * Extends {@link ExportBaseToPage} with Excel-specific extension filters (*.xls, *),
+ * a "See Text Formats" link for the XLS preference tab, and a warning label
+ * about Excel's row/column limits.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -45,11 +54,14 @@ public class ExportExcelToWizardPage extends ExportBaseToPage
         { "*.xls", "*" }; //$NON-NLS-1$ //$NON-NLS-2$
 
 
+    // ── Yoda Checks the Excel Pad Requirements ────────────────────────────────────
+    // The Excel wizard icon marks the format; extensions filter to *.xls.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExportExcelToWizardPage.
-     * 
-     * @param pageName the page name
-     * @param wizard the wizard
+     * Creates a new ExportExcelToWizardPage with the Excel wizard icon.
+     *
+     * @param pageName  the wizard page name.
+     * @param wizard    the parent export wizard.
      */
     public ExportExcelToWizardPage( String pageName, ExportBaseWizard wizard )
     {
@@ -58,8 +70,19 @@ public class ExportExcelToWizardPage extends ExportBaseToPage
     }
 
 
+    // ── Yoda Surveys the Excel Landing Zone ───────────────────────────────────────
+    // Beyond the standard file selector, we add a link to Excel formatting
+    // preferences and a warning about Excel's inherent row/column count limits.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the page UI using the base-class file browser, then adds:
+     * a "See Text Formats" hyperlink to the XLS preference tab, and a
+     * wrapped warning label reminding the user that Excel has limits on the
+     * number of rows and columns that can be exported.
+     *
+     * @param parent  the parent composite.
      */
     public void createControl( Composite parent )
     {
@@ -86,8 +109,15 @@ public class ExportExcelToWizardPage extends ExportBaseToPage
     }
 
 
+    // ── The Excel Pad Accepts These Surfaces ──────────────────────────────────────
+    // Only *.xls and *.* are valid Excel landing pads.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Returns the file-extension filters for the Excel save dialog.
+     *
+     * @return  {@code ["*.xls", "*"]}.
      */
     protected String[] getExtensions()
     {
@@ -95,8 +125,16 @@ public class ExportExcelToWizardPage extends ExportBaseToPage
     }
 
 
+    // ── The Excel Format Name ─────────────────────────────────────────────────────
+    // Error messages reference the "Excel" format by name.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Returns the localised format name "Excel" for use in page titles and
+     * error messages.
+     *
+     * @return  the string "Excel".
      */
     protected String getFileType()
     {

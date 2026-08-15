@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.valueeditors;
 
@@ -42,8 +42,21 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: AttributeTypeAndValueDialog — ISB TERMINAL FOR ATTRIBUTE-VALUE PAIRS
+// The ISB data-entry terminal for the "attributeValue" protected-item row
+// presents two fields side by side: an attribute-type drop-down (autocomplete
+// from the schema) and a free-text value field.
+// The officer picks a type, types a value, and the terminal encodes the pair
+// as "type=value" for insertion into the ACI directive.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class provides a dialog to enter an attribute type and value.
+ * JFace {@link Dialog} for entering an attribute type and a value together.
+ * Used by {@link AttributeTypeAndValueValueEditor} when the user edits an
+ * {@code attributeValue} protected item.
+ * Displays a schema-driven combo for the attribute type (with content assist)
+ * and a free-text field for the value, separated by " = ".
+ * Think of this as the ISB terminal for attribute-value pairs: two fields,
+ * one clear separator, one combined result.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -72,13 +85,27 @@ public class AttributeTypeAndValueDialog extends Dialog
     private String returnValue;
 
 
+    // ── OPEN THE ATTRIBUTE-VALUE TERMINAL ─────────────────────────────────────
+    // The ISB terminal opens pre-filled with the existing attribute type and value
+    // (if editing) or blank (if adding a new attributeValue entry).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AttributeTypeDialog.
-     * 
-     * @param parentShell the parent shell
-     * @param schema the schema
-     * @param initialAttributeType the initial attribute type
-     * @param initialValue the initial value
+     * Creates a new {@code AttributeTypeAndValueDialog}.
+     *
+     * <p>For example — editing an existing attributeValue entry:</p>
+     * <pre>
+     *   AttributeTypeAndValueDialog dlg =
+     *       new AttributeTypeAndValueDialog(shell, schema, "cn", "John Doe");
+     *   if (dlg.open() == Dialog.OK) {
+     *     String type  = dlg.getAttributeType();  // e.g. "sn"
+     *     String value = dlg.getValue();           // e.g. "Smith"
+     *   }
+     * </pre>
+     *
+     * @param parentShell           the parent SWT shell
+     * @param schema                the LDAP schema used to populate the attribute-type combo
+     * @param initialAttributeType  pre-filled attribute type, or empty string for blank
+     * @param initialValue          pre-filled attribute value, or empty string for blank
      */
     public AttributeTypeAndValueDialog( Shell parentShell, Schema schema, String initialAttributeType,
         String initialValue )
@@ -92,6 +119,9 @@ public class AttributeTypeAndValueDialog extends Dialog
     }
 
 
+    // ── SET TITLE AND ICON ────────────────────────────────────────────────────
+    // The orderly labels the terminal window with the appropriate title.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -103,6 +133,10 @@ public class AttributeTypeAndValueDialog extends Dialog
     }
 
 
+    // ── COMMIT THE PAIR ───────────────────────────────────────────────────────
+    // Grand Moff confirms the attribute type and value; we snapshot both fields
+    // into the return variables before delegating to the superclass close.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -114,6 +148,12 @@ public class AttributeTypeAndValueDialog extends Dialog
     }
 
 
+    // ── BUILD THE TWO-FIELD FORM ──────────────────────────────────────────────
+    // The orderly lays out three widgets in a row: attribute-type combo,
+    // " = " separator label, and value text field.
+    // Content assist is attached to the combo so the user can type a prefix
+    // and see matching attribute types from the schema.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -146,10 +186,15 @@ public class AttributeTypeAndValueDialog extends Dialog
     }
 
 
+    // ── RETURN THE SELECTED TYPE ──────────────────────────────────────────────
+    // The value editor retrieves the chosen attribute type to build the
+    // "type=value" string for the ACI directive.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the attribute type.
-     * 
-     * @return the attribute type, null if canceled
+     * Returns the attribute type chosen in the combo, or {@code null} if the
+     * dialog was cancelled.
+     *
+     * @return the attribute type string, or {@code null}
      */
     public String getAttributeType()
     {
@@ -157,10 +202,14 @@ public class AttributeTypeAndValueDialog extends Dialog
     }
 
 
+    // ── RETURN THE ENTERED VALUE ──────────────────────────────────────────────
+    // The value editor retrieves the entered value to complete the pair.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the value.
-     * 
-     * @return the value, null if canceled
+     * Returns the value entered in the text field, or {@code null} if the
+     * dialog was cancelled.
+     *
+     * @return the attribute value string, or {@code null}
      */
     public String getValue()
     {

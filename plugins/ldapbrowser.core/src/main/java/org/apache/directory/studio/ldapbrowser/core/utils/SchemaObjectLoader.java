@@ -29,9 +29,22 @@ import org.apache.directory.studio.ldapbrowser.core.BrowserCorePlugin;
 import org.apache.directory.studio.ldapbrowser.core.model.IBrowserConnection;
 import org.apache.directory.studio.ldapbrowser.core.model.schema.Schema;
 
+// ── CLASS: SchemaObjectLoader — R2-D2 CACHING THE JEDI ARCHIVES INDEXES ──────
+// R2-D2 pre-downloads the Jedi Archives indexes into two flat arrays so that
+// auto-completion widgets don't have to re-scan the schema on every keystroke.
+// SchemaObjectLoader lazily builds sorted arrays of object class names+OIDs
+// and attribute type names+OIDs, falling back to all known connections or the
+// default schema when no specific BrowserConnection is set.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A class exposing some common methods on the schema.
- * 
+ * Lazily builds and caches sorted arrays of schema object names and OIDs for
+ * use by auto-completion widgets.  Covers both object classes and attribute
+ * types, drawing from a specific {@link IBrowserConnection} or from all known
+ * connections when none is set.
+ *
+ * <p>Think of this as R2-D2 caching the Jedi Archives indexes: the first
+ * query is slow, every subsequent query is instant.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SchemaObjectLoader
@@ -61,10 +74,17 @@ public class SchemaObjectLoader
     }
     
     
+    // ── R2-D2 Returns The Cached Object Class Names And OIDs Index ────────────────
+    // If the index array is null or empty, R2-D2 rebuilds it from the schema.
+    // Names and OIDs are collected separately, de-duplicated, sorted, and merged.
+    // The DEFAULT_SCHEMA is always appended after any connection-specific schemas.
+    // Returns a flat array: all sorted names first, then all sorted OIDs.
     /**
-     * Gets the array containing the objectClass names and OIDs.
+     * Gets the array containing the object class names and OIDs.
+     * The array is built lazily and cached; subsequent calls return the
+     * cached result.
      *
-     * @return the array containing the objectClass names and OIDs
+     * @return the sorted array of object class names and OIDs
      */
     public String[] getObjectClassNamesAndOids()
     {
@@ -99,10 +119,17 @@ public class SchemaObjectLoader
         return objectClassesAndOids;
     }
 
+    // ── R2-D2 Returns The Cached Attribute Type Names And OIDs Index ─────────────
+    // If the index array is null or empty, R2-D2 rebuilds it from the schema.
+    // Attribute type names and OIDs are collected, de-duplicated, sorted, merged.
+    // Follows the same fallback logic as getObjectClassNamesAndOids.
+    // Returns a flat array: all sorted names first, then all sorted OIDs.
     /**
-     * Gets the array containing the attribute names and OIDs.
+     * Gets the array containing the attribute type names and OIDs.
+     * The array is built lazily and cached; subsequent calls return the
+     * cached result.
      *
-     * @return the array containing the attribute names and OIDs
+     * @return the sorted array of attribute type names and OIDs
      */
     public String[] getAttributeNamesAndOids()
     {
@@ -138,11 +165,11 @@ public class SchemaObjectLoader
     }
 
     
-    /**
-     * Gets the array containing the schemaObjects and OIDs.
-     *
-     * @return the array containing the Schema objects and OIDs
-     */
+    // ── R2-D2 Builds And Caches A Schema Index Using A Provided Adder Strategy ────
+    // If the input array is already populated, R2-D2 returns it unchanged (cache hit).
+    // Otherwise he gathers names and OIDs via the SchemaAdder, sorts both lists,
+    // then merges them into one flat array (names first, OIDs after).
+    // Falls back to all connections when no browserConnection is set.
     private String[] getSchemaObjectsAnddOids( String[] schemaObjects, SchemaAdder schemaAdder )
     {
         // Checking if the array has already be generated

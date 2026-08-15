@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.widgets;
 
@@ -50,8 +50,19 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Table;
 
 
+// ── CLASS: ACIItemItemPermissionsComposite — GRAND MOFF'S ITEM-PERMISSION LIST ─
+// In an itemFirst ACI directive the Grand Moff specifies a list of item
+// permissions — each one names a set of user classes and a set of
+// grants-and-denials that apply to them.
+// This composite is the table that holds those item-permission rows with
+// Add, Edit, and Delete buttons.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This composite contains GUI elements to add, edit and delete ACI item permissions.
+ * SWT {@link Composite} presenting an editable list of {@link ItemPermission}
+ * rows used in itemFirst ACI items.
+ * Each row is managed through an {@link ItemPermissionDialog}.
+ * Think of this as the Grand Moff's item-permission table: add rows, edit
+ * them in the dialog, delete ones you no longer need.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -75,8 +86,13 @@ public class ACIItemItemPermissionsComposite extends Composite
     /** The selected item permissions, input of the table viewer */
     private List<ItemPermissionWrapper> itemPermissionWrappers = new ArrayList<ItemPermissionWrapper>();
 
+    // ── CLASS: ItemPermissionWrapper — TABLE ROW DTO ──────────────────────────
+    // Each row in the table view wraps one ItemPermission bean.
+    // The toString() produces a compact summary for the table cell.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * ItemPermissionWrappers are used as input of the table viewer.
+     * DTO wrapping one {@link ItemPermission} bean for display in the table viewer.
+     * {@link #toString()} returns a compact summary truncated to 50 characters.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -87,9 +103,9 @@ public class ACIItemItemPermissionsComposite extends Composite
 
 
         /**
-         * Creates a new instance of ItemPermissionWrapper.
+         * Creates a new {@code ItemPermissionWrapper}.
          *
-         * @param itemClassClass
+         * @param itemPermission  the item permission bean to wrap
          */
         private ItemPermissionWrapper( ItemPermission itemPermission )
         {
@@ -98,9 +114,10 @@ public class ACIItemItemPermissionsComposite extends Composite
 
 
         /**
-         * Returns a user-friedly string, displayed in the table.
-         * 
-         * @return the string
+         * Returns a user-friendly summary of the item permission for display
+         * in the table, truncated to 50 characters if necessary.
+         *
+         * @return the summary string
          */
         public String toString()
         {
@@ -111,7 +128,7 @@ public class ACIItemItemPermissionsComposite extends Composite
             else
             {
                 StringBuilder buffer = new StringBuilder();
-                
+
                 if ( ( itemPermission.getPrecedence() != null ) && ( itemPermission.getPrecedence() > -1 ) )
                 {
                     buffer.append( '(' );
@@ -120,7 +137,7 @@ public class ACIItemItemPermissionsComposite extends Composite
                 }
 
                 boolean isFirst = true;
-                
+
                 for ( UserClass userClass : itemPermission.getUserClasses() )
                 {
                     if ( isFirst )
@@ -135,11 +152,11 @@ public class ACIItemItemPermissionsComposite extends Composite
                     String s = UserClassWrapper.CLASS_TO_DISPLAY_MAP.get( userClass.getClass() );
                     buffer.append( s );
                 }
-                
+
                 buffer.append( ": " );
 
                 isFirst = true;
-                
+
                 for ( GrantAndDenial grantAndDenial : itemPermission.getGrantsAndDenials() )
                 {
                     if ( isFirst )
@@ -166,7 +183,7 @@ public class ACIItemItemPermissionsComposite extends Composite
                 String s = buffer.toString();
                 s = s.replace( '\r', ' ' );
                 s = s.replace( '\n', ' ' );
-                
+
                 if ( s.length() > 50 )
                 {
                     String temp = s;
@@ -174,19 +191,21 @@ public class ACIItemItemPermissionsComposite extends Composite
                     s = s + "..."; //$NON-NLS-1$
                     s = s + temp.substring( temp.length() - 25, temp.length() );
                 }
-                
+
                 return s;
             }
         }
     }
 
 
+    // ── CONSTRUCT THE ITEM-PERMISSIONS TABLE ──────────────────────────────────
     /**
-     * 
-     * Creates a new instance of ACIItemItemPermissionsComposite.
+     * Creates a new {@code ACIItemItemPermissionsComposite}.
+     * Builds the two-column inner composite, the table viewer, and the
+     * Add / Edit / Delete button panel.
      *
-     * @param parent
-     * @param style
+     * @param parent  the parent composite
+     * @param style   SWT style bits
      */
     public ACIItemItemPermissionsComposite( Composite parent, int style )
     {
@@ -209,9 +228,9 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── BUILD THE INNER COMPOSITE ─────────────────────────────────────────────
     /**
-     * This method initializes composite    
-     *
+     * Creates the inner two-column composite, label, table viewer, and button panel.
      */
     private void createComposite()
     {
@@ -245,9 +264,10 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── BUILD THE TABLE VIEWER ────────────────────────────────────────────────
     /**
-     * This method initializes table and table viewer
-     *
+     * Creates and configures the {@link TableViewer} displaying the item
+     * permission list, and wires selection and double-click listeners.
      */
     private void createTable()
     {
@@ -284,9 +304,10 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── BUILD THE BUTTON PANEL ────────────────────────────────────────────────
     /**
-     * This method initializes buttons  
-     *
+     * Creates the Add, Edit, and Delete buttons in a vertical button panel.
+     * Edit and Delete are disabled until a row is selected.
      */
     private void createButtonComposite()
     {
@@ -359,10 +380,11 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── SHOW / HIDE THIS COMPOSITE ────────────────────────────────────────────
     /**
-     * Shows or hides this composite.
-     * 
-     * @param visible true if visible
+     * Shows or hides this composite by adjusting its {@code GridData.heightHint}.
+     *
+     * @param visible  {@code true} to show, {@code false} to hide
      */
     public void setVisible( boolean visible )
     {
@@ -371,10 +393,11 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── INJECT THE CONNECTION CONTEXT ─────────────────────────────────────────
     /**
-     * Sets the context.
-     * 
-     * @param context the context
+     * Stores the connection context for use by {@link ItemPermissionDialog}.
+     *
+     * @param context  the value context
      */
     public void setContext( ACIItemValueWithContext context )
     {
@@ -382,10 +405,12 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── POPULATE THE TABLE ────────────────────────────────────────────────────
     /**
-     * Sets the item permissions. 
+     * Replaces the current list with {@code itemPermissions} and refreshes
+     * the table viewer.
      *
-     * @param itemPermissions
+     * @param itemPermissions  the item permissions to display
      */
     public void setItemPermissions( Collection<ItemPermission> itemPermissions )
     {
@@ -402,10 +427,11 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── COLLECT THE CURRENT LIST ──────────────────────────────────────────────
     /**
-     * Returns the item permissions as selected by the user.
+     * Returns the item permissions currently in the list.
      *
-     * @return the item permissions
+     * @return the collection of item permissions
      */
     public Collection<ItemPermission> getItemPermissions()
     {
@@ -420,9 +446,12 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── GET THE SELECTED WRAPPER ──────────────────────────────────────────────
     /**
-     * 
-     * @return the item permission that is selected in the table viewer, or null.
+     * Returns the {@link ItemPermissionWrapper} currently selected in the table
+     * viewer, or {@code null} if nothing is selected.
+     *
+     * @return the selected wrapper, or {@code null}
      */
     private ItemPermissionWrapper getSelectedItemPermissionWrapper()
     {
@@ -442,9 +471,10 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── ADD AN ITEM PERMISSION ────────────────────────────────────────────────
     /**
-     * Opens the ItemPermissionDialog and adds the composed 
-     * item permission to the list.
+     * Opens an {@link ItemPermissionDialog} to compose a new item permission
+     * and adds it to the list if the user confirms.
      */
     private void addItemPermission()
     {
@@ -459,9 +489,10 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── EDIT THE SELECTED ITEM PERMISSION ─────────────────────────────────────
     /**
-     * Opens the ItemPermissionDialog with the currently selected
-     * item permission and puts the modified item permission into the list.
+     * Opens an {@link ItemPermissionDialog} pre-filled with the selected item
+     * permission and replaces the old wrapper with the updated one on confirmation.
      */
     private void editItemPermission()
     {
@@ -479,8 +510,10 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── DELETE THE SELECTED ITEM PERMISSION ───────────────────────────────────
     /**
-     * Deletes the currently selected item permission from list.
+     * Removes the selected item permission wrapper from the list without
+     * prompting for confirmation.
      */
     private void deleteItemPermission()
     {
@@ -493,9 +526,10 @@ public class ACIItemItemPermissionsComposite extends Composite
     }
 
 
+    // ── REACT TO SELECTION CHANGES ────────────────────────────────────────────
     /**
-     * Called when an item permission is selected in table viewer.
-     * Updates the enabled/disabled state of the buttons.
+     * Updates the enabled state of the Edit and Delete buttons based on whether
+     * a row is selected in the table viewer.
      */
     private void itemPermissionSelected()
     {

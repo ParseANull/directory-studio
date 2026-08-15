@@ -25,22 +25,43 @@ import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 
+// ── CLASS: Messages — C-3PO TRANSLATING THE JAWA DIALECT ────────────────────
+// C-3PO can speak six million languages and here he's working overtime:
+// the search log view needs human-readable labels for every button and menu
+// item, and C-3PO is the one fetching those translations from the resource
+// bundle on demand.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class get messages from the resources file.
- *  
+ * Provides locale-aware UI strings for the search logs view package.
+ * Every user-visible label, tooltip, and menu item in this package runs
+ * through this class so that adding a new locale only requires updating
+ * the messages.properties file — not touching any Java code.
+ * Think of C-3PO: give him a key and he'll hand you back the right phrase
+ * in whatever language the user's environment demands.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class Messages
 {
     /** The resource name */
-    private static final ResourceBundle RESOURCE_BUNDLE = 
+    private static final ResourceBundle RESOURCE_BUNDLE =
         ResourceBundle.getBundle( Messages.class.getPackage().getName() + ".messages" );
-    
+
+    // ── C-3PO Consults His Language Banks ────────────────────────────────────────
+    // "I am fluent in over six million forms of communication." C-3PO doesn't
+    // guess — he looks it up, and if the phrase isn't in his memory banks he
+    // makes it obvious by returning something clearly wrong.
+    // We do the same: look up the key, and if it's missing return !key! so
+    // developers immediately see there's a missing translation.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Get back a message from the resource file given a key
-     * 
-     * @param key The key associated with the message
-     * @return The found message
+     * Retrieves a localised string from the search logs messages resource bundle.
+     * If the key has no mapping — perhaps someone forgot to add it to the properties
+     * file — we return {@code !key!} instead of throwing, so the UI shows something
+     * visible rather than crashing or showing nothing at all.
+     *
+     * @param key  the message key as defined in messages.properties.
+     * @return     the localised string, or {@code !key!} if no mapping exists.
      */
     public static String getString( String key )
     {

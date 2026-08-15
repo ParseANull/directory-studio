@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.wizards;
@@ -49,9 +49,28 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: AttributeOptionsWizardPage — OBI-WAN EXPLAINS JEDI PROTOCOL NUANCES
+// Aboard the Millennium Falcon, Obi-Wan sits Luke down and works through the
+// finer points of Jedi etiquette: which language to speak in each situation
+// (language tags), whether a transmission needs binary encoding, and any
+// additional ceremonial options.  Each rule can be stacked — you can add more
+// language clauses or more custom options with the "+" buttons — and a preview
+// pane at the bottom shows the resulting full protocol string in real time.
+// This wizard page does exactly that for LDAP attribute descriptions: the user
+// layers language tags (lang-de, lang-en-US) and other options (binary, custom)
+// onto the attribute type chosen on the previous page.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The AttributeOptionsWizardPageprovides input elements for various options
- * and a preview field.
+ * The second page of {@link AttributeWizard} — lets the user attach options
+ * to the attribute type selected on the first page.
+ * Options fall into three categories: language tags (e.g. {@code lang-de}),
+ * the {@code binary} transfer option, and arbitrary custom option strings.
+ * Each category is represented by a dynamic list of rows that can be added or
+ * removed with "+" and "−" buttons.
+ * A read-only preview field at the bottom shows the assembled attribute
+ * description (e.g. {@code cn;binary;lang-de}) as the user edits.
+ * Think of this page as Obi-Wan walking Luke through the protocol nuances —
+ * every option clause is another rule to layer on top.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -98,12 +117,34 @@ public class AttributeOptionsWizardPage extends WizardPage
     private Text previewText;
 
 
+    // ── Obi-Wan Catalogues All Known Languages and Parses Luke's Prior Training ─
+    // Obi-Wan first compiles a master list of every language in the galaxy
+    // (from the JVM's Locale table) and maps each language to its known dialects.
+    // He then reads Luke's existing attribute description and splits out any
+    // language tags, the binary flag, and any other option clauses, ready to
+    // pre-fill the UI when the page opens.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AttributeOptionsWizardPage.
-     * 
-     * @param pageName the page name
-     * @param initialAttributeDescription the initial attribute description
-     * @param wizard the wizard
+     * Creates a new {@code AttributeOptionsWizardPage}, pre-computing the full
+     * language/country lists from {@link Locale#getAvailableLocales()} and
+     * parsing any options already present in the initial attribute description.
+     * Parsed options are stored in lists and used to pre-fill the rows when
+     * {@link #createControl(Composite)} builds the UI.
+     *
+     * <p>For example — Obi-Wan reads Luke's existing training notes and highlights the options:</p>
+     * <pre>
+     *   // "cn;binary;lang-de" is split into:
+     *   parsedBinary    = true
+     *   parsedLangList  = [ "lang-de" ]
+     *   parsedOptionList = []   // (binary handled separately)
+     * </pre>
+     *
+     * @param pageName                    Internal wizard page identifier.
+     * @param initialAttributeDescription The full attribute description to start from;
+     *                                    everything after the first ";" is parsed as options.
+     * @param wizard                      The parent {@link AttributeWizard}; used to
+     *                                    call back to {@link AttributeWizard#getAttributeDescription()}
+     *                                    for the preview.
      */
     public AttributeOptionsWizardPage( String pageName, String initialAttributeDescription, AttributeWizard wizard )
     {
@@ -167,8 +208,22 @@ public class AttributeOptionsWizardPage extends WizardPage
     }
 
 
+    // ── Obi-Wan Checks Whether the Protocol Summary Is Complete ──────────────
+    // Obi-Wan glances at the preview slate — whatever options Luke has dialled
+    // in, the preview reflects them; since this page has no required fields,
+    // it's always considered complete once visible.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Validates the options.
+     * Refreshes the preview text with the current attribute description and
+     * marks the page as complete.
+     * This page has no mandatory fields so it is always complete — any
+     * combination of options (including none) is valid.
+     *
+     * <p>For example — Obi-Wan updates the chalkboard and nods that it's correct:</p>
+     * <pre>
+     *   previewText.setText( wizard.getAttributeDescription() );
+     *   setPageComplete( true );
+     * </pre>
      */
     private void validate()
     {
@@ -177,8 +232,22 @@ public class AttributeOptionsWizardPage extends WizardPage
     }
 
 
+    // ── Luke Steps Forward for the Protocol Briefing ─────────────────────────
+    // Obi-Wan straightens as Luke approaches — it's time to run through the
+    // options checklist.  The moment the page is visible we refresh the preview
+    // so Luke can see exactly where things stand.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by the wizard dialog whenever this page is shown or hidden.
+     * When the page becomes visible we re-validate so the preview reflects any
+     * changes the user made on the type page before returning here.
+     *
+     * <p>For example — Luke approaches Obi-Wan; Obi-Wan updates the preview immediately:</p>
+     * <pre>
+     *   if ( visible ) { validate(); }
+     * </pre>
+     *
+     * @param visible  {@code true} when this page is being shown, {@code false} when hidden.
      */
     public void setVisible( boolean visible )
     {
@@ -190,8 +259,30 @@ public class AttributeOptionsWizardPage extends WizardPage
     }
 
 
+    // ── Obi-Wan Arranges the Training Materials on the Table ─────────────────
+    // Obi-Wan lays out two sections on the Falcon's briefing table: the language
+    // tag section (with combo rows for language and country) and the other-options
+    // section (with text rows for arbitrary options and a binary checkbox).
+    // A preview pane at the bottom shows the running result.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all the SWT controls for this page — the language-tag group with
+     * dynamic rows, the other-options group with a binary checkbox and dynamic
+     * rows, and a read-only preview text at the bottom.
+     * Pre-parsed option values from the constructor are used to populate
+     * the rows with their initial content.
+     *
+     * <p>For example — Obi-Wan lays out the briefing table with language and option rows:</p>
+     * <pre>
+     *   [ Language Tags ]
+     *     lang-[combo▼] - [combo▼]  [+] [-]
+     *   [ Other Options ]
+     *     [text field]  [+] [-]
+     *     [x] binary
+     *   Preview: [readonly text]
+     * </pre>
+     *
+     * @param parent  The parent composite supplied by the wizard dialog.
      */
     public void createControl( Composite parent )
     {
@@ -287,10 +378,26 @@ public class AttributeOptionsWizardPage extends WizardPage
     }
 
 
+    // ── Obi-Wan Recites the Full Protocol String Back to Luke ─────────────────
+    // Obi-Wan reads every option clause Luke added — language tags first, then
+    // binary, then custom options — sorts them alphabetically to ensure a
+    // canonical form, and assembles the final protocol string with semicolons.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the attribute options.
-     * 
-     * @return the attribute options
+     * Assembles and returns the options portion of the LDAP attribute description
+     * string — everything after the attribute type name.
+     * Language tags, the binary flag, and custom options are collected, sorted
+     * case-insensitively, de-duplicated, and joined with semicolons.
+     * Returns an empty string if the controls have been disposed.
+     *
+     * <p>For example — Obi-Wan reads the protocol clauses Luke selected:</p>
+     * <pre>
+     *   // lang row: "de" language, "" country  → ";lang-de"
+     *   // binary checked                        → ";binary"
+     *   // result sorted alphabetically          → ";binary;lang-de"
+     * </pre>
+     *
+     * @return  The options string starting with ";" for each option, or {@code ""} if none.
      */
     String getAttributeOptions()
     {
@@ -376,11 +483,24 @@ public class AttributeOptionsWizardPage extends WizardPage
     }
 
 
+    // ── Obi-Wan Adds Another Custom Protocol Clause to the List ──────────────
+    // Obi-Wan slides a new blank rule card into the briefing at the right
+    // position, preserving all the existing cards' content by disposing them
+    // and recreating them in order so SWT lays them out correctly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds an option line at the given index.
-     * 
-     * @param optionComposite the option composite
-     * @param index the index
+     * Inserts a new option input row into the other-options group at the given
+     * index, re-creating all existing rows to maintain correct SWT layout order.
+     * Existing text values are saved before disposal and restored after.
+     *
+     * <p>For example — Obi-Wan slides a new protocol card into the briefing stack:</p>
+     * <pre>
+     *   addOptionLine( optionsComposite, 2 );
+     *   // existing rows 0,1 recreated; new empty row inserted at position 2
+     * </pre>
+     *
+     * @param optionComposite  The SWT composite that hosts the option rows.
+     * @param index            The position at which to insert the new empty row.
      */
     private void addOptionLine( Composite optionComposite, int index )
     {
@@ -426,12 +546,23 @@ public class AttributeOptionsWizardPage extends WizardPage
     }
 
 
+    // ── Obi-Wan Scripts One Custom Protocol Entry ─────────────────────────────
+    // For each protocol clause row, Obi-Wan prepares a text field for the option
+    // value, a "+" button to insert another clause after this one, and a "−"
+    // button to remove it — then wires the listeners so changes trigger a preview
+    // refresh.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the option line.
-     * 
-     * @param optionComposite the option composite
-     * 
-     * @return the option line
+     * Creates a single option row widget group: a text field, an add (+) button,
+     * and a delete (−) button, all wired to re-validate on any change.
+     *
+     * <p>For example — Obi-Wan prepares one protocol rule card with edit controls:</p>
+     * <pre>
+     *   [ [option text field] [+] [-] ]
+     * </pre>
+     *
+     * @param optionComposite  The SWT composite to add the widgets into.
+     * @return                 The newly created {@link OptionLine} wrapping all three widgets.
      */
     private OptionLine createOptionLine( final Composite optionComposite )
     {
@@ -464,7 +595,7 @@ public class AttributeOptionsWizardPage extends WizardPage
         } );
 
         optionLine.optionDeleteButton = new Button( optionComposite, SWT.PUSH );
-        optionLine.optionDeleteButton.setText( "  \u2212  " ); //$NON-NLS-1$
+        optionLine.optionDeleteButton.setText( "  −  " ); //$NON-NLS-1$
         optionLine.optionDeleteButton.addSelectionListener( new SelectionAdapter()
         {
             public void widgetSelected( SelectionEvent e )
@@ -497,11 +628,23 @@ public class AttributeOptionsWizardPage extends WizardPage
     }
 
 
+    // ── Obi-Wan Removes a Redundant Protocol Clause ───────────────────────────
+    // Obi-Wan pulls a rule card from the stack, disposes of it, and tells the
+    // briefing table to reflow — the remaining cards close the gap automatically.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Deletes the option line at the given index.
-     * 
-     * @param optionComposite the option composite
-     * @param index the index
+     * Removes the option row at the given index from the list and disposes its
+     * SWT widgets, then triggers a shell layout refresh.
+     *
+     * <p>For example — Obi-Wan discards an unwanted protocol rule card:</p>
+     * <pre>
+     *   deleteOptionLine( optionsComposite, 1 );
+     *   // row at index 1 removed; remaining rows reflow
+     * </pre>
+     *
+     * @param optionComposite  The composite hosting the option rows; used to
+     *                         trigger layout after the widgets are disposed.
+     * @param index            The zero-based index of the row to remove.
      */
     private void deleteOptionLine( Composite optionComposite, int index )
     {
@@ -519,8 +662,17 @@ public class AttributeOptionsWizardPage extends WizardPage
         }
     }
 
+    // ── CLASS: OptionLine — ONE PROTOCOL RULE CARD ────────────────────────────
+    // Each protocol clause Obi-Wan adds to the briefing is a single card
+    // containing the option text and the two buttons for adding or removing it.
+    // This class is that card: a simple data holder for the three SWT widgets
+    // that make up one "other option" row in the wizard page.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * The class OptionLine is a wrapper for all input elements of an option.
+     * A lightweight holder for the three SWT widgets that form one custom-option
+     * row in the other-options section of this page.
+     * Created by {@link AttributeOptionsWizardPage#createOptionLine(Composite)}
+     * and tracked in {@code optionLineList}.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -537,11 +689,24 @@ public class AttributeOptionsWizardPage extends WizardPage
     }
 
 
+    // ── Obi-Wan Adds Another Language Clause to the List ─────────────────────
+    // Obi-Wan slides a new language row into the briefing at the right position,
+    // preserving existing language/country selections by disposing and recreating
+    // each row in order before inserting the new blank one.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a language line at the given index.
-     * 
-     * @param langComposite the language composite
-     * @param index the index
+     * Inserts a new language-tag row into the language group at the given index,
+     * re-creating all existing rows to maintain correct SWT layout order.
+     * Existing language and country selections are saved and restored.
+     *
+     * <p>For example — Obi-Wan inserts a new dialect card into the language stack:</p>
+     * <pre>
+     *   addLangLine( langComposite, 1 );
+     *   // existing row 0 recreated; new empty row inserted at position 1
+     * </pre>
+     *
+     * @param langComposite  The SWT composite hosting the language rows.
+     * @param index          The position at which to insert the new empty row.
      */
     private void addLangLine( Composite langComposite, int index )
     {
@@ -592,12 +757,24 @@ public class AttributeOptionsWizardPage extends WizardPage
     }
 
 
+    // ── Obi-Wan Drafts One Language Rule Row ─────────────────────────────────
+    // Obi-Wan prepares a "lang-" label, a language combo, a dash separator, a
+    // country combo (disabled until a language is chosen), and "+"/"−" buttons.
+    // When the language combo changes, Obi-Wan updates the country list to match
+    // the known dialects for that language.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a language line.
-     * 
-     * @param langComposite the language composite
-     * 
-     * @return the language line
+     * Creates a single language-tag row: a "lang-" prefix label, a language
+     * combo, a "-" separator, a country combo (populated based on the chosen
+     * language), and add/delete buttons — all wired to re-validate on change.
+     *
+     * <p>For example — Obi-Wan creates one language rule slot in the briefing:</p>
+     * <pre>
+     *   lang-[combo▼] - [combo▼]  [+] [-]
+     * </pre>
+     *
+     * @param langComposite  The SWT composite to place the widgets into.
+     * @return               The newly created {@link LangLine} holding all six widgets.
      */
     private LangLine createLangLine( final Composite langComposite )
     {
@@ -635,7 +812,7 @@ public class AttributeOptionsWizardPage extends WizardPage
         } );
 
         langLine.deleteButton = new Button( langComposite, SWT.PUSH );
-        langLine.deleteButton.setText( "  \u2212  " ); //$NON-NLS-1$
+        langLine.deleteButton.setText( "  −  " ); //$NON-NLS-1$
         langLine.deleteButton.addSelectionListener( new SelectionAdapter()
         {
             public void widgetSelected( SelectionEvent e )
@@ -694,11 +871,24 @@ public class AttributeOptionsWizardPage extends WizardPage
     }
 
 
+    // ── Obi-Wan Strikes a Language Clause From the Briefing ──────────────────
+    // Obi-Wan decides one of the language rule cards is redundant, pulls it from
+    // the stack, disposes all its widgets, and refreshes the layout so the
+    // remaining cards fill the gap cleanly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Deletes the language line at the given index.
-     * 
-     * @param langComposite the language composite
-     * @param index the index
+     * Removes the language row at the given index from the list and disposes
+     * all six of its SWT widgets, then triggers a shell layout refresh.
+     *
+     * <p>For example — Obi-Wan discards an unneeded language rule card:</p>
+     * <pre>
+     *   deleteLangLine( langComposite, 0 );
+     *   // row removed; remaining lang rows reflow upward
+     * </pre>
+     *
+     * @param langComposite  The composite hosting the language rows; used to
+     *                       check dispose state before triggering layout.
+     * @param index          The zero-based index of the row to remove.
      */
     private void deleteLangLine( Composite langComposite, int index )
     {
@@ -719,8 +909,16 @@ public class AttributeOptionsWizardPage extends WizardPage
         }
     }
 
+    // ── CLASS: LangLine — ONE LANGUAGE PROTOCOL CARD ─────────────────────────
+    // Each language clause Obi-Wan adds is a card containing the "lang-" prefix,
+    // a language dropdown, a dash, a country dropdown, and add/delete buttons.
+    // This class holds all six SWT widgets that make up one language-tag row.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * The class LangLine is a wrapper for all input elements of a language tag.
+     * A lightweight holder for the six SWT widgets that form one language-tag
+     * row in the language section of this page.
+     * Created by {@link AttributeOptionsWizardPage#createLangLine(Composite)}
+     * and tracked in {@code langLineList}.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */

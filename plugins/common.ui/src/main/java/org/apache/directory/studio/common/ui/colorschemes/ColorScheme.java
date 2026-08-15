@@ -24,9 +24,19 @@ import org.apache.directory.studio.common.ui.CommonUIConstants;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 
+// ── CLASS: ColorScheme — IMPERIAL CONFIGURATION TERMINAL COLOR PALETTE ────────
+// Each Death Star configuration terminal can be re-skinned with a different
+// color palette to match the lighting conditions of the control room — Solarized
+// for brightly-lit Imperial bridges, Dracula for dimly-lit weapon bays.  This
+// class represents one such palette: a named set of eight Base16 colors mapped
+// to all fifteen semantic preference keys that Studio uses when rendering LDAP
+// elements.
+// ────────────────────────────────────────────────────────────────────────────
 /**
- * A named set of colors derived from a Base16 palette, mapped to Studio's
- * 15 semantic color preference keys.
+ * We represent a single named Base16 color scheme.  We store fifteen "R,G,B"
+ * strings — one for each of Studio's semantic color preference keys — and
+ * provide methods to apply them to the preference store or retrieve them for
+ * preview rendering.
  *
  * Base16 slots used:
  *   base03 → muted (comments, disabled)
@@ -64,6 +74,29 @@ public class ColorScheme
     private final String[] values;
 
 
+    // ── CONSTRUCTOR ColorScheme — LOADING A PALETTE INTO THE TERMINAL ─────────
+    // The Imperial technician loads a new color cartridge into the terminal:
+    // we take the eight Base16 color strings and map them to the fifteen
+    // semantic keys according to the palette specification.  The mapping is
+    // fixed — base05 is always the foreground, base08 is always red, and so on.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * We create a new color scheme by mapping the eight provided Base16 color
+     * strings (already in "R,G,B" format) to our fifteen semantic preference
+     * keys.  This constructor is package-private — use {@link ColorSchemes} to
+     * obtain instances.
+     *
+     * @param id     the unique identifier string for this scheme
+     * @param label  the human-readable display name
+     * @param base03 the muted/comment color
+     * @param base05 the default foreground color
+     * @param base08 the red (error/delete/separator) color
+     * @param base09 the orange (OID/constant) color
+     * @param base0A the yellow (object class/modify) color
+     * @param base0B the green (value/add) color
+     * @param base0D the blue (function/attribute type/rename) color
+     * @param base0E the purple (keyword) color
+     */
     ColorScheme( String id, String label,
         String base03, String base05,
         String base08, String base09, String base0A, String base0B,
@@ -91,7 +124,19 @@ public class ColorScheme
     }
 
 
-    /** Writes all 15 color preferences into the given store. */
+    // ── METHOD applyTo — FLASHING THE NEW PALETTE ONTO THE TERMINAL ───────────
+    // The technician presses the "apply" button on the Imperial terminal and all
+    // fifteen semantic color preferences switch to the values of this palette in
+    // one sweep.  The new colors take effect immediately across every editor and
+    // tree view that reads from the preference store.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * We write all fifteen color preference values from this scheme into the
+     * given preference store.  After this call, every editor and renderer that
+     * reads from the store will use our colors.
+     *
+     * @param store the preference store to write into
+     */
     public void applyTo( IPreferenceStore store )
     {
         for ( int i = 0; i < KEYS.length; i++ )
@@ -101,7 +146,19 @@ public class ColorScheme
     }
 
 
-    /** Returns the "R,G,B" values in the same order as {@link #KEYS}. */
+    // ── METHOD getValues — READING THE PALETTE SWATCHES ──────────────────────
+    // The technician reads off the fifteen color values from the terminal's
+    // display so the preference page can paint preview swatches.  We return
+    // a defensive copy so callers cannot accidentally corrupt our internal
+    // array.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * We return a defensive copy of the fifteen "R,G,B" strings in the same
+     * order as {@link #KEYS}.  Use this to render preview swatches without
+     * needing to read from the preference store.
+     *
+     * @return a copy of the color value strings in {@link #KEYS} order
+     */
     public String[] getValues()
     {
         return values.clone();

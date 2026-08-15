@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.connection.core.io.api;
 
@@ -98,32 +98,74 @@ import org.eclipse.core.runtime.Preferences;
 import org.eclipse.osgi.util.NLS;
 
 
+// ── CLASS: DirectoryApiConnectionWrapper — THE FALCON'S ACTUAL HYPERDRIVE ENGINE ──
+// ConnectionWrapper is the abstract contract (the blueprint).  This class is the
+// real thing: the Millennium Falcon's actual hyperdrive unit, built from the
+// Apache Directory API's LdapNetworkConnection.
+// Every LDAP operation — connect, bind, search, modify, add, delete, rename,
+// extended — is implemented here.  Each operation is packaged inside an
+// InnerRunnable that runs on the current job thread with a cancel listener
+// attached so the progress dialog can interrupt it.
+// TLS is handled by injecting StudioTrustManager into the LdapConnectionConfig,
+// which gives us our layered certificate trust check (permanent → session → JVM).
+// Auth supports Anonymous, Simple, CRAM-MD5, DIGEST-MD5, and GSSAPI/Kerberos.
+// Referrals on write operations are handled by checkAndHandleReferral(), which
+// opens a connection to the referral target and re-fires the operation there.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A ConnectionWrapper is a wrapper for a real directory connection implementation.
+ * The only production implementation of {@link ConnectionWrapper}.
+ * Uses the Apache Directory API {@link LdapNetworkConnection} to communicate
+ * with the LDAP server over TCP (plain, LDAPS, or StartTLS).
+ *
+ * <p>Key design points:</p>
+ * <ul>
+ *   <li>All operations run inside an {@link InnerRunnable} on the current job thread
+ *       so they can be interrupted by the progress dialog's Cancel button.</li>
+ *   <li>TLS certificate trust is handled by {@link StudioTrustManager}, which checks
+ *       permanent/session trust stores before falling back to the JVM trust store
+ *       and finally prompting the user.</li>
+ *   <li>Authentication supports ANONYMOUS, SIMPLE, SASL_CRAM_MD5, SASL_DIGEST_MD5,
+ *       and SASL_GSSAPI (Kerberos).  Credentials are obtained from the
+ *       {@link IAuthHandler} registered with the plugin.</li>
+ *   <li>Write operations (modify, rename, add, delete) check for a referral response
+ *       and automatically re-issue the operation against the referral target.</li>
+ *   <li>If the connection drops mid-session, {@link #checkConnectionAndRunAndMonitor}
+ *       reconnects and retries once before giving up.</li>
+ * </ul>
+ * Think of this as the Falcon's real hyperdrive engine: it does all the actual work
+ * that the {@link ConnectionWrapper} interface promises.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DirectoryApiConnectionWrapper implements ConnectionWrapper
 {
-    /** The search request number */
+    /** Monotonically increasing request number used to correlate log entries across operations. */
     private static int searchRequestNum = 0;
 
-    /** The Studio connection  */
+    /** The Studio connection model that owns this wrapper. */
     private Connection connection;
 
-    /** The LDAP connection */
+    /** The underlying Apache Directory API LDAP network connection. */
     private LdapNetworkConnection ldapConnection;
 
-    /** The binary attribute detector */
+    /** Detector that tells the codec which attribute types carry binary (non-string) values. */
     private DefaultConfigurableBinaryAttributeDetector binaryAttributeDetector;
 
-    /** The current job thread */
+    /**
+     * The thread currently executing an LDAP operation.
+     * Stored so the cancel listener can interrupt it if the user clicks Cancel.
+     */
     private Thread jobThread;
 
+
+    // ── CONSTRUCTOR — BIND TO THE STUDIO CONNECTION ────────────────────────────────
+    // The wrapper needs the connection model so it can read its parameters
+    // (host, port, auth, encryption) and ask the auth handler for credentials.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DirectoryApiConnectionWrapper.
-     * 
-     * @param connection the connection
+     * Creates a new {@link DirectoryApiConnectionWrapper} for the given connection.
+     *
+     * @param connection  The Studio connection model this wrapper implements.
      */
     public DirectoryApiConnectionWrapper( Connection connection )
     {
@@ -131,8 +173,13 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── CONNECT — FIRE UP THE HYPERDRIVE ──────────────────────────────────────────
+    // We delegate to doConnect() and clean up on failure.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Establishes the TCP (and optionally TLS) connection to the directory server.
+     * On failure, we disconnect and report the error to the monitor.
      */
     public void connect( StudioProgressMonitor monitor )
     {
@@ -151,6 +198,21 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── DO CONNECT — THE ACTUAL SOCKET + TLS SETUP ────────────────────────────────
+    // We build the LdapConnectionConfig (host, port, timeout, TLS settings),
+    // inject our StudioTrustManager if TLS is requested, then create the
+    // LdapNetworkConnection inside an InnerRunnable.  We use a temp variable
+    // during the connection process so other threads can't see a half-open connection.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Builds the {@link LdapConnectionConfig}, sets up TLS trust managers if needed,
+     * and creates the {@link LdapNetworkConnection} (including StartTLS upgrade if configured).
+     * Uses a local temp variable during construction to avoid exposing a partially connected
+     * socket to other threads.
+     *
+     * @param monitor  Progress monitor for cancellation and error reporting.
+     * @throws Exception  If connection or TLS setup fails.
+     */
     private void doConnect( final StudioProgressMonitor monitor ) throws Exception
     {
         ldapConnection = null;
@@ -286,8 +348,14 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── DISCONNECT — CUT POWER TO THE ENGINES ─────────────────────────────────────
+    // We interrupt the job thread (if there is one), close the LDAP connection,
+    // and clear both fields so the wrapper knows it's dead.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Interrupts the current job thread (if any) and closes the underlying
+     * {@link LdapNetworkConnection}.
      */
     public void disconnect()
     {
@@ -313,8 +381,13 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── BIND — AUTHENTICATE AGAINST THE SERVER ────────────────────────────────────
+    // We delegate to doBind().  On failure, we disconnect and report the error.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Sends the LDAP bind request using the connection's configured authentication method.
+     * On failure, disconnects and reports the error to the monitor.
      */
     public void bind( StudioProgressMonitor monitor )
     {
@@ -330,6 +403,17 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── BIND SIMPLE — SEND A PLAIN BIND REQUEST ───────────────────────────────────
+    // Convenience method that builds a simple-auth BindRequest and fires it.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Sends a simple authentication bind request with the given principal and password.
+     *
+     * @param bindPrincipal  The bind DN string.
+     * @param bindPassword   The bind password.
+     * @return  The server's {@link BindResponse}.
+     * @throws LdapException  If the bind request fails.
+     */
     private BindResponse bindSimple( String bindPrincipal, String bindPassword ) throws LdapException
     {
         BindRequest bindRequest = new BindRequestImpl();
@@ -340,6 +424,21 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── DO BIND — FULL AUTHENTICATION LOGIC ───────────────────────────────────────
+    // We switch on the auth method: ANONYMOUS, SIMPLE, CRAM-MD5, DIGEST-MD5,
+    // or GSSAPI.  For everything except ANONYMOUS, we ask the IAuthHandler for
+    // credentials first.  For GSSAPI, we also configure the JAAS login module
+    // from preferences and optionally inject the KRB5 realm/KDC manually.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Implements the full bind sequence.
+     * Selects the auth method from the connection parameters, obtains credentials
+     * from the {@link IAuthHandler}, and sends the appropriate bind request.
+     * For GSSAPI, configures the JAAS {@link Configuration} via {@link InnerConfiguration}.
+     *
+     * @param monitor  Progress monitor for cancellation and error reporting.
+     * @throws Exception  If the connection is not open or binding fails.
+     */
     private void doBind( final StudioProgressMonitor monitor ) throws Exception
     {
         if ( isConnected() )
@@ -499,8 +598,13 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
-    /***
+    // ── UNBIND — DELEGATE TO DISCONNECT ───────────────────────────────────────────
+    // The Apache Directory API's LdapNetworkConnection closes the socket on disconnect,
+    // so we just use that.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
      * {@inheritDoc}
+     * Sends an LDAP unbind by closing the underlying connection.
      */
     public void unbind()
     {
@@ -508,8 +612,10 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── IS CONNECTED — CHECK IF THE SOCKET IS OPEN ────────────────────────────────
     /**
      * {@inheritDoc}
+     * Returns {@code true} if the underlying {@link LdapNetworkConnection} is open.
      */
     public boolean isConnected()
     {
@@ -517,8 +623,10 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── IS SECURED — CHECK IF TLS IS ACTIVE ───────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Returns {@code true} if the connection is open and TLS-secured.
      */
     public boolean isSecured()
     {
@@ -526,6 +634,11 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── GET SSL SESSION — RETURN THE TLS SESSION ──────────────────────────────────
+    /**
+     * {@inheritDoc}
+     * Returns the {@link SSLSession} from the underlying connection, or {@code null}.
+     */
     @Override
     public SSLSession getSslSession()
     {
@@ -533,8 +646,13 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── SET BINARY ATTRIBUTES — CONFIGURE THE CODEC ───────────────────────────────
+    // We clear the current list and re-populate it from the given collection.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Configures the {@link DefaultConfigurableBinaryAttributeDetector} with the
+     * given set of attribute type names.
      */
     public void setBinaryAttributes( Collection<String> binaryAttributes )
     {
@@ -552,8 +670,16 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── SEARCH — FIRE THE SENSOR ARRAY ────────────────────────────────────────────
+    // We build a SearchRequest, open the cursor in an InnerRunnable, and wrap
+    // the cursor in a StudioSearchResultEnumeration (which handles lazy pull
+    // and referral following).  We log the request via all registered ILdapLoggers.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Sends the LDAP search request and returns a {@link StudioSearchResultEnumeration}
+     * for lazy result iteration with referral handling.
+     * Returns {@code null} on error (the monitor will have the error details).
      */
     public StudioSearchResultEnumeration search( final String searchBase, final String filter,
         final SearchControls searchControls, final AliasDereferencingMethod aliasesDereferencingMethod,
@@ -642,13 +768,13 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── CONVERT SEARCH SCOPE — MAP JNDI SCOPE INT TO APACHE DIR API ENUM ──────────
     /**
-     * Converts the search scope.
+     * Converts a JNDI {@link SearchControls} scope constant to the Apache Directory API
+     * {@link SearchScope} enum.
      *
-     * @param searchControls
-     *      the search controls
-     * @return
-     *      the associated search scope
+     * @param searchControls  The search controls carrying the scope constant.
+     * @return  The equivalent {@link SearchScope}.
      */
     private SearchScope convertSearchScope( SearchControls searchControls )
     {
@@ -672,13 +798,13 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── CONVERT ALIAS DEREF MODE — MAP STUDIO ENUM TO APACHE DIR API ENUM ─────────
     /**
-     * Converts the Alias Dereferencing method.
+     * Converts the Studio {@link AliasDereferencingMethod} to the Apache Directory API
+     * {@link AliasDerefMode}.
      *
-     * @param aliasesDereferencingMethod
-     *      the Alias Dereferencing method.
-     * @return
-     *      the converted Alias Dereferencing method.
+     * @param aliasesDereferencingMethod  The Studio alias dereferencing method.
+     * @return  The equivalent {@link AliasDerefMode}.
      */
     private AliasDerefMode convertAliasDerefMode( AliasDereferencingMethod aliasesDereferencingMethod )
     {
@@ -698,8 +824,17 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── MODIFY ENTRY — SEND AN LDAP MODIFY REQUEST ────────────────────────────────
+    // Read-only connections are rejected immediately.  Otherwise we build a
+    // ModifyRequest, fire it, check for referral (and re-fire if needed), check
+    // the response code, and log via all registered ILdapLoggers.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Sends an LDAP modify request.
+     * Rejects read-only connections.  Logs the operation via {@link ILdapLogger}s.
+     * Automatically handles referral responses by re-issuing the operation on the
+     * referral target.
      */
     public void modifyEntry( final Dn dn, final Collection<Modification> modifications, final Control[] controls,
         final StudioProgressMonitor monitor, final ReferralsInfo referralsInfo )
@@ -781,8 +916,11 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── RENAME ENTRY — SEND AN LDAP MODDN REQUEST ─────────────────────────────────
     /**
      * {@inheritDoc}
+     * Sends an LDAP modDN (rename or move) request.
+     * Rejects read-only connections.  Handles referrals.  Logs via {@link ILdapLogger}s.
      */
     public void renameEntry( final Dn oldDn, final Dn newDn, final boolean deleteOldRdn,
         final Control[] controls, final StudioProgressMonitor monitor, final ReferralsInfo referralsInfo )
@@ -860,8 +998,11 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── CREATE ENTRY — SEND AN LDAP ADD REQUEST ────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Sends an LDAP add request to create the given entry.
+     * Rejects read-only connections.  Handles referrals.  Logs via {@link ILdapLogger}s.
      */
     public void createEntry( final Entry entry, final Control[] controls,
         final StudioProgressMonitor monitor, final ReferralsInfo referralsInfo )
@@ -939,8 +1080,11 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── DELETE ENTRY — SEND AN LDAP DELETE REQUEST ────────────────────────────────
     /**
      * {@inheritDoc}
+     * Sends an LDAP delete request for the given DN.
+     * Rejects read-only connections.  Handles referrals.  Logs via {@link ILdapLogger}s.
      */
     public void deleteEntry( final Dn dn, final Control[] controls, final StudioProgressMonitor monitor,
         final ReferralsInfo referralsInfo )
@@ -1015,6 +1159,12 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── EXTENDED — SEND AN LDAP EXTENDED OPERATION ────────────────────────────────
+    /**
+     * {@inheritDoc}
+     * Sends an LDAP extended operation and returns the server's response.
+     * Rejects read-only connections.
+     */
     @Override
     public ExtendedResponse extended( ExtendedRequest request, StudioProgressMonitor monitor )
     {
@@ -1027,6 +1177,7 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
         }
 
         ExtendedResponse[] outerResponse = new ExtendedResponse[1];
+
         InnerRunnable runnable = new InnerRunnable()
         {
             public void run()
@@ -1073,21 +1224,33 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
         return outerResponse[0];
     }
 
+
+    // ── INNER CLASS: InnerRunnable — THE MISSION PACKET ───────────────────────────
+    // Each LDAP operation is packaged into an InnerRunnable: the run() logic,
+    // plus storage for the result (search enumeration), any exception, and a
+    // cancel flag.  The outer method creates one, calls runAndMonitor(), and
+    // then checks the stored state.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Inner runnable used in connection wrapper operations.
-     *
-     * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+     * Abstract base class for all per-operation runnables.
+     * Subclasses implement {@link #run()} to perform the actual LDAP operation.
+     * The result, exception, and cancel flag are stored in the fields so the
+     * outer method can inspect them after {@link #runAndMonitor} returns.
      */
     abstract class InnerRunnable implements Runnable
     {
+        /** The search result enumeration produced by a search operation; null for write ops. */
         protected StudioSearchResultEnumeration searchResultEnumeration = null;
+        /** The exception thrown during the operation, if any. */
         protected StudioLdapException exception = null;
+        /** {@code true} if the operation was cancelled. */
         protected boolean canceled = false;
 
+
         /**
-         * Gets the exception.
-         * 
-         * @return the exception
+         * Returns the exception thrown during the operation, or {@code null} on success.
+         *
+         * @return  The {@link StudioLdapException}, or {@code null}.
          */
         public Exception getException()
         {
@@ -1096,9 +1259,10 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
 
 
         /**
-         * Gets the result.
-         * 
-         * @return the result
+         * Returns the search result enumeration produced by a search operation,
+         * or {@code null} for write operations.
+         *
+         * @return  The {@link StudioSearchResultEnumeration}, or {@code null}.
          */
         public StudioSearchResultEnumeration getResult()
         {
@@ -1107,9 +1271,9 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
 
 
         /**
-         * Checks if is canceled.
-         * 
-         * @return true, if is canceled
+         * Returns {@code true} if the operation was cancelled.
+         *
+         * @return  {@code true} if cancelled.
          */
         public boolean isCanceled()
         {
@@ -1118,7 +1282,7 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
 
 
         /**
-         * Reset.
+         * Resets the runnable state for a retry.
          */
         public void reset()
         {
@@ -1128,14 +1292,44 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
         }
     }
 
+
+    // ── REFERRAL HANDLING DATA CONSUMER — THE REDIRECT LAMBDA TYPE ────────────────
+    /**
+     * Functional interface whose {@link #accept} method re-issues the current
+     * LDAP operation against a referral target.
+     */
     @FunctionalInterface
     private interface ReferralHandlingDataConsumer
     {
-
+        /**
+         * Re-issues the LDAP operation using the referral connection and DN.
+         *
+         * @param t  The referral handling data containing the connection and DN.
+         * @throws LdapException  If the re-issued operation fails.
+         */
         void accept( ReferralHandlingData t ) throws LdapException;
-
     }
 
+
+    // ── CHECK AND HANDLE REFERRAL — DETECT REFERRAL RESULT CODE AND RE-FIRE ────────
+    // When a write operation response has result code REFERRAL, we use
+    // ConnectionWrapperUtils to get a live connection for the referral target,
+    // extract the referral DN, and call the consumer lambda to re-issue the op.
+    // Returns true if we handled the referral (caller should return without logging).
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Inspects the given response for a {@link ResultCodeEnum#REFERRAL} result code.
+     * If found, resolves the referral connection, extracts the target DN, and calls
+     * the consumer to re-issue the operation on the referral target.
+     * Returns {@code true} if the referral was handled (the caller should return immediately).
+     *
+     * @param response       The LDAP response to inspect.
+     * @param monitor        Progress monitor for cancellation.
+     * @param referralsInfo  Referral tracking context.
+     * @param consumer       Lambda that re-issues the operation against the referral target.
+     * @return  {@code true} if a referral was detected and handled.
+     * @throws LdapException  If re-issuing the operation fails.
+     */
     private boolean checkAndHandleReferral( ResultResponse response, StudioProgressMonitor monitor,
         ReferralsInfo referralsInfo, ReferralHandlingDataConsumer consumer ) throws LdapException
     {
@@ -1175,12 +1369,29 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
         return true;
     }
 
+
+    // ── INNER CLASS: ReferralHandlingData — THE REFERRAL REDIRECT PACKET ──────────
+    /**
+     * Simple data holder for referral re-dispatch: carries the target wrapper,
+     * the resolved referral DN, and the referral tracking context.
+     */
     static class ReferralHandlingData
     {
+        /** The connection wrapper to use for the re-issued operation. */
         ConnectionWrapper connectionWrapper;
+        /** The DN to use for the re-issued operation, extracted from the referral URL. */
         String referralDn;
+        /** Referral tracking context passed to the re-issued operation. */
         ReferralsInfo newReferralsInfo;
 
+
+        /**
+         * Creates a new {@link ReferralHandlingData}.
+         *
+         * @param connectionWrapper  The referral connection wrapper.
+         * @param referralDn         The target DN from the referral URL.
+         * @param newReferralsInfo   Referral tracking context.
+         */
         ReferralHandlingData( ConnectionWrapper connectionWrapper, String referralDn, ReferralsInfo newReferralsInfo )
         {
             this.connectionWrapper = connectionWrapper;
@@ -1189,6 +1400,21 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
         }
     }
 
+
+    // ── CHECK CONNECTION AND RUN AND MONITOR — ENSURE LIVE + RETRY ONCE ───────────
+    // Before any operation, we make sure the connection is live.  If not, we
+    // reconnect and re-bind.  We run the operation once; if it throws
+    // InvalidConnectionException, we reconnect and retry once.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Ensures the connection is live before running the given runnable.
+     * If the connection is not open, reconnects and re-binds.
+     * If the runnable throws {@link InvalidConnectionException}, reconnects and retries once.
+     *
+     * @param runnable  The operation to run.
+     * @param monitor   Progress monitor for cancellation.
+     * @throws Exception  If reconnecting or the operation itself fails.
+     */
     private void checkConnectionAndRunAndMonitor( final InnerRunnable runnable, final StudioProgressMonitor monitor )
         throws Exception
     {
@@ -1223,6 +1449,21 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── RUN AND MONITOR — ATTACH CANCEL LISTENER AND EXECUTE ─────────────────────
+    // We attach a cancel listener that interrupts the job thread and closes the
+    // LDAP connection if the user hits Cancel.  We record the current thread as
+    // jobThread so the listener can interrupt it.  After run() returns, we remove
+    // the listener and clear jobThread.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Executes the given runnable on the current thread with a cancel listener attached.
+     * If the monitor is cancelled, the job thread is interrupted and the LDAP
+     * connection is closed.
+     *
+     * @param runnable  The runnable to execute.
+     * @param monitor   Progress monitor whose cancellation will interrupt this operation.
+     * @throws CancelException  If the monitor was already cancelled before this method.
+     */
     private void runAndMonitor( final InnerRunnable runnable, final StudioProgressMonitor monitor )
         throws CancelException
     {
@@ -1273,17 +1514,44 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
         }
     }
 
+
+    // ── INNER CLASS: InnerConfiguration — THE GSSAPI JAAS CONFIG ─────────────────
+    // GSSAPI authentication requires a JAAS Configuration so the JVM knows which
+    // Kerberos login module to use.  This inner class builds that configuration
+    // dynamically from the connection's preferences and credential mode.
+    // ─────────────────────────────────────────────────────────────────────────────
+    /**
+     * JAAS {@link Configuration} for GSSAPI (Kerberos) authentication.
+     * Builds an {@link AppConfigurationEntry} for the configured login module
+     * with options that match the connection's Kerberos credential configuration
+     * (native ticket cache vs. obtain-TGT).
+     */
     private final class InnerConfiguration extends Configuration
     {
+        /** The JAAS login module class name (e.g. com.sun.security.auth.module.Krb5LoginModule). */
         private String krb5LoginModule;
+        /** Cached configuration entries, built on first access. */
         private AppConfigurationEntry[] configList = null;
 
+
+        /**
+         * Creates a new {@link InnerConfiguration} for the given login module.
+         *
+         * @param krb5LoginModule  The JAAS login module class name.
+         */
         public InnerConfiguration( String krb5LoginModule )
         {
             this.krb5LoginModule = krb5LoginModule;
         }
 
 
+        /**
+         * Returns the JAAS application configuration entries.
+         * Built lazily on first call and cached thereafter.
+         *
+         * @param applicationName  Ignored — we always return the same entry.
+         * @return  An array containing the single Kerberos login module entry.
+         */
         public AppConfigurationEntry[] getAppConfigurationEntry( String applicationName )
         {
             if ( configList == null )
@@ -1310,25 +1578,40 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
         }
 
 
+        /**
+         * {@inheritDoc}
+         * No-op — we don't cache external config state.
+         */
         @Override
         public void refresh()
         {
         }
     }
 
+
+    // ── GET LDAP LOGGERS — FETCH REGISTERED LOGGERS FROM THE PLUGIN ───────────────
+    /**
+     * Returns the list of registered {@link ILdapLogger} instances from the plugin registry.
+     *
+     * @return  List of active loggers.
+     */
     private List<ILdapLogger> getLdapLoggers()
     {
         return ConnectionCorePlugin.getDefault().getLdapLoggers();
     }
 
 
+    // ── CHECK RESPONSE — VERIFY THE RESULT CODE ────────────────────────────────────
+    // The Apache Directory API's ResultCodeEnum.processResponse() throws an
+    // LdapException if the result code is not SUCCESS (or one of the OK codes).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Checks the given response.
+     * Verifies that the given response's LDAP result code indicates success.
+     * Delegates to {@link ResultCodeEnum#processResponse(ResultResponse)}, which
+     * throws an {@link LdapException} on failure.
      *
-     * @param response
-     *      the response
-     * @throws Exception
-     *      if the LDAP result associated with the response is not a success
+     * @param response  The response to check; no-op if {@code null}.
+     * @throws Exception  If the result code is not a success code.
      */
     private void checkResponse( ResultResponse response ) throws Exception
     {
@@ -1339,6 +1622,17 @@ public class DirectoryApiConnectionWrapper implements ConnectionWrapper
     }
 
 
+    // ── TO STUDIO LDAP EXCEPTION — WRAP ANY EXCEPTION FOR CALLERS ─────────────────
+    // All exceptions from the Apache Directory API are converted to StudioLdapException
+    // so callers only have to deal with one exception type.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Converts the given exception to a {@link StudioLdapException}.
+     * Returns {@code null} if the input is {@code null}.
+     *
+     * @param exception  The exception to wrap.
+     * @return  A {@link StudioLdapException} wrapping the input, or {@code null}.
+     */
     private StudioLdapException toStudioLdapException( Exception exception )
     {
         if ( exception == null )

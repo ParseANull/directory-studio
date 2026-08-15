@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common;
@@ -40,16 +40,52 @@ import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.widgets.Display;
 
 
+// ── CLASS: BrowserCommonPreferencesInitializer — MON MOTHMA'S STANDING ORDERS
+// Before the Battle of Yavin, Mon Mothma gathers her commanders and issues
+// standing orders: default patrol routes, standard color codes for ships,
+// acceptable search limits, and which pilot gets which assignment. These orders
+// take effect immediately and persist until someone explicitly changes them.
+// This initializer is those standing orders — it populates Eclipse's preference
+// store with sensible defaults the first time the plugin starts, before any
+// user has touched the settings screen.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to set default preference values.
+ * Populates the Eclipse preference store with default values for every
+ * setting in the ldapbrowser.common plugin. Eclipse calls this class once
+ * at startup (before showing any preference pages) via the
+ * {@code org.eclipse.core.runtime.preferences} extension point.
+ * Think of this class as Mon Mothma issuing Alliance-wide standing orders —
+ * sensible defaults that hold until a user overrides them.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class BrowserCommonPreferencesInitializer extends AbstractPreferenceInitializer
 {
+    // ── MON MOTHMA READS THE STANDING ORDERS ──────────────────────────────────
+    // Mon Mothma steps up to the podium in the Rebel briefing room and reads
+    // every standing order aloud: patrols start at 1000 entries per sweep, font
+    // styles for different types of officers, browser folding limits, icon
+    // assignments for known species — the full set of defaults that make the
+    // Alliance function before anyone has a chance to customize anything.
+    // This method does the same for every preference key in the plugin.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Sets all default preference values for the ldapbrowser.common plugin.
+     * Eclipse calls this automatically before any preference page is opened,
+     * ensuring the store has a sane fallback for every key even if the user
+     * has never visited a settings screen.
+     * Covers: search count/time limits, attribute fonts and colors, value editor
+     * mappings, browser display options, entry editor options, and text format
+     * settings.
+     *
+     * <p>For example — Mon Mothma briefing the Alliance on default operations:</p>
+     * <pre>
+     *   store.setDefault( COUNT_LIMIT, 1000 );      // "No sweep exceeds 1000"
+     *   store.setDefault( BROWSER_ENABLE_FOLDING, true ); // "Fold large groups"
+     *   // ... forty more standing orders follow
+     * </pre>
      */
+    @Override
     public void initializeDefaultPreferences()
     {
 
@@ -84,7 +120,7 @@ public class BrowserCommonPreferencesInitializer extends AbstractPreferenceIniti
         Collection<AttributeValueEditorRelation> avprs = new ArrayList<AttributeValueEditorRelation>();
         Collection<SyntaxValueEditorRelation> svprs = new ArrayList<SyntaxValueEditorRelation>();
         Collection<ValueEditorExtension> valueEditorExtensions = ValueEditorManager.getValueEditorExtensions();
-        
+
         for ( ValueEditorExtension vee : valueEditorExtensions )
         {
             for ( String attributeType : vee.attributeTypes )
@@ -92,14 +128,14 @@ public class BrowserCommonPreferencesInitializer extends AbstractPreferenceIniti
                 AttributeValueEditorRelation aver = new AttributeValueEditorRelation( attributeType, vee.className );
                 avprs.add( aver );
             }
-            
+
             for ( String syntaxOid : vee.syntaxOids )
             {
                 SyntaxValueEditorRelation sver = new SyntaxValueEditorRelation( syntaxOid, vee.className );
                 svprs.add( sver );
             }
         }
-        
+
         BrowserCommonActivator.getDefault().getValueEditorsPreferences().setDefaultAttributeValueEditorRelations(
             avprs.toArray( new AttributeValueEditorRelation[0] ) );
         BrowserCommonActivator.getDefault().getValueEditorsPreferences().setDefaultSyntaxValueEditorRelations(

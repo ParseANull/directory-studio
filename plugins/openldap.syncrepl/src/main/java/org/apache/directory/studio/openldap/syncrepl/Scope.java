@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.syncrepl;
 
@@ -23,8 +23,25 @@ package org.apache.directory.studio.openldap.syncrepl;
 import java.text.ParseException;
 
 
+// ── CLASS: Scope — How Much of the Imperial Directory Tree to Replicate ───────
+// A sector command doesn't necessarily need the entire Imperial Intelligence
+// directory — it might only need the top-level dossier ("base"), just the
+// immediate sub-dossiers ("one"), or the entire subtree ("sub").  The "subord"
+// scope is a variant of "sub" that excludes the base entry itself.
+// This enum models that LDAP search scope choice, which is the syncrepl
+// "scope" parameter controlling which entries are replicated.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This enum implements all the possible values for the scope value.
+ * All valid values for the syncrepl {@code scope} parameter.
+ * The scope controls which entries under the search base are replicated:
+ * {@link #BASE} replicates only the base entry; {@link #ONE} replicates
+ * immediate children; {@link #SUB} replicates the full subtree;
+ * {@link #SUBORD} replicates the subtree excluding the base entry.
+ * Think of this as telling the sector command how much of the Imperial
+ * intelligence tree to mirror: just the cover page, one folder down,
+ * or the entire filing cabinet.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public enum Scope
 {
@@ -44,12 +61,17 @@ public enum Scope
     private String value;
 
 
+    // ── Select the Right Replication Coverage ────────────────────────────────
+    // The parser matches the incoming scope name case-insensitively and returns
+    // the correct constant, or throws ParseException for anything unrecognised.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Parses a scope string.
+     * Parses a scope string into the corresponding enum constant.
      *
-     * @param s the string
-     * @return a scope
-     * @throws ParseException if an error occurs during parsing
+     * @param s  the scope string — one of {@code "sub"}, {@code "one"},
+     *           {@code "base"}, or {@code "subord"} (case-insensitive).
+     * @return   the matching {@link Scope} constant.
+     * @throws ParseException  if {@code s} is not a recognised scope value.
      */
     public static Scope parse( String s ) throws ParseException
     {
@@ -80,10 +102,13 @@ public enum Scope
     }
 
 
+    // ── Create the Constant with Its Config Token ─────────────────────────────
+    // Each constant carries its exact lowercase token for round-trip serialisation.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of Scope.
+     * Creates a Scope constant with its config directive token.
      *
-     * @param value the value
+     * @param value  the lowercase token as it appears in the syncrepl directive.
      */
     private Scope( String value )
     {
@@ -91,8 +116,13 @@ public enum Scope
     }
 
 
+    // ── Write the Scope Back into the Configuration ───────────────────────────
+    // Returns the exact token used in the OpenLDAP configuration file.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the config file token for this scope value.
+     *
+     * @return  one of {@code "sub"}, {@code "one"}, {@code "base"}, {@code "subord"}.
      */
     public String toString()
     {

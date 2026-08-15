@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor;
@@ -31,12 +31,24 @@ import org.eclipse.ui.IPersistableElement;
 import org.eclipse.ui.editors.text.ILocationProvider;
 
 
+// ── CLASS: NonExistingLdifEditorInput — REBEL BLANK COMMUNIQUÉ FORM ──────────
+// A Rebel operator sometimes starts a brand-new communiqué before they know
+// which relay station will store it.  They use a blank form stamped with a
+// temporary serial number ("LDIF 1", "LDIF 2", ...).
+// NonExistingLdifEditorInput is that blank form: it satisfies Eclipse's need
+// for a writeable path (pointing to the plugin's state location) without
+// corresponding to a real file on disk.
+// Inspired by org.eclipse.ui.internal.editors.text.NonExistingFileEditorInput.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This EditorInput is used to create a LDIF file that isn't saved yet.
- * It is used from File->New, but also from the embedded LDIF editors
- * in modification view, in batch operation wizard and the LDIF preference page.
- * 
- * Inspired from org.eclipse.ui.internal.editors.text.NonExistingFileEditorInput.java
+ * {@link IPathEditorInput} for LDIF files that do not yet exist on disk.
+ * Used by File-&gt;New, the embedded modification-view LDIF editor, the batch
+ * operation wizard, and the LDIF preference page.
+ * Returns {@code false} from {@link #exists()} and {@code null} from
+ * {@link #getPersistable()}, signalling to Eclipse that the file is transient.
+ * The writeable path points to the plugin state location so the editor remains
+ * editable.
+ * Think of this as the blank communiqué form — serial-numbered, ready to fill in.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -49,8 +61,11 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     private String name;
 
 
+    // ── ASSIGN A UNIQUE SERIAL NUMBER ─────────────────────────────────────────
+    // The archivist stamps the next available serial number on the blank form.
     /**
-     * Creates a new instance of NonExistingLdifEditorInput.
+     * Creates a new {@code NonExistingLdifEditorInput} and assigns it a unique
+     * name ("LDIF 1", "LDIF 2", ...) from the shared counter.
      */
     public NonExistingLdifEditorInput()
     {
@@ -59,8 +74,13 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     }
 
 
+    // ── REPORT NON-EXISTENCE ──────────────────────────────────────────────────
+    // The form does not correspond to a filed document yet.
     /**
-     * As the name says, this implementations always returns false.
+     * Always returns {@code false} — this input does not correspond to an
+     * existing file.
+     *
+     * @return {@code false}
      */
     public boolean exists()
     {
@@ -68,8 +88,12 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     }
 
 
+    // ── RETURN THE LDIF FILE ICON ─────────────────────────────────────────────
+    // The form carries the standard LDIF communiqué icon.
     /**
-     * Returns the LDIF file image.
+     * Returns the image descriptor for the LDIF editor icon.
+     *
+     * @return the image descriptor
      */
     public ImageDescriptor getImageDescriptor()
     {
@@ -77,8 +101,11 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     }
 
 
+    // ── RETURN THE TAB LABEL ──────────────────────────────────────────────────
     /**
-     * Returns the name.
+     * Returns the editor-tab label ("LDIF 1", "LDIF 2", ...).
+     *
+     * @return the name
      */
     public String getName()
     {
@@ -86,8 +113,12 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     }
 
 
+    // ── REPORT NON-PERSISTABILITY ─────────────────────────────────────────────
+    // The form cannot be restored across Eclipse sessions.
     /**
-     * As the name says, this implementations always returns false.
+     * Always returns {@code null} — this input is not persistable.
+     *
+     * @return {@code null}
      */
     public IPersistableElement getPersistable()
     {
@@ -95,8 +126,11 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     }
 
 
+    // ── RETURN THE TOOLTIP ────────────────────────────────────────────────────
     /**
-     * Returns the name.
+     * Returns the editor tooltip (same as the name).
+     *
+     * @return the name
      */
     public String getToolTipText()
     {
@@ -104,9 +138,15 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     }
 
 
+    // ── ADAPT TO ILocationProvider ────────────────────────────────────────────
+    // The editor needs this adapter to be editable — without a valid location
+    // provider Eclipse treats the editor as read-only.
     /**
-     * An EditorInput must return a good ILocationProvider, otherwise
-     * the editor is not editable.
+     * Returns {@code this} when {@code adapter} is {@link ILocationProvider},
+     * otherwise delegates to the platform adapter manager.
+     *
+     * @param adapter  the requested adapter type
+     * @return         the adapter, or {@code null}
      */
     public Object getAdapter( Class adapter )
     {
@@ -119,12 +159,16 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     }
 
 
+    // ── PROVIDE A WRITEABLE PATH (ILocationProvider) ──────────────────────────
+    // We route the path through getPath() so the location is always the
+    // plugin state folder — a platform-independent, writeable location.
     /**
-     * This implementation returns a path that point to the plugin's
-     * state location. 
-     * 
-     * A valid, writeable path must be returned, otherwise the editor
-     * is not editable.
+     * Returns the path for {@code element} if it is a
+     * {@link NonExistingLdifEditorInput}, otherwise {@code null}.
+     * Delegates to {@link #getPath()}.
+     *
+     * @param element  the element to get the path for
+     * @return         the path, or {@code null}
      */
     public IPath getPath( Object element )
     {
@@ -138,8 +182,13 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     }
 
 
-    /** 
-     * This implemention just compares the names
+    // ── EQUALITY BY NAME ──────────────────────────────────────────────────────
+    /**
+     * Returns {@code true} if {@code o} is a {@code NonExistingLdifEditorInput}
+     * with the same name.
+     *
+     * @param o  the object to compare
+     * @return   {@code true} if equal
      */
     public boolean equals( Object o )
     {
@@ -158,8 +207,11 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     }
 
 
+    // ── HASH BY NAME ──────────────────────────────────────────────────────────
     /**
-     * Returns hash code of the name string.
+     * Returns the hash code of the name string.
+     *
+     * @return the hash code
      */
     public int hashCode()
     {
@@ -167,13 +219,14 @@ public class NonExistingLdifEditorInput implements IPathEditorInput, ILocationPr
     }
 
 
+    // ── RETURN THE PLUGIN STATE PATH ──────────────────────────────────────────
+    // The plugin state location is platform-independent and writeable, so
+    // the editor can read and write the temporary file there.
     /**
-     * This implementation returns a path that point to the plugin's
-     * state location. The state location is a platform indepentend 
-     * location that is writeable.
-     * 
-     * A valid, writeable path must be returned, otherwise the editor
-     * is not editable.
+     * Returns the path {@code <stateLocation>/<name>.ldif} — a writeable,
+     * platform-independent location that keeps the editor editable.
+     *
+     * @return the path
      */
     public IPath getPath()
     {

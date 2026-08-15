@@ -38,11 +38,27 @@ import org.apache.directory.studio.openldap.config.acl.model.AbstractAclWhoClaus
 import org.apache.directory.studio.openldap.config.acl.widgets.AclWhoClauseSsfValuesEnum;
 
 
+// ── CLASS: AbstractWhoClauseCryptoStrengthComposite — IMPERIAL CRYPTO STRENGTH
+// Imperial Security Bureau demands that any SSF-based who-clause form show
+// the same controls: a combo offering preset encryption tiers (1/40/56/64/
+// 128/164/256) plus a "Custom" entry that reveals a numeric spinner. This
+// abstract class creates those controls and wires the combo listener that
+// shows/hides the spinner. Concrete subclasses (WhoClauseSaslSsfComposite,
+// WhoClauseSsfComposite, WhoClauseTlsSsfComposite, WhoClauseTransportSsfComposite)
+// bind to their own AbstractAclWhoClauseCryptoStrength subtype via the generic
+// parameter.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * 
- * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ * Abstract base for who-clause composites that edit a cryptographic strength
+ * requirement (SSF / SASL-SSF / TLS-SSF / Transport-SSF). Renders an
+ * "SSF Value" label, a preset-tier combo viewer, and a custom-value spinner.
+ * The spinner is hidden until the "Custom" tier is selected.
  *
- * @param <C>
+ * <p>Think of this class as the Imperial Security Bureau's standard encryption-tier
+ * form — all SSF clause panels reuse this base.</p>
+ *
+ * @param <C>  The concrete crypto-strength who-clause type.
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class AbstractWhoClauseCryptoStrengthComposite<C extends AbstractAclWhoClauseCryptoStrength> extends
     AbstractWhoClauseComposite<C>
@@ -70,11 +86,17 @@ public class AbstractWhoClauseCryptoStrengthComposite<C extends AbstractAclWhoCl
     private AclWhoClauseSsfValuesEnum currentSsfValue;
 
 
+    // ── Constructing the Crypto Strength Composite ────────────────────────────
+    // The form receives its clause type, context, and visual editor reference.
+    // The actual SWT controls are created in createComposite().
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AbstractWhoClauseCryptoStrengthComposite.
+     * Creates a new crypto-strength composite. SWT controls are deferred to
+     * {@link #createComposite(Composite)}.
      *
-     * @param clause the clause
-     * @param visualEditorComposite the visual editor composite
+     * @param context               The ACL context.
+     * @param clause                The typed crypto-strength who-clause to edit.
+     * @param visualEditorComposite The visual editor composite (for layout refresh).
      */
     public AbstractWhoClauseCryptoStrengthComposite( OpenLdapAclValueWithContext context, C clause, Composite visualEditorComposite )
     {
@@ -82,6 +104,24 @@ public class AbstractWhoClauseCryptoStrengthComposite<C extends AbstractAclWhoCl
     }
 
 
+    // ── Building the SSF Form ─────────────────────────────────────────────────
+    // Creates a three-column row: label, preset-tier combo, and hidden custom
+    // spinner. The combo listener shows the spinner when "Custom" is selected
+    // and hides it for preset tiers.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Creates the SSF form composite: an "SSF Value:" label, a preset-tier
+     * {@link ComboViewer}, and a {@link Spinner} (initially hidden) for custom values.
+     *
+     * <p>For example — Tarkin creating the TLS-SSF sub-form:</p>
+     * <pre>
+     *   WhoClauseTlsSsfComposite c = new WhoClauseTlsSsfComposite(context, parent);
+     *   c.createComposite(configurationComposite);
+     * </pre>
+     *
+     * @param parent  The parent composite.
+     * @return        The three-column composite containing the controls.
+     */
     public Composite createComposite( Composite parent )
     {
         Composite composite = BaseWidgetUtils.createColumnContainer( parent, 3, 1 );

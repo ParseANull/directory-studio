@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.actions;
@@ -49,8 +49,24 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.IWorkbenchActionDefinitionIds;
 
 
+// ── CLASS: CopyAction — CASSIAN AND JYN COPYING THE DEATH STAR PLANS ─────────
+// On Scarif, Cassian and Jyn race through the data vault, pulling up the
+// Death Star schematics on the terminal. They don't grab the whole vault —
+// they identify exactly what the Alliance needs (entries, searches, or values)
+// and transmit just that to the Rebel fleet above. The format depends on what's
+// selected: DNs for entries, names for searches, display strings for values.
+// CopyAction does the same: it looks at what's selected, decides what flavor
+// of copy makes sense, serializes the data to both a typed transfer format
+// and a plain-text format, then puts it all on the SWT clipboard.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Copy Action
+ * Copies the currently selected LDAP objects (entries, searches, or values)
+ * to the system clipboard in both a typed transfer format and plain text.
+ * The typed format (EntryTransfer, SearchTransfer, ValuesTransfer) is used by
+ * the paste action for in-application operations; the plain-text format lets
+ * users paste into external tools like text editors.
+ * Think of this class as Cassian and Jyn transmitting just the right data
+ * from the Scarif data vault to the waiting Rebel fleet.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -61,11 +77,20 @@ public class CopyAction extends BrowserAction
     private ValueEditorManager valueEditorManager;
 
 
+    // ── JYN PLUGS INTO THE TERMINAL — BASIC COPY CONFIGURED ──────────────────
+    // Jyn connects to the data terminal with just the paste-target in mind —
+    // she knows where the data is going but doesn't yet know which editor
+    // will render the values. This constructor sets up the basic copy path.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of CopyAction.
+     * Creates a CopyAction linked to the given paste action proxy.
+     * After a successful copy, we update the paste action so it knows
+     * new data is available on the clipboard.
+     * No value editor manager is set — values will be copied as raw strings
+     * or base64 rather than via a display renderer.
      *
-     * @param pasteActionProxy
-     *      the associated Paste Action
+     * @param pasteActionProxy  the paste action to notify after copy; may be null
+     *                          if no paste update is needed.
      */
     public CopyAction( BrowserActionProxy pasteActionProxy )
     {
@@ -74,11 +99,20 @@ public class CopyAction extends BrowserAction
     }
 
 
+    // ── JYN PLUGS IN WITH FULL TRANSLATION — VALUE EDITOR CONFIGURED ──────────
+    // Jyn connects to the terminal and also brings C-3PO to interpret the alien
+    // data into a format the Rebel analysts can read. The value editor manager
+    // knows how to render each attribute type's value as a display string.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of CopyAction.
+     * Creates a CopyAction with both a paste action proxy and a value editor
+     * manager. The manager is used to render attribute values via their
+     * configured display editors (e.g., showing a date instead of raw bytes)
+     * when building the plain-text copy string.
      *
-     * @param pasteActionProxy
-     *      the associated Paste Action
+     * @param pasteActionProxy    the paste action to notify after copy.
+     * @param valueEditorManager  the manager used to look up display renderers
+     *                            for each attribute value type.
      */
     public CopyAction( BrowserActionProxy pasteActionProxy, ValueEditorManager valueEditorManager )
     {
@@ -88,9 +122,27 @@ public class CopyAction extends BrowserAction
     }
 
 
+    // ── JYN READS THE TERMINAL DISPLAY — LABEL ADAPTS TO SELECTION ───────────
+    // The terminal readout changes depending on what Jyn has selected: "Copy
+    // Entry DN" when she's on a single record, "Copy Entries' DNs" for
+    // multiple, "Copy Search" for saved query definitions, etc.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the menu label for this action, adapting to the current selection.
+     * Shows singular or plural versions depending on how many objects are selected,
+     * and picks the right noun (entries, searches, or values) based on what's selected.
+     *
+     * <p>For example — the terminal readout changing as Jyn selects more data:</p>
+     * <pre>
+     *   // one entry selected   → "Copy Entry DN"
+     *   // multiple entries     → "Copy Entries' DNs"
+     *   // one search selected  → "Copy Search"
+     *   // multiple values      → "Copy Values"
+     * </pre>
+     *
+     * @return the action label string, localized.
      */
+    @Override
     public String getText()
     {
         // entry/searchresult/bookmark
@@ -118,27 +170,65 @@ public class CopyAction extends BrowserAction
     }
 
 
+    // ── JYN HOLDS UP THE COPY INSIGNIA ────────────────────────────────────────
+    // The action's icon identifies it visually in menus and toolbars — the
+    // standard Eclipse copy icon, same one used everywhere.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the standard Eclipse "copy" icon descriptor from the shared
+     * image registry.
+     *
+     * @return the copy tool image descriptor.
      */
+    @Override
     public ImageDescriptor getImageDescriptor()
     {
         return PlatformUI.getWorkbench().getSharedImages().getImageDescriptor( ISharedImages.IMG_TOOL_COPY );
     }
 
 
+    // ── JYN BROADCASTS ON THE COPY CHANNEL ────────────────────────────────────
+    // The command ID wires this action to the standard Ctrl+C keyboard shortcut
+    // via Eclipse's key-binding system.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the Eclipse command ID for the standard "copy" action, used
+     * to bind this action to Ctrl+C (or the platform equivalent).
+     *
+     * @return the workbench copy command ID.
      */
+    @Override
     public String getCommandId()
     {
         return IWorkbenchActionDefinitionIds.COPY;
     }
 
 
+    // ── CASSIAN AND JYN TRANSMIT THE SELECTED DATA ────────────────────────────
+    // Cassian starts the transmission: entries go as DNs (both typed and
+    // plain-text), searches go as named search objects, values go with their
+    // display string. Each data type gets its own path through the clipboard
+    // API. After the copy, the paste action is notified so it can re-evaluate
+    // its enabled state.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Executes the copy operation. Determines what's selected (entries, searches,
+     * or values), serializes it to the SWT clipboard with both a typed transfer
+     * and a plain-text transfer, then notifies the associated paste action to
+     * re-evaluate its enabled state.
+     * For values, uses the value editor manager (if set) to produce a
+     * human-readable display string; falls back to the raw string or base64
+     * encoding for binary values.
+     *
+     * <p>For example — Cassian and Jyn transmitting the Death Star plans:</p>
+     * <pre>
+     *   copyToClipboard(
+     *     new Object[]{ entries, dnText },
+     *     new Transfer[]{ EntryTransfer.getInstance(), TextTransfer.getInstance() }
+     *   );
+     * </pre>
      */
+    @Override
     public void run()
     {
         IEntry[] entries = getEntries();
@@ -233,14 +323,33 @@ public class CopyAction extends BrowserAction
     }
 
 
+    // ── CASSIAN FEEDS THE DATA INTO THE TRANSMISSION TERMINAL ─────────────────
+    // This static helper creates a fresh Clipboard, loads it with the data
+    // arrays (typed objects + transfer agents), then disposes it. The clipboard
+    // is a transient SWT resource — create it, use it, dispose it immediately.
+    // Silently swallows IllegalArgumentException (e.g., when copying RootDSE)
+    // to avoid spurious error dialogs.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Copies data to Clipboard
+     * Puts the given data arrays onto the SWT system clipboard using the
+     * corresponding transfer agents. Each element in {@code data} must have
+     * a matching {@link Transfer} in {@code dataTypes} at the same index.
+     * The clipboard is created, populated, and disposed within this call.
+     * Silently ignores {@link IllegalArgumentException} — this can happen
+     * when the data is not suitable for the clipboard (e.g., copying the RootDSE).
      *
-     * @param data
-     *      the data to be set in the clipboard
-     * @param dataTypes
-     *      the transfer agents that will convert the data to its platform specific format; 
-     *      each entry in the data array must have a corresponding dataType
+     * <p>For example — Cassian feeding data into the transmission terminal:</p>
+     * <pre>
+     *   CopyAction.copyToClipboard(
+     *     new Object[]{ entries, dnText },
+     *     new Transfer[]{ EntryTransfer.getInstance(), TextTransfer.getInstance() }
+     *   );
+     * </pre>
+     *
+     * @param data       the objects to copy; each must be compatible with the
+     *                   corresponding transfer agent.
+     * @param dataTypes  the transfer agents that convert each data element
+     *                   to a platform-native format.
      */
     public static void copyToClipboard( Object[] data, Transfer[] dataTypes )
     {
@@ -269,9 +378,18 @@ public class CopyAction extends BrowserAction
     }
 
 
+    // ── JYN CHECKS IF THE TERMINAL HAS DATA TO TRANSMIT ──────────────────────
+    // Before Jyn starts the transmission, she confirms there's actually something
+    // selected to copy — entries, searches, values, or string properties.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code true} if there is something to copy: entries, searches,
+     * values, or string properties. Returns {@code false} when the selection
+     * is empty or contains only unsupported types.
+     *
+     * @return {@code true} if this action is currently copyable.
      */
+    @Override
     public boolean isEnabled()
     {
         // entry/searchresult/bookmark
@@ -305,11 +423,17 @@ public class CopyAction extends BrowserAction
     }
 
 
+    // ── JYN IDENTIFIES WHICH ENTRIES ARE IN THE SELECTION ─────────────────────
+    // Jyn scans the selected objects to see if they are entry-type targets
+    // (IEntry, ISearchResult, or IBookmark). Only returns non-null if the
+    // selection is purely entry-type — no searches, attributes, or values mixed in.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Get the Entries
+     * Returns the entries to copy, or {@code null} if the selection is not
+     * purely entry-type (i.e., contains searches, attributes, or values).
+     * Normalizes ISearchResult and IBookmark to their underlying IEntry.
      *
-     * @return
-     *      the Entries
+     * @return an array of entries to copy, or {@code null} if wrong selection type.
      */
     private IEntry[] getEntries()
     {
@@ -339,11 +463,17 @@ public class CopyAction extends BrowserAction
     }
 
 
+    // ── JYN IDENTIFIES WHICH SEARCHES ARE IN THE SELECTION ────────────────────
+    // Jyn checks whether the selection is purely saved-search objects. Returns
+    // null if anything else (entries, attributes, values) is mixed in.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Get the Searches
+     * Returns the searches to copy, or {@code null} if the selection contains
+     * non-search objects. Only returns the searches when they are the sole
+     * type in the selection.
      *
-     * @return
-     *      the Searches
+     * @return the array of selected searches, or {@code null} if the selection
+     *         contains other types.
      */
     private ISearch[] getSearches()
     {
@@ -366,11 +496,17 @@ public class CopyAction extends BrowserAction
     }
 
 
+    // ── JYN IDENTIFIES WHICH VALUES ARE IN THE SELECTION ──────────────────────
+    // Jyn checks whether the selection is attribute/value-level objects.
+    // Normalizes AttributeHierarchy and IAttribute to their constituent values.
+    // Returns null if entries, searches, or connections are mixed in.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Get the Values
+     * Returns the attribute values to copy, or {@code null} if the selection
+     * contains non-value types. Expands AttributeHierarchy and IAttribute
+     * to their constituent IValue objects, then adds any directly selected values.
      *
-     * @return
-     *      the Values
+     * @return the array of values to copy, or {@code null} if wrong selection type.
      */
     private IValue[] getValues()
     {

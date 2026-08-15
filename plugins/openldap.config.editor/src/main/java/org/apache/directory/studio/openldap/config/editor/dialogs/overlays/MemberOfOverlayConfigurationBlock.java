@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs.overlays;
 
@@ -49,9 +49,20 @@ import org.apache.directory.studio.openldap.config.model.overlay.OlcMemberOf;
 import org.apache.directory.studio.openldap.config.model.overlay.OlcMemberOfDanglingReferenceBehaviorEnum;
 
 
+// Like the Imperial construction crews assembling the memberOf back-reference
+// module onto the second Death Star — wiring the group object-class selector,
+// the group and entry attribute-type pickers, the modifier-name identity, the
+// dangling-reference behavior chooser and error-code selector, and the referential-
+// integrity toggle — we build the MemberOf overlay configuration block that
+// automatically maintains reverse membership pointers on user entries.
 /**
- * This class implements a block for the configuration of the Member Of overlay.
- * 
+ * This class implements the configuration block for the MemberOf overlay.
+ * We present combo pickers for group object class, group attribute type,
+ * and entry attribute type; a modifier-name DN entry widget; a dangling-reference
+ * behavior combo; a dangling-reference error-code combo; and a "Maintain Referential
+ * Integrity" checkbox, all of which we read/write to and from the {@link OlcMemberOf}
+ * model object on refresh and save.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConfigurationBlock<OlcMemberOf>
@@ -75,11 +86,17 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     private Button maintianReferentialIntegrityCheckbox;
 
 
+    // Like the construction crew powering up a fresh MemberOf module with
+    // no prior configuration, cataloguing all the schema types from the
+    // connection so the combo pickers are populated, we create the block
+    // with a new empty OlcMemberOf and call init() to fill the lists.
     /**
-     * Creates a new instance of MemberOfOverlayConfigurationBlock.
+     * Creates a new MemberOfOverlayConfigurationBlock with a fresh, empty
+     * {@link OlcMemberOf} as the backing model and initializes the attribute
+     * type, object class, and result code lists from the browser connection's schema.
      *
-     * @param dialog the dialog
-     * @param browserConnection the connection
+     * @param dialog the parent OverlayDialog that hosts this block
+     * @param browserConnection the browser connection used for schema lookups
      */
     public MemberOfOverlayConfigurationBlock( OverlayDialog dialog, IBrowserConnection browserConnection )
     {
@@ -90,12 +107,19 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew installing a pre-configured MemberOf module that already
+    // has group-class and attribute-type settings from a previous deployment,
+    // we accept an existing OlcMemberOf and store it — defaulting to a fresh
+    // one if null — then still call init() to populate the schema lists.
     /**
-     * Creates a new instance of MemberOfOverlayConfigurationBlock.
+     * Creates a new MemberOfOverlayConfigurationBlock backed by the given
+     * {@link OlcMemberOf}. If {@code overlay} is {@code null} we create a
+     * fresh default config instead. Either way, the schema attribute-type,
+     * object-class, and result-code lists are initialized from the connection.
      *
-     * @param dialog the dialog
-     * @param browserConnection the connection
-     * @param overlay the overlay
+     * @param dialog the parent OverlayDialog that hosts this block
+     * @param browserConnection the browser connection used for schema lookups
+     * @param overlay the existing MemberOf overlay config to edit, or {@code null}
      */
     public MemberOfOverlayConfigurationBlock( OverlayDialog dialog, IBrowserConnection browserConnection,
         OlcMemberOf overlay )
@@ -115,8 +139,13 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew running the initial systems check that populates the
+    // attribute-type, object-class, and result-code lookup tables so the
+    // combo pickers in the UI have data to offer, we call both init helpers.
     /**
-     * Initializes the list of attribute types and object class.
+     * Initializes the list of attribute types, object classes, and result codes
+     * by delegating to {@link #initAttributeTypesAndObjectClassesLists()} and
+     * {@link #initResultCodesList()}.
      */
     private void init()
     {
@@ -125,8 +154,15 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew querying the station's schema catalog to build sorted
+    // name lists for all known attribute types and object classes so the
+    // combo pickers can offer them as auto-complete suggestions, we walk
+    // the browser connection's schema and collect every name alphabetically.
     /**
-     * Initializes the lists of attribute types and object classes.
+     * Populates {@code connectionAttributeTypes} and {@code connectionObjectClasses}
+     * by querying all attribute type and object class descriptions from the browser
+     * connection's schema, collecting every declared name, and sorting both lists
+     * case-insensitively. Does nothing when the browser connection is absent.
      */
     private void initAttributeTypesAndObjectClassesLists()
     {
@@ -167,8 +203,14 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew cataloguing every known LDAP result code into a
+    // sorted list so the dangling-reference error-code combo can present
+    // a complete menu of numeric codes and their human-readable messages,
+    // we build and sort the full ResultCodeEnum roster here.
     /**
-     * Initializes the list of result codes.
+     * Populates the {@code resultCodes} list with all known {@link ResultCodeEnum}
+     * values in ascending numeric order, for use as the data input of the
+     * dangling-reference error-code combo viewer.
      */
     private void initResultCodesList()
     {
@@ -227,8 +269,20 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the construction crew building the MemberOf module's full control
+    // panel — combo pickers for group object class, group attribute type, and
+    // entry attribute type; a DN picker for the modifier name; a dangling-reference
+    // behavior combo with a custom Ignore/Drop/Error label provider; a dangling-
+    // reference error-code combo showing "code (message)" labels; and a
+    // referential-integrity checkbox — we create all block content widgets here.
     /**
-     * {@inheritDoc}
+     * Creates the block content area with two-column rows for Group Object Class,
+     * Group Attribute Type, Entry Attribute Type, Modifier's Name, Dangling Ref.
+     * Behavior (with Ignore/Drop/Error choices), Dangling Ref. Error Code (with
+     * numeric code and message labels), and a "Maintain Referential Integrity"
+     * checkbox spanning both columns.
+     *
+     * @param parent the parent composite to attach our content to
      */
     public void createBlockContent( Composite parent )
     {
@@ -329,8 +383,17 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew reading the MemberOf module's current settings out of
+    // the station's configuration record and populating each control on the
+    // panel — the group class, the attribute type pickers, the modifier DN,
+    // the dangling-reference behavior and error code, and the referential-
+    // integrity flag — we push each overlay value into its corresponding widget.
     /**
-     * {@inheritDoc}
+     * Refreshes all block widgets from the current {@link OlcMemberOf}, setting
+     * the group object class, group attribute type, entry attribute type,
+     * modifier-name DN, dangling-reference behavior (defaulting to IGNORE),
+     * dangling-reference error code (defaulting to CONSTRAINT_VIOLATION), and
+     * the referential-integrity checkbox.
      */
     public void refresh()
     {
@@ -424,8 +487,16 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew writing all the updated MemberOf settings back into the
+    // station's configuration record — clearing fields that are empty or equal
+    // to the overlay's built-in defaults so the model stays clean, and saving
+    // everything else — we persist every widget value into the OlcMemberOf model.
     /**
-     * {@inheritDoc}
+     * Saves the current widget values back into the {@link OlcMemberOf}, writing
+     * group object class, group attribute type, entry attribute type, modifier-name
+     * DN (cleared when empty), dangling-reference behavior (cleared when null),
+     * dangling-reference error code (cleared when CONSTRAINT_VIOLATION or absent),
+     * and the referential-integrity flag.
      */
     public void save()
     {
@@ -512,11 +583,16 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew reading the current text out of a combo picker's editable
+    // field so it can be stored back into the model — whether the operator
+    // selected from the drop-down list or typed a custom value directly —
+    // we pull the raw text from the underlying Combo widget.
     /**
-     * Gets the text selection of the combo viewer.
+     * Returns the raw text currently displayed in the given {@link ComboViewer}'s
+     * underlying {@link Combo} widget, including any user-typed custom value.
      *
-     * @param viewer the viewer
-     * @return the text selection of the viewer
+     * @param viewer the combo viewer whose text to retrieve
+     * @return the current text in the combo's edit field
      */
     private String getComboViewerText( ComboViewer viewer )
     {
@@ -524,11 +600,17 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew pre-loading a combo picker with a value from the model
+    // so the operator sees the currently configured setting when the panel
+    // first opens — defaulting to an empty string if the model has no value —
+    // we set the combo's text directly.
     /**
-     * Sets the text selection of the combo viewer.
+     * Sets the text displayed in the given {@link ComboViewer}'s underlying
+     * {@link Combo} widget to {@code text}, or clears it to an empty string
+     * when {@code text} is {@code null}.
      *
-     * @param viewer the viewer
-     * @param text the text
+     * @param viewer the combo viewer whose text to update
+     * @param text the value to display, or {@code null} to clear the field
      */
     private void setComboViewerText( ComboViewer viewer, String text )
     {
@@ -543,10 +625,15 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew reading which dangling-reference behavior the operator
+    // selected from the behavior combo — Ignore, Drop, or Error — and casting
+    // the selected element to the expected enum type, we extract the selection.
     /**
-     * Gets the selected dangling reference behavior.
+     * Returns the currently selected {@link OlcMemberOfDanglingReferenceBehaviorEnum}
+     * from the dangling-reference behavior combo viewer, or {@code null} if the
+     * selection is empty or not an instance of the expected enum.
      *
-     * @return the selected dangling reference behavior
+     * @return the selected dangling-reference behavior, or {@code null}
      */
     private OlcMemberOfDanglingReferenceBehaviorEnum getSelectedDanglingReferenceBehavior()
     {
@@ -570,10 +657,16 @@ public class MemberOfOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew reading which LDAP result code the operator chose for
+    // dangling-reference errors — the numeric code the overlay should return
+    // when it detects a broken group reference — we extract the selection from
+    // the error-code combo and cast it to ResultCodeEnum.
     /**
-     * Gets the selected dangling reference error code.
+     * Returns the currently selected {@link ResultCodeEnum} from the dangling-reference
+     * error-code combo viewer, or {@code null} if the selection is empty or not
+     * an instance of {@link ResultCodeEnum}.
      *
-     * @return the selected dangling reference error code
+     * @return the selected dangling-reference error code, or {@code null}
      */
     private ResultCodeEnum getSelectedDanglingReferenceErrorCode()
     {

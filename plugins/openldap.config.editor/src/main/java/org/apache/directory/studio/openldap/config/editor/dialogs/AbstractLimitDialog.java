@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -35,10 +35,16 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
+// Like Mace Windu standing firm in the Senate chamber and refusing
+// to let bad values through, this abstract class provides the shared
+// validation logic and listener plumbing for both SizeLimitDialog and
+// TimeLimitDialog so neither has to duplicate the fight.
 /**
- * A class that share elements of configuration between the SizeLimitDialog
- * and TimeLimitDialog.
- * 
+ * Abstract base class sharing validation logic and event listeners between
+ * {@link SizeLimitDialog} and {@link TimeLimitDialog}. We validate soft,
+ * hard, and global limit fields and keep the OK button and result text
+ * in sync with whatever the operator types.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
@@ -47,47 +53,60 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
     /** The SoftLimit Text and checkboxes */
     protected Text softLimitText;
     protected Button softUnlimitedCheckbox;
-    
+
     /** The HardLimit Text and checkboxes */
     protected Text hardLimitText;
     protected Button hardUnlimitedCheckbox;
     protected Button hardSoftCheckbox;
-    
+
     /** The GlobalLimit Text and checkboxes */
     protected Text globalLimitText;
     protected Button globalUnlimitedCheckbox;
-    
+
     /** The resulting Limit Text, or an error message */
     protected Text limitText;
-    
+
     /** The modified Limit, as a String */
     protected String newLimitStr;
-    
+
     /** The wrapper (either time or size) used to store the parameters */
     //protected AbstractLimitWrapper limitWrapper;
 
 
+    // Like Mace Windu stepping into the Senate chamber and taking his
+    // position before the confrontation begins, we call the parent
+    // constructor to get the dialog shell set up correctly before
+    // any limit validation logic runs.
     /**
-     * Create a new instance of the TimeSizeLimitDialog
-     * 
-     * @param parentShell The parent Shell
+     * Creates a new AbstractLimitDialog attached to the given parent shell.
+     * Subclasses call this to initialize the dialog infrastructure.
+     *
+     * @param parentShell the parent shell this dialog belongs to
      */
     protected AbstractLimitDialog( Shell parentShell )
     {
         super( parentShell );
     }
-    
-    
+
+
+    // Like Mace Windu sizing up the soft-limit claim Palpatine is making
+    // and deciding whether it's actually within acceptable bounds,
+    // we parse the soft limit text and reject any value that's either
+    // non-numeric or less than -1 (the unlimited sentinel).
     /**
-     * Check if the soft value is valid or not
+     * Checks whether the current soft limit field value is valid.
+     * We accept empty, "unlimited", "none", -1, or any non-negative integer.
+     * Anything else (non-numeric or below -1) returns false.
+     *
+     * @return {@code true} if the soft limit value is valid, {@code false} otherwise
      */
     protected boolean isValidSoft()
     {
         String softLimitStr = softLimitText.getText();
-        
+
         if ( !Strings.isEmpty( softLimitStr ) )
         {
-            if ( !TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( softLimitStr ) && 
+            if ( !TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( softLimitStr ) &&
                 !TimeLimitWrapper.NONE_STR.equals( softLimitStr ) )
             {
                 try
@@ -103,22 +122,30 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 }
             }
         }
-        
+
         return true;
     }
-    
-    
+
+
+    // Like Mace Windu scrutinizing the hard-limit assertion with equal
+    // intensity — and also accepting the special "soft" keyword that
+    // ties the hard limit to whatever the soft limit is — we validate
+    // the hard limit text with the same strict criteria plus that extra rule.
     /**
-     * Check if the hard value is valid or not
+     * Checks whether the current hard limit field value is valid.
+     * We accept empty, "unlimited", "none", "soft", -1, or any non-negative integer.
+     * Anything else returns false.
+     *
+     * @return {@code true} if the hard limit value is valid, {@code false} otherwise
      */
     protected boolean isValidHard()
     {
         String hardLimitStr = hardLimitText.getText();
-        
+
         if ( !Strings.isEmpty( hardLimitStr ) )
         {
-            if ( !TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( hardLimitStr ) && 
-                 !TimeLimitWrapper.NONE_STR.equals( hardLimitStr ) && 
+            if ( !TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( hardLimitStr ) &&
+                 !TimeLimitWrapper.NONE_STR.equals( hardLimitStr ) &&
                  !TimeLimitWrapper.SOFT_STR.equalsIgnoreCase( hardLimitStr ) )
             {
                 try
@@ -134,21 +161,29 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 }
             }
         }
-        
+
         return true;
     }
-    
-    
+
+
+    // Like Mace Windu giving the global policy one last check before
+    // he commits to his position, we validate the global limit field
+    // using the same numeric rules as the soft limit — no negatives
+    // below -1, no non-numeric garbage allowed.
     /**
-     * Check if the global value is valid or not
+     * Checks whether the current global limit field value is valid.
+     * We accept empty, "unlimited", "none", -1, or any non-negative integer.
+     * Anything else returns false.
+     *
+     * @return {@code true} if the global limit value is valid, {@code false} otherwise
      */
     protected boolean isValidGlobal()
     {
         String globalLimitStr = hardLimitText.getText();
-        
+
         if ( !Strings.isEmpty( globalLimitStr ) )
         {
-            if ( !TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( globalLimitStr ) && 
+            if ( !TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( globalLimitStr ) &&
                  !TimeLimitWrapper.NONE_STR.equals( globalLimitStr ) )
             {
                 try
@@ -164,22 +199,26 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 }
             }
         }
-        
+
         return true;
     }
-    
-    
+
+
+    // Like Mace Windu delivering his final verdict — is this whole
+    // limit configuration valid or not — we run all three field checks
+    // and return true only when soft, hard, and global all pass muster.
     /**
-     * Check if the global TimeLimit is valid : 
-     * the values must be numeric, or "unlimited" or "none" or "soft" (for the hard limit). They
-     * also have to be >=0
+     * Checks whether all three limit fields (soft, hard, global) contain
+     * valid values. All three must pass their individual checks.
+     *
+     * @return {@code true} if all limit fields are valid, {@code false} if any one fails
      */
     protected boolean isValid()
     {
         return isValidSoft() && isValidHard() && isValidGlobal();
     }
-    
-    
+
+
     /**
      * The listener for the Soft Limit Text
      */
@@ -205,8 +244,8 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 // Check the case we don't have anything
                 limitWrapper.setSoftLimit( null );
             }
-            else if ( TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( softLimitStr ) || 
-                TimeLimitWrapper.NONE_STR.equalsIgnoreCase( softLimitStr ) ) 
+            else if ( TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( softLimitStr ) ||
+                TimeLimitWrapper.NONE_STR.equalsIgnoreCase( softLimitStr ) )
             {
                 limitWrapper.setSoftLimit( TimeLimitWrapper.UNLIMITED );
                 unlimited = true;
@@ -217,7 +256,7 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 try
                 {
                     int value = Integer.parseInt( softLimitStr );
-                    
+
                     if ( value < TimeLimitWrapper.UNLIMITED )
                     {
                         // The value must be either -1 (unlimited) or a positive number
@@ -243,7 +282,7 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
             softUnlimitedCheckbox.setSelection( unlimited );
             softLimitText.setForeground( display.getSystemColor( color ) );
             limitText.setText( limitWrapper.toString() );
-            
+
             // Update the Hard limit if the hardSoft checkbox is set
             if ( hardSoftCheckbox.getSelection() )
             {
@@ -254,17 +293,17 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 else
                 {
                     hardLimitText.setText( softLimitStr );
-                    
+
                     // Use the same color than for the soft
                     Display displayHard = softLimitText.getDisplay();
                     hardLimitText.setForeground( displayHard.getSystemColor( color ) );
                 }
             }
-            
+
             okButton.setEnabled( isValid() );
         };
-    
-    
+
+
     /**
      * The listener for the Hard Limit Text
      */
@@ -291,12 +330,12 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 limitWrapper.setHardLimit( null );
             }
             else if ( TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( hardLimitStr ) ||
-                TimeLimitWrapper.NONE_STR.equalsIgnoreCase( hardLimitStr ) ) 
+                TimeLimitWrapper.NONE_STR.equalsIgnoreCase( hardLimitStr ) )
             {
                 limitWrapper.setHardLimit( TimeLimitWrapper.UNLIMITED );
                 unlimited = true;
             }
-            else if ( TimeLimitWrapper.SOFT_STR.equalsIgnoreCase( hardLimitStr ) ) 
+            else if ( TimeLimitWrapper.SOFT_STR.equalsIgnoreCase( hardLimitStr ) )
             {
                 limitWrapper.setHardLimit( limitWrapper.getSoftLimit() );
                 unlimited = softUnlimitedCheckbox.getSelection();
@@ -307,7 +346,7 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 try
                 {
                     int value = Integer.parseInt( hardLimitStr );
-                    
+
                     if ( value < TimeLimitWrapper.UNLIMITED )
                     {
                         // The value must be either -1 (unlimited) or a positive number
@@ -333,9 +372,9 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
             hardUnlimitedCheckbox.setSelection( unlimited );
             hardLimitText.setForeground( display.getSystemColor( color ) );
             limitText.setText( limitWrapper.toString() );
-            
+
             if ( isValidSoft() )
-            { 
+            {
                 okButton.setEnabled( true );
             }
             else
@@ -343,8 +382,8 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 okButton.setEnabled( isValid() );
             }
         };
-    
-    
+
+
     /**
      * The listener for the Global Limit Text
      */
@@ -370,8 +409,8 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 // Check the case we don't have anything
                 limitWrapper.setGlobalLimit( null );
             }
-            else if ( TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( globalLimitStr ) || 
-                TimeLimitWrapper.NONE_STR.equalsIgnoreCase( globalLimitStr ) ) 
+            else if ( TimeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( globalLimitStr ) ||
+                TimeLimitWrapper.NONE_STR.equalsIgnoreCase( globalLimitStr ) )
             {
                 limitWrapper.setGlobalLimit( TimeLimitWrapper.UNLIMITED );
                 unlimited = true;
@@ -382,7 +421,7 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 try
                 {
                     int value = Integer.parseInt( globalLimitStr );
-                    
+
                     if ( value < TimeLimitWrapper.UNLIMITED )
                     {
                         // The value must be either -1 (unlimited) or a positive number
@@ -410,8 +449,8 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
             globalUnlimitedCheckbox.setSelection( unlimited );
             okButton.setEnabled( isValid() );
         };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the soft unlimited button is checked
      */
@@ -443,13 +482,13 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
             {
                 softLimitText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
-            
+
             limitText.setText( limitWrapper.toString() );
             okButton.setEnabled( isValid() );
         }
     };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the hard unlimited button is checked
      */
@@ -480,8 +519,8 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
             okButton.setEnabled( isValid() );
         }
     };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the hard unlimited button is checked.
      * We will disable the hardLimitText.
@@ -499,7 +538,7 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
             {
                 hardLimitText.setEnabled( false );
                 String softStr = softLimitText.getText();
-                
+
                 if ( softStr != null )
                 {
                     hardLimitText.setText( softStr );
@@ -508,12 +547,12 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 {
                     hardLimitText.setText( "" );
                 }
-                
+
                 limitWrapper.setHardLimit( limitWrapper.getSoftLimit() );
                 hardUnlimitedCheckbox.setSelection( TimeLimitWrapper.UNLIMITED.equals( limitWrapper.getSoftLimit() ) );
 
                 if ( isValidSoft() )
-                { 
+                {
                     hardLimitText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 }
                 else
@@ -532,8 +571,8 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
             okButton.setEnabled( isValid() );
         }
     };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the global unlimited button is checked
      */
@@ -562,11 +601,16 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
             okButton.setEnabled( isValid() );
         }
     };
-    
-    
+
+
+    // Like Mace Windu concluding the confrontation and issuing the
+    // final verdict — the limit string is locked in and the dialog
+    // can close — we capture the result string before calling the
+    // parent's okPressed to complete the dialog lifecycle.
     /**
-     * Construct the new TimeLimit from what we have in the dialog
-     * {@inheritDoc}
+     * Handles the OK button press by capturing the current limit string
+     * from the edited element before closing the dialog, so the caller
+     * can retrieve it via {@link #getNewLimit()}.
      */
     @Override
     protected void okPressed()
@@ -576,8 +620,13 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
     }
 
 
+    // Like the Senate scribe handing Mace Windu the written record of
+    // what was decided, we return the finalized limit string so the
+    // caller can persist it after the dialog has closed.
     /**
-     * {@inheritDoc}
+     * Returns the limit string that was active when the operator pressed OK.
+     *
+     * @return the resulting limit configuration string
      */
     public String getNewLimit()
     {
@@ -585,18 +634,24 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
     }
 
 
+    // Like Mace Windu reviewing the mission dossier before the confrontation
+    // to understand the current state of play, we pre-populate the soft,
+    // hard, and global limit fields from the existing limit wrapper so
+    // the operator sees the current values and can edit from there.
     /**
-     * Initializes the UI from the Limit
+     * Initializes the dialog's soft, hard, and global limit fields from
+     * the current {@link LimitWrapper}, pre-selecting the "unlimited"
+     * checkboxes and "hard=soft" checkbox as appropriate.
      */
     protected void initDialog()
     {
         LimitWrapper limitWrapper = (LimitWrapper)getEditedElement();
-        
+
         if ( limitWrapper != null )
         {
             // The SoftLimit
             Integer softLimit = limitWrapper.getSoftLimit();
-            
+
             if ( softLimit == null )
             {
                 softLimitText.setText( "" );
@@ -612,10 +667,10 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 softLimitText.setText( softLimit.toString() );
                 softUnlimitedCheckbox.setSelection( false );
             }
-            
+
             // The HardLimit
             Integer hardLimit = limitWrapper.getHardLimit();
-            
+
             if ( hardLimit == null )
             {
                 hardLimitText.setText( "" );
@@ -640,10 +695,10 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 hardUnlimitedCheckbox.setSelection( false );
                 hardSoftCheckbox.setSelection( false );
             }
-            
+
             // The GlobalLimit
             Integer globalLimit = limitWrapper.getGlobalLimit();
-            
+
             if ( globalLimit == null )
             {
                 globalLimitText.setText( "" );
@@ -659,7 +714,7 @@ public abstract class AbstractLimitDialog<E> extends AddEditDialog<E>
                 globalLimitText.setText( globalLimit.toString() );
                 globalUnlimitedCheckbox.setSelection( false );
             }
-            
+
             limitText.setText( limitWrapper.toString() );
         }
     }

@@ -21,6 +21,21 @@
 package org.apache.directory.studio.ldapbrowser.core.propertypageproviders;
 
 
+// ── CLASS: EntryPropertyPageProvider — JEDI BADGE FOR ENTRY OBJECTS ─────────
+// Every room on the Death Star blueprint needs a door clearance badge before
+// the inspection panel opens.  EntryPropertyPageProvider is that clearance badge
+// for IEntry objects: implementing it signals to the Eclipse property-page
+// framework that this object should expose entry property pages.
+// No methods — the interface is a pure marker.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Marker interface that tags a class as a provider of entry property pages.
+ *
+ * <p>Think of this as a Death Star door clearance badge: an object implementing
+ * this interface announces "I am an LDAP entry — show my property pages."</p>
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public interface EntryPropertyPageProvider
 {
 

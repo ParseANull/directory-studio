@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -42,24 +42,20 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 
+// Like Princess Leia's hologram delivering a security-policy briefing where
+// each checkbox represents a specific SASL security constraint — no plain text,
+// no anonymous access, forward secrecy required, and so on — we present a
+// focused dialog that lets the administrator enable or disable each property
+// flag and set numeric thresholds for min/max SSF and buffer size, watching
+// the resulting property string update in real time below.
 /**
- * The SaslSecPropsDialog is used to edit the Sasl Security Properties. We manage
- * two kind of properties : with or without parameters. Here is the list of those properties
- * 
- * <ul>
- * <li>none : the  flag properties default, "noanonymous,noplain", will be cleared</li>
- * <li>noplain : disables mechanisms susceptible to simple passive attacks</li>
- * <li>noactive : disables mechanisms susceptible to active attacks</li>
- * <li>nodict : disables mechanisms  susceptible to passive dictionary attacks.</li>
- * <li>noanonymous : disables mechanisms which support anonymous login</li>
- * <li>forwardsec : requires forward secrecy between sessions.</li>
- * <li>passcred : requirse mechanisms which pass client credentials</li>
- * <li>minssf=&lt;factor&gt; : specifies the minimum acceptable security strength factor</li>
- * <li>maxssf=&lt;factor&gt; : specifies the maximum acceptable security strength factor</li>
- * <li>maxbufsize=&lt;size&gt;: specifies the maximum security layer receive buffer size</li>
- * </ul>
- * 
- * Here is what it looks like :
+ * The SaslSecPropsDialog is used to edit the SASL Security Properties. We
+ * manage two kinds of properties: flag-style properties (none, noplain,
+ * noactive, nodict, noanonymous, forwardsec, passcred) and numeric-parameter
+ * properties (minssf, maxssf, maxbufsize). The composed property string is
+ * displayed live in a read-only result area.
+ *
+ * <p>The dialog layout looks like:
  * <pre>
  * +--------------------------------------+
  * | SASL Security Properties             |
@@ -81,7 +77,7 @@ import org.eclipse.swt.widgets.Text;
  * |  (Cancel)                      (OK)  |
  * +--------------------------------------+
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SaslSecPropsDialog extends Dialog
@@ -100,13 +96,13 @@ public class SaslSecPropsDialog extends Dialog
     private Text minSsfText;
     private Text maxSsfText;
     private Text maxBufSizeText;
-    
+
     /** An array of all the checkboxes */
     private Button[] buttons = new Button[7];
-    
+
     // The resulting String
     private Text saslSecPropsText;
-    
+
     // An empty space
     protected static final String TABULATION = " ";
 
@@ -119,18 +115,18 @@ public class SaslSecPropsDialog extends Dialog
         public void widgetSelected( SelectionEvent e )
         {
             Object object = e.getSource();
-            
+
             if ( object instanceof Button )
             {
-                Button selectedButton = (Button)object;
-                
+                Button selectedButton = ( Button ) object;
+
                 // none
                 if ( selectedButton.equals( noneCheckbox ) )
                 {
                     if ( noneCheckbox.getSelection() )
                     {
                         saslSecPropsWrapper.addFlag( SaslSecPropEnum.NONE );
-                        
+
                         // Uncheck the noplain and noanonymous checkboxes
                         saslSecPropsWrapper.removeFlag( SaslSecPropEnum.NO_PLAIN );
                         saslSecPropsWrapper.removeFlag( SaslSecPropEnum.NO_ANONYMOUS );
@@ -148,7 +144,7 @@ public class SaslSecPropsDialog extends Dialog
                     if ( noPlainCheckbox.getSelection() )
                     {
                         saslSecPropsWrapper.addFlag( SaslSecPropEnum.NO_PLAIN );
-                        
+
                         // Uncheck the none checkbox
                         saslSecPropsWrapper.removeFlag( SaslSecPropEnum.NONE );
                         noneCheckbox.setSelection( false );
@@ -188,7 +184,7 @@ public class SaslSecPropsDialog extends Dialog
                     if ( noAnonymousCheckbox.getSelection() )
                     {
                         saslSecPropsWrapper.addFlag( SaslSecPropEnum.NO_ANONYMOUS );
-                        
+
                         // Uncheck the none checkbox
                         saslSecPropsWrapper.removeFlag( SaslSecPropEnum.NONE );
                         noneCheckbox.setSelection( false );
@@ -223,12 +219,12 @@ public class SaslSecPropsDialog extends Dialog
                     }
                 }
             }
-            
+
             setSaslSecPropsText();
         }
     };
 
-    
+
     /**
      * The listener for the minSsf Limit Text
      */
@@ -245,9 +241,9 @@ public class SaslSecPropsDialog extends Dialog
                 return;
             }
 
-            // The value must be an integer >= 0 
+            // The value must be an integer >= 0
             String minSsfStr = minSsfText.getText();
-            
+
             if ( Strings.isEmpty( minSsfStr ) )
             {
                 saslSecPropsWrapper.setMinSsf( null );
@@ -258,7 +254,7 @@ public class SaslSecPropsDialog extends Dialog
                 try
                 {
                     int value = Integer.parseInt( minSsfStr );
-                    
+
                     if ( value < 0 )
                     {
                         // The value must be >= 0
@@ -283,7 +279,7 @@ public class SaslSecPropsDialog extends Dialog
             okButton.setEnabled( valid );
         };
 
-    
+
     /**
      * The listener for the maxSsf Limit Text
      */
@@ -300,9 +296,9 @@ public class SaslSecPropsDialog extends Dialog
                 return;
             }
 
-            // The value must be an integer >= 0 
+            // The value must be an integer >= 0
             String maxSsfStr = maxSsfText.getText();
-            
+
             if ( Strings.isEmpty( maxSsfStr ) )
             {
                 saslSecPropsWrapper.setMaxSsf( null );
@@ -313,7 +309,7 @@ public class SaslSecPropsDialog extends Dialog
                 try
                 {
                     int value = Integer.parseInt( maxSsfStr );
-                    
+
                     if ( value < 0 )
                     {
                         // The value must be >= 0
@@ -338,7 +334,7 @@ public class SaslSecPropsDialog extends Dialog
             okButton.setEnabled( valid );
         };
 
-    
+
     /**
      * The listener for the maxBufSize Limit Text
      */
@@ -355,9 +351,9 @@ public class SaslSecPropsDialog extends Dialog
                 return;
             }
 
-            // The value must be an integer >= 0 
+            // The value must be an integer >= 0
             String maxBufSizeStr = maxBufSizeText.getText();
-            
+
             if ( Strings.isEmpty( maxBufSizeStr ) )
             {
                 saslSecPropsWrapper.setMaxBufSize( null );
@@ -368,7 +364,7 @@ public class SaslSecPropsDialog extends Dialog
                 try
                 {
                     int value = Integer.parseInt( maxBufSizeStr );
-                    
+
                     if ( value < 0 )
                     {
                         // The value must be >= 0
@@ -394,9 +390,13 @@ public class SaslSecPropsDialog extends Dialog
         };
 
 
+    // Like Leia setting up the hologram projector with the RESIZE flag
+    // and no pre-loaded security properties, we create the dialog with
+    // a resizable shell style and leave the wrapper to be initialized
+    // when createDialogArea is called.
     /**
-     * Creates a new instance of SaslSecPropsDialog.
-     * 
+     * Creates a new SaslSecPropsDialog with no pre-loaded property value.
+     *
      * @param parentShell the parent shell
      */
     public SaslSecPropsDialog( Shell parentShell )
@@ -406,11 +406,16 @@ public class SaslSecPropsDialog extends Dialog
     }
 
 
+    // Like loading an existing security policy into the hologram briefing
+    // before opening it so the operator sees the current flags and numeric
+    // thresholds rather than a blank slate, we parse the given property
+    // string into a SaslSecPropsWrapper at construction time.
     /**
-     * Creates a new instance of SaslSecPropsDialog.
-     * 
+     * Creates a new SaslSecPropsDialog pre-populated with the given
+     * SASL security properties string.
+     *
      * @param parentShell the parent shell
-     * @param value the initial value
+     * @param value the existing SASL security properties string to edit
      */
     public SaslSecPropsDialog( Shell parentShell, String value )
     {
@@ -420,8 +425,14 @@ public class SaslSecPropsDialog extends Dialog
     }
 
 
+    // Like labeling the hologram channel "OpenLDAP SASL Security Properties"
+    // so the operator knows they're editing the server's SASL policy, we
+    // stamp the shell title before the dialog opens.
     /**
-     * {@inheritDoc}
+     * Configures the dialog shell by setting its title to
+     * "OpenLDAP SASL Security Properties".
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -431,8 +442,18 @@ public class SaslSecPropsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram projecting the full SASL security briefing with
+    // all the policy flag checkboxes and numeric threshold fields so the
+    // operator can configure every constraint in one view, we build both
+    // the edit area and the live result area.
     /**
-     * {@inheritDoc}
+     * Builds the dialog content area with the SASL security properties
+     * checkboxes and numeric fields, plus a read-only result area showing
+     * the composed property string. We initialize all widgets from the
+     * wrapper and attach listeners before returning.
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -447,13 +468,19 @@ public class SaslSecPropsDialog extends Dialog
         setSaslSecPropsText();
         addListeners();
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // Like loading the current security policy flags and numeric thresholds
+    // into the hologram panel before opening it so the operator starts from
+    // the actual current values, we read each flag and value from the wrapper
+    // and set the corresponding UI widgets.
     /**
-     * Initializes the Dialog with the values 
+     * Initializes all checkboxes and text fields from the current
+     * {@link SaslSecPropsWrapper}, pre-populating flag states and
+     * numeric threshold values.
      */
     private void initDialog()
     {
@@ -465,7 +492,7 @@ public class SaslSecPropsDialog extends Dialog
         noAnonymousCheckbox.setSelection( saslSecPropsWrapper.getFlags().contains( SaslSecPropEnum.NO_ANONYMOUS ) );
         forwardSecCheckbox.setSelection( saslSecPropsWrapper.getFlags().contains( SaslSecPropEnum.FORWARD_SEC ) );
         passCredCheckbox.setSelection( saslSecPropsWrapper.getFlags().contains( SaslSecPropEnum.PASS_CRED ) );
-        
+
         // The properties with values
         if ( saslSecPropsWrapper.getMinSsf() != null )
         {
@@ -484,8 +511,13 @@ public class SaslSecPropsDialog extends Dialog
     }
 
 
+    // Like the mission status board updating the composed security directive
+    // string whenever the operator changes a flag or numeric value so everyone
+    // can see the final policy without mental assembly, we push the current
+    // wrapper value into the result text field.
     /**
-     * Sets the SaslSecProps value.
+     * Updates the result text field with the current composed SASL security
+     * properties string from the wrapper.
      */
     private void setSaslSecPropsText()
     {
@@ -493,9 +525,17 @@ public class SaslSecPropsDialog extends Dialog
     }
 
 
+    // Like the briefing crew arranging the seven flag checkboxes in a
+    // two-column grid and adding the three numeric threshold rows below
+    // so the operator can configure the full SASL security policy in one
+    // compact panel, we build the property configuration group here.
     /**
-     * Creates the SaslSecProps area.
-     * 
+     * Creates the SASL security properties edit area containing a two-column
+     * grid of flag checkboxes (none, noplain, noactive, nodict, noanonymous,
+     * forwardsec, passcred) and three labeled text fields for minssf, maxssf,
+     * and maxbufsize.
+     *
+     * <pre>
      * | SASL Security Properties             |
      * | .----------------------------------. |
      * | | none        [ ]   noplain    [ ] | |
@@ -507,8 +547,9 @@ public class SaslSecPropsDialog extends Dialog
      * | | maxSSF        [      ]           | |
      * | | maxBufSizeSSF [      ]           | |
      * | '----------------------------------' |
+     * </pre>
      *
-     * @param parent the parent composite
+     * @param parent the parent composite to attach the properties area to
      */
     private void createSaslSecPropsArea( Composite parent )
     {
@@ -552,7 +593,7 @@ public class SaslSecPropsDialog extends Dialog
         BaseWidgetUtils.createLabel( saslSecPropsGroup, "maxssf", 1 );
         maxSsfText = BaseWidgetUtils.createText( saslSecPropsGroup, "", 1 );
         maxSsfText.addModifyListener( maxSsfListener );
-        
+
         // Max Buf Size
         BaseWidgetUtils.createLabel( saslSecPropsGroup, "maxbufsize", 1 );
         maxBufSizeText = BaseWidgetUtils.createText( saslSecPropsGroup, "", 1 );
@@ -560,9 +601,13 @@ public class SaslSecPropsDialog extends Dialog
     }
 
 
+    // Like adding the security directive status board to the operations room
+    // so commanders always see the resulting SASL property string without
+    // having to mentally compose it, we create the read-only value display.
     /**
-     * Creates the SASL Security Properties value area. It's not editable
-     * 
+     * Creates the SASL security properties result display area showing
+     * the composed property string in a read-only text field.
+     *
      * <pre>
      * | SASL security Properties Value       |
      * | .----------------------------------. |
@@ -570,7 +615,7 @@ public class SaslSecPropsDialog extends Dialog
      * | '----------------------------------' |
      * </pre>
      *
-     * @param parent the parent composite
+     * @param parent the parent composite to attach the value area to
      */
     private void createSaslSecPropsValueArea( Composite parent )
     {
@@ -580,8 +625,12 @@ public class SaslSecPropsDialog extends Dialog
     }
 
 
+    // Like wiring every checkbox to the live result display so each flag
+    // toggle immediately updates the composed property string, we attach
+    // the checkbox selection listener to all seven flag buttons.
     /**
-     * Adds listeners.
+     * Attaches the checkbox selection listener to all seven flag checkboxes
+     * so the result display and wrapper update on every toggle.
      */
     private void addListeners()
     {
@@ -592,8 +641,14 @@ public class SaslSecPropsDialog extends Dialog
     }
 
 
+    // Like Leia handing the finalized security policy back to the operations
+    // room after the briefing is complete, we return the composed SASL
+    // security properties string for the caller to store.
     /**
-     * @return The SASL Security Properties parameter value
+     * Returns the composed SASL security properties string representing
+     * the current state of all flag checkboxes and numeric thresholds.
+     *
+     * @return the SASL security properties string
      */
     public String getSaslSecPropsValue()
     {

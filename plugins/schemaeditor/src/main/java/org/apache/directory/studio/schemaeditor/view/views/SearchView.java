@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 
 package org.apache.directory.studio.schemaeditor.view.views;
@@ -74,9 +74,28 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
 
 
+// ── CLASS: SearchView — R2-D2 at the Death Star Computer ──────────────────────
+// In A New Hope, R2-D2 plugs into the Death Star's computer terminal and runs a
+// search: "I'm looking for the detention block where Princess Leia is being held."
+// He probes the system with a query, scans for matching records across multiple
+// fields (name, sector, cell number), and surfaces the result. Everything R2 does
+// is a search: plug in a query, specify what fields to look in (aliases, OID,
+// description, matching rules), optionally restrict scope (AT only, OC only, both),
+// hit "search," and get a list of matching entries.
+// This view is R2-D2's terminal. It has a search field, a "Search In" menu that
+// lets you pick which LDAP schema fields to match against, a "Scope" menu for
+// AT/OC/both, a search button that fires the actual regex match, and a results
+// table that shows what was found. Double-click a result and the editor opens.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Search View.
- * 
+ * The Search View lets users search for attribute types and object classes in the
+ * loaded schema by name, OID, description, or any other field the LDAP schema object
+ * exposes. The view builds a regex-based search from the entered string, applies it
+ * across all checked "Search In" fields, filters by scope (AT only, OC only, or both),
+ * and displays the sorted results in a table. Double-clicking or pressing Enter opens
+ * the editor for the selected schema object. Think of it as R2-D2 plugged into the
+ * Death Star computer — query in, matching records out.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SearchView extends ViewPart
@@ -101,8 +120,21 @@ public class SearchView extends ViewPart
     private Composite parent;
 
 
+    // ── R2 Plugs Into the Terminal ────────────────────────────────────────────
+    // When R2-D2 plugs into the Death Star terminal, he builds out the interface:
+    // registers a help context, sets up the layout, creates the results label,
+    // creates the table viewer, and initializes the search controller that will
+    // respond to events. That's exactly what createPartControl does — it builds
+    // the whole view and wires up its controller.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the Search View UI and wires up its controller.
+     * We register a dynamic help context, set up a zero-margin grid layout on the parent
+     * composite, create a search results label, a separator, and the results table viewer.
+     * A {@link SearchViewController} is instantiated last — it registers listeners on the
+     * schema handler so the view refreshes when the schema changes.
+     *
+     * @param parent  the SWT composite provided by Eclipse to host this view
      */
     public void createPartControl( Composite parent )
     {
@@ -159,8 +191,19 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Opens the Query Interface ──────────────────────────────────────────
+    // After plugging in, R2 opens the search input panel: a text field, toolbar
+    // menus for "Search In" and "Scope", and a search button. When the search
+    // field appears (from the search page or toolbar action), this is called to
+    // materialize those controls inside the searchFieldComposite.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Create the Search Field Sections.
+     * Builds and displays the search field row inside the view.
+     * Called when the user opens a search from the search page or when the controller
+     * decides to show the field. Creates the text input, "Search In" and "Scope"
+     * drop-down toolbar items, and the search button. Attaches listeners that enable
+     * the button only when text is present and trigger {@link #search()} on Enter or
+     * button click. Also creates the separator below the field row.
      */
     private void createSearchField()
     {
@@ -268,11 +311,22 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Configures Which Fields to Probe ───────────────────────────────────
+    // R2-D2 doesn't just search one field — he can probe by name, sector code,
+    // cell number, or description, and the Rebel operators choose which fields
+    // to include. createSearchInMenu builds the "Search In" drop-down with check
+    // items for aliases, OID, description, superior, syntax, matching rules,
+    // superiors, mandatory attributes, and optional attributes.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Search In Menu
+     * Builds and returns the "Search In" pop-up menu.
+     * Each menu item is a checkbox that persists its state in the plugin's dialog
+     * settings. The choices determine which LDAP schema fields the search regex is
+     * applied against: aliases (names), OID, description, superior, syntax, matching
+     * rules, superior OCs, mandatory attributes, and optional attributes. Pre-checked
+     * based on saved dialog settings (aliases, OID, and description default to checked).
      *
-     * @return
-     *      the Search In menu
+     * @return  the populated pop-up menu, ready to be shown
      */
     public Menu createSearchInMenu()
     {
@@ -424,11 +478,19 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Selects the Search Scope ───────────────────────────────────────────
+    // "Search the detention block, the entire base, or just the cargo bay?"
+    // The Scope menu limits the search to attribute types only, object classes
+    // only, or both. Three radio items, one saved state.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Scope Menu
+     * Builds and returns the "Scope" pop-up menu.
+     * Three mutually exclusive radio items control whether the search applies to both
+     * attribute types and object classes, attribute types only, or object classes only.
+     * The chosen scope is persisted in dialog settings and pre-selected from saved state.
+     * Defaults to "Attribute Types and Object Classes" if no setting has been saved.
      *
-     * @return
-     *      the Scope menu
+     * @return  the populated scope pop-up menu
      */
     public Menu createScopeMenu()
     {
@@ -494,8 +556,19 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Builds the Readout Screen ──────────────────────────────────────────
+    // After plugging in, R2 opens the results display: a scrollable table with
+    // a full-row selection model, wired to a JFace TableViewer with our content
+    // and label providers, and with listeners for Enter-key and double-click to
+    // open the associated editor.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the TableViewer.
+     * Creates the results table and its JFace TableViewer.
+     * The underlying SWT table uses single-selection, H/V scroll, full-row selection,
+     * and hidden-selection mode. The viewer gets a {@link DecoratingLabelProvider}
+     * wrapping {@link SearchViewLabelProvider} (so Eclipse decorator overlays still
+     * work) and a {@link SearchViewContentProvider} for grouping/sorting. Listeners
+     * on the table handle Enter-key presses and double-clicks to open editors.
      */
     private void createTableViewer()
     {
@@ -534,8 +607,19 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Retrieves the Detention Block Plans ────────────────────────────────
+    // "Found her. Opening the cell door now." R2 gets a match and immediately
+    // opens the associated resource — the editor for the selected schema object.
+    // openEditor picks up the current table selection and opens either the
+    // AttributeTypeEditor or ObjectClassEditor, depending on what was selected.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Open the editor associated with the current selection in the table.
+     * Opens the schema editor for the currently selected table row.
+     * Reads the viewer's current selection, determines whether it's an
+     * {@link AttributeType} or {@link ObjectClass}, constructs the appropriate editor
+     * input, and calls Eclipse's page API to open the editor. If the editor fails to
+     * open (a {@link PartInitException}), we log the error and show an error dialog.
+     * Does nothing if there's no selection or no schema handler.
      */
     private void openEditor()
     {
@@ -583,8 +667,14 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Stays Ready at the Keyboard ────────────────────────────────────────
+    // R2 keeps the cursor in the search field so the user can type immediately.
+    // If the field isn't visible, the results table gets focus as a fallback.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Gives focus to the search field, or to the results table if the field is hidden.
+     * Eclipse calls this when the user switches to this view. We put focus in the
+     * text field whenever it's visible so the user can start typing right away.
      */
     public void setFocus()
     {
@@ -599,8 +689,18 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Extends the Interface Panel ───────────────────────────────────────
+    // When the Rebel operator calls up the search from the search page, R2 extends
+    // the input panel so there's a text field to type into. showSearchFieldSection
+    // materializes the search field row that was previously hidden, relays out the
+    // view, and puts focus in the text field.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Shows the Search Field Section.
+     * Shows the search-field row above the results table.
+     * Called by the {@link SearchViewController} when the user initiates a search from
+     * the search page (which pre-fills the field). Calls {@link #createSearchField()} to
+     * build the controls, forces a layout refresh on the parent, then focuses the field
+     * and validates its content to enable/disable the search button.
      */
     public void showSearchFieldSection()
     {
@@ -611,8 +711,16 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Retracts the Input Panel ───────────────────────────────────────────
+    // When the search is complete and the field is no longer needed, R2 retracts
+    // the panel — disposing the controls and relaying out the view so the results
+    // table fills the space.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Hides the Search Field Section.
+     * Hides and disposes the search-field row.
+     * Disposes both the inner composite (containing the text field, toolbar, and button)
+     * and the separator label below it. Forces a layout refresh on the parent so the
+     * results table expands to fill the reclaimed space. Focus moves to the results table.
      */
     public void hideSearchFieldSection()
     {
@@ -631,21 +739,39 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Checks Whether the Query Is Ready ─────────────────────────────────
+    // R2 won't start transmitting until the query has at least one character —
+    // an empty query returns everything, which isn't useful. validateSearchField
+    // enables the search button only when there's something to search for.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * Enables or disables the search button based on whether the search field has content.
+     * Called by the modify listener on the text field on every keystroke. The button is
+     * useless when the field is empty, so we keep it disabled until there's at least
+     * one character.
+     */
     private void validateSearchField()
     {
         searchButton.setEnabled( searchField.getText().length() > 0 );
     }
 
 
+    // ── R2 Receives External Search Input ────────────────────────────────────
+    // The Rebel operator can feed R2 a pre-built query from the search page:
+    // a search string, a list of fields to probe, and a scope. setSearchInput
+    // saves the query, updates the search field if it's visible, runs the search,
+    // and updates the results label and table.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the Search Input.
+     * Accepts a fully specified search and runs it.
+     * Called by the {@link SearchViewController} when the user submits a search from
+     * the search page. We save the search string (so we can re-run it later), push it
+     * to the search history, update the text field if visible, run the actual match,
+     * update the results label, and push the result list to the table viewer.
      *
-     * @param searchString
-     *      the search String
-     * @param searchIn
-     *      the search In
-     * @param scope
-     *      the scope
+     * @param searchString  the user's search string (may contain * and ? wildcards)
+     * @param searchIn      array of {@link SearchInEnum} values indicating which fields to match
+     * @param scope         one of the {@code PREFS_SEARCH_PAGE_SCOPE_*} constants (AT only, OC only, both)
      */
     public void setSearchInput( String searchString, SearchInEnum[] searchIn, int scope )
     {
@@ -667,15 +793,31 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Runs the Query Against the Death Star Database ────────────────────
+    // "Searching... found it. Detention Block AA-23, Level 5." R2 converts the
+    // user's search string into a regex (translating * and ? wildcards), loops
+    // over all attribute types and object classes in the schema, and checks each
+    // requested field against the pattern. Matches go into the results list.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Searches the objects corresponding to the search parameters.
+     * Runs the actual schema search and returns the list of matching objects.
+     * We translate * to {@code [\S]*} and ? to {@code [\S]} to create a case-insensitive
+     * regex pattern. We then loop over the attribute types and/or object classes loaded
+     * in the {@link SchemaHandler}, checking each enabled "Search In" field against the
+     * pattern. Each schema object is added at most once (we {@code continue} after the
+     * first match to avoid duplicates).
      *
-     * @param searchString
-     *      the search String
-     * @param searchIn
-     *      the search In
-     * @param scope
-     *      the scope
+     * <p>For example — R2 probes the system:</p>
+     * <pre>
+     *   search("cn*", [ALIASES, DESCRIPTION], AT_AND_OC)
+     *   → pattern = "cn[\S]*" (case-insensitive)
+     *   → matches cn, cnAddress, commonName aliases → adds those ATs
+     * </pre>
+     *
+     * @param searchString  the user's raw search string (with * and ? wildcards)
+     * @param searchIn      which fields to match against
+     * @param scope         whether to search ATs, OCs, or both
+     * @return              the list of matching {@link SchemaObject} instances
      */
     private List<SchemaObject> search( String searchString, SearchInEnum[] searchIn, int scope )
     {
@@ -852,15 +994,19 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Checks a Multi-Value Field ─────────────────────────────────────────
+    // R2 probes a list of values — like scanning all the names (aliases) of an
+    // attribute type. The moment one name matches the pattern, R2 reports a hit.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Check an array with the given pattern.
+     * Returns {@code true} if any string in the list fully matches the given pattern.
+     * We iterate through each string in {@code list} and test with {@code pattern.matcher(s).matches()}.
+     * We use full-string matching (not find()) because the pattern already has wildcards
+     * encoded. Returns {@code false} if the list is null or empty.
      *
-     * @param pattern
-     *      the Regex pattern
-     * @param list
-     *      the array
-     * @return
-     *      true if the pattern matches one of the aliases, false, if not.
+     * @param pattern  the compiled regex pattern (with wildcards pre-translated)
+     * @param list     the list of strings to test (may be null)
+     * @return         {@code true} if any element in the list matches the pattern
      */
     private boolean checkList( Pattern pattern, List<String> list )
     {
@@ -879,6 +1025,20 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Checks a Single Field Value ────────────────────────────────────────
+    // R2 probes a single field — like the OID or description. A null field
+    // (the attribute type has no description) doesn't match; only a real string
+    // that matches the pattern returns true.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns {@code true} if the given string fully matches the pattern.
+     * Null values never match — we return {@code false} immediately without throwing.
+     * Uses full-string matching ({@code matches()}) rather than substring find.
+     *
+     * @param pattern  the compiled regex pattern
+     * @param string   the single field value to test (may be null)
+     * @return         {@code true} if the string is non-null and matches the pattern
+     */
     private boolean checkString( Pattern pattern, String string )
     {
         if ( string != null )
@@ -890,8 +1050,18 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Re-Runs the Last Query ─────────────────────────────────────────────
+    // "Running the same search again — Rebel intel says things may have changed."
+    // search() re-runs the query using the currently visible text field and the
+    // saved dialog settings for Search In and Scope, and pushes the new results
+    // back to the viewer.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Launches the search from the search fields views.
+     * Re-runs the search using the current contents of the search field.
+     * Called when the user clicks the search button or presses Enter. Reads the
+     * text field, loads the current Search In and Scope settings from dialog settings,
+     * and calls {@link #setSearchInput(String, SearchInEnum[], int)} to run the search
+     * and update the results label and table.
      */
     private void search()
     {
@@ -902,13 +1072,26 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Updates the Mission Status Display ─────────────────────────────────
+    // Above the results table, R2 prints a status line: "No search" (before any
+    // query), or "'cn' — 42 matches in workspace." setSearchResultsLabel formats
+    // and sets that status string.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Refresh the overview label with the number of results.
+     * Updates the results count label above the table.
+     * Shows "No search" before any search has been run. After a search, shows the
+     * query string in single quotes and the count of matches, using singular "match"
+     * or plural "matches" correctly. Appends " in workspace" at the end.
      *
-     * @param searchString
-     *      the search String
-     * @param resultsCount
-     *      the number of results
+     * <p>For example — R2's status readout:</p>
+     * <pre>
+     *   setSearchResultsLabel("cn*", 42) → "'cn*' - 42 matches in workspace"
+     *   setSearchResultsLabel("cn",  1)  → "'cn' - 1 match in workspace"
+     *   setSearchResultsLabel(null,  0)  → "(no search text)"
+     * </pre>
+     *
+     * @param searchString  the search string to display, or {@code null} for "no search" state
+     * @param resultsCount  the number of matching results found
      */
     public void setSearchResultsLabel( String searchString, int resultsCount )
     {
@@ -943,8 +1126,18 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Repeats the Last Search ────────────────────────────────────────────
+    // "The schema changed — running the last query again to see if results differ."
+    // runCurrentSearchAgain is called by the controller when a schema-change event
+    // arrives, so the search results stay current without the user having to
+    // re-type anything.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Runs the current search again.
+     * Re-runs the most recently executed search with the same parameters.
+     * Called by the {@link SearchViewController} when it detects a schema change (an
+     * attribute type or object class was added, modified, or removed). We re-run with
+     * the saved search string and the current Search In / Scope settings. Does nothing
+     * if no search has been run yet.
      */
     public void runCurrentSearchAgain()
     {
@@ -956,11 +1149,18 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Reports the Current Query ─────────────────────────────────────────
+    // Other parts of the plugin may need to know what R2 was searching for —
+    // for example, to pre-populate another dialog. getSearchString exposes the
+    // saved search string.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Search String.
+     * Returns the most recently used search string.
+     * Other components (such as the controller or a search page) may call this to
+     * read back what the user searched for. Returns {@code null} if no search has been
+     * run yet in this session.
      *
-     * @return
-     *      the Search String or null if no Search String is set.
+     * @return  the last search string, or {@code null} if none
      */
     public String getSearchString()
     {
@@ -968,8 +1168,16 @@ public class SearchView extends ViewPart
     }
 
 
+    // ── R2 Refreshes the Screen ───────────────────────────────────────────────
+    // R2 re-renders the results table without re-running the query — just forcing
+    // the viewer to re-ask the content and label providers for current values.
+    // Useful when sort preferences change.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes the view.
+     * Refreshes the results table viewer without re-running the search query.
+     * Forces the {@link TableViewer} to re-ask the content and label providers for
+     * current data. Useful when sort or grouping preferences change but the underlying
+     * result list hasn't changed.
      */
     public void refresh()
     {

@@ -6,23 +6,34 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.model.overlay;
 
 
+// ── CLASS: OlcValSortMethodEnum — Lando Chooses the Ledger Ordering Algorithm ─
+// Lando has four ways to sort his Cloud City trade records: alphabetically A-Z,
+// alphabetically Z-A, numerically smallest-first, or numerically largest-first.
+// He picks the right one depending on what makes the ledger most useful.
+// The valsort overlay has the same four sort modes for LDAP attribute values:
+// alpha-ascend, alpha-descend, numeric-ascend, numeric-descend.
+// This enum encodes that choice as a Java constant that the configuration model
+// and the I/O layer both understand.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This enum represents the various values for the  'OlcValSortOverlay' sort method.
- * 
+ * Represents the sort method for an {@code olcValSortAttr} rule, specifying how
+ * the valsort overlay orders multi-valued attribute values in search results.
+ * Think of this as Lando choosing the ordering algorithm for one of his ledgers.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public enum OlcValSortMethodEnum
@@ -52,11 +63,23 @@ public enum OlcValSortMethodEnum
     private static final String NUMERIC_DESCEND_STRING = "numeric-descend";
 
 
+    // ── fromString — Lando Reads the Sort Method from the Ledger Entry ────────────
+    // Lando reads the sorting keyword from the raw ledger entry and translates it
+    // into the corresponding algorithm constant.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the associated enum element.
+     * Parses the sort method keyword from an olcValSortAttr rule string.
+     * Comparison is case-insensitive ("Alpha-Ascend" and "alpha-ascend" both work).
      *
-     * @param s the string
-     * @return the associated enum element
+     * <p>For example — Lando reads the sort method:</p>
+     * <pre>
+     *   OlcValSortMethodEnum method =
+     *       OlcValSortMethodEnum.fromString( "numeric-descend" );
+     *   // returns NUMERIC_DESCEND
+     * </pre>
+     *
+     * @param s  the sort method keyword from the olcValSortAttr rule
+     * @return   the matching enum constant, or null if unrecognized
      */
     public static OlcValSortMethodEnum fromString( String s )
     {
@@ -81,8 +104,20 @@ public enum OlcValSortMethodEnum
     }
 
 
+    // ── toString — Lando Records the Sort Method in the LDAP Attribute ────────────
+    // Lando writes the sort method keyword back into the raw attribute string in the
+    // exact format the valsort overlay expects.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the string representation suitable for the olcValSortAttr attribute value.
+     *
+     * <p>For example — Lando records the sort method:</p>
+     * <pre>
+     *   OlcValSortMethodEnum.ALPHA_ASCEND.toString();   // "alpha-ascend"
+     *   OlcValSortMethodEnum.NUMERIC_DESCEND.toString(); // "numeric-descend"
+     * </pre>
+     *
+     * @return  the lowercase sort method keyword
      */
     @Override
     public String toString()

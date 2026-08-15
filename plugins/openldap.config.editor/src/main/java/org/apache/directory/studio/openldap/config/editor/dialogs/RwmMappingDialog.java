@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -50,9 +50,18 @@ import org.apache.directory.studio.openldap.config.model.overlay.OlcRwmMapValue;
 import org.apache.directory.studio.openldap.config.model.overlay.OlcRwmMapValueTypeEnum;
 
 
+// Like Princess Leia's hologram delivering a precise mapping directive —
+// "translate attribute X on our side to attribute Y on theirs" — we
+// present a compact dialog where the administrator picks the mapping type
+// (attribute or object class) and enters local and foreign names to
+// define one rewrite/remap translation rule.
 /**
- * T
- * 
+ * A dialog for editing a single RWM (Rewrite/Remap) mapping value, which
+ * consists of a type (attribute type or object class), a local schema
+ * name, and a foreign schema name. We pull attribute type and object class
+ * suggestions from the connected directory's schema and populate the
+ * name combos accordingly.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class RwmMappingDialog extends Dialog
@@ -105,12 +114,17 @@ public class RwmMappingDialog extends Dialog
         };
 
 
+    // Like Leia loading a pre-existing mapping directive into the hologram
+    // so the operator can review and revise it, we parse the provided value
+    // string into an OlcRwmMapValue and pre-populate the UI when the dialog
+    // opens, while also pulling schema lists from the connected directory.
     /**
-     * Creates a new instance of ValueSortingValueDialog.
-     * 
+     * Creates a new RwmMappingDialog pre-populated from the given value string.
+     * If the string cannot be parsed we start from an empty mapping.
+     *
      * @param parentShell the parent shell
-     * @param browserConnection the connection
-     * @param value the value
+     * @param browserConnection the connection used for schema lookups
+     * @param value the existing mapping value string to edit
      */
     public RwmMappingDialog( Shell parentShell, IBrowserConnection browserConnection, String value )
     {
@@ -137,11 +151,16 @@ public class RwmMappingDialog extends Dialog
     }
 
 
+    // Like Leia spinning up a brand-new mapping briefing with no prior
+    // directive so the operator defines the translation from scratch,
+    // we create the dialog with an empty OlcRwmMapValue and load the
+    // schema lists for name suggestions.
     /**
-     * Creates a new instance of ValueSortingValueDialog.
-     * 
+     * Creates a new RwmMappingDialog with no pre-existing value, ready
+     * for the operator to define a brand-new mapping.
+     *
      * @param parentShell the parent shell
-     * @param browserConnection the connection
+     * @param browserConnection the connection used for schema lookups
      */
     public RwmMappingDialog( Shell parentShell, IBrowserConnection browserConnection )
     {
@@ -155,8 +174,15 @@ public class RwmMappingDialog extends Dialog
     }
 
 
+    // Like Leia's intelligence analyst pulling the directory's full attribute
+    // type and object class catalogs so the operator can pick names from a
+    // drop-down instead of typing them blind, we collect and sort the schema
+    // names from the connected directory and add the wildcard "*" at the top.
     /**
-     * Initializes the lists of attribute types and object classes.
+     * Populates the {@code connectionAttributeTypes} and
+     * {@code connectionObjectClasses} lists from the connected directory's
+     * schema, sorted case-insensitively with "*" prepended to each list.
+     * If there is no connection, both lists are left empty.
      */
     private void initAttributeTypesAndObjectClassesLists()
     {
@@ -201,8 +227,13 @@ public class RwmMappingDialog extends Dialog
     }
 
 
+    // Like labeling the hologram channel "Mapping" so the operator knows
+    // they're configuring a rewrite-remap translation rule, we stamp the
+    // dialog shell with that title before it opens.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to "Mapping".
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -212,8 +243,15 @@ public class RwmMappingDialog extends Dialog
     }
 
 
+    // Like the hologram crew equipping the briefing with an OK button that
+    // stays disabled until the required fields are filled in, we create
+    // the button bar and immediately check the initial enable state.
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createButtonsForButtonBar(org.eclipse.swt.widgets.Composite)
+     * Creates the dialog button bar with OK and Cancel buttons, then
+     * immediately evaluates whether the OK button should be enabled
+     * based on the current field values.
+     *
+     * @param parent the parent composite to attach the button bar to
      */
     @Override
     protected void createButtonsForButtonBar( Composite parent )
@@ -225,8 +263,15 @@ public class RwmMappingDialog extends Dialog
     }
 
 
+    // Like Leia finalizing the mapping directive and committing it to the
+    // mission file before transmitting it to the fleet, we read the type,
+    // local name, and foreign name from the UI and write them into the
+    // value object before closing.
     /**
-     * {@inheritDoc}
+     * Reads the type, local name, and foreign name from the UI and stores
+     * them in the {@link OlcRwmMapValue}, setting names to {@code null}
+     * when the operator left them blank, then delegates to the superclass
+     * {@code okPressed()} to close the dialog.
      */
     @Override
     protected void okPressed()
@@ -262,8 +307,16 @@ public class RwmMappingDialog extends Dialog
     }
 
 
+    // Like Leia's hologram projecting the mapping form with Type, Local Name,
+    // and Foreign Name fields so the operator can define the full translation
+    // rule in one view, we build the dialog content area with three labeled
+    // combos and wire up the listeners.
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     * Builds the dialog content area with type, local name, and foreign name
+     * combos, initializes them from the current value, and attaches listeners.
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -272,7 +325,6 @@ public class RwmMappingDialog extends Dialog
         Composite dialogComposite = ( Composite ) super.createDialogArea( parent );
         GridData gridData = new GridData( SWT.FILL, SWT.FILL, true, true );
         gridData.widthHint = convertHorizontalDLUsToPixels( IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH );
-        //        gridData.heightHint = convertVerticalDLUsToPixels( IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH ) * 4 / 3;
         dialogComposite.setLayoutData( gridData );
         Composite composite = BaseWidgetUtils.createColumnContainer( dialogComposite, 2, 1 );
 
@@ -332,8 +384,13 @@ public class RwmMappingDialog extends Dialog
     }
 
 
+    // Like wiring the hologram's control panel so every combo change
+    // triggers an immediate OK-button eligibility check, we attach
+    // listeners to the type selector and both name combos.
     /**
-     * Adds listeners to UI widgets.
+     * Attaches a selection listener to the type combo and modify listeners
+     * to the local and foreign name combos so the OK button state updates
+     * whenever the operator makes any change.
      */
     private void addListeners()
     {
@@ -343,8 +400,14 @@ public class RwmMappingDialog extends Dialog
     }
 
 
+    // Like loading the existing mapping data into the hologram display before
+    // opening it so the operator sees the current values and can edit from
+    // the right baseline, we read type, local name, and foreign name out of
+    // the value object and set the corresponding UI widgets.
     /**
-     * Inits the UI from the value.
+     * Initializes the type combo, local name combo, and foreign name combo
+     * from the current {@link OlcRwmMapValue}. We also populate the name
+     * combos with the appropriate schema suggestions based on the selected type.
      */
     private void initFromValue()
     {
@@ -402,26 +465,14 @@ public class RwmMappingDialog extends Dialog
     }
 
 
+    // Like the intelligence analyst checking whether the mapping type and
+    // foreign name are both specified before stamping the directive as
+    // ready to file, we evaluate the current combo values and enable
+    // or disable the OK button accordingly.
     /**
-     * Gets the selected sort method.
-     *
-     * @return the selected sort method
-     */
-    private OlcRwmMapValueTypeEnum getSelectedType()
-    {
-        StructuredSelection selection = ( StructuredSelection ) typeComboViewer.getSelection();
-
-        if ( !selection.isEmpty() )
-        {
-            return ( OlcRwmMapValueTypeEnum ) selection.getFirstElement();
-        }
-
-        return null;
-    }
-
-
-    /**
-     * Checks and updates the OK button 'enable' state.
+     * Evaluates whether the OK button should be enabled. We require a
+     * non-null type selection and a non-empty foreign name; the local name
+     * is optional and not checked here.
      */
     private void checkAndUpdateOkButtonEnableState()
     {
@@ -453,10 +504,36 @@ public class RwmMappingDialog extends Dialog
     }
 
 
+    // Like reading which mapping type is highlighted on the briefing form
+    // so the rest of the logic knows whether to work with attribute types
+    // or object classes, we return the currently selected type enum value.
     /**
-     * Gets the value.
+     * Returns the currently selected {@link OlcRwmMapValueTypeEnum} from
+     * the type combo, or {@code null} if nothing is selected.
      *
-     * @return the value
+     * @return the selected mapping type, or {@code null}
+     */
+    private OlcRwmMapValueTypeEnum getSelectedType()
+    {
+        StructuredSelection selection = ( StructuredSelection ) typeComboViewer.getSelection();
+
+        if ( !selection.isEmpty() )
+        {
+            return ( OlcRwmMapValueTypeEnum ) selection.getFirstElement();
+        }
+
+        return null;
+    }
+
+
+    // Like handing the completed mapping directive back to the overlay
+    // editor so it can be stored in the configuration, we return the
+    // final string representation of the mapping value.
+    /**
+     * Returns the string representation of the edited mapping value,
+     * as produced by {@link OlcRwmMapValue#toString()}.
+     *
+     * @return the mapping value string
      */
     public String getValue()
     {

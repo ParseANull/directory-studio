@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.ldapservers;
 
@@ -40,10 +40,19 @@ import org.eclipse.ui.IMemento;
 import org.eclipse.ui.XMLMemento;
 
 
+// ── CLASS: LdapServersManager — LANDO'S CLOUD CITY CONTROL CENTRE ─────────────────────────
+// Lando Calrissian runs Cloud City from a central operations room — every power generator,
+// landing pad, and life-support system appears on his board, added or removed as the city
+// grows or shrinks.  He persists the layout to disk so a restart doesn't lose the map.
+// We do the same: track every configured LDAP server in a list + map, save them to
+// ldapServers.xml on disk, and fire events when servers are added, removed, or updated.
+// ─────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the LDAP Servers Manager.
- * <p>
- * It is used to store all the LDAP Servers used and defined in the plugin.
+ * The central registry for all LDAP server instances defined in this Studio workspace.
+ * Maintains an in-memory list and ID-keyed map, persists servers to {@code ldapServers.xml},
+ * and notifies registered {@link LdapServersManagerListener}s whenever the registry changes.
+ * Think of this class as Lando's operations centre: one authoritative board, backed by disk,
+ * always consistent.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -64,19 +73,44 @@ public class LdapServersManager
     private List<LdapServersManagerListener> listeners;
 
 
+    // ── Lando Initializes His Operations Room ───────────────────────────────────────────────
+    // Before opening Cloud City for business, Lando sets up an empty operations room —
+    // blank boards, no readings yet, ready to track everything once data flows in.
+    // We create the manager with no servers or listeners; {@link #loadServersFromStore()} fills it.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ServersHandler.
+     * Creates the singleton manager instance — kept private because there must be exactly one.
+     * Collections are initialized lazily inside {@link #loadServersFromStore()} so startup
+     * order is explicit and controlled.
+     *
+     * <p>For example — Lando's empty control room:</p>
+     * <pre>
+     *   Lando: "Systems online. Boards are clear. Awaiting server data."
+     *   serversList = null; serversIdMap = null; listeners = null.
+     * </pre>
      */
     private LdapServersManager()
     {
     }
 
 
+    // ── Lando's One Shared Operations Room ──────────────────────────────────────────────────
+    // Everyone in Cloud City who needs to know about the power grid uses Lando's same control
+    // room — there is no second control room, and no one builds their own copy.
+    // Classic singleton: one shared manager for the entire application.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the default servers handler (singleton pattern).
+     * Returns the singleton {@link LdapServersManager}, creating it on the first call.
+     * Every component that needs to add, remove, or look up servers goes through this
+     * single instance so the list stays consistent everywhere.
      *
-     * @return
-     *      the default servers handler
+     * <p>For example — Cloud City's shared control room:</p>
+     * <pre>
+     *   The Rebellion asks: "Who's managing the servers?"
+     *   Lando steps forward: "That's me. Always the same guy."
+     * </pre>
+     *
+     * @return the single shared {@link LdapServersManager}
      */
     public static LdapServersManager getDefault()
     {
@@ -89,11 +123,23 @@ public class LdapServersManager
     }
 
 
+    // ── Docking A New Ship At The Landing Pad ───────────────────────────────────────────────
+    // A new vessel requests a berth at Cloud City — Lando assigns it a pad, logs it in the
+    // manifest, and announces its arrival over the intercom so everyone knows.
+    // We add the server to our list + map, save to disk, and fire {@code serverAdded} to listeners.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a server.
+     * Adds a server to the registry, persists the updated list to disk, and notifies listeners.
+     * This is the public entry point for adding a brand-new server — use it after the
+     * "New Server" wizard completes.
      *
-     * @param server
-     *      the server to be added
+     * <p>For example — a new ship arrives at Cloud City:</p>
+     * <pre>
+     *   Lando: "Landing pad 7 assigned to 'ApacheDS-Local'."
+     *   Server added to list, saved to ldapServers.xml, listeners notified.
+     * </pre>
+     *
+     * @param server  the server to register — must not already be in the list
      */
     public void addServer( LdapServer server )
     {
@@ -103,14 +149,26 @@ public class LdapServersManager
     }
 
 
+    // ── Quietly Adding A Ship Without The Announcement ──────────────────────────────────────
+    // During Cloud City's initial setup, Lando loads the existing manifest from disk — he
+    // adds each ship to the board silently, without broadcasting each one over the intercom.
+    // We use this private variant during {@link #loadServersFromStore()} to avoid spurious events.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a server.
+     * Internal helper that adds a server to the in-memory registry with optional listener
+     * notification.
+     * Skips duplicates silently. Called by the public {@link #addServer(LdapServer)} (with
+     * notification) and by {@link #loadServersFromStore()} (without notification).
      *
-     * @param server
-     *      the server to be added
-     * @param notifyListeners
-     *      <code>true</code> if the listeners need to be notified, 
-     *      <code>false</code> if not.
+     * <p>For example — Lando quietly updates the manifest:</p>
+     * <pre>
+     *   During startup: addServer(server, false) — board updated, no intercom blast.
+     *   During user action: addServer(server, true) — board updated AND announcement made.
+     * </pre>
+     *
+     * @param server           the server to add
+     * @param notifyListeners  {@code true} to fire {@code serverAdded} events; {@code false}
+     *                         to update silently (used during bulk loading)
      */
     private void addServer( LdapServer server, boolean notifyListeners )
     {
@@ -132,11 +190,22 @@ public class LdapServersManager
     }
 
 
+    // ── Removing A Ship From The Manifest ───────────────────────────────────────────────────
+    // A vessel leaves Cloud City permanently — Lando strikes it from the manifest, clears its
+    // landing pad, and broadcasts the departure so all systems can clean up.
+    // We remove the server from list + map, save to disk, and fire {@code serverRemoved}.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a server.
+     * Removes a server from the registry, persists the updated list to disk, and notifies listeners.
+     * This is the public entry point used by the Delete action after the user confirms deletion.
      *
-     * @param server
-     *      the server to be removed
+     * <p>For example — a ship departs Cloud City:</p>
+     * <pre>
+     *   Lando: "Pad 7 is now clear. 'ApacheDS-Local' has left the grid."
+     *   Server removed from list, saved to ldapServers.xml, listeners notified.
+     * </pre>
+     *
+     * @param server  the server to remove — if it isn't in the list, this is a no-op
      */
     public void removeServer( LdapServer server )
     {
@@ -146,14 +215,18 @@ public class LdapServersManager
     }
 
 
+    // ── Quietly Removing Without The Broadcast ──────────────────────────────────────────────
+    // Lando can silently remove a ship from the internal registry without triggering alarms —
+    // useful during batch operations where events would be premature or redundant.
+    // This private variant handles the actual removal logic for both public and internal callers.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a server.
+     * Internal helper that removes a server from the in-memory registry with optional listener
+     * notification.
+     * Skips silently if the server isn't present.
      *
-     * @param server
-     *      the server to be removed
-     * @param notifyListeners
-     *      <code>true</code> if the listeners need to be notified, 
-     *      <code>false</code> if not.
+     * @param server           the server to remove
+     * @param notifyListeners  {@code true} to fire {@code serverRemoved}; {@code false} to remove silently
      */
     private void removeServer( LdapServer server, boolean notifyListeners )
     {
@@ -175,14 +248,16 @@ public class LdapServersManager
     }
 
 
+    // ── Checking The Landing Pad Manifest ───────────────────────────────────────────────────
+    // Lando glances at his manifest: "Is that ship already registered here?"
+    // A quick membership check before trying to add a duplicate or react to a missing server.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the server handler contains the given server.
+     * Returns whether the given server is currently registered in the manager.
+     * Useful as a guard before performing operations that assume the server is (or isn't) tracked.
      *
-     * @param server
-     *      the server
-     * @return
-     *      <code>true</code> if the server hander contains the given server, 
-     *      <code>false</code> if not
+     * @param server  the server to look for
+     * @return {@code true} if the server is in our registry; {@code false} if not
      */
     public boolean containsServer( LdapServer server )
     {
@@ -190,11 +265,16 @@ public class LdapServersManager
     }
 
 
+    // ── Plugging A New Comms Line Into The Control Room ─────────────────────────────────────
+    // A new department in Cloud City wants to receive landing-pad notifications — Lando patches
+    // their comm line into the intercom system so they get every future announcement.
+    // We add the listener to our list so it receives future server events.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a listener to the servers handler.
+     * Registers a listener to receive server lifecycle events (added, removed, updated).
+     * Duplicate registrations are ignored — a listener is never notified twice for the same event.
      *
-     * @param listener
-     *      the listener to add
+     * @param listener  the component that wants to know when servers change
      */
     public void addListener( LdapServersManagerListener listener )
     {
@@ -205,11 +285,16 @@ public class LdapServersManager
     }
 
 
+    // ── Unplugging A Comms Line From The Control Room ───────────────────────────────────────
+    // A department shuts down and disconnects from Cloud City's intercom — no more notifications
+    // will be routed to them, freeing up the line.
+    // We remove the listener from our list so it stops receiving events.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a listener to the servers handler.
+     * Unregisters a previously added listener so it no longer receives server events.
+     * If the listener wasn't registered, this is a safe no-op.
      *
-     * @param listener
-     *      the listener to remove
+     * @param listener  the component to unsubscribe from server lifecycle events
      */
     public void removeListener( LdapServersManagerListener listener )
     {
@@ -220,8 +305,23 @@ public class LdapServersManager
     }
 
 
+    // ── Lando Reads The Manifest Off Disk ───────────────────────────────────────────────────
+    // Each time Cloud City restarts, Lando reads the saved manifest from the records room —
+    // the main file first, then the backup if the main is corrupt.
+    // We load servers from ldapServers.xml (with ldapServers-temp.xml as fallback).
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the server from the file store.
+     * Initializes all collections and loads the server list from the on-disk store.
+     * Tries the primary file ({@code ldapServers.xml}) first; falls back to the temp file
+     * if the primary is corrupt or unreadable; shows an error dialog if both fail.
+     * Called once at plugin startup by {@link LdapServersPlugin#start}.
+     *
+     * <p>For example — Lando restores Cloud City's manifest:</p>
+     * <pre>
+     *   Primary file OK → servers loaded, no fuss.
+     *   Primary corrupt → try temp file.
+     *   Both corrupt → show error dialog to the user.
+     * </pre>
      */
     public void loadServersFromStore()
     {
@@ -290,8 +390,23 @@ public class LdapServersManager
     }
 
 
+    // ── Lando Writes The Manifest Back To Disk ──────────────────────────────────────────────
+    // After any change to Cloud City's configuration, Lando writes the updated manifest to the
+    // records room — first to a temp copy so a crash mid-write doesn't destroy the original.
+    // We write to ldapServers-temp.xml first, then copy to ldapServers.xml.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the server to the file store.
+     * Persists the current server list to disk using a write-to-temp-then-copy strategy.
+     * Writing to the temp file first protects against data loss if the process crashes
+     * partway through — the primary file is only replaced once the temp write succeeds.
+     * Falls back to writing directly to the primary file if the temp strategy itself fails.
+     *
+     * <p>For example — Lando safeguards the manifest:</p>
+     * <pre>
+     *   Step 1: Write all servers to ldapServers-temp.xml.
+     *   Step 2: Copy temp to ldapServers.xml.
+     *   If step 1 or 2 fails → write directly to ldapServers.xml as a last resort.
+     * </pre>
      */
     public void saveServersToStore()
     {
@@ -335,11 +450,16 @@ public class LdapServersManager
     }
 
 
+    // ── Finding The Records Room Path ───────────────────────────────────────────────────────
+    // Every manifest document lives in Cloud City's central records room at a known address.
+    // We compute the path to ldapServers.xml inside Eclipse's plugin state location.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the path to the server file.
+     * Returns the {@link IPath} to the primary {@code ldapServers.xml} store file.
+     * This file lives inside Eclipse's plugin state directory, which is specific to the
+     * current workspace and survives plugin restarts.
      *
-     * @return
-     *      the path to the server file.
+     * @return the path to {@code ldapServers.xml}
      */
     private IPath getServersStorePath()
     {
@@ -347,11 +467,17 @@ public class LdapServersManager
     }
 
 
+    // ── Finding The Temporary Records Room Path ──────────────────────────────────────────────
+    // Cloud City keeps a scratch copy of the manifest in a side room during updates —
+    // if the main room catches fire mid-write, the scratch copy is still safe.
+    // We compute the path to ldapServers-temp.xml for use as a safe write buffer.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the path to the server temp file.
+     * Returns the {@link IPath} to the temporary write buffer {@code ldapServers-temp.xml}.
+     * We write here first, then promote to the primary file — this two-phase strategy
+     * prevents corruption if the process is killed mid-write.
      *
-     * @return
-     *      the path to the server temp file.
+     * @return the path to {@code ldapServers-temp.xml}
      */
     private IPath getServersStoreTempPath()
     {
@@ -359,15 +485,18 @@ public class LdapServersManager
     }
 
 
+    // ── Checking Whether A Landing Pad Name Is Free ─────────────────────────────────────────
+    // Before assigning a new vessel a name, Lando checks the manifest for conflicts —
+    // "ApacheDS-Local" is taken; "ApacheDS-Test" is free.
+    // We compare case-insensitively because user-visible names should be obviously distinct.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the given is available (i.e. not already taken by another 
-     * server).
+     * Checks whether the given name is not already used by any registered server.
+     * Server names must be unique so the UI can unambiguously identify each server;
+     * the comparison is case-insensitive so "My Server" and "my server" count as the same name.
      *
-     * @param name
-     *      the name
-     * @return
-     *      <code>true</code> if the name is available, <code>false</code> if
-     *      not
+     * @param name  the candidate name to check
+     * @return {@code true} if the name is free to use; {@code false} if another server already uses it
      */
     public boolean isNameAvailable( String name )
     {
@@ -383,11 +512,16 @@ public class LdapServersManager
     }
 
 
+    // ── Reading The Full Manifest Roster ────────────────────────────────────────────────────
+    // Lando hands over the complete list of every vessel currently on the grid.
+    // Callers like the Servers view use this to populate the table.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the servers list.
+     * Returns the complete list of all registered {@link LdapServer} instances.
+     * This is the live list — callers should not modify it directly; use
+     * {@link #addServer} and {@link #removeServer} instead.
      *
-     * @return
-     *      the servers list.
+     * @return the ordered list of servers
      */
     public List<LdapServer> getServersList()
     {
@@ -395,11 +529,16 @@ public class LdapServersManager
     }
 
 
+    // ── Looking Up A Vessel By Its Registry ID ──────────────────────────────────────────────
+    // Given a specific vessel registry number, Lando looks it up instantly in his indexed board.
+    // We use the ID-keyed map for O(1) lookup instead of scanning the whole list.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the server associated with the given id.
+     * Returns the server registered under the given UUID-style ID, or {@code null} if not found.
+     * IDs are stable across renames, so this is the reliable way to retrieve a specific server.
      *
-     * @return
-     *      the server associated witht the given id.
+     * @param id  the server's unique identifier
+     * @return the matching {@link LdapServer}, or {@code null} if no server has that ID
      */
     public LdapServer getServerById( String id )
     {
@@ -407,11 +546,18 @@ public class LdapServersManager
     }
 
 
+    // ── Locating The Docking Bay For All Ships ──────────────────────────────────────────────
+    // Cloud City's general docking bay — the directory that contains every individual
+    // server's own private berth folder.
+    // We return the path to the "servers/" folder inside Eclipse's plugin state location.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Get the path to the servers folder.
+     * Returns the {@link IPath} to the shared "servers" folder that contains individual per-server
+     * subdirectories.
+     * Each server gets its own subfolder (named after its ID) for storing server-specific files
+     * like config data and mementos.
      *
-     * @return
-     *      the path to the server folder
+     * @return the path to the "servers/" directory
      */
     public static IPath getServersFolder()
     {
@@ -419,13 +565,17 @@ public class LdapServersManager
     }
 
 
+    // ── Locating A Specific Ship's Private Berth ────────────────────────────────────────────
+    // Each vessel in Cloud City has its own private landing bay identified by the ship's ID.
+    // We append the server's UUID to the general docking bay path to get its specific folder.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the path to the server's folder.
+     * Returns the {@link IPath} to the given server's private data folder.
+     * Server-specific files (configuration snapshots, mementos) are stored here, isolated
+     * from other servers' data.
      *
-     * @param server
-     *      the server
-     * @return
-     *      the path to the server's folder
+     * @param server  the server whose folder we want; if {@code null}, we return {@code null}
+     * @return the path to this server's folder, or {@code null} if server is null
      */
     public static IPath getServerFolder( LdapServer server )
     {
@@ -438,12 +588,19 @@ public class LdapServersManager
     }
 
 
+    // ── Preparing A New Private Berth For A New Ship ────────────────────────────────────────
+    // A new vessel arrives at Cloud City — Lando creates a new landing bay for it, first
+    // making sure the general docking area exists, then carving out a private slot.
+    // We mkdir the servers/ folder and then mkdir the server's own subdirectory.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-    * Creates a new server folder for the given id.
-    *
-    * @param id
-    *      the id of the server
-    */
+     * Creates the servers/ parent folder and the given server's private subfolder if they don't
+     * already exist.
+     * This must be called after a server is first registered so there is a place to store
+     * its files (configuration snapshots, mementos, etc.).
+     *
+     * @param server  the newly registered server needing a private folder; no-op if null
+     */
     public static void createNewServerFolder( LdapServer server )
     {
         if ( server != null )
@@ -465,13 +622,27 @@ public class LdapServersManager
     }
 
 
+    // ── Reading A Ship's Private Logbook ────────────────────────────────────────────────────
+    // Each vessel in Cloud City stores a private logbook (memento) in its berth — containing
+    // adapter-specific data that survives restarts.  Lando retrieves it on request.
+    // We read the server's memento.xml file and return a writable XMLMemento.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the memento for the given server.
+     * Returns a writable {@link IMemento} for the given server, backed by the server's
+     * {@code memento.xml} file.
+     * Adapter extensions use mementos to persist their own custom state (ports, config paths, etc.)
+     * across Studio restarts without needing to know about the servers.xml format.
+     * Returns {@code null} if the server is null or if any IO error occurs.
      *
-     * @param server
-     *      the server
-     * @return
-     *      the associated memento
+     * <p>For example — Lando retrieves and unlocks a ship's logbook:</p>
+     * <pre>
+     *   File exists → read its current content into a writable memento.
+     *   File missing → create it empty, then open it.
+     *   IO error → return null (caller must handle gracefully).
+     * </pre>
+     *
+     * @param server  the server whose memento we want
+     * @return a writable {@link IMemento} pre-populated with existing data, or {@code null}
      */
     public static IMemento getMementoForServer( LdapServer server )
     {

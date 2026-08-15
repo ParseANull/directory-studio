@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.pages;
 
@@ -65,39 +65,23 @@ import org.eclipse.ui.forms.widgets.TableWrapData;
 import org.eclipse.ui.forms.widgets.TableWrapLayout;
 
 
+// ── CLASS: OptionsPage — The Imperial Policy Council Chamber ──────────────────
+// The Imperial Policy Council meets to decide what operations are permitted,
+// what is forbidden, what identities are trusted, and how the galaxy's
+// authorization policies are structured.  OptionsPage is that council chamber
+// in the OpenLDAP editor: it manages the four policy tables (olcAllows,
+// olcDisallows, olcRequires, olcRestrict), the two ordered rule sets
+// (AuthID rewrite rules and AuthZ regexps), and the miscellaneous options
+// (args file, plugin log, referral, authz policy, root DSE files, and the
+// three on/off switches).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Options Page of the Server Configuration Editor. We manage the 
- * following parameters :
- * <ul>
- *   <li>Operations and features :
- *     <ul>
- *       <li>olcAllows</li>
- *       <li>olcDisallows</li>
- *       <li>olcRequires</li>
- *       <li>olcRestrict</li>
- *     </ul>
- *   </li>
- *   <li>Authorization regexp & rewrite rules :
- *     <ul>
- *       <li>olcAuthIDRewrite</li>
- *       <li>olcAuthzRegexp</li>
- *     </ul>
- *   </li>
- *   <li>Miscellaneous options :
- *     <ul>
- *       <li>olcArgsFile</li>
- *       <li>olcPluginLogFile</li>
- *       <li>olcReferral</li>
- *       <li>olcAuthzPolicy</li>
- *       <li>olcRootDSE</li>
- *       <li>olcReadOnly</li>
- *       <li>olcGentleHUP</li>
- *       <li>olcReadOnly</li>
- *       <li>olcReverseLookup</li>
- *     </ul>
- *   </li>
- * </ul>
- * Here is the content of this page :
+ * The "Options" tab page of the OpenLDAP server configuration editor.
+ * It manages features/operations policy tables, authorization ID rewrite rules,
+ * authorization regexps, and miscellaneous options.
+ * Think of it as the Imperial Policy Council: it decides what is allowed,
+ * what is forbidden, who can do what, and how identities are transformed.
+ *
  * <pre>
  * .--------------------------------------------------------------------------------------.
  * | Options                                                                              |
@@ -147,7 +131,7 @@ import org.eclipse.ui.forms.widgets.TableWrapLayout;
  * | +----------------------------------------------------------------------------------+ |
  * +--------------------------------------------------------------------------------------+
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
@@ -165,7 +149,7 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
 
     /** The olcDisallows parameter */
     private TableWidget<DisallowFeatureEnum> disallowFeatureTableWidget;
-    
+
     /** The olcRequires parameter */
     private TableWidget<RequireConditionEnum> requireConditionTableWidget;
 
@@ -181,19 +165,19 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
 
     // The miscellaneous parameters
     /** The olcArgsFile parameter */
-    private Text argsFileText; 
+    private Text argsFileText;
 
     /** The olcPluginLogFile parameter */
-    private Text pluginLogFileText; 
+    private Text pluginLogFileText;
 
     /** The olcReferral parameter */
-    private Text referralText; 
+    private Text referralText;
 
     /** The olcRootDSE parameter */
-    private TableWidget<StringValueWrapper> rootDseTableWidget; 
+    private TableWidget<StringValueWrapper> rootDseTableWidget;
 
     /** The olcAuthzPolicy parameter */
-    private Combo authzPolicyCombo; 
+    private Combo authzPolicyCombo;
 
     /** The olcGentleHUP parameter */
     private Button gentleHupCheckbox;
@@ -203,141 +187,141 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
 
     /** The olcReverseLookup parameter */
     private Button reverseLookupCheckbox;
-    
-    
+
+
     /**
      * The olcAllows listener
      */
     private WidgetModifyListener allowFeatureListener = event ->
         {
             List<String> allowFeatures = new ArrayList<>();
-            
+
             for ( AllowFeatureEnum allowFeature : allowFeatureTableWidget.getElements() )
             {
                 allowFeatures.add( allowFeature.getName() );
             }
-            
+
             getConfiguration().getGlobal().setOlcAllows( allowFeatures );
         };
-    
-    
+
+
     /**
      * The olcDisallows listener
      */
     private WidgetModifyListener disallowFeatureListener = event ->
         {
             List<String> disallowFeatures = new ArrayList<>();
-            
+
             for ( DisallowFeatureEnum disallowFeature : disallowFeatureTableWidget.getElements() )
             {
                 disallowFeatures.add( disallowFeature.getName() );
             }
-            
+
             getConfiguration().getGlobal().setOlcDisallows( disallowFeatures );
         };
-    
-    
+
+
     /**
      * The olcRequires listener
      */
     private WidgetModifyListener requireConditionListener = event ->
         {
             List<String> requires = new ArrayList<>();
-            
+
             for ( RequireConditionEnum requireCondition : requireConditionTableWidget.getElements() )
             {
                 requires.add( requireCondition.getName() );
             }
-            
+
             getConfiguration().getGlobal().setOlcRequires( requires );
         };
-    
-    
+
+
     /**
      * The olcRestrict listener
      */
     private WidgetModifyListener restrictOperationListener = event ->
         {
             List<String> restricts = new ArrayList<>();
-            
+
             for ( RestrictOperationEnum restrictOperation : restrictOperationTableWidget.getElements() )
             {
                 restricts.add( restrictOperation.getName() );
             }
-            
+
             getConfiguration().getGlobal().setOlcRestrict( restricts );
         };
-    
-    
+
+
     /**
      * The olcAuthIdRewrite listener
      */
     private WidgetModifyListener authIdRewriteListener = event ->
         {
             List<String> authIdRewrites = new ArrayList<>();
-            
+
             for ( OrderedStringValueWrapper authIdRewrite : authIdRewriteTableWidget.getElements() )
             {
                 authIdRewrites.add( authIdRewrite.toString() );
             }
-            
+
             getConfiguration().getGlobal().setOlcAuthIDRewrite( authIdRewrites );
         };
-    
-    
+
+
     /**
      * The olcAuthzRegexp listener
      */
     private WidgetModifyListener authzRegexpListener = event ->
         {
             List<String> authzRegexps = new ArrayList<>();
-            
+
             for ( OrderedStringValueWrapper authzRegexp : authzRegexpTableWidget.getElements() )
             {
                 authzRegexps.add( authzRegexp.toString() );
             }
-            
+
             getConfiguration().getGlobal().setOlcAuthzRegexp( authzRegexps );
         };
-    
-    
+
+
     /**
      * The olcArgsFile listener
      */
     private ModifyListener argsFileTextListener = event ->
         getConfiguration().getGlobal().setOlcArgsFile( argsFileText.getText() );
-    
-    
+
+
     /**
      * The olcPluginFileLog listener
      */
     private ModifyListener pluginLogFileTextListener = event ->
         getConfiguration().getGlobal().setOlcPluginLogFile( pluginLogFileText.getText() );
-    
-    
+
+
     /**
      * The olcReferral listener
      */
     private ModifyListener referralTextListener = event ->
         getConfiguration().getGlobal().setOlcReferral( referralText.getText() );
-    
-    
+
+
     /**
      * The olcRootDSE listener
      */
     private WidgetModifyListener rootDseTableListener = event ->
         {
             List<String> rootDses = new ArrayList<>();
-            
+
             for ( StringValueWrapper rootDse : rootDseTableWidget.getElements() )
             {
                 rootDses.add( rootDse.getValue() );
             }
-            
+
             getConfiguration().getGlobal().setOlcRootDSE( rootDses );
         };
-    
-    
+
+
     /**
      * The olcAuthzPolicy listener
      */
@@ -350,7 +334,7 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
         }
     };
 
-    
+
     /**
      * The olcGentleHup listener
      */
@@ -363,7 +347,7 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
         }
     };
 
-    
+
     /**
      * The olcReadOnly listener
      */
@@ -376,7 +360,7 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
         }
     };
 
-    
+
     /**
      * The olcReverseLookup listener
      */
@@ -389,7 +373,12 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
         }
     };
 
-    
+
+    // ── Constructor — The Council Chamber Opens ───────────────────────────────
+    // The Imperial Policy Council convenes.  The session is registered with the
+    // editor — the presiding authority — and the chamber is ready to receive
+    // policy decisions.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates a new instance of OptionsPage.
      *
@@ -401,11 +390,17 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── createFormContent — The Council Chamber Arranges Its Tables ───────────
+    // The chamber is arranged with the Features and Operations tables side by
+    // side in the upper half, the AuthID rewrite and AuthZ regexp tables side
+    // by side in the middle, and the Miscellaneous options spanning the full
+    // width at the bottom.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
-     * Creates the OpenLDAP options config Tab. It contains 5 sections, in "
+     * Creates the OpenLDAP options config Tab. It contains 5 sections, in
      * columns and 2 rows
-     * 
+     *
      * <pre>
      * +--------------+---------------+
      * |              |               |
@@ -470,6 +465,10 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── createFeaturesSection — The Allowed/Disallowed Features Panel ─────────
+    // The Features panel is where the council votes on which capabilities to
+    // allow (bind, update, etc.) and which to disallow (e.g. anonymous bind).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the Features section.
      *
@@ -499,12 +498,12 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
     private void createFeaturesSection( FormToolkit toolkit, Composite parent )
     {
         // The Features section, which can be expanded or compacted
-        Section section = createSection( toolkit, parent, 
+        Section section = createSection( toolkit, parent,
             Messages.getString( "OpenLDAPOptionsPage.FeaturesSection" ) );
         Composite composite = createSectionComposite( toolkit, section, 2, false );
 
         // The olcAllows parameter label
-        Label allowFeatureLabel = toolkit.createLabel( composite, 
+        Label allowFeatureLabel = toolkit.createLabel( composite,
             Messages.getString( "OpenLDAPOptionsPage.AllowFeature" ) ); //$NON-NLS-1$
         allowFeatureLabel.setLayoutData( new GridData( SWT.FILL, SWT.FILL, false, false, 2, 1 ) );
 
@@ -529,6 +528,11 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── createOperationsSection — The Required/Restricted Operations Panel ────
+    // The Operations panel is where the council votes on which conditions are
+    // mandatory before an operation is allowed, and which operations are
+    // restricted to privileged callers.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the Operations section.
      * <pre>
@@ -557,12 +561,12 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
     private void createOperationsSection( FormToolkit toolkit, Composite parent )
     {
         // The Operations section, which can be expanded or compacted
-        Section section = createSection( toolkit, parent, 
+        Section section = createSection( toolkit, parent,
             Messages.getString( "OpenLDAPOptionsPage.OperationsSection" ) );
         Composite composite = createSectionComposite( toolkit, section, 2, false );
 
         // The olcRequires parameter label
-        Label requireConditionLabel = toolkit.createLabel( composite, 
+        Label requireConditionLabel = toolkit.createLabel( composite,
             Messages.getString( "OpenLDAPOptionsPage.RequireCondition" ) ); //$NON-NLS-1$
         requireConditionLabel.setLayoutData( new GridData( SWT.FILL, SWT.FILL, false, false, 2, 1 ) );
 
@@ -587,6 +591,11 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── createAuthIdRewriteSection — The Identity Rewrite Rules Panel ─────────
+    // The council reviews the ordered list of rewrite rules that transform
+    // incoming authentication IDs before they're matched against directory
+    // entries.  Order matters — rules are applied top-to-bottom.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the Authentication ID Rewrite Rules section.
      * <pre>
@@ -607,12 +616,12 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
      */
     private void createAuthIdRewriteSection( FormToolkit toolkit, Composite parent )
     {
-        Section section = createSection( toolkit, parent, 
+        Section section = createSection( toolkit, parent,
             Messages.getString( "OpenLDAPOptionsPage.AuthIdRewrite" ) );
         Composite composite = createSectionComposite( toolkit, section, 2, false );
 
         // The olcAuthIdRewrite parameter table
-        authIdRewriteTableWidget = new TableWidget<>( 
+        authIdRewriteTableWidget = new TableWidget<>(
             new OrderedStringValueDecorator( composite.getShell() , "authIdRewrite") );
 
         authIdRewriteTableWidget.createOrderedWidgetWithEdit( composite, toolkit );
@@ -621,13 +630,18 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── createAuthzRegexpsSection — The Authorization Regexp Rules Panel ───────
+    // The council reviews the ordered list of authorization regexp rules that
+    // map authentication IDs to authorization IDs.  Like the rewrite rules,
+    // order matters — the first matching rule wins.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the Authz Regexp section.
      * <pre>
      * .----------------------------------------.
      * |V Authorization Regexps                 |
      * +----------------------------------------+
-     * | +--------------------------+           | 
+     * | +--------------------------+           |
      * | | xyz                      | (Add...)  |
      * | | abcde                    | (Edit...) |
      * | | aaa                      | (Delete)  |
@@ -641,12 +655,12 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
      */
     private void createAuthzRegexpsSection( FormToolkit toolkit, Composite parent )
     {
-        Section section = createSection( toolkit, parent, 
+        Section section = createSection( toolkit, parent,
             Messages.getString( "OpenLDAPOptionsPage.AuthzRegexp" ) );
         Composite composite = createSectionComposite( toolkit, section, 2, false );
 
         // The olcAuthzRegexp parameter table
-        authzRegexpTableWidget = new TableWidget<>( 
+        authzRegexpTableWidget = new TableWidget<>(
             new OrderedStringValueDecorator( composite.getShell(), "AuthzRegexp" ) );
 
         authzRegexpTableWidget.createOrderedWidgetWithEdit( composite, toolkit );
@@ -655,6 +669,11 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── createMiscellaneousSection — The Miscellaneous Options Panel ──────────
+    // The council wraps up with the miscellaneous items: the args file path,
+    // the plugin log, the referral URL, the authz policy, the root DSE files,
+    // and three boolean toggles (Read Only, GentleHUP, Reverse Lookup).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the miscellaneous section.
      * <pre>
@@ -678,21 +697,21 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
      */
     private void createMiscellaneousSection( FormToolkit toolkit, Composite parent )
     {
-        Section section = createSection( toolkit, parent, 
+        Section section = createSection( toolkit, parent,
             Messages.getString( "OpenLDAPOptionsPage.Miscellaneous" ) );
         Composite composite = createSectionComposite( toolkit, section, 5, false );
 
         // The olcArgFile parameter.
-        argsFileText = CommonUIUtils.createText( toolkit, composite, 
+        argsFileText = CommonUIUtils.createText( toolkit, composite,
             Messages.getString( "OpenLDAPOptionsPage.ArgsFile" ), "", -1, argsFileTextListener );
         toolkit.createLabel( composite, "" );
 
         // The olcPluginLogFile parameter.
-        pluginLogFileText = CommonUIUtils.createText( toolkit, composite, 
+        pluginLogFileText = CommonUIUtils.createText( toolkit, composite,
             Messages.getString( "OpenLDAPOptionsPage.PluginLogFile" ), "", -1, pluginLogFileTextListener );
 
         // The olcReferral parameter.
-        referralText = CommonUIUtils.createText( toolkit, composite, 
+        referralText = CommonUIUtils.createText( toolkit, composite,
             Messages.getString( "OpenLDAPOptionsPage.Referral" ), "", -1, referralTextListener );
         toolkit.createLabel( composite, "" );
 
@@ -707,12 +726,12 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
         toolkit.createLabel( composite, "" );
 
         // The olcOther label.
-        toolkit.createLabel( composite, 
+        toolkit.createLabel( composite,
             Messages.getString( "OpenLDAPOptionsPage.Others" ) );
         toolkit.createLabel( composite, "" );
 
         // The olcRootDSE parameter.
-        rootDseTableWidget = new TableWidget<>( 
+        rootDseTableWidget = new TableWidget<>(
             new StringValueDecorator( composite.getShell(), Messages.getString( "OpenLDAPOptionsPage.RootDSE" ) ) );
 
         rootDseTableWidget.createWidgetWithEdit( composite, toolkit );
@@ -727,23 +746,27 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
         othersGroup.setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false, 2, 1 ) );
 
         // The olcGentleHUP Button
-        gentleHupCheckbox = BaseWidgetUtils.createCheckbox( othersGroup, 
+        gentleHupCheckbox = BaseWidgetUtils.createCheckbox( othersGroup,
             Messages.getString( "OpenLDAPOptionsPage.GentleHUP" ), 1 );
         gentleHupCheckbox.addSelectionListener( gentleHupCheckboxSelectionListener );
 
         // The olcReadOnly Button
-        readOnlyCheckbox = BaseWidgetUtils.createCheckbox( othersGroup, 
+        readOnlyCheckbox = BaseWidgetUtils.createCheckbox( othersGroup,
             Messages.getString( "OpenLDAPOptionsPage.ReadOnly" ), 1 );
         readOnlyCheckbox.addSelectionListener( readOnlyCheckboxSelectionListener );
         toolkit.createLabel( composite, "" );
 
         // The olcReverseLookup Button
-        reverseLookupCheckbox = BaseWidgetUtils.createCheckbox( othersGroup, 
+        reverseLookupCheckbox = BaseWidgetUtils.createCheckbox( othersGroup,
             Messages.getString( "OpenLDAPOptionsPage.ReverseLookup" ), 1 );
         reverseLookupCheckbox.addSelectionListener( reverseLookupCheckboxSelectionListener );
     }
 
-    
+
+    // ── addListeners — The Council Arms All the Policy Monitors ───────────────
+    // After a data reload, the council reactivates all the dirty-state monitors
+    // so any subsequent policy change is detected and the editor is flagged dirty.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Adds listeners to UI Controls.
      */
@@ -765,7 +788,12 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
         addDirtyListener( reverseLookupCheckbox );
     }
 
-    
+
+    // ── removeListeners — The Council Silences the Policy Monitors ────────────
+    // Before a programmatic data reload, the council silences all the
+    // dirty-state monitors so automatic field population doesn't trigger
+    // false change-detection.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Removes listeners to UI Controls.
      */
@@ -786,8 +814,12 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
         removeDirtyListener( readOnlyCheckbox );
         removeDirtyListener( reverseLookupCheckbox );
     }
-    
-    
+
+
+    // ── refreshAllowFeatures — Reload the Allowed-Features Table ──────────────
+    // The commander refreshes the allowed-features readout from the current
+    // global configuration model.
+    // ─────────────────────────────────────────────────────────────────────────
     private void refreshAllowFeatures( OlcGlobal global )
     {
         List<String> allowedFeatures = global.getOlcAllows();
@@ -803,8 +835,11 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
 
         allowFeatureTableWidget.setElements( alloweds );
     }
-    
-    
+
+
+    // ── refreshDisllowFeatures — Reload the Disallowed-Features Table ─────────
+    // Same refresh for the disallowed-features table.
+    // ─────────────────────────────────────────────────────────────────────────
     private void refreshDisllowFeatures( OlcGlobal global )
     {
         List<String> disallowedFeatures = global.getOlcDisallows();
@@ -817,11 +852,14 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
                 disalloweds.add( DisallowFeatureEnum.getFeature( disallowedFeature ) );
             }
         }
-        
+
         disallowFeatureTableWidget.setElements( disalloweds );
     }
-    
-    
+
+
+    // ── refreshRequireConditions — Reload the Required-Conditions Table ────────
+    // Same refresh for the required-conditions table.
+    // ─────────────────────────────────────────────────────────────────────────
     private void refreshRequireConditions( OlcGlobal global )
     {
         List<String> requireConditions = global.getOlcRequires();
@@ -834,11 +872,14 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
                 requires.add( RequireConditionEnum.getCondition( requireCondition ) );
             }
         }
-        
+
         requireConditionTableWidget.setElements( requires );
     }
-    
-    
+
+
+    // ── refreshRestrictOperations — Reload the Restricted-Operations Table ────
+    // Same refresh for the restricted-operations table.
+    // ─────────────────────────────────────────────────────────────────────────
     private void refreshRestrictOperations( OlcGlobal global )
     {
         List<String> restrictOperations = global.getOlcRestrict();
@@ -851,11 +892,15 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
                 restricts.add( RestrictOperationEnum.getRestrictOperation( restrictOperation ) );
             }
         }
-        
+
         restrictOperationTableWidget.setElements( restricts );
     }
-    
-    
+
+
+    // ── refreshAuthIdRewrites — Reload the AuthID Rewrite Rules Table ─────────
+    // The authID rewrite table is ordered, so we have to strip and re-sort the
+    // ordering prefix from each value before handing the list back to the widget.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * The AuthIdRewrite table is ordered, we need to deal with that.
      */
@@ -876,14 +921,14 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
             {
                 // Parse the prefix, and set the element at the right place
                 int prefix = OpenLdapConfigurationPluginUtils.getOrderingPrefix( rewrite );
-                
+
                 valuePrefixes[pos++] = prefix;
                 values.put( prefix, OpenLdapConfigurationPluginUtils.stripOrderingPrefix( rewrite ) );
             }
 
             // Now, order them
             Arrays.sort( valuePrefixes );
-            
+
             // Ok, store the elements accordingly to their prefix now
             for ( int prefix : valuePrefixes )
             {
@@ -897,12 +942,15 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
         {
             // Store an empty list
             List<OrderedStringValueWrapper> rewrites = new ArrayList<>();
-            
+
             authIdRewriteTableWidget.setElements( rewrites );
         }
     }
 
-    
+
+    // ── refreshAuthzRegexps — Reload the AuthZ Regexp Rules Table ─────────────
+    // Same ordered-prefix handling as refreshAuthIdRewrites, for authz regexps.
+    // ─────────────────────────────────────────────────────────────────────────
     private void refreshAuthzRegexps( OlcGlobal global )
     {
         List<String> authzRegexps = global.getOlcAuthzRegexp();
@@ -920,14 +968,14 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
             {
                 // Parse the prefix, and set the element at the right place
                 int prefix = OpenLdapConfigurationPluginUtils.getOrderingPrefix( regexp );
-                
+
                 valuePrefixes[pos] = prefix;
                 values.put( prefix, OpenLdapConfigurationPluginUtils.stripOrderingPrefix( regexp ) );
             }
 
             // Now, order them
             Arrays.sort( valuePrefixes );
-            
+
             // Ok, store the elements accordingly to their prefix now
             for ( int prefix : valuePrefixes )
             {
@@ -941,13 +989,16 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
         {
             // Store an empty list
             List<OrderedStringValueWrapper> regexps = new ArrayList<>();
-            
+
             authzRegexpTableWidget.setElements( regexps );
         }
-        
+
     }
 
-    
+
+    // ── refreshRootDseFiles — Reload the Root DSE Files Table ─────────────────
+    // Same refresh pattern for the root DSE files table.
+    // ─────────────────────────────────────────────────────────────────────────
     private void refreshRootDseFiles( OlcGlobal global )
     {
         List<String> rootDses = global.getOlcRootDSE();
@@ -960,11 +1011,16 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
                 roots.add( new StringValueWrapper( rootDse, true ) );
             }
         }
-        
+
         rootDseTableWidget.setElements( roots );
     }
 
 
+    // ── refreshUI — The Council Refreshes All Readouts from Model ─────────────
+    // When fresh data arrives from the LDAP server, the council secretary
+    // refreshes every display: features tables, operations tables, rewrite
+    // rules, regexp rules, miscellaneous options, and the three boolean toggles.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -992,7 +1048,7 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
 
             // Restrict Operation Condition Table Widget
             refreshRestrictOperations( global );
-            
+
             // AuthID Rewrite Table Widget
             refreshAuthIdRewrites( global );
 
@@ -1015,7 +1071,7 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
             {
                 // Select the right one
                 boolean found = false;
-                
+
                 for ( String authzPolicyStr : AuthzPolicyEnum.getNames() )
                 {
                     if ( authzPolicyStr.equalsIgnoreCase( authzPolicy ) )
@@ -1025,7 +1081,7 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
                         break;
                     }
                 }
-                
+
                 if ( !found )
                 {
                     authzPolicyCombo.setText( AuthzPolicyEnum.UNKNOWN.getName() );
@@ -1038,13 +1094,13 @@ public class OptionsPage extends OpenLDAPServerConfigurationEditorPage
 
             // Update the RootDSEText
             refreshRootDseFiles( global );
-            
+
             // Update the GentleHupCheckbox
             BaseWidgetUtils.setValue( global.getOlcGentleHUP(), gentleHupCheckbox );
-            
+
             // Update the ReadOnlyCheckbox
             BaseWidgetUtils.setValue( global.getOlcReadOnly(), readOnlyCheckbox );
-            
+
             // Update the GentleHupCheckbox
             BaseWidgetUtils.setValue( global.getOlcReverseLookup(), reverseLookupCheckbox );
 

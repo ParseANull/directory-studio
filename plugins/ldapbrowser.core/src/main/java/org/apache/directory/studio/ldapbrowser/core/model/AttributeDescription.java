@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core.model;
@@ -36,29 +36,38 @@ import org.apache.directory.studio.ldapbrowser.core.model.schema.Schema;
 import org.apache.directory.studio.ldapbrowser.core.model.schema.SchemaUtils;
 
 
+// ── CLASS: AttributeDescription — C-3PO PARSING A JAWA DIALECT PHRASE ───────
+// C-3PO hears "cn;lang-de;lang-en" and immediately breaks it apart: "That's
+// the Common Name attribute, spoken in German with an English fallback."  He
+// identifies the base word (cn), lists the dialect tags (lang-de, lang-en),
+// and notes any other option flags.  He can also render the phrase as a pure
+// numeric OID code rather than the friendly name — useful when the other
+// droid doesn't know any attribute names.
+// This class implements RFC 4512, section 2.5: an attribute description is
+// an attribute type (OID or short name) optionally followed by semicolon-
+// delimited option tags such as language tags (lang-xx) or binary (;binary).
+// We parse the string once in the constructor and expose the pieces separately.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an attribute description as 
- * specified in RFC4512, section 2.5:
- * 
- *    An attribute description is represented by the ABNF:
+ * Implements an attribute description as specified in RFC 4512, section 2.5:
  *
- *      attributedescription = attributetype options
- *      attributetype = oid
- *      options = *( SEMI option )
- *      option = 1*keychar
+ * <pre>
+ *   attributedescription = attributetype options
+ *   attributetype = oid
+ *   options = *( SEMI option )
+ *   option = 1*keychar
+ * </pre>
  *
- *   where &lt;attributetype> identifies the attribute type and each <option>
- *   identifies an attribute option.  Both &lt;attributetype> and <option>
- *   productions are case insensitive.  The order in which <option>s
- *   appear is irrelevant.  That is, any two &lt;attributedescription>s that
- *   consist of the same &lt;attributetype> and same set of <option>s are
- *   equivalent.
+ * <p>Examples of valid attribute descriptions:</p>
+ * <ul>
+ *   <li>{@code 2.5.4.0}</li>
+ *   <li>{@code cn;lang-de;lang-en}</li>
+ *   <li>{@code owner}</li>
+ * </ul>
  *
- *   Examples of valid attribute descriptions:
- *
- *      2.5.4.0
- *      cn;lang-de;lang-en
- *      owner
+ * <p>Think of this as C-3PO parsing a Jawa phrase: the base word is the
+ * attribute type, and the semicolon-delimited suffixes are the dialect options
+ * (language tags and binary flags).</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -80,10 +89,22 @@ public class AttributeDescription implements Serializable
     private List<String> parsedOptionList;
 
 
+    // ── C-3PO Splits The Phrase Into Base Word And Dialect Tags ──────────────────
+    // "cn;lang-de;lang-en — base word: cn, language tags: [lang-de, lang-en],
+    // other options: []."  The parsing happens once here, up front.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AttributeDescription.
-     * 
-     * @param description the user provided description
+     * Creates a new instance of AttributeDescription by parsing the given
+     * attribute description string into its attribute type and options.
+     *
+     * <p>For example:</p>
+     * <pre>
+     *   AttributeDescription ad = new AttributeDescription("cn;lang-de;lang-en");
+     *   // ad.getParsedAttributeType() == "cn"
+     *   // ad.getParsedLangList()      == ["lang-de", "lang-en"]
+     * </pre>
+     *
+     * @param description the attribute description string; must not be {@code null}.
      */
     public AttributeDescription( String description )
     {
@@ -108,9 +129,12 @@ public class AttributeDescription implements Serializable
     }
 
 
+    // ── C-3PO Reads Back The Original Phrase ─────────────────────────────────────
+    // "The original string, as I received it: 'cn;lang-de;lang-en'."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Gets the user provided description.
-     * 
+     *
      * @return the user provided description
      */
     public String getDescription()
@@ -119,9 +143,12 @@ public class AttributeDescription implements Serializable
     }
 
 
+    // ── C-3PO Reads The Base Word ─────────────────────────────────────────────────
+    // "The core attribute type is: cn."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Gets the parsed attribute type.
-     * 
+     *
      * @return the parsed attribute type
      */
     public String getParsedAttributeType()
@@ -130,9 +157,12 @@ public class AttributeDescription implements Serializable
     }
 
 
+    // ── C-3PO Lists The Language Dialect Tags ─────────────────────────────────────
+    // "Dialect tags found: [lang-de, lang-en] — German first, English fallback."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Gets the list of parsed language tags.
-     * 
+     *
      * @return the list of parsed language tags
      */
     public List<String> getParsedLangList()
@@ -141,9 +171,12 @@ public class AttributeDescription implements Serializable
     }
 
 
+    // ── C-3PO Lists The Non-Language Options ──────────────────────────────────────
+    // "Other option flags found: [binary] — requesting binary encoding."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Gets the list of parsed options, except the language tags.
-     * 
+     *
      * @return the list of parsed options, except the language tags
      */
     public List<String> getParsedOptionList()
@@ -152,12 +185,17 @@ public class AttributeDescription implements Serializable
     }
 
 
+    // ── C-3PO Translates The Phrase To Numeric OID Format ────────────────────────
+    // "In case the other droid only speaks OID, I'll rephrase as 2.5.4.3;lang-de."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Returns the attribute description with the numeric OID
      * instead of the descriptive attribute type.
-     * 
-     * @param schema the schema
-     * 
+     *
+     * <p>For example, {@code cn;lang-de} becomes {@code 2.5.4.3;lang-de}.</p>
+     *
+     * @param schema the schema used to look up OIDs; if {@code null}, the
+     *               original description is returned unchanged.
      * @return the attribute description with the numeric OID
      */
     public String toOidString( Schema schema )
@@ -201,15 +239,27 @@ public class AttributeDescription implements Serializable
     }
 
 
+    // ── C-3PO Checks Whether One Phrase Is A Dialect Sub-Type Of Another ─────────
+    // "Is 'givenName;lang-de' a more specific form of 'name'?  Yes — givenName
+    // inherits from name, and lang-de satisfies no language constraint on name."
+    // This matters for returned-attributes matching: if a search asks for 'name',
+    // should we display 'givenName;lang-de'?  Only if it's a subtype.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if the given attribute description is subtype of 
+     * Checks if the given attribute description is subtype of
      * this attribute description.
-     * 
-     * @param other the other attribute description
-     * @param schema the schema
-     * 
-     * @return true, if the other attribute description is a 
-     *         subtype of this attribute description.
+     *
+     * <p>Examples:</p>
+     * <ul>
+     *   <li>{@code name.isSubtypeOf(givenName)} → {@code false} (name is the supertype)</li>
+     *   <li>{@code givenName.isSubtypeOf(name)} → {@code true}</li>
+     *   <li>{@code givenName;lang-de.isSubtypeOf(givenName)} → {@code true}</li>
+     *   <li>{@code givenName;lang-en.isSubtypeOf(name;lang-de)} → {@code false}</li>
+     * </ul>
+     *
+     * @param other  the other (potential supertype) attribute description.
+     * @param schema the schema for type hierarchy lookups.
+     * @return {@code true} if {@code other} is a supertype of {@code this}.
      */
     public boolean isSubtypeOf( AttributeDescription other, Schema schema )
     {

@@ -25,67 +25,97 @@ import org.apache.directory.studio.openldap.config.acl.OpenLdapAclValueWithConte
 import org.eclipse.swt.widgets.Composite;
 
 
+// ── CLASS: ClauseComposite — IMPERIAL DIRECTIVE FORM CONTRACT ─────────────────
+// Grand Moff Tarkin demands that every security-directive form implement the same
+// interface: it must be able to create its SWT composite on demand, expose its
+// visual editor parent, accept a live LDAP connection for DN browsing, and save
+// its own widget settings before closing. This interface is that Imperial contract.
+// Any Who or What clause composite that can be embedded in the visual ACL editor
+// must implement it so the widget builder can treat them uniformly.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This interface defines a clause composite.
- * 
+ * Contract for every clause composite embedded in the visual ACL editor. Defines
+ * the lifecycle operations: create the SWT composite, get/set the visual editor
+ * parent, get/set the LDAP connection, save widget settings, and access the ACL
+ * context.
+ *
+ * <p>Think of this interface as Grand Moff Tarkin's standard form specification —
+ * every security-directive form that appears in the editor must conform.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public interface ClauseComposite
 {
+    // ── Creating the SWT Composite ────────────────────────────────────────────
     /**
-     * Creates the composite.
+     * Creates and returns the SWT {@link Composite} for this clause inside the
+     * given parent.
      *
-     * @param parent the parent composite
+     * @param parent  The parent composite.
+     * @return        The newly created composite.
      */
     Composite createComposite( Composite parent );
 
 
+    // ── Accessing the Visual Editor Composite ────────────────────────────────
     /**
-     * Gets the visual editor composite.
-     * 
-     *  @return the visual editor composite
+     * Returns the visual editor composite (used for layout refresh calls).
+     *
+     * @return  The visual editor composite.
      */
     Composite getVisualEditorComposite();
 
 
+    // ── Updating the Visual Editor Composite Reference ───────────────────────
     /**
-     * Sets the visual editor composite.
+     * Sets the visual editor composite reference. Called when the parent changes.
      *
-     * @param visualEditorComposite the visual editor composite
+     * @param visualEditorComposite  The new visual editor composite.
      */
     void setVisualEditorComposite( Composite visualEditorComposite );
 
 
+    // ── Accessing the LDAP Connection ─────────────────────────────────────────
     /**
-     * Gets the connection.
+     * Returns the current LDAP browser connection used for DN/attribute browsing.
      *
-     * @return the connection
+     * @return  The current connection; may be {@code null}.
      */
     IBrowserConnection getConnection();
 
 
+    // ── Updating the LDAP Connection ──────────────────────────────────────────
     /**
-     * Sets the connection.
+     * Sets the LDAP browser connection. Implementations should call {@code setInput()}
+     * to refresh any entry widgets after the connection changes.
      *
-     * @param connection the connection
+     * @param connection  The new connection.
      */
     void setConnection( IBrowserConnection connection );
 
 
+    // ── Saving Widget Settings ────────────────────────────────────────────────
     /**
-     * Saves widget settings.
+     * Persists any widget-level settings (e.g. expand/collapse state of expandable
+     * sections). Called by the visual editor before it closes.
      */
     void saveWidgetSettings();
-    
-    
+
+
+    // ── Accessing the ACL Context ─────────────────────────────────────────────
     /**
-     * @return The ACL context in use
+     * Returns the ACL context in use.
+     *
+     * @return  The ACL context.
      */
     OpenLdapAclValueWithContext getContext();
-    
-    
+
+
+    // ── Updating the ACL Context ──────────────────────────────────────────────
     /**
-     * @param context The ACL context in use
+     * Sets the ACL context in use.
+     *
+     * @param context  The new ACL context.
      */
     void setContext( OpenLdapAclValueWithContext context );
 }

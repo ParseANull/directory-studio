@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.dialogs;
 
@@ -44,8 +44,23 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
 
 
+// ── CLASS: ItemPermissionDialog — GRAND MOFF COMPOSING AN ITEM-FIRST DIRECTIVE
+// In an itemFirst ACI directive, Grand Moff Tarkin specifies which user classes
+// are allowed near a resource, and exactly which grants and denials apply.
+// This dialog is the form he fills in: precedence spinner at the top,
+// user-classes table in the middle, grants-and-denials tree at the bottom.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A dialog to compose item permissions.
+ * JFace {@link Dialog} for composing or editing a single {@link ItemPermission}.
+ * The dialog contains:
+ * <ul>
+ *   <li>An optional precedence spinner (enabled by a checkbox)</li>
+ *   <li>An {@link ACIItemUserClassesComposite} for selecting user classes</li>
+ *   <li>An {@link ACIItemGrantsAndDenialsComposite} for specifying grants and denials</li>
+ * </ul>
+ * Pressing OK assembles the three parts into a new {@link ItemPermission}.
+ * Think of this as Grand Moff composing an item-first directive: who may access
+ * the resource, and under what permissions.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -74,12 +89,24 @@ public class ItemPermissionDialog extends Dialog
     private ACIItemGrantsAndDenialsComposite grantsAndDenialsComposite;
 
 
+    // ── OPEN THE ITEM-PERMISSION FORM ─────────────────────────────────────────
+    // Grand Moff opens the form pre-populated with the existing permission
+    // (if editing) or blank (if adding).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ItemPermissionDialog.
-     * 
-     * @param parentShell the shell
-     * @param initialItemPermission the initial item permission
-     * @param context the context
+     * Creates a new {@code ItemPermissionDialog}.
+     *
+     * <p>For example — adding a new item permission from the table composite:</p>
+     * <pre>
+     *   ItemPermissionDialog dlg = new ItemPermissionDialog(shell, null, context);
+     *   if (dlg.open() == Dialog.OK) {
+     *     ItemPermission perm = dlg.getItemPermission();
+     *   }
+     * </pre>
+     *
+     * @param parentShell           the parent SWT shell
+     * @param initialItemPermission the permission to pre-populate the form, or {@code null} for a blank form
+     * @param context               the DTO carrying connection and entry for sub-dialogs
      */
     public ItemPermissionDialog( Shell parentShell, ItemPermission initialItemPermission,
         ACIItemValueWithContext context )
@@ -92,9 +119,13 @@ public class ItemPermissionDialog extends Dialog
     }
 
 
+    // ── SET TITLE AND ICON ────────────────────────────────────────────────────
+    // The orderly labels the form window so the officer knows which directive
+    // section he is filling in.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the dialog image and text.
-     * 
+     * Sets the dialog title and icon.
+     *
      * {@inheritDoc}
      */
     protected void configureShell( Shell shell )
@@ -105,8 +136,14 @@ public class ItemPermissionDialog extends Dialog
     }
 
 
+    // ── VALIDATE AND COMMIT ───────────────────────────────────────────────────
+    // Grand Moff signs the form: precedence, user classes, and grants/denials
+    // are assembled into an ItemPermission and stored.  If assembly fails, an
+    // error dialog appears and the form stays open.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reimplementation: Checks for valid syntax and sets the return value.
+     * Assembles the filled-in form into a new {@link ItemPermission} and closes
+     * the dialog.  Shows a {@link MessageDialog} if any field is invalid.
      */
     protected void okPressed()
     {
@@ -126,12 +163,17 @@ public class ItemPermissionDialog extends Dialog
     }
 
 
+    // ── BUILD THE FORM LAYOUT ─────────────────────────────────────────────────
+    // The orderly prints and assembles the three-section form: precedence at the
+    // top, user-classes table in the middle, grants-and-denials at the bottom.
+    // If an initial permission was provided, all fields are pre-filled.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates all the dialog content.
-     * 
-     * @param parent the parent
-     * 
-     * @return the control
+     * Creates the precedence controls, user-classes composite, and grants-and-denials
+     * composite, then pre-fills them from {@code initialItemPermission} if provided.
+     *
+     * @param parent  the parent composite provided by the Dialog framework
+     * @return        the fully constructed dialog content area
      */
     protected Control createDialogArea( Composite parent )
     {
@@ -194,10 +236,15 @@ public class ItemPermissionDialog extends Dialog
     }
 
 
+    // ── RETURN THE COMPOSED PERMISSION ────────────────────────────────────────
+    // After Grand Moff seals the form, the caller retrieves the assembled
+    // ItemPermission to add to or update the item-permissions table.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the item permission. Returns null if Cancel button was pressed.
+     * Returns the {@link ItemPermission} assembled by the dialog after OK was pressed.
+     * Returns {@code null} if the dialog was cancelled.
      *
-     * @return the composed item permission or null
+     * @return the composed item permission, or {@code null}
      */
     public ItemPermission getItemPermission()
     {

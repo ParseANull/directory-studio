@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.ui.widgets;
@@ -57,67 +57,105 @@ import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.actions.ActionFactory;
 
 
+// ── CLASS: ConnectionActionGroup — REBEL BASE OPERATIONS OFFICER ──────────────────
+// The operations officer at the Rebel base wires everything up before the mission:
+// assigns pilots to ships (New Connection / New Folder), clears pilots for scramble
+// (Open/Close), authorises copy/paste/delete/rename of records, and finally
+// broadcasts who handles each global command over the base's PA system.
+// ConnectionActionGroup is that officer for the connection tree widget.  The
+// constructor builds all nine action proxies, wires up drag-and-drop, and stores
+// them in a keyed map.  fillToolBar() and fillContextMenu() push subsets of those
+// actions into the right UI slots.  activateGlobalActionHandlers() either registers
+// the actions as Eclipse global command handlers (standalone mode via ActionUtils)
+// or sets them into the host view's IActionBars (embedded mode).
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class manages all the actions of the connection widget.
- * 
+ * Manages all actions for the connection tree widget.
+ *
+ * <p>Responsibilities:</p>
+ * <ul>
+ *   <li>Creates all {@link ConnectionViewActionProxy} wrappers around the concrete
+ *       action objects.</li>
+ *   <li>Installs {@link DragConnectionListener} and {@link DropConnectionListener}
+ *       on the tree viewer for drag-and-drop support.</li>
+ *   <li>Fills the toolbar, local menu, and context menu.</li>
+ *   <li>Activates/deactivates the global action handlers for Copy, Paste, Delete,
+ *       and Properties — routing to either {@link ActionUtils} (standalone mode) or
+ *       {@link IActionBars} (embedded mode).</li>
+ * </ul>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ConnectionActionGroup implements ActionHandlerManager, IMenuListener
 {
-    /** The collapse all action. */
-    private CollapseAllAction collapseAllAction;
+    // ── ACTION KEY CONSTANTS ──────────────────────────────────────────────────────
 
-    /** The expand all action. */
-    private ExpandAllAction expandAllAction;
-
-    /** The Constant newConnectionAction. */
+    /** Map key for the "New Connection" action. */
     protected static final String NEW_CONNECTION_ACTION = "newConnectionAction"; //$NON-NLS-1$
 
-    /** The Constant newConnectionFolderAction. */
+    /** Map key for the "New Connection Folder" action. */
     protected static final String NEW_CONNECTION_FOLDER_ACTION = "newConnectionFolderAction"; //$NON-NLS-1$
 
-    /** The Constant openConnectionAction. */
+    /** Map key for the "Open Connection" action. */
     protected static final String OPEN_CONNECTION_ACTION = "openConnectionAction"; //$NON-NLS-1$
 
-    /** The Constant closeConnectionAction. */
+    /** Map key for the "Close Connection" action. */
     protected static final String CLOSE_CONNECTION_ACTION = "closeConnectionAction"; //$NON-NLS-1$
 
-    /** The Constant copyConnectionAction. */
+    /** Map key for the "Copy Connection" action. */
     protected static final String COPY_CONNECTION_ACTION = "copyConnectionAction"; //$NON-NLS-1$
 
-    /** The Constant pasteConnectionAction. */
+    /** Map key for the "Paste Connection" action. */
     protected static final String PASTE_CONNECTION_ACTION = "pasteConnectionAction"; //$NON-NLS-1$
 
-    /** The Constant deleteConnectionAction. */
+    /** Map key for the "Delete Connection" action. */
     protected static final String DELETE_CONNECTION_ACTION = "deleteConnectionAction"; //$NON-NLS-1$
 
-    /** The Constant renameConnectionAction. */
+    /** Map key for the "Rename Connection" action. */
     protected static final String RENAME_CONNECTION_ACTION = "renameConnectionAction"; //$NON-NLS-1$
 
-    /** The Constant propertyDialogAction. */
+    /** Map key for the "Properties" action. */
     protected static final String PROPERTY_DIALOG_ACTION = "propertyDialogAction"; //$NON-NLS-1$
 
-    /** The drag connection listener. */
+
+    // ── FIELDS ────────────────────────────────────────────────────────────────────
+
+    /** Toolbar-only action: collapse all tree nodes. */
+    private CollapseAllAction collapseAllAction;
+
+    /** Toolbar-only action: expand all tree nodes. */
+    private ExpandAllAction expandAllAction;
+
+    /** DnD: listens on the drag source (the tree viewer). */
     private DragConnectionListener dragConnectionListener;
 
-    /** The drop connection listener. */
+    /** DnD: listens on the drop target (the tree viewer). */
     private DropConnectionListener dropConnectionListener;
 
-    /** The action map. */
+    /** Map from key constants above to {@link ConnectionViewActionProxy} instances. */
     protected Map<String, ConnectionViewActionProxy> connectionActionMap;
 
-    /** The action bars. */
+    /**
+     * The host view's action bars for embedded mode, or {@code null} in standalone
+     * mode.  Set by {@link #enableGlobalActionHandlers(IActionBars)}.
+     */
     protected IActionBars actionBars;
 
-    /** The connection main widget. */
+    /** The connection widget whose viewer we manage actions for. */
     protected ConnectionWidget mainWidget;
 
 
+    // ── CONSTRUCTOR ───────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ConnectionActionGroup.
+     * Creates a new {@link ConnectionActionGroup} for the given widget.
      *
-     * @param mainWidget the connection main widget
-     * @param configuration the connection widget configuration
+     * <p>Builds all action proxies, wires drag-and-drop on the viewer, and stores
+     * everything in the action map.  Note that the Paste action is created first
+     * because the Copy action needs a reference to it.</p>
+     *
+     * @param mainWidget    The {@link ConnectionWidget} to manage.
+     * @param configuration The {@link ConnectionConfiguration} (unused here but
+     *                      kept for API symmetry with the view's setup code).
      */
     public ConnectionActionGroup( ConnectionWidget mainWidget, ConnectionConfiguration configuration )
     {
@@ -137,10 +175,16 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
             new OpenConnectionAction() ) );
         connectionActionMap.put( CLOSE_CONNECTION_ACTION, new ConnectionViewActionProxy( viewer, this,
             new CloseConnectionAction() ) );
+
+        // ── PASTE BEFORE COPY ─────────────────────────────────────────────────────
+        // CopyAction holds a reference to PasteAction so it can update paste
+        // availability after a copy — create Paste first.
+        // ──────────────────────────────────────────────────────────────────────────
         connectionActionMap
             .put( PASTE_CONNECTION_ACTION, new ConnectionViewActionProxy( viewer, this, new PasteAction() ) );
         connectionActionMap.put( COPY_CONNECTION_ACTION, new ConnectionViewActionProxy( viewer, this, new CopyAction(
             ( StudioActionProxy ) connectionActionMap.get( PASTE_CONNECTION_ACTION ) ) ) );
+
         connectionActionMap.put( DELETE_CONNECTION_ACTION, new ConnectionViewActionProxy( viewer, this,
             new DeleteAction() ) );
         connectionActionMap.put( RENAME_CONNECTION_ACTION, new ConnectionViewActionProxy( viewer, this,
@@ -148,7 +192,10 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
         connectionActionMap.put( PROPERTY_DIALOG_ACTION, new ConnectionViewActionProxy( viewer, this,
             new PropertiesAction() ) );
 
-        // DND support
+        // ── DRAG AND DROP ─────────────────────────────────────────────────────────
+        // Allow both COPY and MOVE operations; use ConnectionTransfer for the
+        // serialisation format.
+        // ──────────────────────────────────────────────────────────────────────────
         dropConnectionListener = new DropConnectionListener();
         dragConnectionListener = new DragConnectionListener( viewer );
         int ops = DND.DROP_COPY | DND.DROP_MOVE;
@@ -159,8 +206,11 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
     }
 
 
+    // ── DISPOSE ───────────────────────────────────────────────────────────────────
     /**
-     * Disposes this action group.
+     * Disposes all actions and releases all references.
+     *
+     * <p>Safe to call multiple times — subsequent calls are no-ops.</p>
      */
     public void dispose()
     {
@@ -192,10 +242,16 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
     }
 
 
+    // ── ENABLE GLOBAL ACTION HANDLERS ─────────────────────────────────────────────
     /**
-     * Enables the action handlers.
+     * Stores the host view's {@link IActionBars} and activates the global action
+     * handlers.
      *
-     * @param actionBars the action bars
+     * <p>Call this from the view's {@code setFocus()} or
+     * {@code createPartControl()} to wire the actions into the global Eclipse
+     * command framework.</p>
+     *
+     * @param actionBars The host view's {@link IActionBars}.
      */
     public void enableGlobalActionHandlers( IActionBars actionBars )
     {
@@ -204,10 +260,12 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
     }
 
 
+    // ── FILL TOOL BAR ─────────────────────────────────────────────────────────────
     /**
-     * Fills the tool bar.
+     * Populates the toolbar with the New Connection, Open/Close, and
+     * Expand/Collapse actions.
      *
-     * @param toolBarManager the tool bar manager
+     * @param toolBarManager The toolbar to populate.
      */
     public void fillToolBar( IToolBarManager toolBarManager )
     {
@@ -223,20 +281,28 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
     }
 
 
+    // ── FILL MENU ─────────────────────────────────────────────────────────────────
     /**
-     * Fills the local menu.
+     * Populates the local (view) menu.
      *
-     * @param menuManager the local menu manager
+     * <p>Currently empty — all actions are in the context menu or toolbar.</p>
+     *
+     * @param menuManager The local menu manager.
      */
     public void fillMenu( IMenuManager menuManager )
     {
     }
 
 
+    // ── FILL CONTEXT MENU ─────────────────────────────────────────────────────────
     /**
-     * Fills the context menu.
+     * Wires up the context menu so it populates dynamically via
+     * {@link #menuAboutToShow(IMenuManager)}.
      *
-     * @param menuManager the context menu manager
+     * <p>Sets {@code removeAllWhenShown(true)} and registers this class as the
+     * menu listener so the menu is rebuilt from scratch each time it opens.</p>
+     *
+     * @param menuManager The context menu manager.
      */
     public void fillContextMenu( IMenuManager menuManager )
     {
@@ -245,19 +311,32 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
     }
 
 
+    // ── MENU ABOUT TO SHOW ────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
-     * 
-     * This implementation fills the context menu.
+     *
+     * <p>Populates the context menu immediately before it is displayed.  The menu
+     * is structured as:</p>
+     * <ol>
+     *   <li>New Connection / New Folder</li>
+     *   <li>Open or Close (only the enabled one appears)</li>
+     *   <li>Copy / Paste / Delete / Rename</li>
+     *   <li>MB_ADDITIONS extension point separator</li>
+     *   <li>Properties</li>
+     * </ol>
+     *
+     * @param menuManager The context menu being built.
      */
     public void menuAboutToShow( IMenuManager menuManager )
     {
-        // add
+        // ── NEW ───────────────────────────────────────────────────────────────────
         menuManager.add( ( IAction ) connectionActionMap.get( NEW_CONNECTION_ACTION ) );
         menuManager.add( ( IAction ) connectionActionMap.get( NEW_CONNECTION_FOLDER_ACTION ) );
         menuManager.add( new Separator() );
 
-        // open/close
+        // ── OPEN / CLOSE ──────────────────────────────────────────────────────────
+        // Show Close if possible, Open otherwise — never show both at once.
+        // ──────────────────────────────────────────────────────────────────────────
         if ( ( connectionActionMap.get( CLOSE_CONNECTION_ACTION ) ).isEnabled() )
         {
             menuManager.add( ( IAction ) connectionActionMap.get( CLOSE_CONNECTION_ACTION ) );
@@ -268,29 +347,36 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
         }
         menuManager.add( new Separator() );
 
-        // copy/paste/...
+        // ── EDIT ──────────────────────────────────────────────────────────────────
         menuManager.add( ( IAction ) connectionActionMap.get( COPY_CONNECTION_ACTION ) );
         menuManager.add( ( IAction ) connectionActionMap.get( PASTE_CONNECTION_ACTION ) );
         menuManager.add( ( IAction ) connectionActionMap.get( DELETE_CONNECTION_ACTION ) );
         menuManager.add( ( IAction ) connectionActionMap.get( RENAME_CONNECTION_ACTION ) );
         menuManager.add( new Separator() );
 
-        // additions
+        // ── ADDITIONS ─────────────────────────────────────────────────────────────
         menuManager.add( new Separator( IWorkbenchActionConstants.MB_ADDITIONS ) );
         menuManager.add( new Separator() );
 
-        // properties
+        // ── PROPERTIES ────────────────────────────────────────────────────────────
         menuManager.add( ( IAction ) connectionActionMap.get( PROPERTY_DIALOG_ACTION ) );
     }
 
 
+    // ── ACTIVATE GLOBAL ACTION HANDLERS ──────────────────────────────────────────
     /**
-     * Activates the action handlers.
+     * Activates the global command handlers for Copy, Paste, Delete, and
+     * Properties.
+     *
+     * <p>In standalone mode (no {@link IActionBars}) uses {@link ActionUtils} to
+     * register each action as an Eclipse global handler.  In embedded mode uses
+     * the host view's {@link IActionBars#setGlobalActionHandler}.</p>
      */
     public void activateGlobalActionHandlers()
     {
         if ( actionBars == null )
         {
+            // ── STANDALONE MODE — USE ActionUtils ─────────────────────────────────
             IAction copyConnectionAction = connectionActionMap.get( COPY_CONNECTION_ACTION );
             copyConnectionAction.setActionDefinitionId( ConnectionUIConstants.CMD_COPY );
             ActionUtils.activateActionHandler( copyConnectionAction );
@@ -309,6 +395,7 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
         }
         else
         {
+            // ── EMBEDDED MODE — USE IActionBars ───────────────────────────────────
             actionBars.setGlobalActionHandler( ActionFactory.COPY.getId(), ( IAction ) connectionActionMap
                 .get( COPY_CONNECTION_ACTION ) );
             actionBars.setGlobalActionHandler( ActionFactory.PASTE.getId(), ( IAction ) connectionActionMap
@@ -324,13 +411,19 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
     }
 
 
+    // ── DEACTIVATE GLOBAL ACTION HANDLERS ────────────────────────────────────────
     /**
-     * Deactivates the action handlers.
+     * Deactivates the global command handlers for Copy, Paste, Delete, and
+     * Properties.
+     *
+     * <p>Call this when the connection widget loses focus so other views can
+     * reclaim the global handlers.</p>
      */
     public void deactivateGlobalActionHandlers()
     {
         if ( actionBars == null )
         {
+            // ── STANDALONE MODE — USE ActionUtils ─────────────────────────────────
             IAction copyConnectionAction = connectionActionMap.get( COPY_CONNECTION_ACTION );
             ActionUtils.deactivateActionHandler( copyConnectionAction );
             IAction pasteConnectionAction = connectionActionMap.get( PASTE_CONNECTION_ACTION );
@@ -342,6 +435,7 @@ public class ConnectionActionGroup implements ActionHandlerManager, IMenuListene
         }
         else
         {
+            // ── EMBEDDED MODE — CLEAR IActionBars ─────────────────────────────────
             actionBars.setGlobalActionHandler( ActionFactory.COPY.getId(), null );
             actionBars.setGlobalActionHandler( ActionFactory.PASTE.getId(), null );
             actionBars.setGlobalActionHandler( ActionFactory.DELETE.getId(), null );

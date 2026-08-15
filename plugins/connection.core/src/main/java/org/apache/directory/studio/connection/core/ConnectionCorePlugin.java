@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.connection.core;
 
@@ -48,8 +48,23 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
 
 
+// ── CLASS: ConnectionCorePlugin — THE FALCON'S CENTRAL COMPUTER ───────────────
+// The Millennium Falcon's central computer boots up when you power on the ship,
+// wires together every subsystem (nav computer, comms, shields, hyperdrive),
+// and shuts everything down cleanly when you power off.
+// This OSGi bundle activator does the same: it starts all the core services
+// (ConnectionManager, FolderManager, trust stores, event runner, loggers) when
+// Eclipse loads the plugin, and tears them down on stop.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The activator class controls the plug-in life cycle
+ * The OSGi bundle activator (plugin) for connection.core.
+ * We start and stop the plugin lifecycle here: creating the {@link ConnectionManager},
+ * {@link ConnectionFolderManager}, trust stores, event runner, and exposing
+ * the auth/referral/certificate handlers that the UI layer plugs into.
+ * Think of this class as the Falcon's central computer — it boots the whole
+ * ship and provides a single access point ({@link #getDefault()}) for every subsystem.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ConnectionCorePlugin extends Plugin
 {
@@ -99,8 +114,15 @@ public class ConnectionCorePlugin extends Plugin
     /** The plugin properties */
     private PropertyResourceBundle properties;
 
+
+    // ── CONSTRUCTOR — THE FALCON'S COMPUTER INITIALIZES ITSELF ────────────────────
+    // When the Falcon's computer first powers on it stores a reference to itself
+    // so any other system on the ship can find it.
+    // We store a reference to this singleton instance in the static field.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * The constructor
+     * Creates the plugin instance and registers it as the shared singleton.
+     * Eclipse calls this once per plugin lifecycle — don't call it yourself.
      */
     public ConnectionCorePlugin()
     {
@@ -108,8 +130,20 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── START — BOOTING THE FALCON ────────────────────────────────────────────────
+    // Han flips the master switch and the Falcon's computer boots every subsystem
+    // in sequence: event bus, connection registry, folder registry, key stores.
+    // We initialize all the core services during OSGi bundle activation.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.core.runtime.Plugin#start(org.osgi.framework.BundleContext)
+     * Called by Eclipse/OSGi when this plugin bundle is activated.
+     * We initialize the event runner, connection manager, folder manager, password
+     * keystore, and both trust stores (permanent + session).
+     * We also force-start the Apache Directory API codec bundles that some versions
+     * of OSGi fail to activate automatically.
+     *
+     * @param context  The OSGi bundle context provided by the framework.
+     * @throws Exception  if any subsystem fails to initialize.
      */
     public void start( BundleContext context ) throws Exception
     {
@@ -153,8 +187,18 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── STOP — POWERING DOWN THE FALCON ───────────────────────────────────────────
+    // Han powers down the Falcon: he first disconnects every active connection
+    // (so we don't leave dangling network sockets), then nulls out every subsystem.
+    // We close all open connections and tear down all services during bundle stop.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.core.runtime.Plugin#stop(org.osgi.framework.BundleContext)
+     * Called by Eclipse/OSGi when this plugin bundle is deactivated.
+     * We disconnect all open connections so the LDAP server doesn't see zombie sockets,
+     * then null out all subsystems so they can be garbage-collected.
+     *
+     * @param context  The OSGi bundle context provided by the framework.
+     * @throws Exception  if the superclass stop fails.
      */
     public void stop( BundleContext context ) throws Exception
     {
@@ -193,10 +237,17 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET DEFAULT — REACHING THE FALCON'S MASTER CONTROL PANEL ─────────────────
+    // Any crew member who needs to talk to the ship's systems goes to the master
+    // control panel — there's only one, and it's always at the same spot.
+    // We return the singleton plugin instance.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the shared instance
+     * Returns the singleton instance of this plugin.
+     * Every other class that needs a plugin service calls
+     * {@code ConnectionCorePlugin.getDefault().getSomething()}.
      *
-     * @return the shared instance
+     * @return  The shared {@link ConnectionCorePlugin} instance.
      */
     public static ConnectionCorePlugin getDefault()
     {
@@ -204,11 +255,15 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET CONNECTION MANAGER — CHEWIE'S ROUTE DATAPAD ──────────────────────────
+    // Crew members who need the list of known server routes ask Chewie for his datapad.
+    // We return the {@link ConnectionManager} that holds all registered connections.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Connection Manager
+     * Returns the {@link ConnectionManager} that manages all saved connections.
+     * Use this to add, remove, or look up connections by id or name.
      *
-     * @return
-     *      the connection manager
+     * @return  The shared {@link ConnectionManager}.
      */
     public ConnectionManager getConnectionManager()
     {
@@ -216,10 +271,15 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET FOLDER MANAGER — CHEWIE'S FILING CABINET ─────────────────────────────
+    // Crew members who need the folder hierarchy ask Chewie for his filing cabinet.
+    // We return the {@link ConnectionFolderManager} that manages the folder tree.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the connection folder manager.
+     * Returns the {@link ConnectionFolderManager} that manages the folder hierarchy.
+     * Use this to add, remove, or navigate connection folders.
      *
-     * @return the connection folder manager
+     * @return  The shared {@link ConnectionFolderManager}.
      */
     public ConnectionFolderManager getConnectionFolderManager()
     {
@@ -227,10 +287,16 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET EVENT RUNNER — THE FALCON'S COMMS RELAY ───────────────────────────────
+    // The comms relay dispatches messages from the cockpit to every station.
+    // We return the {@link EventRunner} that dispatches connection events to listeners.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the event runner.
+     * Returns the {@link EventRunner} used to dispatch connection lifecycle events.
+     * The runner ensures events are delivered in the correct thread context
+     * (important for UI-thread safety).
      *
-     * @return the event runner
+     * @return  The shared {@link EventRunner}.
      */
     public EventRunner getEventRunner()
     {
@@ -238,10 +304,17 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET PASSWORDS KEYSTORE — THE FALCON'S SAFE ────────────────────────────────
+    // The Falcon has a hidden safe where the crew stores sensitive items —
+    // access codes, passwords, identity documents.
+    // We return the {@link PasswordsKeyStoreManager} that stores connection passwords.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the password keystore manager.
+     * Returns the {@link PasswordsKeyStoreManager} that stores connection bind passwords.
+     * When password keystoring is enabled, passwords are kept here instead of in
+     * the plain-text connections.xml file.
      *
-     * @return the password keystore manager
+     * @return  The shared {@link PasswordsKeyStoreManager}.
      */
     public PasswordsKeyStoreManager getPasswordsKeyStoreManager()
     {
@@ -249,10 +322,16 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET PERMANENT TRUST STORE — THE FALCON'S PERMANENT SHIELD REGISTRY ────────
+    // The Falcon keeps a permanent registry of ships it unconditionally trusts —
+    // entries survive reboots because they're written to disk.
+    // We return the trust store that persists across sessions.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the permanent trust store manager.
+     * Returns the permanent {@link StudioKeyStoreManager} for trusted TLS certificates.
+     * Certificates added here are trusted across Eclipse restarts — stored in permanent.jks.
      *
-     * @return the permanent trust store manager
+     * @return  The permanent trust store manager.
      */
     public StudioKeyStoreManager getPermanentTrustStoreManager()
     {
@@ -260,10 +339,16 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET SESSION TRUST STORE — THE FALCON'S TEMPORARY CLEARANCE LIST ───────────
+    // The Falcon also keeps a temporary clearance list for ships trusted only for
+    // this mission — cleared when the ship powers down.
+    // We return the in-memory trust store that doesn't survive Eclipse restarts.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the session trust store manager.
+     * Returns the session-only {@link StudioKeyStoreManager} for temporarily trusted certificates.
+     * Certificates here are trusted only for the current Eclipse session — they're gone on restart.
      *
-     * @return the session trust store manager
+     * @return  The session trust store manager.
      */
     public StudioKeyStoreManager getSessionTrustStoreManager()
     {
@@ -271,11 +356,18 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET AUTH HANDLER — HAN CHECKS HOW TO PROVE IDENTITY ──────────────────────
+    // Han needs someone to handle the docking-bay credential check.
+    // If the UI hasn't registered a proper handler (e.g. in headless tests),
+    // we fall back to a simple default that reads credentials from the parameters.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the authentication handler
+     * Returns the {@link IAuthHandler} that supplies credentials at bind time.
+     * If the UI has not registered a custom handler, we use a default one that reads
+     * the bind principal and password directly from the {@link ConnectionParameter}.
+     * The default handler returns {@code null} (cancels auth) if no password is configured.
      *
-     * @return
-     *      the authentication handler
+     * @return  The active {@link IAuthHandler}.
      */
     public IAuthHandler getAuthHandler()
     {
@@ -311,11 +403,17 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── SET AUTH HANDLER — THE UI PLUGS IN ITS CREDENTIAL DIALOG ─────────────────
+    // The UI registers its own auth handler that pops up a password dialog
+    // instead of reading from the parameter bean.
+    // We store the custom handler for use during bind operations.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the authentication handler
+     * Registers a custom {@link IAuthHandler} that overrides the default.
+     * The connection.ui plugin calls this during startup to provide a handler that
+     * can show a password dialog when credentials are missing or expired.
      *
-     * @param authHandler
-     *      the authentication handler to set
+     * @param authHandler  The new auth handler to use.
      */
     public void setAuthHandler( IAuthHandler authHandler )
     {
@@ -323,11 +421,18 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET REFERRAL HANDLER — C-3PO HANDLES DIPLOMATIC REDIRECTS ────────────────
+    // C-3PO intercepts referrals — "try this other address instead" messages —
+    // and decides how to route them. If no protocol officer is on duty,
+    // the default is to cancel and ignore the referral.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the referral handler
+     * Returns the {@link IReferralHandler} that decides what to do with LDAP referrals.
+     * LDAP referrals are server redirects — "the data you want is over at this URL."
+     * The default handler cancels referral chasing (returns {@code null}).
+     * The UI registers a handler that asks the user which connection to follow.
      *
-     * @return
-     *      the referral handler
+     * @return  The active {@link IReferralHandler}.
      */
     public IReferralHandler getReferralHandler()
     {
@@ -348,11 +453,16 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── SET REFERRAL HANDLER — THE UI PLUGS IN ITS REFERRAL DIALOG ───────────────
+    // The UI registers its own referral handler that shows a dialog letting the
+    // user pick which connection to follow the referral through.
+    // We store the custom handler.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the referral handler
+     * Registers a custom {@link IReferralHandler}.
+     * The connection.ui plugin calls this to provide a dialog-based referral resolver.
      *
-     * @param referralHandler
-     *      the referral handler to set
+     * @param referralHandler  The new referral handler to use.
      */
     public void setReferralHandler( IReferralHandler referralHandler )
     {
@@ -360,11 +470,18 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET CERTIFICATE HANDLER — THE FALCON'S SHIELD TRUST EVALUATOR ─────────────
+    // The Falcon's shield computer evaluates incoming ships: friend, foe, or unknown?
+    // If no evaluator is configured we default to "not trusted" (shields up, always).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the certificate handler
+     * Returns the {@link ICertificateHandler} that evaluates untrusted TLS certificates.
+     * When the server presents a certificate the JVM doesn't recognize, we ask this
+     * handler what to do. The default handler always returns {@code TrustLevel.Not}.
+     * The UI registers a handler that shows a dialog where the user can inspect and
+     * optionally trust the certificate.
      *
-     * @return
-     *      the certificate handler
+     * @return  The active {@link ICertificateHandler}.
      */
     public ICertificateHandler getCertificateHandler()
     {
@@ -385,11 +502,16 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── SET CERTIFICATE HANDLER — THE UI PLUGS IN ITS TRUST DIALOG ───────────────
+    // The UI registers its own certificate handler that shows the user the cert
+    // details and lets them decide whether to trust it permanently or for this session.
+    // We store the custom handler.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the certificate handler
+     * Registers a custom {@link ICertificateHandler}.
+     * The connection.ui plugin calls this to provide a user-visible trust dialog.
      *
-     * @param certificateHandler
-     *      the certificate handler to set
+     * @param certificateHandler  The new certificate handler to use.
      */
     public void setCertificateHandler( ICertificateHandler certificateHandler )
     {
@@ -397,10 +519,16 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET LDIF MODIFICATION LOGGER — FINDING THE CHANGE-LOG RECORDER ───────────
+    // Among the crew, C-3PO is assigned to record every diplomatic exchange
+    // (modification) in LDIF format.  We search the logger list for the right one.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the LDIF modification logger.
-     * 
-     * @return the LDIF modification logger, null if none found.
+     * Returns the {@link LdifModificationLogger} from the registered LDAP loggers, or
+     * {@code null} if none is registered.
+     * We use this to obtain a direct reference to the logger that writes modification LDIF files.
+     *
+     * @return  The {@link LdifModificationLogger}, or {@code null} if not found.
      */
     public LdifModificationLogger getLdifModificationLogger()
     {
@@ -416,10 +544,15 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET LDIF SEARCH LOGGER — FINDING THE SEARCH-LOG RECORDER ─────────────────
+    // C-3PO also keeps a separate log of every search query the crew sent out.
+    // We search the logger list for the LdifSearchLogger.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the LDIF search logger.
-     * 
-     * @return the LDIF search logger, null if none found.
+     * Returns the {@link LdifSearchLogger} from the registered LDAP loggers, or
+     * {@code null} if none is registered.
+     *
+     * @return  The {@link LdifSearchLogger}, or {@code null} if not found.
      */
     public LdifSearchLogger getLdifSearchLogger()
     {
@@ -435,10 +568,18 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET LDAP LOGGERS — C-3PO ASSEMBLES THE LOGGING CREW ──────────────────────
+    // C-3PO gathers every logging specialist registered through the Eclipse
+    // extension point and brief them on the mission before the first LDAP call.
+    // We lazily load all ILdapLogger extensions the first time they're needed.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the LDAP loggers.
-     * 
-     * @return the LDAP loggers
+     * Returns all registered {@link ILdapLogger} instances.
+     * We lazy-load them from the {@code org.apache.directory.studio.ldaplogger}
+     * extension point on first call.
+     * Each logger receives its id, name, and description from the extension metadata.
+     *
+     * @return  A list of all registered loggers (never {@code null}, may be empty).
      */
     public List<ILdapLogger> getLdapLoggers()
     {
@@ -472,10 +613,18 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET CONNECTION LISTENERS — OBI-WAN'S NETWORK OF FORCE SENSITIVES ─────────
+    // Obi-Wan reaches out through the Force and gathers every sensitive who
+    // needs to know when a connection opens or closes.
+    // We lazy-load all IConnectionListener extensions.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the connection listeners.
-     * 
-     * @return the connection listeners
+     * Returns all registered {@link IConnectionListener} instances.
+     * We lazy-load them from the {@code org.apache.directory.studio.connectionlistener}
+     * extension point on first call.
+     * Listeners are notified when connections open or close.
+     *
+     * @return  A list of all registered connection listeners (never {@code null}).
      */
     public List<IConnectionListener> getConnectionListeners()
     {
@@ -508,11 +657,17 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET PLUGIN PROPERTIES — R2 READS THE FALCON'S SPEC PLATE ────────────────
+    // R2-D2 scans the Falcon's specification plate to read build metadata —
+    // version numbers, vendor info, capability flags.
+    // We lazy-load the plugin.properties resource bundle.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the plugin properties.
+     * Returns the {@link PropertyResourceBundle} loaded from plugin.properties.
+     * We use this to read static build metadata (version, vendor) from the bundle.
+     * Loaded lazily on first access; errors are logged and we return {@code null}.
      *
-     * @return
-     *      the plugin properties
+     * @return  The {@link PropertyResourceBundle}, or {@code null} if loading failed.
      */
     public PropertyResourceBundle getPluginProperties()
     {
@@ -536,16 +691,17 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET DEFAULT KRB5 LOGIN MODULE — FINDING THE KERBEROS COMMAND CENTER ───────
+    // The Empire has two different regional headquarters that issue Kerberos tickets:
+    // Sun's and Apache Harmony's. We probe both to find whichever one is available.
+    // We probe the JVM classpath and return the class name of the usable module.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the default KRB5 login module.
-     * 
-     * Right now the following context factories are supported:
-     * <ul>
-     * <li>com.sun.security.auth.module.Krb5LoginModule</li>
-     * <li>org.apache.harmony.auth.module.Krb5LoginModule</li>
-     * </ul>
-     * 
-     * @return the default KRB5 login module
+     * Returns the class name of the best available Kerberos login module on this JVM.
+     * We try Sun's module first, then Apache Harmony's — whichever is findable via
+     * {@code Class.forName()} wins. Returns an empty string if neither is present.
+     *
+     * @return  The fully-qualified class name of the Kerberos login module, or {@code ""}.
      */
     public String getDefaultKrb5LoginModule()
     {
@@ -574,12 +730,35 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET DEFAULT SCOPE PREFERENCES — READING THE FACTORY SETTINGS ─────────────
+    // The Falcon ships with factory-default settings for every dial and switch;
+    // this returns the node in the preference store where defaults live.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the default-scope Eclipse preferences node for this plugin.
+     * Default-scope preferences hold the factory defaults that are used when no
+     * instance-scope (user) override exists.
+     *
+     * @return  The default-scope {@link IEclipsePreferences} node.
+     */
     public IEclipsePreferences getDefaultScopePreferences()
     {
         return DefaultScope.INSTANCE.getNode( ConnectionCoreConstants.PLUGIN_ID );
     }
 
 
+    // ── FLUSH DEFAULT SCOPE PREFERENCES — CHEWIE WRITES THE FACTORY SETTINGS ──────
+    // Chewie saves the factory-default settings to the backing store so they
+    // survive a restart.
+    // We flush the default-scope preferences node.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Flushes the default-scope preference node to its backing store.
+     * We call this after programmatically writing default values to ensure
+     * they're persisted immediately.
+     *
+     * @throws RuntimeException  wrapping a {@link BackingStoreException} if the flush fails.
+     */
     public void flushDefaultScopePreferences()
     {
         try
@@ -593,12 +772,31 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET INSTANCE SCOPE PREFERENCES — READING THE USER'S CUSTOM SETTINGS ───────
+    // The crew has their own custom settings on top of the factory defaults.
+    // We return the instance-scope node where user overrides live.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the instance-scope Eclipse preferences node for this plugin.
+     * Instance-scope preferences hold user-specific overrides that trump defaults.
+     *
+     * @return  The instance-scope {@link IEclipsePreferences} node.
+     */
     public IEclipsePreferences getInstanceScopePreferences()
     {
         return InstanceScope.INSTANCE.getNode( ConnectionCoreConstants.PLUGIN_ID );
     }
 
 
+    // ── FLUSH INSTANCE SCOPE PREFERENCES — CHEWIE WRITES THE USER'S SETTINGS ──────
+    // Chewie saves the crew's custom settings to the backing store.
+    // We flush the instance-scope preferences node.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Flushes the instance-scope preference node to its backing store.
+     *
+     * @throws RuntimeException  wrapping a {@link BackingStoreException} if the flush fails.
+     */
     public void flushInstanceScopePreferences()
     {
         try
@@ -612,6 +810,16 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET MODIFICATION LOGS FILE COUNT — HOW MANY LOG FILES TO KEEP ─────────────
+    // C-3PO only keeps the last N modification log files — older ones get rotated out.
+    // We read the preference that controls how many rotating log files to keep.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the maximum number of rotating modification log files to keep.
+     * Older files are discarded when this limit is exceeded (JUL-style rotation).
+     *
+     * @return  The file count preference value.
+     */
     public int getModificationLogsFileCount()
     {
         return Platform.getPreferencesService().getInt( ConnectionCoreConstants.PLUGIN_ID,
@@ -619,6 +827,16 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET MODIFICATION LOGS FILE SIZE — MAX SIZE PER LOG FILE ──────────────────
+    // Each log file has a max size; when it fills up C-3PO starts a new one.
+    // We read the preference for max file size in kilobytes.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the maximum size in kilobytes for each modification log file.
+     * When a file exceeds this size, a new file is started.
+     *
+     * @return  The file size preference value in kilobytes.
+     */
     public int getModificationLogsFileSize()
     {
         return Platform.getPreferencesService().getInt( ConnectionCoreConstants.PLUGIN_ID,
@@ -626,6 +844,17 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── IS MODIFICATION LOGS ENABLED — IS C-3PO RECORDING CHANGES ───────────────
+    // Han can tell C-3PO to stop recording — for example when running bulk imports
+    // where logging every change would be too noisy.
+    // We return whether modification logging is enabled.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns whether LDAP modification logging is enabled.
+     * When disabled, no LDIF modification log files are written.
+     *
+     * @return  {@code true} if modification logging is on.
+     */
     public boolean isModificationLogsEnabled()
     {
         return Platform.getPreferencesService().getBoolean( ConnectionCoreConstants.PLUGIN_ID,
@@ -633,6 +862,17 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET MASKED ATTRIBUTES — C-3PO KNOWS WHICH FIELDS TO REDACT ───────────────
+    // C-3PO won't record certain sensitive attributes (like userPassword) in the log
+    // — he redacts them with asterisks to protect sensitive data.
+    // We return the comma-separated list of attribute names to mask.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the comma-separated list of LDAP attribute names to mask in modification logs.
+     * Attributes like {@code userPassword} are replaced with {@code ***} in the log files.
+     *
+     * @return  The masked-attributes preference string, or {@code null} if not set.
+     */
     public String getMModificationLogsMaskedAttributes()
     {
         return Platform.getPreferencesService().getString( ConnectionCoreConstants.PLUGIN_ID,
@@ -640,6 +880,15 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET SEARCH LOGS FILE COUNT — HOW MANY SEARCH LOG FILES TO KEEP ───────────
+    // C-3PO rotates search logs too; this tells him how many to keep around.
+    // We read the search log file count preference.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the maximum number of rotating search log files to keep.
+     *
+     * @return  The file count preference value.
+     */
     public int getSearchLogsFileCount()
     {
         return Platform.getPreferencesService().getInt( ConnectionCoreConstants.PLUGIN_ID,
@@ -647,6 +896,15 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── GET SEARCH LOGS FILE SIZE — MAX SIZE PER SEARCH LOG FILE ─────────────────
+    // Each search log file has a max size too.
+    // We read the search log file size preference.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the maximum size in kilobytes for each search log file.
+     *
+     * @return  The file size preference value in kilobytes.
+     */
     public int getSearchLogsFileSize()
     {
         return Platform.getPreferencesService().getInt( ConnectionCoreConstants.PLUGIN_ID,
@@ -654,6 +912,16 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── IS SEARCH REQUEST LOGS ENABLED — IS C-3PO RECORDING QUERIES ──────────────
+    // C-3PO can log outgoing search requests (the queries we send to the server).
+    // We return whether search-request logging is enabled.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns whether search-request logging is enabled.
+     * When enabled, every LDAP search request is written to the search log in LDIF format.
+     *
+     * @return  {@code true} if search request logging is on.
+     */
     public boolean isSearchRequestLogsEnabled()
     {
         return Platform.getPreferencesService().getBoolean( ConnectionCoreConstants.PLUGIN_ID,
@@ -661,6 +929,18 @@ public class ConnectionCorePlugin extends Plugin
     }
 
 
+    // ── IS SEARCH RESULT ENTRY LOGS ENABLED — IS C-3PO RECORDING THE ANSWERS ─────
+    // C-3PO can also log the individual result entries the server sends back
+    // (off by default because results can be very large).
+    // We return whether search-result-entry logging is enabled.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns whether search-result-entry logging is enabled.
+     * When enabled, every result entry from an LDAP search is written to the search log.
+     * Off by default because search results can be enormous.
+     *
+     * @return  {@code true} if search result entry logging is on.
+     */
     public boolean isSearchResultEntryLogsEnabled()
     {
         return Platform.getPreferencesService().getBoolean( ConnectionCoreConstants.PLUGIN_ID,

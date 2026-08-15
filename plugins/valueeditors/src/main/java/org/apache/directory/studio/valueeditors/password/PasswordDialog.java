@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.valueeditors.password;
@@ -63,9 +63,32 @@ import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: PasswordDialog — VADER'S CREDENTIAL VERIFICATION TERMINAL ─────────
+// Deep in the Death Star's command corridor, Vader's security terminal offers
+// two tabs: "Current Password" (inspect the stored hash, test the plain-text
+// credential against it, or attempt a live bind) and "New Password" (choose a
+// new secret, pick a hash algorithm, preview the result before committing).
+// The OK button only lights up when the two "new password" fields match — no
+// partial credentials are ever committed to the Imperial database.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The PasswordDialog is used from the password value editor to view the current password
- * and to enter a new password.
+ * Modal dialog for viewing, verifying, and replacing an LDAP {@code userPassword}
+ * attribute value.
+ * The dialog has two tabs:
+ * <ul>
+ *   <li><strong>Current Password</strong> — shows the stored hash algorithm, the
+ *       hashed bytes and salt in hex, and lets the user test a plain-text
+ *       password against the stored hash (local verify) or against the live
+ *       directory (LDAP bind).</li>
+ *   <li><strong>New Password</strong> — lets the user enter and confirm a new
+ *       password, choose a hash algorithm (SHA, SHA256, SSHA, MD5, crypt, …),
+ *       and preview the encoded result before committing.</li>
+ * </ul>
+ * OK is disabled until the two new-password fields match; it is also unavailable
+ * on the "Current Password" tab so the user must deliberately switch to the
+ * "New Password" tab to overwrite the credential.
+ * Think of this as Vader's credential verification terminal — inspect the
+ * stored secret on one side, provision a replacement on the other.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -149,12 +172,27 @@ public class PasswordDialog extends Dialog
     private Button showNewPasswordDetailsButton;
 
 
+    // ── Vader's Terminal Opens With the Stored Credential ────────────────────
+    // The terminal is initialised with the current hashed credential (raw bytes)
+    // and the entry whose DN will be used for the live-bind test.
+    // If the raw bytes can't be parsed (malformed hash prefix), we quietly set
+    // currentPassword to null so the "Current Password" tab is suppressed.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PasswordDialog.
-     * 
-     * @param parentShell the parent shell
-     * @param currentPassword the current password, null if none
-     * @param entry the entry used to bind 
+     * Creates a new PasswordDialog.
+     * Parses the current password bytes into a {@link Password} model.
+     * If the bytes are null or fail to parse, we start in "new password only"
+     * mode (no "Current Password" tab).
+     *
+     * <p>For example — the terminal opens with the stored credential:</p>
+     * <pre>
+     *   PasswordDialog dialog = new PasswordDialog(shell, entry.getPasswordBytes(), entry);
+     *   dialog.open();
+     * </pre>
+     *
+     * @param parentShell     The SWT shell that owns this dialog.
+     * @param currentPassword The current hashed password as raw bytes, or {@code null}.
+     * @param entry           The LDAP entry whose DN will be used for live bind tests.
      */
     public PasswordDialog( Shell parentShell, byte[] currentPassword, IEntry entry )
     {
@@ -175,8 +213,14 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader Labels the Terminal ─────────────────────────────────────────────
+    // The terminal is labelled "Password Editor" and receives the Imperial lock
+    // icon so it is unmistakably identified as the credential management console.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell — sets the window title and icon.
+     *
+     * @param shell  The SWT Shell to configure.
      */
     protected void configureShell( Shell shell )
     {
@@ -186,8 +230,16 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader Commits the New Credential ─────────────────────────────────────
+    // When OK is pressed, the newly composed password is serialised to bytes and
+    // stored as the return value.  We also persist the user's choice of hash
+    // method to dialog settings so the same algorithm is pre-selected next time.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#okPressed()
+     * Called when the user clicks OK — serialises the new password to bytes and
+     * saves the selected hash algorithm to dialog settings for next time.
+     * If no new password was entered (the user left "New Password" blank), we
+     * set the return password to {@code null}.
      */
     protected void okPressed()
     {
@@ -220,8 +272,15 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Saves Its State on Exit ──────────────────────────────
+    // When the terminal closes (whether OK or Cancel), we remember which tab the
+    // user was on so it reopens to the same view next time.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#close()
+     * Saves the currently active tab index to dialog settings before closing so
+     * the same tab is shown when the dialog reopens.
+     *
+     * @return {@code true} if the shell was successfully closed.
      */
     public boolean close()
     {
@@ -233,8 +292,19 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Restores Its Previous Settings ───────────────────────
+    // The OK and Cancel buttons are created first.  Then we restore the last
+    // selected tab and hash algorithm from dialog settings.  If no current
+    // password exists we force the New Password tab.  Finally we trigger an
+    // initial update so the UI reflects the loaded state.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createButtonsForButtonBar(org.eclipse.swt.widgets.Composite)
+     * Creates the OK and Cancel buttons, then restores previously saved dialog
+     * settings (last active tab, last chosen hash algorithm).
+     * If there is no current password we force the "New Password" tab.
+     * Triggers an initial UI refresh via {@link #updateTabFolder()}.
+     *
+     * @param parent  The composite that hosts the button bar.
      */
     protected void createButtonsForButtonBar( Composite parent )
     {
@@ -281,8 +351,29 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Builds the Two-Tab Console ───────────────────────────
+    // The main panel is a tab folder.  If a current password exists, we build
+    // the "Current Password" inspection tab first; then we always build the
+    // "New Password" provisioning tab.  Listeners are attached after both tabs
+    // are ready so no premature update fires during construction.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     * Builds the dialog content — a tab folder with a "Current Password"
+     * inspection tab (if a password exists) and a "New Password" provisioning tab.
+     * Returns the top-level composite.
+     *
+     * <p>For example — the two-tab console layout:</p>
+     * <pre>
+     *   [ Current Password | New Password ]
+     *   ┌─────────────────────────────────┐
+     *   │ Current Password: ••••••••       │
+     *   │ Hash Method: SSHA               │
+     *   │ Verify: [ _________ ] [Verify]  │
+     *   └─────────────────────────────────┘
+     * </pre>
+     *
+     * @param parent  The parent composite provided by JFace.
+     * @return        The top-level composite containing the tab folder.
      */
     protected Control createDialogArea( Composite parent )
     {
@@ -329,8 +420,17 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Builds the Inspection Tab ────────────────────────────
+    // The "Current Password" tab shows the stored hash in masked form, its
+    // algorithm, the hex-encoded hash bytes and salt, and a verify field where
+    // the user can type a test password.  "Show details" checkboxes unmask the
+    // fields.  "Verify" runs a local hash comparison; "Bind" executes a live
+    // LDAP bind.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the current password tab.
+     * Creates and populates the "Current Password" tab — shows the stored hash,
+     * hash algorithm, hex values, and provides Verify and Bind buttons for
+     * testing a plain-text password against the stored credential.
      */
     private void createCurrentPasswordTab()
     {
@@ -413,8 +513,16 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Builds the Provisioning Tab ──────────────────────────
+    // The "New Password" tab provides entry/confirm fields, a hash algorithm
+    // picker (populated from HASH_METHODS), a read-only preview of the encoded
+    // result, and a "New Salt" button (enabled for salted algorithms).  OK is
+    // disabled until the two text fields match.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the new password tab.
+     * Creates and populates the "New Password" tab — two text fields for the new
+     * password and its confirmation, a hash algorithm combo, a preview of the
+     * encoded result, and a "New Salt" button for salted algorithms.
      */
     private void createNewPasswordTab()
     {
@@ -492,8 +600,16 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Wires Up Its Sensors ────────────────────────────────
+    // After both tabs are built, we attach listeners that trigger a UI refresh
+    // whenever the user types, changes the hash method, or toggles a checkbox.
+    // The "Verify" and "Bind" listeners are attached only in dual-tab mode.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the listeners.
+     * Attaches SWT listeners to all interactive widgets so the UI refreshes
+     * whenever the user types, toggles a checkbox, or changes the hash combo.
+     * "Verify" and "Bind" listeners are attached only when both tabs are shown
+     * (i.e. there is a current password to inspect).
      */
     private void addListeners()
     {
@@ -582,8 +698,19 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Refreshes the Inspection Tab ─────────────────────────
+    // On the "Current Password" tab we show the stored hash, algorithm, and hex
+    // bytes, masked behind bullet characters unless "Show details" is ticked.
+    // The "Verify" and "Bind" buttons become clickable only when the test field
+    // has text (and, for Bind, when a live connection exists).  While this tab
+    // is active, OK is disabled — the user must switch to "New Password" to commit.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the current password tab.
+     * Refreshes the "Current Password" tab widgets to reflect the current
+     * password model and the state of the "Show details" and test-password fields.
+     * Enables or disables the Verify/Bind buttons based on whether there is a
+     * testable password and a live connection.
+     * Disables OK while this tab is active.
      */
     private void updateCurrentPasswordGroup()
     {
@@ -606,10 +733,10 @@ public class PasswordDialog extends Dialog
         }
         else
         {
-            currentPasswordText.setEchoChar( '\u2022' );
-            currentPasswordValueHexText.setEchoChar( '\u2022' );
+            currentPasswordText.setEchoChar( '•' );
+            currentPasswordValueHexText.setEchoChar( '•' );
             currentPasswordSaltHexText.setEchoChar( currentPasswordSaltHexText.getText().equals(
-                Utils.getNonNullString( null ) ) ? '\0' : '\u2022' );
+                Utils.getNonNullString( null ) ) ? '\0' : '•' );
         }
 
         // enable/disable test field and buttons
@@ -622,7 +749,7 @@ public class PasswordDialog extends Dialog
         }
         else
         {
-            testPasswordText.setEchoChar( '\u2022' );
+            testPasswordText.setEchoChar( '•' );
         }
         verifyPasswordButton.setEnabled( testPasswordText.isEnabled() && !"".equals( testPasswordText.getText() ) ); //$NON-NLS-1$
         bindPasswordButton.setEnabled( testPasswordText.isEnabled() && !"".equals( testPasswordText.getText() ) //$NON-NLS-1$
@@ -642,8 +769,15 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Runs a Local Hash Comparison ─────────────────────────
+    // The "Verify" button triggers a local verification: we hash the test
+    // password with the same algorithm and salt stored in the directory and
+    // compare byte-by-byte.  A success produces an info dialog; a failure
+    // calls the exception handler so the error is reported consistently.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Verifies the current password.
+     * Verifies the test password against the stored hash locally (no network call).
+     * Opens an information dialog on success or an error dialog on failure.
      */
     private void verifyCurrentPassword()
     {
@@ -669,8 +803,17 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Attempts a Live LDAP Bind ────────────────────────────
+    // The "Bind" button performs a real LDAP BIND operation using the entry's DN
+    // and the test password.  We clone the connection (so we don't disturb the
+    // live one), set the credentials, and run CheckBindRunnable.  A success
+    // dialog confirms access; failures are surfaced via the normal status mechanism.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Binds to the directory using the test password.
+     * Attempts a live LDAP BIND using the entry's DN and the typed test password.
+     * Clones the current connection to avoid disturbing the active session.
+     * Shows an information dialog on success; errors are reported by the
+     * connection UI exception handler.
      */
     private void bindCurrentPassword()
     {
@@ -695,8 +838,18 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Refreshes the Provisioning Tab ───────────────────────
+    // While the user types on the "New Password" tab we continuously re-hash the
+    // input with the chosen algorithm and update the preview.  If the confirm
+    // field matches we enable OK; if they diverge or either field is blank, OK
+    // stays disabled and the preview is cleared.  The "New Salt" button is
+    // enabled only for salted algorithms.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the new password tab.
+     * Refreshes the "New Password" tab — re-hashes the new password with the
+     * currently selected algorithm, updates the preview fields, and enables or
+     * disables the OK button and "New Salt" button based on whether the two
+     * password fields match.
      */
     private void updateNewPasswordGroup()
     {
@@ -734,20 +887,27 @@ public class PasswordDialog extends Dialog
         }
         else
         {
-            newPasswordText.setEchoChar( '\u2022' );
-            confirmNewPasswordText.setEchoChar( '\u2022' );
+            newPasswordText.setEchoChar( '•' );
+            confirmNewPasswordText.setEchoChar( '•' );
             newPasswordPreviewText.setEchoChar( newPasswordPreviewText.getText()
-                .equals( Utils.getNonNullString( null ) ) ? '\0' : '\u2022' );
+                .equals( Utils.getNonNullString( null ) ) ? '\0' : '•' );
             newPasswordPreviewValueHexText.setEchoChar( newPasswordPreviewValueHexText.getText().equals(
-                Utils.getNonNullString( null ) ) ? '\0' : '\u2022' );
+                Utils.getNonNullString( null ) ) ? '\0' : '•' );
             newPasswordPreviewSaltHexText.setEchoChar( newPasswordPreviewSaltHexText.getText().equals(
-                Utils.getNonNullString( null ) ) ? '\0' : '\u2022' );
+                Utils.getNonNullString( null ) ) ? '\0' : '•' );
         }
     }
 
 
+    // ── Vader's Terminal Refreshes the Active Tab ─────────────────────────────
+    // When the user switches tabs, we redirect focus and trigger the appropriate
+    // group-update method so the newly visible tab reflects the current state.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the tab folder and the tabs.
+     * Called when the active tab changes.
+     * Triggers the appropriate group update ({@link #updateCurrentPasswordGroup()}
+     * or {@link #updateNewPasswordGroup()}) and sets focus to the primary field
+     * on the newly selected tab.
      */
     private void updateTabFolder()
     {
@@ -767,10 +927,17 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Reads the Chosen Algorithm ───────────────────────────
+    // The "New Password" tab has a combo where the user picks the hash algorithm.
+    // We read the current selection and return the enum constant, or null for
+    // the "no hash" option (plain-text storage).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the selected new password hash method.
+     * Returns the {@link LdapSecurityConstants} hash algorithm currently selected
+     * in the "New Password" tab combo, or {@code null} if "No Hash" is chosen
+     * (meaning the password will be stored in plain text).
      *
-     * @return the selected new password hash method
+     * @return  The selected hash algorithm, or {@code null} for no hashing.
      */
     private LdapSecurityConstants getSelectedNewPasswordHashMethod()
     {
@@ -790,11 +957,20 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Resolves an Algorithm to Its Display Name ────────────
+    // Given a hash method object (either an enum constant or the NO_HASH_METHOD
+    // sentinel string), we return its human-readable name for the combo label
+    // provider.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the name of the hash method.
+     * Returns the display name for a hash method object.
+     * If the object is a {@link LdapSecurityConstants} constant we return
+     * {@code hashMethod.getName()}; if it is the {@code NO_HASH_METHOD} sentinel
+     * string we return the "no hash" browser-core message; otherwise we return
+     * {@code null}.
      *
-     * @param o the hash method object
-     * @return the name of the hash method
+     * @param o  The hash method object (enum constant or sentinel string).
+     * @return   The display name, or {@code null} if the type is unrecognised.
      */
     private String getHashMethodName( Object o )
     {
@@ -813,10 +989,16 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Reads the Current Hash Algorithm Name ────────────────
+    // We read the hash algorithm recorded in the stored password model and look
+    // up its display name.  If no algorithm is recorded (plain-text password),
+    // we return the "no hash" label so the field is never left blank.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the current password hash method name.
+     * Returns the display name of the hash algorithm recorded in the current
+     * stored password.  Returns the "no hash" label if the password is plain text.
      *
-     * @return the current password hash method name
+     * @return  The hash algorithm name string for display.
      */
     private String getCurrentPasswordHashMethodName()
     {
@@ -833,19 +1015,38 @@ public class PasswordDialog extends Dialog
     }
 
 
+    // ── Vader's Terminal Hands Over the New Credential ───────────────────────
+    // After OK is pressed, callers retrieve the new password bytes here.
+    // Returns null if the dialog was cancelled or the user set no new password.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the new password.
-     * 
-     * @return the password, either encypted by the selected
-     *         algorithm or as plain text.
+     * Returns the new password as raw bytes (hashed or plain text depending on
+     * the selected algorithm) after the dialog has been closed with OK.
+     * Returns {@code null} if the dialog was cancelled or no new password was set.
+     *
+     * <p>For example — the caller retrieves the encoded credential:</p>
+     * <pre>
+     *   if (dialog.open() == Dialog.OK) {
+     *       byte[] pw = dialog.getNewPassword();
+     *       // write pw to the userPassword attribute
+     *   }
+     * </pre>
+     *
+     * @return  The new encoded password bytes, or {@code null}.
      */
     public byte[] getNewPassword()
     {
         return returnPassword;
     }
 
+    // ── ENUM: DisplayMode — VADER'S TERMINAL OPERATING MODE ──────────────────
+    // The terminal operates in one of two modes: showing both the current and new
+    // password tabs when a credential already exists, or showing only the new
+    // password tab when no credential is stored yet.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * This enum contains the display modes for the dialog.
+     * Indicates whether the dialog shows only the "New Password" tab or both
+     * the "Current Password" and "New Password" tabs.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */

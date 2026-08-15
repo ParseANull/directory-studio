@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.sourceeditor;
 
@@ -29,8 +29,21 @@ import org.eclipse.jface.text.TextAttribute;
 import org.eclipse.swt.SWT;
 
 
+// ── CLASS: ACITextAttributeProvider — C-3PO'S COLOUR ANNOTATION KIT ──────────
+// C-3PO keeps a kit of colour-coded stickers — one shade for general keywords,
+// another for grant values, a bright red for denials, and so on.
+// Before he annotates a directive he selects the right sticker for each word.
+// ACITextAttributeProvider is that kit: it maps token-type keys to SWT
+// TextAttribute objects (colour + bold/normal style).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class provides the TextAttributes elements for each kind of attribute
+ * Provides the {@link TextAttribute} (colour and font style) for each token type
+ * recognised by the ACI source editor.
+ * On construction it pre-builds a map from token-type keys (the {@code *_ATTRIBUTE}
+ * constants) to {@link TextAttribute} instances that wrap SWT colours sourced from
+ * the {@link CommonUIPlugin} colour registry.
+ * Think of this class as C-3PO's colour annotation kit: one entry per token category,
+ * each carrying the exact shade and weight to paint that token in the editor.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -51,8 +64,23 @@ public class ACITextAttributeProvider
     private Map<String, TextAttribute> attributes = new HashMap<String, TextAttribute>();
 
 
+    // ── FILL THE COLOUR KIT ───────────────────────────────────────────────────
+    // C-3PO unpacks his sticker kit and assigns one colour to each token category:
+    // default text stays neutral, keywords go bold, strings get the value colour,
+    // grant values go green (add colour), and deny values go red (delete colour).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AciTextAttributeProvider.
+     * Creates a new {@code ACITextAttributeProvider} and pre-builds the
+     * token-type-to-{@link TextAttribute} map.
+     * Colours are sourced from {@link CommonUIPlugin} so they respect the
+     * workspace colour preferences.
+     *
+     * <p>For example — the ACICodeScanner picks up attributes at construction time:</p>
+     * <pre>
+     *   ACITextAttributeProvider provider = new ACITextAttributeProvider();
+     *   TextAttribute keywordAttr = provider.getAttribute(KEYWORD_ATTRIBUTE);
+     *   // keywordAttr is bold, painted in the ATTRIBUTE_TYPE_COLOR
+     * </pre>
      */
     public ACITextAttributeProvider()
     {
@@ -70,13 +98,23 @@ public class ACITextAttributeProvider
     }
 
 
+    // ── SELECT THE RIGHT STICKER ──────────────────────────────────────────────
+    // C-3PO looks up the sticker for a given token type; if none is found he
+    // falls back to the default (plain text) sticker so nothing is left unpainted.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the correct TextAttribute for the given type
+     * Returns the {@link TextAttribute} for the given token-type key.
+     * Falls back to the {@link #DEFAULT_ATTRIBUTE} entry if {@code type} is unknown.
      *
-     * @param type
-     *      the type of element
-     * @return
-     *      the correct TextAttribute for the given type
+     * <p>For example — fetching the grant-value style:</p>
+     * <pre>
+     *   TextAttribute attr = provider.getAttribute(ACITextAttributeProvider.GRANT_VALUE);
+     *   // attr carries the ADD_COLOR (green) and no bold style
+     * </pre>
+     *
+     * @param type  one of the {@code *_ATTRIBUTE} or {@code *_VALUE} constants defined
+     *              on this class
+     * @return      the matching {@link TextAttribute}, or the default if {@code type} is unknown
      */
     public TextAttribute getAttribute( String type )
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapservers.apacheds;
@@ -67,8 +67,34 @@ import org.eclipse.ui.PlatformUI;
 import org.osgi.framework.Bundle;
 
 
+// ── CLASS: ApacheDS200LdapServerAdapter — Han Solo Flying the Millennium Falcon ─
+// Han Solo is the guy who actually flies the ship.  When the Alliance tells him
+// to launch (start), he copies the engine libraries from the plugin bundle into
+// the ship's lib folder (verifyAndCopyLibraries), sets up the partition and log
+// folders (add), fires up the ApacheDS JVM with the right arguments
+// (launchApacheDS), and starts the console tail thread so logs flow to the
+// Eclipse console.  When they say "land" (stop) he gracefully signals ApacheDS
+// to shut down and waits up to 3 minutes for it to finish.  When Chewie needs
+// to fix the hyperdrive (repair), he launches ApacheDS in repair mode and again
+// waits for it.  Checking ports before launch is the pre-flight checklist:
+// if any configured protocol port is already in use, we tell the operator now
+// rather than letting ApacheDS crash at startup.
+// ApacheDS200LdapServerAdapter implements the LdapServerAdapter interface for
+// ApacheDS version 2.0.0, bridging the Studio server-management UI to the
+// ApacheDS JVM process lifecycle.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an LDAP Server Adapter for ApacheDS version 2.0.0.
+ * An {@link LdapServerAdapter} for Apache DS version 2.0.0.
+ * Handles the full lifecycle of an embedded ApacheDS 2.0.0 instance:
+ * provisioning the server folder (add), opening the config editor
+ * (openConfiguration), launching the JVM (start), stopping it gracefully
+ * (stop), running partition repair (repair), and validating that required
+ * ports are free before launch (checkPortsBeforeServerStart).
+ * Also exposes static helpers so other classes (e.g. {@link CreateConnectionAction})
+ * can read the server's parsed configuration and query individual protocol
+ * enable/port settings.
+ * Think of Han Solo flying the Millennium Falcon — this class is the engineer
+ * who knows every switch in the cockpit.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -88,8 +114,23 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
         START, REPAIR, STOP;
     }
 
+
+    // ── Pre-Flight: Set Up the Server Folder Structure ────────────────────────
+    // Before the Falcon can fly we need the right directory layout under the
+    // server folder: conf/, ldif/, log/, and partitions/.  We also copy the
+    // service JAR and log4j config from the plugin bundle.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Provisions a new ApacheDS 2.0.0 server instance.
+     * Creates the required folder structure (conf, ldif, log, partitions),
+     * verifies and copies the ApacheDS service JAR, copies the default
+     * {@code config.ldif} and {@code log4j.properties} from the plugin bundle,
+     * and creates an empty {@code apacheds.log} file.
+     *
+     * @param server   the server being added.
+     * @param monitor  the progress monitor for this operation.
+     * @throws Exception  if folder creation or file copy fails.
+     * @see LdapServerAdapter#add(LdapServer, StudioProgressMonitor)
      */
     public void add( LdapServer server, StudioProgressMonitor monitor ) throws Exception
     {
@@ -126,18 +167,37 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Delete: Nothing Extra to Do ───────────────────────────────────────────
+    // The LdapServersManager handles deletion of the server folder itself;
+    // we don't need any additional cleanup.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Deletes the server — no extra cleanup needed beyond the default behavior.
+     *
+     * @param server   the server being deleted.
+     * @param monitor  the progress monitor.
+     * @throws Exception  (never thrown by this implementation).
+     * @see LdapServerAdapter#delete(LdapServer, StudioProgressMonitor)
      */
     public void delete( LdapServer server, StudioProgressMonitor monitor ) throws Exception
     {
-        // Nothing to do (nothing more than the default behavior of 
+        // Nothing to do (nothing more than the default behavior of
         // the delete action before this method is called)
     }
 
 
+    // ── Open the Cockpit Configuration Panel ──────────────────────────────────
+    // We open the ServerConfigurationEditor in the Eclipse workbench so the
+    // operator can edit config.ldif visually.  Must run on the UI thread.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Opens the server's {@code config.ldif} in the
+     * {@link ServerConfigurationEditor} on the UI thread.
+     *
+     * @param server   the server whose configuration to open.
+     * @param monitor  the progress monitor (used to report editor init errors).
+     * @throws Exception  if opening the editor fails.
+     * @see LdapServerAdapter#openConfiguration(LdapServer, StudioProgressMonitor)
      */
     public void openConfiguration( final LdapServer server, final StudioProgressMonitor monitor ) throws Exception
     {
@@ -162,8 +222,21 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Start the Engines — Launch ApacheDS ───────────────────────────────────
+    // We call startOrRepair() with Action.START, store the resulting ILaunch in
+    // the server's custom object map so stop() can find it, then run the startup
+    // watchdog that polls the LDAP port until the server responds.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Starts the ApacheDS 2.0.0 server.
+     * Verifies/copies libraries, starts the console log tail thread, launches
+     * the ApacheDS JVM, stores the {@link ILaunch} in the server, and runs
+     * the startup watchdog to wait for the server to become responsive.
+     *
+     * @param server   the server to start.
+     * @param monitor  the progress monitor.
+     * @throws Exception  if launch fails.
+     * @see LdapServerAdapter#start(LdapServer, StudioProgressMonitor)
      */
     public void start( LdapServer server, StudioProgressMonitor monitor ) throws Exception
     {
@@ -177,15 +250,19 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Chewie Fixes the Hyperdrive — Repair Mode ────────────────────────────
+    // We launch ApacheDS with the "repair" argument, then poll every second
+    // for up to 3 minutes waiting for the repair process to finish.  When done
+    // we stop the console tail thread.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Starts the ApacheDS in "repair" mode
+     * Starts ApacheDS in repair mode to rebuild corrupted partition index files.
+     * Waits (polling every second) for up to 3 minutes for the repair process
+     * to exit, then stops the console log tail thread.
      *
-     * @param server
-     *      the server
-     * @param monitor
-     *      the progress monitor
-     * @throws Exception
-     *      if an error occurs when starting the server
+     * @param server   the server whose partitions need repairing.
+     * @param monitor  the progress monitor.
+     * @throws Exception  if launch fails.
      */
     public void repair( LdapServer server, StudioProgressMonitor monitor ) throws Exception
     {
@@ -205,7 +282,23 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
         LdapServersUtils.stopConsolePrinterThread( server );
     }
 
-    
+
+    // ── Shared Launch Logic for Start and Repair ──────────────────────────────
+    // Both start and repair share the same steps up to launchApacheDS(); the
+    // only difference is the Action enum value we pass, which changes the
+    // program argument ("repair" or nothing).
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * Shared implementation for {@link #start} and {@link #repair}.
+     * Verifies/copies the service JAR, starts the console log tail thread,
+     * and launches the ApacheDS JVM with the given action.
+     *
+     * @param server   the server.
+     * @param monitor  the progress monitor.
+     * @param action   {@link Action#START} or {@link Action#REPAIR}.
+     * @return         the resulting {@link ILaunch}.
+     * @throws Exception  if launch fails.
+     */
     private ILaunch startOrRepair( LdapServer server, StudioProgressMonitor monitor, Action action ) throws Exception
     {
         // Getting the bundle associated with the plugin
@@ -226,16 +319,29 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
 
         return launch;
     }
-    
+
+
+    // ── Build and Fire the Launch Configuration ────────────────────────────────
+    // We assemble a Java application launch configuration: default JVM, the
+    // apacheds-service.jar on the classpath, UberjarMain as main class, the
+    // server folder path as the first program argument (plus optionally "repair"
+    // or "stop"), and all the required -D JVM arguments for ApacheDS paths and
+    // instance name.  Then we launch it in RUN mode and start the terminate-
+    // listener thread so we know when the process exits.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Launches ApacheDS using a launch configuration.
+     * Creates and launches an Eclipse Java application launch configuration for ApacheDS.
+     * Configures the JRE, classpath (service JAR), main class
+     * ({@code org.apache.directory.server.UberjarMain}), program arguments
+     * (server folder path; optionally "repair" or "stop"), and VM arguments
+     * (log4j config, var/log/instance paths).
+     * The configuration is marked private (hidden from the user's launch history)
+     * and console output capture is disabled (we read the log file directly).
      *
-     * @param server
-     *      the server
-     * @param repair
-     *      true to launch ApacheDS in repair mode
-     * @return
-     *      the associated launch
+     * @param server  the server to launch.
+     * @param action  {@link Action#START}, {@link Action#REPAIR}, or {@link Action#STOP}.
+     * @return        the resulting {@link ILaunch}.
+     * @throws Exception  if the launch configuration creation or launch fails.
      */
     private static ILaunch launchApacheDS( LdapServer server, Action action )
         throws Exception
@@ -331,8 +437,22 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Land the Falcon — Graceful Shutdown ───────────────────────────────────
+    // We launch a separate "stop" JVM process that signals the running ApacheDS
+    // to shut down, then poll every second for up to 3 minutes waiting for the
+    // STOPPING status to clear, then clean up the console thread and launch.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Stops the ApacheDS 2.0.0 server gracefully.
+     * Launches a separate JVM process with the {@code "stop"} argument that
+     * signals the running server to shut down.  Polls every second for up to
+     * 3 minutes for the server status to leave {@code STOPPING}.  Finally
+     * stops the console log tail thread and terminates the original launch.
+     *
+     * @param server   the server to stop.
+     * @param monitor  the progress monitor.
+     * @throws Exception  if the stop launch fails.
+     * @see LdapServerAdapter#stop(LdapServer, StudioProgressMonitor)
      */
     public void stop( LdapServer server, StudioProgressMonitor monitor ) throws Exception
     {
@@ -356,11 +476,15 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Where We Keep the Engine JAR ──────────────────────────────────────────
+    // The service JAR lives in the plugin's OSGi state location under "libs/";
+    // this is per-workspace and per-plugin, so different workspaces don't share.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the path to the server libraries folder.
+     * Returns the path to the folder where the ApacheDS service JAR is stored.
+     * The folder is inside the plugin's OSGi state location (workspace-specific).
      *
-     * @return
-     *      the path to the server libraries folder
+     * @return  the absolute path to the {@code libs/} folder.
      */
     private static IPath getServerLibrariesFolder()
     {
@@ -368,17 +492,21 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Read the Ship's Current Configuration ─────────────────────────────────
+    // We find the config.ldif file in the server's conf/ folder and parse it
+    // through LoadConfigurationRunnable.readConfiguration().  This is called
+    // both during add() (to extract the default config) and by other classes
+    // (e.g. CreateConnectionAction) that need to query port numbers.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-    * Gets the server configuration.
-    *
-    * @param server
-    *      the server
-    * @return
-    *      the associated server configuration
-     * @throws Exception 
-    * @throws ServerXmlIOException 
-    * @throws FileNotFoundException 
-    */
+     * Reads and parses the server's {@code config.ldif} file.
+     * The file lives at {@code <serverFolder>/conf/ou=config.ldif}.
+     *
+     * @param server  the server whose configuration to read.
+     * @return        the parsed {@link Configuration} object.
+     * @throws Exception           if reading or parsing fails.
+     * @throws FileNotFoundException  if {@code config.ldif} does not exist.
+     */
     public static Configuration getServerConfiguration( LdapServer server ) throws Exception
     {
         File configFile = LdapServersManager.getServerFolder( server ).append( CONF )
@@ -387,15 +515,21 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Which Port to Poll While Waiting for the Server to Start ─────────────
+    // We pick the first enabled protocol's port in priority order:
+    // LDAP > LDAPS > Kerberos > DNS > NTP > ChangePassword.
+    // The startup watchdog connects to this port once per second until it gets
+    // a response, which tells us the server is ready.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the testing port.
+     * Returns the port number the startup watchdog should probe.
+     * We return the port of the first enabled protocol in this order:
+     * LDAP, LDAPS, Kerberos, DNS, NTP, ChangePassword.
+     * Returns {@code 0} if no protocol is enabled.
      *
-     * @param configuration
-     *      the 1.5.6 server configuration
-     * @return
-     *      the testing port
-     * @throws Exception 
-     * @throws ServerXmlIOException 
+     * @param server  the server.
+     * @return        the port to probe, or {@code 0}.
+     * @throws Exception  if reading the configuration fails.
      */
     private int getTestingPort( LdapServer server ) throws Exception
     {
@@ -438,12 +572,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Is the Main LDAP Port Open? ───────────────────────────────────────────
+    // Looks up the "ldap" transport by ID and checks its enabled flag.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the LDAP Server is enabled.
+     * Returns {@code true} if the LDAP transport is enabled in the configuration.
      *
-     * @param configuration the configuration
-     * @return <code>true</code> if the LDAP Server is enabled,
-     *         <code>false</code> if not.
+     * @param configuration  the parsed config bean.
+     * @return               {@code true} if the LDAP server transport is enabled.
      */
     public static boolean isEnableLdap( ConfigBean configuration )
     {
@@ -458,12 +594,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Is the LDAPS Port Open? ───────────────────────────────────────────────
+    // Looks up the "ldaps" transport by ID and checks its enabled flag.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the LDAPS Server is enabled.
+     * Returns {@code true} if the LDAPS transport is enabled in the configuration.
      *
-     * @param configuration the configuration
-     * @return <code>true</code> if the LDAPS Server is enabled,
-     *         <code>false</code> if not.
+     * @param configuration  the parsed config bean.
+     * @return               {@code true} if the LDAPS server transport is enabled.
      */
     public static boolean isEnableLdaps( ConfigBean configuration )
     {
@@ -478,11 +616,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Find the LDAP Transport Bean ─────────────────────────────────────────
+    // Delegates to the ID-based lookup with the "ldap" ID.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the LDAP Server transport bean.
+     * Returns the {@link TransportBean} for the plain LDAP transport (ID "ldap").
      *
-     * @param configuration the configuration
-     * @return the LDAP Server transport bean.
+     * @param configuration  the parsed config bean.
+     * @return               the LDAP transport bean, or {@code null} if not found.
      */
     private static TransportBean getLdapServerTransportBean( ConfigBean configuration )
     {
@@ -490,11 +631,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Find the LDAPS Transport Bean ────────────────────────────────────────
+    // Delegates to the ID-based lookup with the "ldaps" ID.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the LDAPS Server transport bean.
+     * Returns the {@link TransportBean} for the LDAPS transport (ID "ldaps").
      *
-     * @param configuration the configuration
-     * @return the LDAPS Server transport bean.
+     * @param configuration  the parsed config bean.
+     * @return               the LDAPS transport bean, or {@code null} if not found.
      */
     private static TransportBean getLdapsServerTransportBean( ConfigBean configuration )
     {
@@ -502,12 +646,17 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Look Up a Transport Bean by ID ────────────────────────────────────────
+    // Walks the LdapServerBean's transport array looking for the one whose
+    // transportId matches the requested ID.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the corresponding LDAP Server transport bean.
+     * Returns the {@link TransportBean} whose {@code transportId} equals {@code id},
+     * or {@code null} if not found.
      *
-     * @param configuration the configuration
-     * @param id the id
-     * @return the corresponding LDAP Server transport bean.
+     * @param configuration  the parsed config bean.
+     * @param id             the transport ID to find, e.g. {@code "ldap"} or {@code "ldaps"}.
+     * @return               the matching transport bean, or {@code null}.
      */
     private static TransportBean getLdapServerTransportBean( ConfigBean configuration, String id )
     {
@@ -538,12 +687,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Is the Kerberos Port Open? ────────────────────────────────────────────
+    // Checks the KdcServerBean's enabled flag if present.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the Kerberos Server is enabled.
+     * Returns {@code true} if the Kerberos server is enabled.
      *
-     * @param configuration the configuration
-     * @return <code>true</code> if the Kerberos Server is enabled,
-     *         <code>false</code> if not.
+     * @param configuration  the parsed config bean.
+     * @return               {@code true} if the KDC server is enabled.
      */
     public static boolean isEnableKerberos( ConfigBean configuration )
     {
@@ -563,12 +714,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Is the DNS Port Open? ─────────────────────────────────────────────────
+    // Checks the DnsServerBean's enabled flag if present.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the DNS Server is enabled.
+     * Returns {@code true} if the DNS server is enabled.
      *
-     * @param configuration the configuration
-     * @return <code>true</code> if the DNS Server is enabled,
-     *         <code>false</code> if not.
+     * @param configuration  the parsed config bean.
+     * @return               {@code true} if the DNS server is enabled.
      */
     public static boolean isEnableDns( ConfigBean configuration )
     {
@@ -588,12 +741,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Is the NTP Port Open? ─────────────────────────────────────────────────
+    // Checks the NtpServerBean's enabled flag if present.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the NTP Server is enabled.
+     * Returns {@code true} if the NTP server is enabled.
      *
-     * @param configuration the configuration
-     * @return <code>true</code> if the NTP Server is enabled,
-     *         <code>false</code> if not.
+     * @param configuration  the parsed config bean.
+     * @return               {@code true} if the NTP server is enabled.
      */
     public static boolean isEnableNtp( ConfigBean configuration )
     {
@@ -613,12 +768,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Is the Change Password Port Open? ─────────────────────────────────────
+    // Checks the ChangePasswordServerBean's enabled flag if present.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the Change Password Server is enabled.
+     * Returns {@code true} if the ChangePassword server is enabled.
      *
-     * @param configuration the configuration
-     * @return <code>true</code> if the Change Password Server is enabled,
-     *         <code>false</code> if not.
+     * @param configuration  the parsed config bean.
+     * @return               {@code true} if the ChangePassword server is enabled.
      */
     public static boolean isEnableChangePassword( ConfigBean configuration )
     {
@@ -638,11 +795,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Get the LDAP Port Number ──────────────────────────────────────────────
+    // Reads the system port number from the LDAP transport bean.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the LDAP port.
+     * Returns the port number of the LDAP transport, or {@code 0} if not configured.
      *
-     * @param configuration the configuration
-     * @return the LDAP port
+     * @param configuration  the parsed config bean.
+     * @return               the LDAP port.
      */
     public static int getLdapPort( ConfigBean configuration )
     {
@@ -657,11 +817,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Get the LDAPS Port Number ─────────────────────────────────────────────
+    // Reads the system port number from the LDAPS transport bean.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the LDAPS port.
+     * Returns the port number of the LDAPS transport, or {@code 0} if not configured.
      *
-     * @param configuration the configuration
-     * @return the LDAPS port
+     * @param configuration  the parsed config bean.
+     * @return               the LDAPS port.
      */
     public static int getLdapsPort( ConfigBean configuration )
     {
@@ -676,11 +839,15 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Get the Kerberos Port Number ──────────────────────────────────────────
+    // Walks the KDC transport list looking for the tcp or udp transport.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Kerberos port.
+     * Returns the Kerberos (KDC) port number, or {@code 0} if not configured.
+     * Looks for a transport whose ID is {@code "tcp"} or {@code "udp"}.
      *
-     * @param configuration the configuration
-     * @return the Kerberos port
+     * @param configuration  the parsed config bean.
+     * @return               the Kerberos port.
      */
     public static int getKerberosPort( ConfigBean configuration )
     {
@@ -713,11 +880,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Get the DNS Port Number ───────────────────────────────────────────────
+    // Walks the DNS transport list for tcp or udp.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the DNS port.
+     * Returns the DNS server port number, or {@code 0} if not configured.
      *
-     * @param configuration the configuration
-     * @return the DNS port
+     * @param configuration  the parsed config bean.
+     * @return               the DNS port.
      */
     public static int getDnsPort( ConfigBean configuration )
     {
@@ -750,11 +920,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Get the NTP Port Number ───────────────────────────────────────────────
+    // Walks the NTP transport list for tcp or udp.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the NTP port.
+     * Returns the NTP server port number, or {@code 0} if not configured.
      *
-     * @param configuration the configuration
-     * @return the NTP port
+     * @param configuration  the parsed config bean.
+     * @return               the NTP port.
      */
     public static int getNtpPort( ConfigBean configuration )
     {
@@ -787,11 +960,14 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Get the Change Password Port Number ───────────────────────────────────
+    // Walks the ChangePassword transport list for tcp or udp.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Change Password port.
+     * Returns the ChangePassword server port number, or {@code 0} if not configured.
      *
-     * @param configuration the configuration
-     * @return the Change Password port
+     * @param configuration  the parsed config bean.
+     * @return               the ChangePassword port.
      */
     public static int getChangePasswordPort( ConfigBean configuration )
     {
@@ -824,8 +1000,23 @@ public class ApacheDS200LdapServerAdapter implements LdapServerAdapter
     }
 
 
+    // ── Pre-Flight Checklist — Are All the Ports Free? ────────────────────────
+    // For each enabled protocol we check whether its configured port is already
+    // in use by another process.  Any collision is added to the "already in use"
+    // list which the caller displays to the operator before aborting the launch.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Checks all configured protocol ports for availability before starting the server.
+     * For each enabled protocol (LDAP, LDAPS, Kerberos, DNS, NTP, ChangePassword)
+     * we probe the port using {@link AvailablePortFinder}.  Any port that is
+     * already in use is added to the returned list so the caller can warn the
+     * operator before aborting the launch attempt.
+     *
+     * @param server  the server to check.
+     * @return        an array of human-readable port-conflict descriptions;
+     *                empty if all ports are free.
+     * @throws Exception  if reading the server configuration fails.
+     * @see LdapServerAdapter#checkPortsBeforeServerStart(LdapServer)
      */
     public String[] checkPortsBeforeServerStart( LdapServer server ) throws Exception
     {

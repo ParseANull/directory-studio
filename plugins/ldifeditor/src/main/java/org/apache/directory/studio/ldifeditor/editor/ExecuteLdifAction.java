@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor;
@@ -31,8 +31,20 @@ import org.eclipse.jface.action.Action;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 
+// ── CLASS: ExecuteLdifAction — REBEL OPERATOR SENDS THE COMMUNIQUÉ ───────────
+// A Rebel operator finishes composing the LDIF transmission, selects a relay
+// station (the LDAP connection), and hits the big red button to send it.
+// ExecuteLdifAction is that big red button: if there is no active connection
+// the operator is prompted to pick one, then the full document text is handed
+// to ExecuteLdifRunnable which ships it to the directory server.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This Action executes LDIF code.
+ * Eclipse {@link Action} that executes the LDIF content of the active
+ * {@link LdifEditor} against an LDAP directory.
+ * If the editor has no connection the action prompts the user to select one.
+ * Execution is dispatched asynchronously via {@link ExecuteLdifRunnable} and
+ * {@link StudioBrowserJob}.
+ * Think of this as the Rebel operator pressing the big red "transmit" button.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -42,11 +54,13 @@ public class ExecuteLdifAction extends Action
     private LdifEditor editor;
 
 
+    // ── CONSTRUCT THE EXECUTE ACTION ──────────────────────────────────────────
+    // The operator loads up the action with its label, icon, and tooltip —
+    // and keeps a reference to the editor so it knows where to get the LDIF.
     /**
-     * Creates a new instance of ExecuteLdifAction.
+     * Creates a new {@code ExecuteLdifAction} bound to {@code editor}.
      *
-     * @param editor
-     *      the attached editor
+     * @param editor  the LDIF editor whose content will be executed
      */
     public ExecuteLdifAction( LdifEditor editor )
     {
@@ -57,8 +71,16 @@ public class ExecuteLdifAction extends Action
     }
 
 
+    // ── EXECUTE THE LDIF DOCUMENT ─────────────────────────────────────────────
+    // The operator checks whether there is an active relay station.  If not
+    // they open the connection-picker dialog.  Once a connection is confirmed
+    // the LDIF text is packaged into a runnable and shipped off as a background job.
     /**
      * {@inheritDoc}
+     *
+     * <p>If the editor has no connection, opens a {@link SelectBrowserConnectionDialog}
+     * and binds the selection.  Then packages the editor's LDIF text into an
+     * {@link ExecuteLdifRunnable} and executes it via {@link StudioBrowserJob}.</p>
      */
     public void run()
     {
@@ -102,8 +124,12 @@ public class ExecuteLdifAction extends Action
     }
 
 
+    // ── CHECK IF ENABLED ──────────────────────────────────────────────────────
+    // The big red button is only live when the editor is open.
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns {@code true} when an editor is bound.</p>
      */
     public boolean isEnabled()
     {

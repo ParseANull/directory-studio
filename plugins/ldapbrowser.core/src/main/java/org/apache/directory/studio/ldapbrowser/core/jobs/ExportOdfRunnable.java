@@ -51,8 +51,18 @@ import org.odftoolkit.simple.table.Row;
 import org.odftoolkit.simple.table.Table;
 
 
+// ── CLASS: ExportOdfRunnable — CLONE TROOPER FILING ODF SPREADSHEET DOSSIERS ─
+// Order 66 in spreadsheet form: collect up to MAX_COUNT_LIMIT (65 000) LDAP
+// entries and write each one as a row in an ODF spreadsheet.  Column headers
+// are discovered dynamically as new attributes appear, so the sheet grows to
+// accommodate every attribute encountered — Lando running Cloud City records.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to export directory content to an ODF file.
+ * Runnable to export directory content to an ODF spreadsheet file.
+ *
+ * <p>Think of this as a clone trooper executing Order 66 to harvest entries and
+ * file them in an Open Document Format spreadsheet — one entry per row, one
+ * attribute per column, headers populated on the fly as new attributes appear.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -77,9 +87,12 @@ public class ExportOdfRunnable implements StudioConnectionRunnableWithProgress
     private boolean exportDn;
 
 
+    // ── Clone Trooper Receives ODF Mission Orders ─────────────────────────────────
+    // Stores the target ODF filename, browser connection, search parameters,
+    // and the flag that controls whether the DN column is included.
     /**
      * Creates a new instance of ExportOdfRunnable.
-     * 
+     *
      * @param exportOdfFilename the ODF filename
      * @param browserConnection the browser connection
      * @param searchParameter the search parameter
@@ -95,6 +108,7 @@ public class ExportOdfRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Reports The LDAP Connection This Mission Uses ───────────────
     /**
      * {@inheritDoc}
      */
@@ -105,6 +119,7 @@ public class ExportOdfRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Reports The Human-Readable ODF Mission Name ─────────────────
     /**
      * {@inheritDoc}
      */
@@ -114,6 +129,7 @@ public class ExportOdfRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Locks The Target ODF File Against Concurrent Missions ──────
     /**
      * {@inheritDoc}
      */
@@ -124,6 +140,7 @@ public class ExportOdfRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Returns The Error Message If The ODF Mission Fails ─────────
     /**
      * {@inheritDoc}
      */
@@ -133,6 +150,10 @@ public class ExportOdfRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Executes Order 66: Build The ODF Spreadsheet ───────────────
+    // Creates a SpreadsheetDocument, populates a header row and data rows via
+    // exportToOdf(), enforces MAX_COUNT_LIMIT rows, then saves to disk.
+    // Errors are forwarded to the progress monitor.
     /**
      * {@inheritDoc}
      */
@@ -191,9 +212,13 @@ public class ExportOdfRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Streams Each LDAP Entry Into The ODF Table ─────────────────
+    // Iterates the LdifEnumeration and transforms each LdifContentRecord into an
+    // ODF table row via recordToOdfRow().  Size-limit LDAP codes are tolerated.
+    // Progress is reported after each row so the UI stays responsive.
     /**
      * Exports to ODF.
-     * 
+     *
      * @param browserConnection the browser connection
      * @param searchParameter the search parameter
      * @param table the table
@@ -204,8 +229,7 @@ public class ExportOdfRunnable implements StudioConnectionRunnableWithProgress
      * @param valueDelimiter the value delimiter
      * @param binaryEncoding the binary encoding
      * @param exportDn the export dn
-     * 
-     * @throws IOException Signals that an I/O exception has occurred.
+     * @throws IOException if an I/O error occurs
      */
     private static void exportToOdf( IBrowserConnection browserConnection, SearchParameter searchParameter,
         Table table, Row headerRow, int count, StudioProgressMonitor monitor,
@@ -248,17 +272,22 @@ public class ExportOdfRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Writes One Entry As An ODF Spreadsheet Row ─────────────────
+    // Lando runs Cloud City: each new attribute gets a new column header added
+    // dynamically.  Values are looked up by OID from the attribute map; postal
+    // address values are decoded from their $-delimited LDAP format.
+    // The DN is written in column 0 when exportDn is true.
     /**
-     * Transforms an LDIF record to an OdfTableRow.
-     * 
+     * Transforms an LDIF record to an ODF table row.
+     *
      * @param browserConnection the browser connection
      * @param record the record
-     * @param table the table
+     * @param table the ODF table
      * @param headerRow the header row
      * @param headerRowAttributeNameMap the header row attribute name map
      * @param valueDelimiter the value delimiter
      * @param binaryEncoding the binary encoding
-     * @param exportDn the export dn
+     * @param exportDn the export dn flag
      */
     private static void recordToOdfRow( IBrowserConnection browserConnection, LdifContentRecord record,
         Table table, Row headerRow, Map<String, Short> headerRowAttributeNameMap,

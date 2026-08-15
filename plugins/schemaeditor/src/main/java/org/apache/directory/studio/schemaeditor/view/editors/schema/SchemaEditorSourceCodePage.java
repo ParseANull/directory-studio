@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.schemaeditor.view.editors.schema;
@@ -47,9 +47,25 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.ScrolledForm;
 
 
+// ── CLASS: SchemaEditorSourceCodePage — OBI-WAN'S DEATH STAR HOLOGRAM ─────────
+// Aboard the Millennium Falcon, R2-D2 projects Obi-Wan's holographic recording
+// of the Death Star's technical schematics — the raw engineering blueprints of
+// the entire station, rendered in read-only blue light. Obi-Wan can only study
+// them; he cannot reach in and edit the hologram.
+// This page is that hologram: it displays the entire schema's raw OpenLDAP
+// source code in a read-only syntax-highlighted text viewer, automatically
+// regenerated whenever any schema element changes.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is the Source Code Page of the Schema Editor.
- * 
+ * The Source Code page inside the {@link SchemaEditor}.
+ * It displays the entire schema as raw OpenLDAP schema syntax in a read-only
+ * {@link SchemaSourceViewer}. Unlike the object class source code page, this page
+ * is view-only — the user cannot edit schema source here directly.
+ * The page registers a {@link SchemaHandlerListener} so it regenerates the source
+ * text whenever any attribute type, object class, syntax, or matching rule in the
+ * schema changes.
+ * Think of it as Obi-Wan's Death Star hologram: the full technical blueprints
+ * rendered for study, but you can only look — not touch.
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SchemaEditorSourceCodePage extends FormPage
@@ -178,11 +194,20 @@ public class SchemaEditorSourceCodePage extends FormPage
     };
 
 
+    // ── R2 Cues Up the Hologram Projector ─────────────────────────────────────
+    // R2 loads the hologram recording into his projector, connects to the
+    // live ship's sensor feed, and gets ready to display the schematics as
+    // soon as Obi-Wan asks for them.
+    // We do the same: register the page with the parent editor, set the tab
+    // label from the NLS bundle, and hook into the schema handler so we refresh
+    // when the live schema changes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SchemaFormEditorSourceCodePage.
-     * 
-     * @param editor
-     *      the associated editor
+     * Creates the Source Code page and registers it with the parent editor and schema handler.
+     * We attach a {@link SchemaHandlerListener} here so the page regenerates its source
+     * text automatically whenever any schema element changes.
+     *
+     * @param editor  the parent {@link SchemaEditor} that owns this page
      */
     public SchemaEditorSourceCodePage( FormEditor editor )
     {
@@ -191,8 +216,20 @@ public class SchemaEditorSourceCodePage extends FormPage
     }
 
 
+    // ── R2 Projects the Hologram ──────────────────────────────────────────────
+    // R2 activates the projector: the hologram blooms to life in the cabin —
+    // a read-only rendering of the Death Star's full technical schematics
+    // in a monospace font, with scroll bars so Obi-Wan can pan across the design.
+    // We build the source code viewer here: monospace font, read-only mode,
+    // and an initial population of the schema's OpenLDAP source text.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the Source Code page UI: a full-page read-only {@link SchemaSourceViewer}
+     * in monospace font, pre-populated with the schema's full OpenLDAP source representation.
+     *
+     * @param managedForm  the Eclipse Forms managed form hosting this page
      */
     protected void createFormContent( IManagedForm managedForm )
     {
@@ -229,8 +266,17 @@ public class SchemaEditorSourceCodePage extends FormPage
     }
 
 
+    // ── R2 Regenerates the Hologram From the Current Plans ────────────────────
+    // When mission intelligence updates — a new defense system added, an old
+    // one removed — R2 regenerates the hologram from the latest plans so
+    // Obi-Wan is always studying current blueprints, not stale ones.
+    // We export the schema to OpenLDAP format and push it into the document.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Fills in the fields of the User Interface.
+     * Populates the source code viewer from the current schema state.
+     * We export the entire schema to OpenLDAP schema format using
+     * {@link OpenLdapSchemaFileExporter#toSourceCode} and set the result as the
+     * viewer's document text.
      */
     private void fillInUiFields()
     {
@@ -238,8 +284,17 @@ public class SchemaEditorSourceCodePage extends FormPage
     }
 
 
+    // ── R2 Powers Down the Projector ─────────────────────────────────────────
+    // When the Falcon lands and Obi-Wan no longer needs the hologram, R2
+    // powers down the projector and disconnects from the ship's sensor feed —
+    // no lingering connections, no memory of the blueprints.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Cleans up this page when it is disposed.
+     * We remove our {@link SchemaHandlerListener} from the schema handler to
+     * prevent memory leaks and stale callbacks after the editor tab closes.
      */
     public void dispose()
     {
@@ -249,8 +304,15 @@ public class SchemaEditorSourceCodePage extends FormPage
     }
 
 
+    // ── R2 Updates the Hologram When Intelligence Changes ─────────────────────
+    // When new Imperial intelligence comes in, R2 waits until the projector
+    // is fully initialized before refreshing the hologram — no point updating
+    // before the display is ready to receive new data.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes the UI.
+     * Refreshes the source code text from the current schema state.
+     * We guard with the {@code initialized} flag so we don't attempt to write
+     * to the source viewer before it has been fully set up by {@link #createFormContent}.
      */
     public void refreshUI()
     {

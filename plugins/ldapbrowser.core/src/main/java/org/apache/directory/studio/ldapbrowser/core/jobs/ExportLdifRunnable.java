@@ -61,8 +61,19 @@ import org.apache.directory.studio.ldifparser.model.lines.LdifSepLine;
 import org.apache.directory.studio.ldifparser.model.lines.LdifVersionLine;
 
 
+// ── CLASS: ExportLdifRunnable — CLONE TROOPER WRITING LDIF INTELLIGENCE REPORTS
+// Order 66: march through every matching LDAP entry and serialise each one as
+// a standards-compliant LDIF content record.  Values are attribute-sorted so
+// the output is deterministic; an optional version header line is prepended.
+// Pagination (LDAP Paged Results control) is handled transparently.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
  * Runnable to export directory content to an LDIF file.
+ *
+ * <p>Think of this as a clone trooper executing Order 66 to collect every
+ * matching entry and write it to a standard LDIF intelligence report —
+ * attributes sorted, values base-64 encoded where needed, pagination
+ * followed automatically until the last page.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -78,9 +89,12 @@ public class ExportLdifRunnable implements StudioConnectionRunnableWithProgress
     private SearchParameter searchParameter;
 
 
+    // ── Clone Trooper Receives LDIF Mission Orders ────────────────────────────────
+    // Stores the target LDIF filename, browser connection, and search parameters
+    // that define which entries to collect during Order 66 execution.
     /**
      * Creates a new instance of ExportLdifRunnable.
-     * 
+     *
      * @param exportLdifFilename the filename of the LDIF file
      * @param browserConnection the browser connection
      * @param searchParameter the search parameter
@@ -94,6 +108,8 @@ public class ExportLdifRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Reports The LDAP Connection This Mission Uses ───────────────
+    // Returns the single connection required by the job scheduler.
     /**
      * {@inheritDoc}
      */
@@ -104,6 +120,8 @@ public class ExportLdifRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Reports The Human-Readable LDIF Mission Name ────────────────
+    // Returns the localised job name shown in the Eclipse progress dialog.
     /**
      * {@inheritDoc}
      */
@@ -113,6 +131,8 @@ public class ExportLdifRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Locks The Target LDIF File Against Concurrent Missions ─────
+    // A SHA hash of the filename combined with the connection URL forms the lock.
     /**
      * {@inheritDoc}
      */
@@ -124,6 +144,8 @@ public class ExportLdifRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Returns The Error Message If The LDIF Mission Fails ────────
+    // Han shoots first: if the mission fails, return a localised error message.
     /**
      * {@inheritDoc}
      */
@@ -133,6 +155,9 @@ public class ExportLdifRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Executes Order 66: Open File And Export All Entries ────────
+    // Opens the LDIF file for writing, calls export() to stream matching entries,
+    // then closes all file streams.  Errors are forwarded to the progress monitor.
     /**
      * {@inheritDoc}
      */
@@ -164,6 +189,11 @@ public class ExportLdifRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Streams Each LDAP Entry Into The LDIF File ─────────────────
+    // Optionally writes a "version: 1" header, then iterates the LdifEnumeration,
+    // converting each LdifContentRecord to a sorted DummyEntry and back to LDIF.
+    // Size-limit LDAP codes are tolerated; other LDAP errors propagate.
+    // Progress is reported after each record so the UI stays responsive.
     private static void export( IBrowserConnection browserConnection, SearchParameter searchParameter,
         BufferedWriter bufferedWriter, int count, StudioProgressMonitor monitor ) throws IOException
     {
@@ -231,6 +261,10 @@ public class ExportLdifRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Launches The LDAP Search And Returns A LdifEnumeration ─────
+    // Delegates to SearchRunnable.search() and wraps the raw
+    // StudioSearchResultEnumeration in a DefaultLdifEnumeration that handles
+    // paged-results continuations automatically.
     static LdifEnumeration search( IBrowserConnection browserConnection, SearchParameter parameter,
         StudioProgressMonitor monitor )
     {

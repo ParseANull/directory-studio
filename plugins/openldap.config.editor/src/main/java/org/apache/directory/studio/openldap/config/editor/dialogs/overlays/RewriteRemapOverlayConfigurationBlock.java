@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs.overlays;
 
@@ -44,9 +44,18 @@ import org.apache.directory.studio.openldap.config.editor.dialogs.RwmMappingDial
 import org.apache.directory.studio.openldap.config.model.overlay.OlcRwmConfig;
 
 
+// Like the Imperial construction crews assembling the rewrite-and-remap
+// translation module onto the second Death Star — wiring up the mappings
+// table where each row redirects one DN or attribute path to another, and
+// installing the Add, Edit, and Delete controls so the operator can maintain
+// the routing table at will — we build the RewriteRemap overlay configuration
+// block that governs how the RWM overlay rewrites directory operations.
 /**
- * This class implements a block for the configuration of the Audit Log overlay.
- * 
+ * This class implements the configuration block for the Rewrite/Remap (RWM)
+ * overlay. We present a table of mapping strings with Add, Edit, and Delete
+ * buttons, and we read/write that list to and from the {@link OlcRwmConfig}
+ * model object on refresh and save.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class RewriteRemapOverlayConfigurationBlock extends AbstractOverlayDialogConfigurationBlock<OlcRwmConfig>
@@ -108,6 +117,17 @@ public class RewriteRemapOverlayConfigurationBlock extends AbstractOverlayDialog
     };
 
 
+    // Like the construction crew initializing the RWM routing module with
+    // a fresh empty mapping table — no translations yet, everything passes
+    // through unchanged until the operator adds entries — we create the block
+    // with a new empty OlcRwmConfig and an empty local mappings list.
+    /**
+     * Creates a new RewriteRemapOverlayConfigurationBlock with a fresh, empty
+     * {@link OlcRwmConfig} as the backing model and an empty mappings list.
+     *
+     * @param dialog the parent OverlayDialog that hosts this block
+     * @param connection the browser connection used by child dialogs for schema lookups
+     */
     public RewriteRemapOverlayConfigurationBlock( OverlayDialog dialog, IBrowserConnection connection )
     {
         super( dialog, connection );
@@ -115,11 +135,23 @@ public class RewriteRemapOverlayConfigurationBlock extends AbstractOverlayDialog
     }
 
 
+    // Like the crew installing a pre-configured RWM module that already has
+    // a routing table from a previous deployment, we accept an existing
+    // OlcRwmConfig and store it — falling back to a fresh empty one if null.
+    /**
+     * Creates a new RewriteRemapOverlayConfigurationBlock backed by the given
+     * {@link OlcRwmConfig}. If {@code overlay} is {@code null} we create a
+     * fresh default config instead.
+     *
+     * @param dialog the parent OverlayDialog that hosts this block
+     * @param connection the browser connection used by child dialogs for schema lookups
+     * @param overlay the existing RWM overlay config to edit, or {@code null}
+     */
     public RewriteRemapOverlayConfigurationBlock( OverlayDialog dialog, IBrowserConnection connection,
         OlcRwmConfig overlay )
     {
         super( dialog, connection );
-        
+
         if ( overlay == null )
         {
             setOverlay( new OlcRwmConfig() );
@@ -131,8 +163,16 @@ public class RewriteRemapOverlayConfigurationBlock extends AbstractOverlayDialog
     }
 
 
+    // Like the construction crew building the RWM module's control panel —
+    // a scrollable mappings roster backed by a TableViewer and three action
+    // buttons so the operator can add new translations, edit existing ones,
+    // or remove ones that are no longer needed — we create the block content.
     /**
-     * {@inheritDoc}
+     * Creates the block content area with a "Mappings:" label, a
+     * {@link TableViewer} showing the current mapping strings, and Add,
+     * Edit, and Delete buttons wired to their respective listeners.
+     *
+     * @param parent the parent composite to attach our content to
      */
     public void createBlockContent( Composite parent )
     {
@@ -171,9 +211,14 @@ public class RewriteRemapOverlayConfigurationBlock extends AbstractOverlayDialog
     }
 
 
+    // Like the crew operating the module's routing-table editor — pulling
+    // up the selected mapping entry in an RwmMappingDialog, letting the
+    // operator change the translation rule, and then splicing the updated
+    // value back into the same position in the list — we perform the edit.
     /**
-     * Action launched when the edit mapping button is clicked, or
-     * when the value sorts table viewer is double-clicked.
+     * Opens an {@link RwmMappingDialog} pre-populated with the currently
+     * selected mapping string. If the dialog is confirmed, replaces the old
+     * entry in the list with the new value and refreshes the table.
      */
     private void editMappingButtonAction()
     {
@@ -199,8 +244,14 @@ public class RewriteRemapOverlayConfigurationBlock extends AbstractOverlayDialog
     }
 
 
+    // Like the crew pulling the current routing table out of the station's
+    // configuration record and loading every translation rule into the
+    // control panel's mappings list so the operator can see what's active,
+    // we copy each overlay mapping value into our local list.
     /**
-     * {@inheritDoc}
+     * Refreshes the mappings list from the current {@link OlcRwmConfig},
+     * clearing the local list and repopulating it from the overlay's
+     * {@code olcRwmMap} values, then refreshing the table viewer.
      */
     public void refresh()
     {
@@ -223,8 +274,14 @@ public class RewriteRemapOverlayConfigurationBlock extends AbstractOverlayDialog
     }
 
 
+    // Like the crew writing the updated routing table back into the station's
+    // configuration record — first clearing the old entries, then adding each
+    // current mapping in order so the RWM module applies the translations in
+    // the sequence the operator intended — we save all mappings to the overlay.
     /**
-     * {@inheritDoc}
+     * Saves the current mappings list back into the {@link OlcRwmConfig},
+     * clearing any previous {@code olcRwmMap} values and adding each entry
+     * from our local list in order.
      */
     public void save()
     {

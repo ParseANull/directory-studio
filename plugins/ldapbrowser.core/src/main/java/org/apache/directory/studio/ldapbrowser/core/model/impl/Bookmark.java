@@ -33,8 +33,25 @@ import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 import org.eclipse.search.ui.ISearchPageScoreComputer;
 
 
+// ── CLASS: Bookmark — LANDO'S NAVICOMP WAYPOINT FOR A FAVOURITE ENTRY ────────
+// Lando keeps a list of waypoints in the Cloud City navicomp — named locations
+// he wants to jump back to quickly.  Each waypoint has a DN (the coordinates)
+// and a friendly name ("Bespin Admin Office") so he doesn't need to remember
+// the raw address.  When coordinates change, Lando updates the waypoint and
+// broadcasts the update to anyone who cares.
+// Bookmark is that waypoint: a connection + DN + name tuple with a live
+// DelegateEntry so the rest of the UI can treat the bookmarked DN as a
+// browseable entry.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Default implementation if IBookmark.
+ * Default implementation of {@link IBookmark}.
+ * Pairs a {@link BookmarkParameter} (DN + name) with a {@link DelegateEntry}
+ * so the bookmarked DN can be treated as a browseable entry by the UI.
+ * Any DN or name change fires a {@link BookmarkUpdateEvent} through
+ * {@link EventRegistry}.
+ *
+ * <p>Think of this as Lando's navicomp waypoint — a named entry in the
+ * favourites list that you can jump back to at any time.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -54,19 +71,22 @@ public class Bookmark implements IBookmark
     private DelegateEntry bookmarkEntry;
 
 
+    // ── No-Arg Constructor For Serialisation ─────────────────────────────────────
     /**
      * Creates a new instance of Bookmark.
+     * For serialisation use only — fields will be set by the deserialiser.
      */
     protected Bookmark()
     {
     }
 
 
+    // ── Lando Adds A Waypoint From An Existing Parameter Bean ────────────────────
     /**
      * Creates a new instance of Bookmark.
      *
-     * @param connection the connection
-     * @param bookmarkParameter the bookmark parameter
+     * @param connection the browser connection this bookmark belongs to
+     * @param bookmarkParameter the bookmark parameter carrying the DN and name
      */
     public Bookmark( IBrowserConnection connection, BookmarkParameter bookmarkParameter )
     {
@@ -76,12 +96,13 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Lando Adds A Waypoint From Raw DN And Name ────────────────────────────────
     /**
      * Creates a new instance of Bookmark.
      *
-     * @param connection the connection
+     * @param connection the browser connection this bookmark belongs to
      * @param dn the target Dn
-     * @param name the symbolic name
+     * @param name the symbolic name shown in the bookmarks view
      */
     public Bookmark( IBrowserConnection connection, Dn dn, String name )
     {
@@ -91,6 +112,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Lando Reads The Waypoint's DN Coordinates ─────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -100,6 +122,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Lando Updates The Waypoint's DN And Notifies Listeners ───────────────────
     /**
      * {@inheritDoc}
      */
@@ -110,6 +133,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Lando Reads The Waypoint's Friendly Name ──────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -119,6 +143,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Lando Renames The Waypoint And Notifies Listeners ────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -129,6 +154,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── R2-D2 Adapts The Bookmark To Any Requested Interface ─────────────────────
     /**
      * {@inheritDoc}
      */
@@ -161,6 +187,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Obi-Wan Senses A Bookmark Change And Notifies The Force ──────────────────
     private void fireBookmarkUpdated( BookmarkUpdateEvent.Detail detail )
     {
         if ( this.getName() != null && !"".equals( this.getName() ) ) { //$NON-NLS-1$
@@ -169,6 +196,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Lando Retrieves The Full Waypoint Parameter Bean ─────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -178,6 +206,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Lando Replaces The Full Waypoint Parameter Bean ──────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -187,6 +216,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Lando Returns Which Connection Owns This Waypoint ────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -196,6 +226,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Lando Returns The Entry Proxy For The Bookmarked DN ──────────────────────
     /**
      * {@inheritDoc}
      */
@@ -205,6 +236,7 @@ public class Bookmark implements IBookmark
     }
 
 
+    // ── Waypoint Prints Its Friendly Name ────────────────────────────────────────
     /**
      * {@inheritDoc}
      */

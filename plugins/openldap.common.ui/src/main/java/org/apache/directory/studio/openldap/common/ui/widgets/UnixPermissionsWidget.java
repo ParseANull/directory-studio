@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.common.ui.widgets;
 
@@ -40,7 +40,21 @@ import org.apache.directory.studio.openldap.common.ui.dialogs.UnixPermissionsDia
 import org.apache.directory.studio.openldap.common.ui.model.UnixPermissions;
 
 
+// ── CLASS: UnixPermissionsWidget — IMPERIAL SECURITY CHECKPOINT WIDGET ────────
+// Picture the Imperial checkpoint terminal mounted at a base entrance: it
+// displays the current permission value in readable form (symbolic notation
+// and octal side by side) on a read-only screen, and offers an "Edit
+// Permissions..." button that opens the full {@link UnixPermissionsDialog}
+// where the officer can adjust the permission bits. After the dialog closes
+// with OK we update the displayed value and fire our change listeners so the
+// parent form knows the checkpoint rules have been updated.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
+ * We provide a compact Unix permissions display-and-edit widget consisting of a
+ * read-only text label (showing both symbolic and octal notation) and an
+ * "Edit Permissions..." button that opens a {@link UnixPermissionsDialog}. We
+ * extend {@link AbstractWidget} so change listeners are notified when the
+ * permission value changes.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -71,10 +85,15 @@ public class UnixPermissionsWidget extends AbstractWidget
     };
 
 
+    // ── METHOD: create(Composite) — INSTALLING THE CHECKPOINT (NO TOOLKIT) ────
+    // We delegate to the toolkit-aware overload with {@code null} so there is
+    // always one code path to maintain.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
+     * We create the widget's SWT controls inside the given parent without a
+     * {@link FormToolkit}. Delegates to {@link #create(Composite, FormToolkit)}.
      *
-     * @param parent the parent composite
+     * @param parent  the parent {@link Composite}
      */
     public void create( Composite parent )
     {
@@ -82,10 +101,17 @@ public class UnixPermissionsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: create(Composite, FormToolkit) — INSTALLING THE CHECKPOINT ────
+    // We build the composite holding the read-only permission label and the
+    // "Edit Permissions..." button. We attach the edit-button selection listener
+    // so clicking it opens the full permissions dialog.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
+     * We create all SWT controls for this widget inside the given parent,
+     * optionally adapting them with a {@link FormToolkit} for Eclipse Forms pages.
      *
-     * @param parent the parent composite
+     * @param parent   the parent {@link Composite}
+     * @param toolkit  the form toolkit, or {@code null} for plain SWT
      */
     public void create( Composite parent, FormToolkit toolkit )
     {
@@ -98,7 +124,7 @@ public class UnixPermissionsWidget extends AbstractWidget
         {
             composite = new Composite( parent, SWT.NONE );
         }
-        
+
         GridLayout compositeGridLayout = new GridLayout( 2, false );
         compositeGridLayout.marginHeight = compositeGridLayout.marginWidth = 0;
         compositeGridLayout.verticalSpacing = 0;
@@ -113,7 +139,7 @@ public class UnixPermissionsWidget extends AbstractWidget
         {
             label = BaseWidgetUtils.createText( composite, "", 1 );
         }
-        
+
         label.setEditable( false );
         label.setLayoutData( new GridData( SWT.FILL, SWT.CENTER, true, false ) );
 
@@ -126,7 +152,7 @@ public class UnixPermissionsWidget extends AbstractWidget
         {
             editButton = BaseWidgetUtils.createButton( composite, "Edit Permissions...", 1 );
         }
-        
+
         editButton.setLayoutData( new GridData( SWT.RIGHT, SWT.CENTER, false, false ) );
 
         // Adding the listeners to the UI widgets
@@ -134,10 +160,15 @@ public class UnixPermissionsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getControl — HANDING OVER THE CHECKPOINT TERMINAL HANDLE ──────
+    // We return the top-level composite so the parent layout can size and
+    // position the entire permissions widget as a unit.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the primary control associated with this widget.
+     * We return the top-level {@link Control} (a {@link Composite}) for this
+     * widget so the parent layout can size and position it.
      *
-     * @return the primary control associated with this widget.
+     * @return the primary composite control
      */
     public Control getControl()
     {
@@ -145,8 +176,13 @@ public class UnixPermissionsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: addListeners — ACTIVATING THE CHECKPOINT SENSOR ──────────────
+    // We attach our pre-built selection listener to the Edit button so it opens
+    // the {@link UnixPermissionsDialog} when clicked.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the listeners to the UI widgets.
+     * We attach our pre-built selection listener to the "Edit Permissions..."
+     * button.
      */
     private void addListeners()
     {
@@ -154,10 +190,17 @@ public class UnixPermissionsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: setValue — UPDATING THE CHECKPOINT SCREEN ────────────────────
+    // We store the new raw value, parse it into a {@link UnixPermissions}
+    // object (falling back to all-denied on parse failure), and update the
+    // label to show both the symbolic and octal representations.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the value.
+     * We set the widget's current permission value, parse it into a
+     * {@link UnixPermissions} object, and update the display label to show
+     * the symbolic and octal representations.
      *
-     * @param s the value
+     * @param s  the permission value string (decimal, octal, or symbolic)
      */
     public void setValue( String s )
     {
@@ -178,10 +221,15 @@ public class UnixPermissionsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getValue — READING THE CHECKPOINT TERMINAL VALUE ──────────────
+    // We return the raw value string that was last passed to setValue(), which
+    // may be in decimal, octal, or symbolic format.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the value.
+     * We return the raw permission value string that was last set via
+     * {@link #setValue(String)}.
      *
-     * @return the value
+     * @return the raw permission value string
      */
     public String getValue()
     {
@@ -189,8 +237,13 @@ public class UnixPermissionsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: dispose — DECOMMISSIONING THE CHECKPOINT ─────────────────────
+    // We dispose the top-level composite and all its children to free SWT
+    // resources when the parent dialog or editor is closed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes all created SWT widgets.
+     * We dispose the top-level composite (and all its child controls) if it has
+     * not already been disposed.
      */
     public void dispose()
     {

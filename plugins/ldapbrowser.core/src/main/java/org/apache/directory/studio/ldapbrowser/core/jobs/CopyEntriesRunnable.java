@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core.jobs;
@@ -56,11 +56,28 @@ import org.apache.directory.studio.ldapbrowser.core.model.ISearch;
 import org.apache.directory.studio.ldapbrowser.core.utils.ModelConverter;
 
 
+// ── CLASS: CopyEntriesRunnable — THE CLONE ARMY REPLICATES ACROSS ALL PLANETS ─
+// The Kaminoans start the cloning vats: for each Jango Fett template (source
+// entry), they create an exact copy at the target location.  If the clone
+// already exists in the barracks (entry-already-exists), they ask Mace Windu
+// how to handle the conflict (BREAK/IGNORE/OVERWRITE/RENAME).  For a full
+// subtree copy, each clone's children are also recursively cloned (SUBTREE_SCOPE).
+// This runnable copies one or more entries to a new parent DN.  It reads the
+// source entry's attributes, adjusts the RDN on the new copy, and creates the
+// entry at the destination.  A dialog handles naming conflicts.  Fires a
+// {@link BulkModificationEvent} after completion.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to copy entries asynchronously.
- * 
- * TODO: implement overwrite strategy
- * TODO: implement remember selection
+ * A background runnable that copies one or more LDAP entries to a new parent
+ * location.  The copy scope controls depth: OBJECT (top entry only), ONELEVEL
+ * (top entry + its direct children), or SUBTREE (full recursive copy).
+ * If the destination entry already exists, an
+ * {@link EntryExistsCopyStrategyDialog} asks the user how to handle the
+ * conflict (stop, ignore, overwrite attributes, or rename the copy).
+ * After copying, the parent entry's children are marked as uninitialized so the
+ * tree refreshes on next expand.  A {@link BulkModificationEvent} notifies the
+ * UI.
+ * Think of it as the Kaminoans cloning the template across the galaxy.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -79,13 +96,23 @@ public class CopyEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     private EntryExistsCopyStrategyDialog dialog;
 
 
+    // ── The Kaminoans Prepare The Cloning Vats ────────────────────────────────
+    // Stores parent, source entries, copy scope, and the conflict dialog.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of CopyEntriesRunnable.
-     * 
-     * @param parent the parent entry
-     * @param entriesToCopy the entries to copy
-     * @param scope the copy scope
-     * @param dialog the dialog
+     * Creates a new CopyEntriesRunnable.
+     *
+     * <p>For example — copy a single entry (OBJECT scope):</p>
+     * <pre>
+     *   new StudioBrowserJob(new CopyEntriesRunnable(
+     *       newParent, new IEntry[]{sourceEntry}, SearchScope.OBJECT, dialog)).execute();
+     * </pre>
+     *
+     * @param parent        the destination parent entry.
+     * @param entriesToCopy the source entries to copy.
+     * @param scope         the copy depth (OBJECT, ONELEVEL, or SUBTREE).
+     * @param dialog        the dialog to ask for conflict resolution; pass
+     *                      {@code null} to report name-conflict errors directly.
      */
     public CopyEntriesRunnable( final IEntry parent, final IEntry[] entriesToCopy, SearchScope scope,
         EntryExistsCopyStrategyDialog dialog )
@@ -97,8 +124,13 @@ public class CopyEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── One Cloning Bay, One Connection ───────────────────────────────────────
+    // All copies go to the same destination connection.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the connection for the destination parent entry.
+     *
+     * @return single-element array with the underlying {@link Connection}.
      */
     public Connection[] getConnections()
     {
@@ -107,8 +139,13 @@ public class CopyEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── The Job Name For The Progress Bar ─────────────────────────────────────
+    // "Copy entry" (singular) or "Copy entries" (plural).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the display name for this background job.
+     *
+     * @return a localised "Copy entry" or "Copy entries" label.
      */
     public String getName()
     {
@@ -117,8 +154,13 @@ public class CopyEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── Lock Parent And Sources During Cloning ────────────────────────────────
+    // Prevents the parent's children list from changing while we're adding copies.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the parent and all source entries as locked objects.
+     *
+     * @return the lock list.
      */
     public Object[] getLockedObjects()
     {
@@ -129,8 +171,13 @@ public class CopyEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── If Cloning Fails ──────────────────────────────────────────────────────
+    // Singular vs plural error message.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the error message shown if copying fails.
+     *
+     * @return a localised error string.
      */
     public String getErrorMessage()
     {
@@ -139,8 +186,17 @@ public class CopyEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── The Kaminoans Clone Each Template ─────────────────────────────────────
+    // Validates that the source and target are not the same subtree.
+    // Calls static copyEntry per source entry.
+    // After copying, marks the parent's children as uninitialized.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Copies each source entry to the parent DN.  Entries that are ancestors of
+     * the target parent are skipped with an error (you can't copy an entry into
+     * its own subtree for ONELEVEL/SUBTREE scope).
+     *
+     * @param monitor the Eclipse progress monitor.
      */
     public void run( StudioProgressMonitor monitor )
     {
@@ -184,8 +240,15 @@ public class CopyEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── The Kaminoans Announce The Clone Batch Is Ready ───────────────────────
+    // Fires a BulkModificationEvent so the tree refreshes the parent node.
+    // Individual EntryAddedEvents are not fired — there may be thousands of clones.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Fires a {@link BulkModificationEvent} to notify the browser tree that an
+     * unknown number of entries were added.
+     *
+     * @param monitor ignored.
      */
     public void runNotification( StudioProgressMonitor monitor )
     {
@@ -196,23 +259,30 @@ public class CopyEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── Copy A Single Template Entry To The Destination ───────────────────────
+    // Reads the source entry's attributes with an OBJECT-scope search.
+    // Handles referral and subentry entries by requesting the right attributes.
+    // Then delegates to copyEntryRecursive with the search result enumeration.
+    // Static so RenameEntryRunnable can call it for simulated renames.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Copy entry. If scope is SearchControls.SUBTREE_SCOPE the entry is copied
-     * recursively.
-     * 
-     * @param browserConnection the browser connection
-     * @param dnToCopy the Dn to copy
-     * @param parentDn the parent Dn
-     * @param newRdn the new Rdn, if null the Rdn of dnToCopy is used
-     * @param scope the copy scope
-     * @param numberOfCopiedEntries the number of copied entries
-     * @param dialog the dialog to ask for the copy strategy, if null the user won't be
-     *        asked instead the NameAlreadyBoundException it reported to the monitor
-     * @param dummyMonitor the dummy monitor, used for I/O that causes exceptions that 
-     *        should be handled
-     * @param monitor the real monitor
-     * 
-     * @return the number of copied entries
+     * Copies a single entry (and optionally its children, based on scope) to
+     * the destination parent.  Reads the source entry's attributes first, then
+     * calls {@link #copyEntryRecursive}.
+     * Static so that {@link RenameEntryRunnable} can reuse it for copy+delete
+     * simulated renames.
+     *
+     * @param entryToCopy          the source entry.
+     * @param parent               the destination parent.
+     * @param newRdn               the RDN for the copy; {@code null} to keep
+     *                             the source RDN.
+     * @param scope                {@link SearchControls} scope constant.
+     * @param numberOfCopiedEntries running count for progress reporting.
+     * @param dialog               the conflict dialog; {@code null} to report
+     *                             conflicts directly to the monitor.
+     * @param dummyMonitor         absorbs per-entry errors for retry.
+     * @param monitor              the real progress monitor.
+     * @return the updated count of copied entries.
      */
     static int copyEntry( IEntry entryToCopy, IEntry parent, Rdn newRdn, int scope, int numberOfCopiedEntries,
         EntryExistsCopyStrategyDialog dialog, StudioProgressMonitor dummyMonitor, StudioProgressMonitor monitor )
@@ -259,24 +329,32 @@ public class CopyEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── The Kaminoans Clone Each Entry And All Its Children ───────────────────
+    // Iterates through the search result enumeration.  For each entry:
+    //   1. Compose the new DN by applying the parent DN and any forced new RDN.
+    //   2. Apply the new RDN to the entry's attribute values (oldRdn out, newRdn in).
+    //   3. Try to create the entry.
+    //   4. If it already exists, ask the dialog for a strategy and react.
+    //   5. If scope is ONELEVEL or SUBTREE, recursively copy children.
+    // Static so other runnables can reuse it.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Copy the entries. If scope is SearchControls.SUBTREE_SCOPE the entries are copied
-     * recursively.
-     * 
-     * @param sourceBrowserConnection the source browser connection
-     * @param entries the source entries to copy
-     * @param targetBrowserConnection the target browser connection
-     * @param parentDn the target parent Dn
-     * @param newRdn the new Rdn, if null the original Rdn of each entry is used
-     * @param scope the copy scope
-     * @param numberOfCopiedEntries the number of copied entries
-     * @param dialog the dialog to ask for the copy strategy, if null the user won't be
-     *        asked instead the NameAlreadyBoundException it reported to the monitor
-     * @param dummyMonitor the dummy monitor, used for I/O that causes exceptions that 
-     *        should be handled
-     * @param monitor the real monitor
-     * 
-     * @return the number of copied entries
+     * Recursively copies entries from the source enumeration to the target
+     * location.  Handles naming conflicts by consulting the
+     * {@link EntryExistsCopyStrategyDialog}.
+     *
+     * @param sourceBrowserConnection  the source connection.
+     * @param entries                  the source search result enumeration.
+     * @param targetBrowserConnection  the target connection.
+     * @param parentDn                 the target parent DN.
+     * @param forceNewRdn              the RDN override, or {@code null} to keep
+     *                                 the original.
+     * @param scope                    {@link SearchControls} scope constant.
+     * @param numberOfCopiedEntries    running count.
+     * @param dialog                   the conflict dialog; {@code null} to report.
+     * @param dummyMonitor             absorbs per-entry errors.
+     * @param monitor                  the real progress monitor.
+     * @return the updated count of copied entries.
      */
     static int copyEntryRecursive( IBrowserConnection sourceBrowserConnection, StudioSearchResultEnumeration entries,
         IBrowserConnection targetBrowserConnection, Dn parentDn, Rdn forceNewRdn, int scope,
@@ -432,6 +510,21 @@ public class CopyEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── Swap The Clone's RDN Attributes ───────────────────────────────────────
+    // When we give the clone a new RDN (e.g. rename from "cn=Fett" to "cn=Rex"),
+    // we remove the old RDN attribute value and add the new one so the entry's
+    // attributes stay consistent with its DN.
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * Adjusts an entry's attributes to match a new RDN.  Removes the old RDN
+     * attribute values and adds the new ones.  This keeps the entry's attribute
+     * set consistent with its DN after a copy-with-rename.
+     *
+     * @param entry  the entry (Apache LDAP API) to modify in place.
+     * @param oldRdn the old RDN (values to remove).
+     * @param newRdn the new RDN (values to add).
+     * @throws LdapException if the attribute manipulation fails.
+     */
     private static void applyNewRdn( Entry entry, Rdn oldRdn, Rdn newRdn ) throws LdapException
     {
         // remove old Rdn attributes and values

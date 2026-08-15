@@ -53,8 +53,18 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.eclipse.core.runtime.Preferences;
 
 
+// ── CLASS: ExportXlsRunnable — CLONE TROOPER FILING EXCEL INTELLIGENCE REPORTS ─
+// Order 66 in .xls form: collect up to MAX_COUNT_LIMIT (65 000) LDAP entries
+// and write each as a row in an Apache POI HSSF workbook.  Column headers are
+// discovered dynamically; column widths are auto-sized after the sheet is full.
+// Lando runs Cloud City: each attribute OID maps to its own spreadsheet column.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to export directory content to an XLS file.
+ * Runnable to export directory content to an XLS (Excel) file.
+ *
+ * <p>Think of this as a clone trooper executing Order 66 to harvest entries and
+ * file them in an Excel spreadsheet — one entry per row, one attribute per
+ * column, column headers added on the fly as new attributes are encountered.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -79,10 +89,13 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
     private boolean exportDn;
 
 
+    // ── Clone Trooper Receives XLS Mission Orders ─────────────────────────────────
+    // Stores the target XLS filename, browser connection, search parameters,
+    // and whether the DN column is included in the output.
     /**
      * Creates a new instance of ExportXlsRunnable.
-     * 
-     * @param exportLdifFilename the export ldif filename
+     *
+     * @param exportLdifFilename the export XLS filename
      * @param browserConnection the browser connection
      * @param searchParameter the search parameter
      * @param exportDn true to export the Dn
@@ -97,6 +110,7 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Reports The LDAP Connection This Mission Uses ───────────────
     /**
      * {@inheritDoc}
      */
@@ -107,6 +121,7 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Reports The Human-Readable XLS Mission Name ─────────────────
     /**
      * {@inheritDoc}
      */
@@ -116,6 +131,7 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Locks The Target XLS File Against Concurrent Missions ──────
     /**
      * {@inheritDoc}
      */
@@ -126,6 +142,7 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Returns The Error Message If The XLS Mission Fails ─────────
     /**
      * {@inheritDoc}
      */
@@ -135,6 +152,10 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Executes Order 66: Build The XLS Workbook And Write To Disk ─
+    // Creates an HSSFWorkbook, streams matching entries into rows via exportToXls(),
+    // auto-sizes column widths after the sheet is complete, then saves to disk.
+    // Errors are forwarded to the progress monitor.
     /**
      * {@inheritDoc}
      */
@@ -211,9 +232,13 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Streams LDAP Entries Into The HSSF Sheet ───────────────────
+    // Iterates the LdifEnumeration and transforms each LdifContentRecord into an
+    // HSSF row via recordToHSSFRow().  Size-limit LDAP codes are tolerated.
+    // Progress is reported after each row so the UI stays responsive.
     /**
      * Exports to XLS.
-     * 
+     *
      * @param browserConnection the browser connection
      * @param searchParameter the search parameter
      * @param sheet the sheet
@@ -224,8 +249,7 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
      * @param valueDelimiter the value delimiter
      * @param binaryEncoding the binary encoding
      * @param exportDn the export dn
-     * 
-     * @throws IOException Signals that an I/O exception has occurred.
+     * @throws IOException if an I/O error occurs
      */
     private static void exportToXls( IBrowserConnection browserConnection, SearchParameter searchParameter,
         HSSFSheet sheet, HSSFRow headerRow, int count, StudioProgressMonitor monitor,
@@ -268,9 +292,13 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Writes One Entry As An HSSF Spreadsheet Row ────────────────
+    // Lando runs Cloud City: each new attribute gets a new column header cell.
+    // Postal address values are decoded from their $-delimited LDAP format and
+    // the cell is given a wrap-text style so multi-line addresses display cleanly.
     /**
      * Transforms an LDIF record to an HSSF row.
-     * 
+     *
      * @param browserConnection the browser connection
      * @param record the record
      * @param sheet the sheet
@@ -278,7 +306,7 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
      * @param headerRowAttributeNameMap the header row attribute name map
      * @param valueDelimiter the value delimiter
      * @param binaryEncoding the binary encoding
-     * @param exportDn the export dn
+     * @param exportDn the export dn flag
      */
     private static void recordToHSSFRow( IBrowserConnection browserConnection, LdifContentRecord record,
         HSSFSheet sheet, HSSFRow headerRow, Map<String, Integer> headerRowAttributeNameMap, String valueDelimiter,
@@ -328,6 +356,9 @@ public class ExportXlsRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Creates A String-Typed Cell In A Given Row ─────────────────
+    // Factory helper that creates an HSSFCell at the given column index and
+    // sets its type to CELL_TYPE_STRING so POI serialises it correctly.
     private static HSSFCell createStringCell( HSSFRow row, int cellNum )
     {
         HSSFCell cell = row.createCell( cellNum );

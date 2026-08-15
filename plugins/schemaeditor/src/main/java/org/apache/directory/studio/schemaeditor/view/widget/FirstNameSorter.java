@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.schemaeditor.view.widget;
@@ -29,13 +29,47 @@ import org.apache.directory.studio.schemaeditor.model.difference.AttributeTypeDi
 import org.apache.directory.studio.schemaeditor.model.difference.ObjectClassDifference;
 
 
+// ── CLASS: FirstNameSorter — HAN SHOOTS FIRST ────────────────────────────────
+// In the Mos Eisley cantina, Han Solo does not wait to see who blinks first —
+// he acts, decisively and without hesitation. Greedo never gets a turn.
+// Our comparator operates the same way: when two schema difference objects are
+// compared, we extract the first name of each and decide the winner immediately,
+// case-insensitively, with no second-guessing.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to compare and sort ascending two TreeNode.
+ * A {@link Comparator} that sorts {@link AttributeTypeDifference} and
+ * {@link ObjectClassDifference} objects ascending by their first registered name.
+ * "First name" here means {@code SchemaObject.getNames().get(0)}, which is the
+ * primary human-readable identifier (e.g. "cn", "sn", "inetOrgPerson").
+ * Think of it as Han shooting first: the first name wins the comparison fast,
+ * without inspecting secondary aliases or OIDs.
  */
 public class FirstNameSorter implements Comparator<Object>
 {
+    // ── HAN DRAWS AND DECIDES WHO GOES FIRST ─────────────────────────────────────
+    // Two bounty hunters walk into the cantina. Han looks at the first name on each
+    // one's wanted poster and decides instantly who ranks higher — alphabetically,
+    // case-insensitively. If a poster has no name at all, Han treats it as an empty
+    // string and it loses. Objects he does not recognise fall back to toString().
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Compares two schema difference objects by the first name of their underlying
+     * schema element. The comparison is case-insensitive and ascending. Supported
+     * combinations are AT-vs-AT, OC-vs-OC, AT-vs-OC, and OC-vs-AT — any other pair
+     * falls back to a plain {@code toString()} comparison.
+     *
+     * <p>For example — Han decides the order in the cantina:</p>
+     * <pre>
+     *   o1 = AttributeTypeDifference("cn")   firstName "cn"
+     *   o2 = AttributeTypeDifference("sn")   firstName "sn"
+     *   compare(o1, o2)  →  negative (cn &lt; sn alphabetically)
+     *
+     *   o1 has no names  →  treated as ""  →  sorts before anything with a name
+     * </pre>
+     *
+     * @param o1  the first difference object to compare
+     * @param o2  the second difference object to compare
+     * @return    negative if o1 should sort before o2, positive if after, 0 if equal
      */
     public int compare( Object o1, Object o2 )
     {

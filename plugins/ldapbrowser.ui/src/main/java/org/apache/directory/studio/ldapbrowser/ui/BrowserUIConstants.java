@@ -6,33 +6,47 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui;
 
 
+// ── CLASS: BrowserUIConstants — Palpatine Transmits Order 66 ─────────────────
+// Palpatine sits in his Senate pod and transmits Order 66 across the HoloNet to
+// every clone commander simultaneously — one broadcast, galaxy-wide compliance.
+// This class is that broadcast: a single authoritative source of named constants
+// that every corner of the Browser UI plugin reads from rather than hard-coding.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class contains all the constants used by the Browser UI Plugin
- * Final reference -> class shouldn't be extended
+ * Centralises every string key, integer code, and resource path used by the
+ * Browser UI plugin so nothing is hard-coded in a dozen different places.
+ * Think of this class as Palpatine's Order 66 transmission — one definitive
+ * set of directives that all parts of the plugin obey without question.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public final class BrowserUIConstants
 {
+    // ── Order 66: Prevent Rogue Instantiation ────────────────────────────────
+    // Palpatine's Order 66 was not a request — it was a closed directive with
+    // no room for individual clone interpretation or deviation.
+    // This private constructor is our version: a constants holder has no
+    // business being instantiated, so we slam the door shut entirely.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     *  Ensures no construction of this class, also ensures there is no need for final keyword above
-     *  (Implicit super constructor is not visible for default constructor),
-     *  but is still self documenting.
+     * Private constructor — this class is a pure constants holder and must never
+     * be instantiated. Marking it private (rather than just leaving it to {@code final})
+     * makes the intent self-documenting to anyone reading the source.
      */
     private BrowserUIConstants()
     {
@@ -53,13 +67,13 @@ public final class BrowserUIConstants
         .getString( "PrefPage_MainPreferencePage_id" ); //$NON-NLS-1$
     public static final String PREFERENCEPAGEID_ATTRIBUTES = BrowserUIPlugin.getDefault().getPluginProperties()
         .getString( "PrefPage_AttributesPreferencePage_id" ); //$NON-NLS-1$
-    public static final String PREFERENCEPAGEID_BINARYATTRIBUTES = 
+    public static final String PREFERENCEPAGEID_BINARYATTRIBUTES =
         "org.apache.directory.studio.ldapbrowser.preferences.BinaryAttributesAndSyntaxesPreferencePage"; //$NON-NLS-1$
-    public static final String PREFERENCEPAGEID_BROWSER = 
+    public static final String PREFERENCEPAGEID_BROWSER =
         "org.apache.directory.studio.ldapbrowser.preferences.BrowserPreferencePage"; //$NON-NLS-1$
-    public static final String PREFERENCEPAGEID_ENTRYEDITOR = 
+    public static final String PREFERENCEPAGEID_ENTRYEDITOR =
         "org.apache.directory.studio.ldapbrowser.preferences.EntryEditorPreferencePage"; //$NON-NLS-1$
-    public static final String PREFERENCEPAGEID_ENTRYEDITORS = 
+    public static final String PREFERENCEPAGEID_ENTRYEDITORS =
         "org.apache.directory.studio.ldapbrowser.preferences.EntryEditorsPreferencePage"; //$NON-NLS-1$
     public static final String PREFERENCEPAGEID_SEARCHRESULTEDITOR = BrowserUIPlugin.getDefault().getPluginProperties()
         .getString( "PrefPage_SearchResultEditorPreferencePage_id" ); //$NON-NLS-1$
@@ -67,7 +81,7 @@ public final class BrowserUIConstants
         .getString( "PrefPage_ModificationLogsPreferencePage_id" ); //$NON-NLS-1$
     public static final String PREFERENCEPAGEID_SEARCHLOGS = BrowserUIPlugin.getDefault().getPluginProperties()
         .getString( "PrefPage_SearchLogsPreferencePage_id" ); //$NON-NLS-1$
-    public static final String PREFERENCEPAGEID_TEXTFORMATS = 
+    public static final String PREFERENCEPAGEID_TEXTFORMATS =
         "org.apache.directory.studio.ldapbrowser.preferences.TextFormatsPreferencePage"; //$NON-NLS-1$
 
     /** The constant used to identify the "user user priorities" preference  */

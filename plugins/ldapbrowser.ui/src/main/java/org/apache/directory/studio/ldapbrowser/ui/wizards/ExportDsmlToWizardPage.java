@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -32,8 +32,20 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Group;
 
 
+// ── CLASS: ExportDsmlToWizardPage — YODA DECIDES WHERE AND HOW TO SET IT DOWN ─
+// Yoda must not only choose where to set the X-wing (the file path) but also
+// decide WHICH side up to land it: entry-first (RESPONSE — the LDAP entries
+// themselves) or query-first (REQUEST — the search parameters that would
+// reproduce the result set). This extra "Save as" radio-button group is the
+// unique addition this page makes on top of the base To page.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the page to select the target DSML file.
+ * The "To" page of the DSML export wizard: picks the destination .xml file
+ * and the DSML variant (RESPONSE or REQUEST).
+ * Extends {@link ExportBaseToPage} with a "Save as" radio group that lets the
+ * user choose between DSML response format (searchResultEntry elements) and
+ * DSML request format (searchRequest element). The choice is pushed back to
+ * the wizard via {@link ExportDsmlWizard#setSaveAsType}.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -47,13 +59,16 @@ public class ExportDsmlToWizardPage extends ExportBaseToPage
         { "*.xml", "*" }; //$NON-NLS-1$ //$NON-NLS-2$
 
 
+    // ── Yoda Checks the DSML Landing Requirements ────────────────────────────────
+    // The file must be an XML file, and the wizard reference is kept so the
+    // Save-As radio buttons can update the wizard's saveAsType directly.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExportDsmlToWizardPage.
+     * Creates a new ExportDsmlToWizardPage with the DSML wizard icon and a
+     * reference to the wizard for pushing the saveAsType back.
      *
-     * @param pageName
-     *          the name of the page
-     * @param wizard
-     *          the wizard the page is attached to
+     * @param pageName  the wizard page name.
+     * @param wizard    the parent DSML export wizard.
      */
     public ExportDsmlToWizardPage( String pageName, ExportDsmlWizard wizard )
     {
@@ -64,8 +79,22 @@ public class ExportDsmlToWizardPage extends ExportBaseToPage
     }
 
 
+    // ── Yoda Lays Out the DSML Landing Zone ──────────────────────────────────────
+    // The page has the standard file-selector from the base class, then adds
+    // a "Save as" radio group: RESPONSE (entries) or REQUEST (query parameters).
+    // Selecting a radio immediately updates the wizard's saveAsType so
+    // performFinish() sees the latest choice.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the page UI using the base-class file browser, then appends a
+     * "Save as" group with two radio buttons: "DSML Response" (pre-selected,
+     * writes searchResultEntry elements) and "DSML Request" (writes a
+     * searchRequest element). Each button updates the wizard's
+     * {@link ExportDsmlWizard#saveAsType} immediately on selection.
+     *
+     * @param parent  the parent composite.
      */
     public void createControl( Composite parent )
     {
@@ -113,8 +142,15 @@ public class ExportDsmlToWizardPage extends ExportBaseToPage
     }
 
 
+    // ── The DSML Landing Pad Accepts XML Files ────────────────────────────────────
+    // DSML is always XML, so the file browser filters to *.xml and *.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Returns the file-extension filters for the DSML save dialog.
+     *
+     * @return  {@code ["*.xml", "*"]}.
      */
     protected String[] getExtensions()
     {
@@ -122,8 +158,15 @@ public class ExportDsmlToWizardPage extends ExportBaseToPage
     }
 
 
+    // ── The DSML Format Name ──────────────────────────────────────────────────────
+    // Error messages say "please enter a DSML file" — format-specific and clear.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Returns the localised format name "DSML" for use in page titles and error messages.
+     *
+     * @return  the string "DSML".
      */
     protected String getFileType()
     {

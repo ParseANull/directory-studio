@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration.editor;
 
@@ -72,8 +72,21 @@ import org.eclipse.ui.forms.widgets.TableWrapData;
 import org.eclipse.ui.forms.widgets.TableWrapLayout;
 
 
+// ── CLASS: ReplicationDetailsPage — THE REBEL SIGNALS OFFICER'S EDITING STATION ─────────
+// A Rebel signals officer sits at her console on Yavin 4 and opens the briefing file for
+// one replication consumer — the outpost that pulls intelligence from a remote Imperial
+// server.  She configures the remote host, the bind credentials, the search scope, and
+// exactly which attributes to sync, then commits her changes so the consumer bean reflects
+// her orders.
+// ─────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Details Page of the Server Configuration Editor for the Replication type
+ * The details panel shown on the right side of the Replication master/details view.
+ * It renders every configurable field of a single {@link ReplConsumerBean} — identity,
+ * connection parameters, and search configuration — and commits user edits back to the
+ * bean on every interaction.
+ * Think of this class as the Rebel signals officer's editing station: she picks a consumer
+ * from the roster on the left and this panel opens its full briefing file for inspection
+ * and amendment.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -177,7 +190,7 @@ public class ReplicationDetailsPage implements IDetailsPage
             }
             else
             {
-                bindPasswordText.setEchoChar( '\u2022' );
+                bindPasswordText.setEchoChar( '•' );
             }
         }
     };
@@ -224,11 +237,24 @@ public class ReplicationDetailsPage implements IDetailsPage
     };
 
 
+    // ── Reporting For Duty At The Signals Station ──────────────────────────────────────────
+    // The Rebel signals officer arrives at her editing station, grabs a reference to the
+    // master block (so she can signal "dirty" edits), fires up the schema object loader,
+    // and looks up the browser connection tied to the current server config.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ReplicationDetailsPage.
+     * Creates a new ReplicationDetailsPage and wires it to the given master/details block.
+     * Also initialises the schema object loader (used to suggest attribute names in the
+     * attributes dialog) and resolves the browser connection for the entry and filter widgets.
      *
-     * @param pmdb
-     *      the associated Master Details Block
+     * <p>For example — the Rebel signals officer reports for duty:</p>
+     * <pre>
+     *   She grabs a radio link to the master roster block so she can mark changes as dirty.
+     *   She spins up the attribute loader so auto-complete works in the attribute dialog.
+     *   She resolves the LDAP browser connection tied to this server's configuration.
+     * </pre>
+     *
+     * @param pmdb  the {@link ReplicationMasterDetailsBlock} that owns this details page
      */
     public ReplicationDetailsPage( ReplicationMasterDetailsBlock pmdb )
     {
@@ -241,8 +267,24 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Assembling The Full Briefing Station ──────────────────────────────────────────────
+    // The Rebel officer lays out three specialised sub-panels on her editing station:
+    // the consumer's identity, its connection parameters, and its search configuration.
+    // Each sub-panel maps to a different dimension of the replication consumer dossier.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all three visual sections of the details panel inside the given parent composite.
+     * Delegates each section to its own {@code create*Section} method — details, connection,
+     * and configuration.
+     *
+     * <p>For example — the officer lays out her briefing station with three dedicated zones:</p>
+     * <pre>
+     *   Zone 1: identity (ID, description, enabled flag).
+     *   Zone 2: connection (replication mode, remote host/port, bind credentials, TLS).
+     *   Zone 3: configuration (base DN, filter, scope, attributes, alias dereferencing).
+     * </pre>
+     *
+     * @param parent  the SWT composite to build the sections inside
      */
     public void createContents( Composite parent )
     {
@@ -260,13 +302,22 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Building The Consumer Identity Zone ───────────────────────────────────────────────
+    // The top zone of the briefing station shows who this replication consumer is: its
+    // unique ID, a plain-English description, and whether it is currently active.
+    // These are the fields a Rebel commander checks first to identify an intelligence outpost.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Details Section
+     * Creates the "Replication Consumer Details" section — the top block of the details
+     * panel — containing the Enabled checkbox, the consumer ID field, and the Description.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the toolkit to use
+     * <p>For example — a Rebel commander reads the identity panel of an outpost dossier:</p>
+     * <pre>
+     *   Enabled = checked, ID = "consumer1", Description = "Syncs from Coruscant node".
+     * </pre>
+     *
+     * @param parent   the parent composite to attach this section to
+     * @param toolkit  the Eclipse Forms toolkit used to create styled widgets
      */
     private void createDetailsSection( Composite parent, FormToolkit toolkit )
     {
@@ -299,13 +350,25 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Building The Comms Link Zone ──────────────────────────────────────────────────────
+    // This zone is the radio room: it configures how the consumer connects to the remote
+    // LDAP server — replication mode, host, port, bind DN, password, size/time limits,
+    // and whether to encrypt with StartTLS.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Details Section
+     * Creates the "Connection" section covering replication mode (refresh-and-persist vs
+     * refresh-only), refresh interval, remote host and port, bind credentials, size and
+     * time limits, and the StartTLS toggle.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the toolkit to use
+     * <p>For example — a Rebel signals officer configures the comms link to a remote node:</p>
+     * <pre>
+     *   She selects "Refresh And Persist" mode so the consumer stays connected continuously.
+     *   She enters "coruscant.empire.gov" as the remote host and 10389 as the port.
+     *   She fills in the bind DN and password, then enables StartTLS for encrypted comms.
+     * </pre>
+     *
+     * @param parent   the parent composite
+     * @param toolkit  the Eclipse Forms toolkit
      */
     private void createConnectionSection( Composite parent, FormToolkit toolkit )
     {
@@ -362,7 +425,7 @@ public class ReplicationDetailsPage implements IDetailsPage
         // Bind Password Text
         toolkit.createLabel( composite, "Bind Password:" );
         bindPasswordText = toolkit.createText( composite, "" );
-        bindPasswordText.setEchoChar( '\u2022' );
+        bindPasswordText.setEchoChar( '•' );
         bindPasswordText.setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false ) );
 
         // Show Password Checkbox
@@ -391,13 +454,26 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Building The Intelligence Gathering Zone ───────────────────────────────────────────
+    // This zone defines what the consumer actually syncs: the base DN it starts from, an
+    // LDAP filter for which entries to include, the search scope (subtree / one level /
+    // object), which attributes to replicate, and how to handle LDAP aliases.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Details Section
+     * Creates the "Configuration" section covering the base DN, LDAP search filter, search
+     * scope (subtree / one-level / object), the list of attributes to replicate, and the
+     * alias-dereferencing mode.
+     * This section defines the shape of the data the consumer will pull from the remote server.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the toolkit to use
+     * <p>For example — a Rebel analyst configures what intelligence to collect:</p>
+     * <pre>
+     *   She sets base DN to "dc=example,dc=com" to start from the root of the tree.
+     *   She applies filter "(objectClass=*)" to pull everything.
+     *   She picks "Subtree" scope and adds "cn", "sn", "mail" to the attributes list.
+     * </pre>
+     *
+     * @param parent   the parent composite
+     * @param toolkit  the Eclipse Forms toolkit
      */
     private void createConfigurationSection( Composite parent, FormToolkit toolkit )
     {
@@ -488,8 +564,20 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Keeping The Attribute Buttons In Sync ─────────────────────────────────────────────
+    // The Edit and Delete buttons on the attributes table only make sense when something is
+    // selected; we enable or disable them based on the current table selection state.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the attributes buttons enable state.
+     * Enables or disables the Edit and Delete attribute buttons based on whether the
+     * attributes table has a current selection.
+     * Called every time the table selection changes so the buttons always reflect reality.
+     *
+     * <p>For example — the analyst's table controls mirror what she has highlighted:</p>
+     * <pre>
+     *   She clicks "cn" in the attributes list — Edit and Delete light up.
+     *   She clicks away to deselect — they grey out again.
+     * </pre>
      */
     private void updateAttributesButtonsEnableState()
     {
@@ -500,8 +588,22 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Adding A New Attribute To Replicate ───────────────────────────────────────────────
+    // The Rebel analyst decides she wants to sync a new attribute and opens the attribute
+    // picker dialog.  If she confirms a choice, we add it to the list (deduplicating) and
+    // select it in the table so she can see the result.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a new attribute and opens the attribute dialog.
+     * Opens the attribute-picker dialog, and if the user confirms, adds the chosen attribute
+     * to the replication attribute list (if not already present) and refreshes the table.
+     * We deduplicate because replicating the same attribute twice would be pointless.
+     *
+     * <p>For example — the analyst adds "mail" to the sync list:</p>
+     * <pre>
+     *   She clicks Add; the attribute dialog opens with schema-aware auto-complete.
+     *   She picks "mail" and confirms — the table gains a new "mail" row.
+     *   If "mail" was already in the list we silently skip the duplicate.
+     * </pre>
      */
     private void addNewAttribute()
     {
@@ -525,8 +627,21 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Editing An Existing Attribute ─────────────────────────────────────────────────────
+    // The analyst realises she typed "cnn" instead of "cn" and needs to correct the
+    // selected row.  We open the attribute dialog pre-populated with the current value;
+    // if she confirms a new name we remove the old one and insert the corrected attribute.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Opens an attribute dialog with the selected attribute in the attributes table viewer.
+     * Opens the attribute-picker dialog pre-populated with the currently selected attribute,
+     * and if the user confirms, replaces the old attribute with the new one in the list.
+     * Also accessible via double-clicking a row in the attributes table.
+     *
+     * <p>For example — the analyst corrects a typo in the sync list:</p>
+     * <pre>
+     *   She double-clicks "cnn" in the table; the dialog opens with "cnn" pre-filled.
+     *   She corrects it to "cn" and confirms — "cnn" is removed and "cn" takes its place.
+     * </pre>
      */
     private void editSelectedAttribute()
     {
@@ -559,8 +674,21 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Dropping An Attribute From The Sync List ──────────────────────────────────────────
+    // The analyst decides an attribute is no longer needed in the sync list and removes it
+    // without a confirmation dialog — the change is still reversible via the editor's undo.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Deletes the selected index in the indexes table viewer.
+     * Removes the currently selected attribute from the replication attribute list and
+     * refreshes the table viewer.
+     * No confirmation dialog — this is a lightweight edit that can be undone by reverting
+     * the editor.
+     *
+     * <p>For example — the analyst drops "telephoneNumber" from the sync list:</p>
+     * <pre>
+     *   She selects "telephoneNumber" and presses Delete.
+     *   The entry vanishes from the table and the editor is marked dirty.
+     * </pre>
      */
     private void deleteSelectedAttribute()
     {
@@ -577,10 +705,18 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Sizing The Attribute Table Buttons ────────────────────────────────────────────────
+    // The Add, Edit, and Delete buttons next to the attributes table all need to be the
+    // same standard width — we create a shared GridData with the Eclipse-standard button
+    // width so the button strip looks tidy regardless of label length.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Create a new button grid data.
+     * Creates a {@link GridData} instance sized to the Eclipse standard button width for
+     * use on the Add, Edit, and Delete buttons beside the attributes table.
+     * Using the same factory for all three keeps the button strip visually consistent.
      *
-     * @return the new button grid data
+     * @return  a new {@link GridData} with {@code widthHint} set to
+     *          {@link IDialogConstants#BUTTON_WIDTH}
      */
     private GridData createNewButtonGridData()
     {
@@ -590,8 +726,23 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Arming Every Control On The Station ───────────────────────────────────────────────
+    // The Rebel technician runs a signal cable from every widget on the editing station to
+    // the central commit-and-dirty pipeline so that any change flows back into the model
+    // and lights up the editor's save indicator.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds listeners to UI fields.
+     * Attaches all the event listeners (modify, selection, verify, double-click) to every
+     * widget on the details panel.
+     * Called at the end of {@link #refresh()} after we've populated the widgets from the
+     * model, so listeners don't fire spuriously during the population phase.
+     *
+     * <p>For example — the technician wires every panel control to the commit pipeline:</p>
+     * <pre>
+     *   Every text field gets a ModifyListener that commits and marks dirty on each keystroke.
+     *   Every radio and checkbox gets a SelectionListener that does the same on toggle.
+     *   The attributes table gets a double-click listener that opens the edit dialog.
+     * </pre>
      */
     private void addListeners()
     {
@@ -625,8 +776,21 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Disarming Every Control Before A Data Reload ──────────────────────────────────────
+    // Before we repopulate the widgets from a newly selected consumer bean, we cut all the
+    // listener cables — otherwise every setText() and setSelection() would trigger a commit
+    // that writes half-formed data back into the model mid-load.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes listeners to UI fields.
+     * Detaches all event listeners from every widget on the panel.
+     * Must be called at the start of {@link #refresh()} before we push new model data into
+     * the widgets — otherwise listeners would commit partial data on every {@code setText()}.
+     *
+     * <p>For example — the technician cuts the cables before swapping the active dossier:</p>
+     * <pre>
+     *   She disconnects everything so loading new values doesn't trigger spurious commits.
+     *   Once the load is done, addListeners() re-arms all the connections.
+     * </pre>
      */
     private void removeListeners()
     {
@@ -660,8 +824,25 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Receiving A New Consumer Selection ────────────────────────────────────────────────
+    // A Rebel commander taps a different consumer row on the master roster and the editing
+    // station gets the news: "here is the new dossier — display it."
+    // We extract the bean from the selection and call refresh() to repaint the panel.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by the Eclipse forms framework when the master-list selection changes.
+     * We extract the newly selected {@link ReplConsumerBean} (or set it to {@code null}
+     * for an empty/multi-selection) then call {@link #refresh()} to repopulate the panel.
+     *
+     * <p>For example — the commander swaps the open dossier on the editing station:</p>
+     * <pre>
+     *   She clicks "consumer2" on the roster; the selection event fires.
+     *   We pull out consumer2's bean and refresh the panel to show its settings.
+     *   A multi-selection or no selection sets the bean to null and blanks the panel.
+     * </pre>
+     *
+     * @param part       the form part that fired the event (unused here)
+     * @param selection  the new selection from the master table viewer
      */
     public void selectionChanged( IFormPart part, ISelection selection )
     {
@@ -678,8 +859,27 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Flushing All Panel Values Back Into The Model ─────────────────────────────────────
+    // The Rebel officer finishes editing and presses Save — every value visible on screen
+    // needs to be written back into the ReplConsumerBean so the config model reflects
+    // exactly what she typed.  We read each widget and push its value, guarding against
+    // parse failures with sensible zero-defaults.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reads every widget on the panel and pushes its current value into the in-memory
+     * {@link ReplConsumerBean}.
+     * Called on every user interaction via the modify/selection listeners so the model
+     * stays in sync at all times, not just at an explicit save.
+     *
+     * <p>For example — the officer logs every field from the briefing panel into the dossier:</p>
+     * <pre>
+     *   She reads enabled, ID, replication mode, remote host, bind DN, search scope...
+     *   Each value goes straight into the corresponding setter on the consumer bean.
+     *   Unparseable numeric fields (port, size limit, time limit) safely default to 0.
+     * </pre>
+     *
+     * @param onSave  {@code true} when called as part of an explicit editor save, {@code false}
+     *                for live incremental updates triggered by listener events
      */
     public void commit( boolean onSave )
     {
@@ -803,10 +1003,22 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Reading The Search Scope Radio Buttons ────────────────────────────────────────────
+    // Exactly one of three radio buttons (Subtree / One Level / Object) is selected at any
+    // time.  We map whichever one is selected to the corresponding SearchScope enum constant.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the search scope.
+     * Reads the three scope radio buttons and returns the corresponding {@link SearchScope}
+     * constant, or {@code null} if somehow none is selected (shouldn't happen in practice).
      *
-     * @return the search scope
+     * <p>For example — the analyst reads the scope dial on the search configuration panel:</p>
+     * <pre>
+     *   Subtree selected → SearchScope.SUBTREE.
+     *   One Level selected → SearchScope.ONELEVEL.
+     *   Object selected → SearchScope.OBJECT.
+     * </pre>
+     *
+     * @return  the selected {@link SearchScope}, or {@code null}
      */
     private SearchScope getSearchScope()
     {
@@ -827,10 +1039,22 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Reading The Alias Dereferencing Checkboxes ────────────────────────────────────────
+    // Two checkboxes — "Finding Base DN" and "Search" — combine into four possible
+    // AliasDerefMode values.  We map each combination to the corresponding enum constant.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the aliases dereferencing mode.
+     * Maps the two alias-dereferencing checkboxes to an {@link AliasDerefMode} constant.
+     * Both checked → DEREF_ALWAYS; only Search → DEREF_IN_SEARCHING; only Finding Base DN
+     * → DEREF_FINDING_BASE_OBJ; neither → NEVER_DEREF_ALIASES.
      *
-     * @return the aliases dereferencing mode
+     * <p>For example — the analyst maps checkbox states to an LDAP deref mode:</p>
+     * <pre>
+     *   Both checked → always dereference aliases, wherever they appear.
+     *   Neither checked → never follow alias entries during the search.
+     * </pre>
+     *
+     * @return  the {@link AliasDerefMode} corresponding to the current checkbox state
      */
     private AliasDerefMode getAliasDerefMode()
     {
@@ -858,16 +1082,31 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Cleaning Up When The Station Closes ───────────────────────────────────────────────
+    // When the editing station is decommissioned we have nothing extra to release, but the
+    // IDetailsPage interface requires this method to exist.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Lifecycle method called when this details page is disposed.
+     * We have no resources to clean up here, so this is intentionally empty.
+     *
+     * @see IDetailsPage#dispose()
      */
     public void dispose()
     {
     }
 
 
+    // ── Registering The Managed Form ──────────────────────────────────────────────────────
+    // Before any widgets can be built, Eclipse hands us the managed form that provides the
+    // toolkit and lifecycle.  We store it so createContents() can access the toolkit.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Stores the {@link IManagedForm} reference so we can access the toolkit inside
+     * {@link #createContents(Composite)}.
+     * Eclipse guarantees this is called before {@code createContents}.
+     *
+     * @param form  the managed form that owns this details page
      */
     public void initialize( IManagedForm form )
     {
@@ -875,8 +1114,15 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Reporting Dirty State ─────────────────────────────────────────────────────────────
+    // Dirtiness is tracked at the editor level; this page does not maintain its own dirty
+    // state.  We always return false and let setEditorDirty() handle the save indicator.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Always returns {@code false} — dirtiness is tracked at the editor level via
+     * {@code setEditorDirty()}, not by this details page.
+     *
+     * @return  {@code false} always
      */
     public boolean isDirty()
     {
@@ -884,8 +1130,15 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Reporting Staleness ───────────────────────────────────────────────────────────────
+    // Staleness is handled through the master-list selection change flow, not by this page
+    // polling the model independently.  We always return false.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Always returns {@code false} — staleness detection is driven by the selection-change
+     * mechanism, not by this page tracking model versions.
+     *
+     * @return  {@code false} always
      */
     public boolean isStale()
     {
@@ -893,8 +1146,26 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Repainting The Editing Station ────────────────────────────────────────────────────
+    // The officer opens a new consumer dossier and the editing station repaints to show its
+    // contents: cut listener cables, load every field from the bean, re-arm the cables.
+    // We also handle the attributes list specially — stripping out the wildcard entries
+    // before populating the table since those are represented by dedicated checkboxes.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reloads all widgets from the currently selected {@link ReplConsumerBean}.
+     * The sequence is always: remove listeners → populate widgets → add listeners, to
+     * prevent spurious commits during population.
+     * Special handling for the search scope and alias deref mode: we parse the stored string
+     * values back into enums and set the matching radio/checkbox controls.
+     *
+     * <p>For example — the officer opens a freshly selected consumer dossier:</p>
+     * <pre>
+     *   She cuts the commit pipeline, loads each field from the bean, handles edge cases
+     *   like an invalid scope string or null alias mode by defaulting to safe values.
+     *   The attributes table is repopulated after removing the wildcard placeholders.
+     *   Finally she re-arms the pipeline so future edits flow back to the bean.
+     * </pre>
      */
     public void refresh()
     {
@@ -1072,8 +1343,14 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Directing Keyboard Focus ───────────────────────────────────────────────────────────
+    // When the editing station becomes active, we send keyboard focus to the ID field so
+    // the analyst can start typing or tabbing right away without needing to click first.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Sets keyboard focus to the consumer ID text field when this details page becomes active.
+     *
+     * @see IDetailsPage#setFocus()
      */
     public void setFocus()
     {
@@ -1081,8 +1358,16 @@ public class ReplicationDetailsPage implements IDetailsPage
     }
 
 
+    // ── Refusing External Form Input ──────────────────────────────────────────────────────
+    // If the forms framework tries to push an external object into this panel we decline —
+    // we only respond to master-list selections, not programmatic input pushes.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Always returns {@code false} because this details page does not accept externally
+     * pushed form input — it only reacts to master-list selection events.
+     *
+     * @param input  the input object being offered (ignored)
+     * @return       {@code false} always
      */
     public boolean setFormInput( Object input )
     {

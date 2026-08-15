@@ -38,27 +38,27 @@ import org.apache.directory.studio.openldap.config.acl.widgets.composites.WhatCl
 import org.apache.directory.studio.openldap.config.acl.widgets.composites.WhatClauseFilterComposite;
 
 
+// ── CLASS: OpenLdapAclWhatClauseWidget — GRAND MOFF SELECTING TARGET OBJECT ──
+// Grand Moff Tarkin stands at the targeting console choosing the object the
+// ACL will protect. He has three exclusive choices: DN (a specific entry),
+// Filter (a pattern-matched set of entries), or Attributes (a set of attribute
+// types within entries). When he selects a checkbox a new configuration panel
+// appears below it; deselecting removes the panel and disposes its widgets.
+// The listener for each checkbox calls createXxxComposite() or disposeComposite()
+// and then forces the visual editor composite to re-layout so the holotable
+// scrolls correctly. refresh() reads the current model and pre-checks the right
+// checkbox, creating the appropriate sub-composite.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The WhatClause widget. It coves all the What possible options :
- * <ul>
- * <li>DN</li>
- * <li>Filter</li>
- * <li>Attributes</li>
- * </ul>
- * The three possible options, when selected, will open new composites dynamically.
- * 
- * <pre>
- * </pre>
- * .---------------------------------------------------------.
- * |                                                         |
- * | [ ] DN                                                  |
- * |                                                         |
- * | [ ] Filter                                              |
- * |                                                         |
- * | [ ] Attributes                                          |
- * |                                                         |
- * `---------------------------------------------------------'
- * </pre>
+ * An SWT widget representing the "Access to What" section of the visual ACL
+ * editor. Provides three optional checkboxes (DN, Filter, Attributes) — when
+ * a checkbox is checked a corresponding sub-composite ({@link WhatClauseDnComposite},
+ * {@link WhatClauseFilterComposite}, or {@link WhatClauseAttributesComposite}) is
+ * dynamically created beneath it; unchecking disposes the sub-composite.
+ *
+ * <p>Think of this class as Grand Moff Tarkin choosing which Imperial target the
+ * ACL will govern — one checkbox for each targeting mode.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OpenLdapAclWhatClauseWidget extends AbstractWidget
@@ -87,7 +87,11 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
 
     private WhatClauseDnComposite dnClauseComposite;
 
-    // Listeners
+    // ── Listener: DN Checkbox ─────────────────────────────────────────────────
+    // When Tarkin checks DN, a DN-targeting sub-composite appears. When he
+    // unchecks it the sub-composite is disposed to free resources.
+    // ─────────────────────────────────────────────────────────────────────────
+    /** The listener on the DN Checkbox. Creates/disposes the DN sub-composite. */
     private SelectionAdapter dnCheckboxListener = new SelectionAdapter()
     {
         public void widgetSelected( org.eclipse.swt.events.SelectionEvent e )
@@ -105,8 +109,12 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
             visualEditorComposite.layout( true, true );
         }
     };
-    
-    
+
+
+    // ── Listener: Filter Checkbox ─────────────────────────────────────────────
+    // When Tarkin checks Filter, a filter-entry sub-composite appears; uncheck disposes it.
+    // ─────────────────────────────────────────────────────────────────────────
+    /** The listener on the Filter Checkbox. Creates/disposes the Filter sub-composite. */
     private SelectionAdapter filterCheckboxListener = new SelectionAdapter()
     {
         public void widgetSelected( org.eclipse.swt.events.SelectionEvent e )
@@ -124,8 +132,11 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
             visualEditorComposite.layout( true, true );
         }
     };
-    
-    
+
+
+    // ── Listener: Attributes Checkbox ─────────────────────────────────────────
+    // When Tarkin checks Attributes, an attribute-list sub-composite appears; uncheck disposes it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * The listener on the Attributes Checkbox. It creates the Attributes composite
      * when selected, dispose it when unchecked.
@@ -149,32 +160,32 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
     };
 
 
+    // ── Constructing the What Clause Widget ───────────────────────────────────
+    // Grand Moff Tarkin opens the targeting console, stores the visual editor
+    // reference, creates the three checkboxes inside an "Access to What" group,
+    // and attaches their listeners. Sub-composites are created on demand.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of OpenLdapAclWhatClauseWidget. It's just a list of
-     * 3 checkboxes which, when selected, open a new composite dynamically created.
-     * 
+     * Creates a new What Clause widget with three checkboxes (DN, Filter, Attributes)
+     * inside an "Acces to What" group. Sub-composites are created dynamically when
+     * the user checks a box.
+     *
+     * <p>For example — Tarkin opening the targeting console:</p>
      * <pre>
-     * .---------------------------------------------------------.
-     * |                                                         |
-     * | [ ] DN                                                  |
-     * |                                                         |
-     * | [ ] Filter                                              |
-     * |                                                         |
-     * | [ ] Attributes                                          |
-     * |                                                         |
-     * `---------------------------------------------------------'
+     *   whatClauseWidget = new OpenLdapAclWhatClauseWidget(
+     *       visualEditor, parentComposite, context);
      * </pre>
-     * 
-     * @param visualEditorComposite the visual editor composite
-     * @param parent The WhatClause parent's composite
-     * @param context the Acl context
+     *
+     * @param visualEditorComposite  The parent visual editor composite (used for layout refresh).
+     * @param parent                 The composite in which the group will be created.
+     * @param context                The ACL context providing the current model.
      */
-    public OpenLdapAclWhatClauseWidget( OpenLdapAclVisualEditorComposite visualEditorComposite, 
+    public OpenLdapAclWhatClauseWidget( OpenLdapAclVisualEditorComposite visualEditorComposite,
         Composite parent, OpenLdapAclValueWithContext context )
     {
         this.visualEditorComposite = visualEditorComposite;
         this.context = context;
-        
+
         // Creating the widget base composite
         composite = BaseWidgetUtils.createColumnContainer( parent, 1, 1 );
 
@@ -199,8 +210,13 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
     }
 
 
+    // ── Creating the DN Sub-Composite ─────────────────────────────────────────
+    // A group box is created as the sub-composite container, then the DN
+    // clause composite is built inside it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the DN composite.
+     * Creates a group-box container below the DN checkbox and instantiates a
+     * {@link WhatClauseDnComposite} inside it to edit the DN targeting clause.
      */
     private void createDnComposite()
     {
@@ -213,7 +229,7 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
 
         /*
         AclWhatClause whatClause = context.getAclItem().getWhatClause();
-        
+
         if ( whatClause.getDnClause() != null )
         {
             dnClauseComposite.setClause( whatClause.getDnClause() );
@@ -227,8 +243,13 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
     }
 
 
+    // ── Creating the Filter Sub-Composite ─────────────────────────────────────
+    // A group box is created as the sub-composite container, then the filter
+    // clause composite is built inside it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the filter composite.
+     * Creates a group-box container below the Filter checkbox and instantiates a
+     * {@link WhatClauseFilterComposite} inside it to edit the filter targeting clause.
      */
     private void createFilterComposite()
     {
@@ -255,8 +276,14 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
     }
 
 
+    // ── Creating the Attributes Sub-Composite ─────────────────────────────────
+    // A container composite is created below the Attributes checkbox, then the
+    // attributes clause composite is built inside it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the attributes composite.
+     * Creates a container below the Attributes checkbox and instantiates a
+     * {@link WhatClauseAttributesComposite} inside it to edit the attribute-list
+     * targeting clause.
      */
     private void createAttributesComposite()
     {
@@ -281,10 +308,14 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
     }
 
 
+    // ── Disposing a Sub-Composite Safely ──────────────────────────────────────
+    // Tarkin removes a targeting panel from the console safely — only if the
+    // composite exists and has not already been disposed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes the given composite.
+     * Disposes the given composite if it is non-null and not already disposed.
      *
-     * @param composite the composite
+     * @param composite  The composite to dispose; no-op if {@code null} or already disposed.
      */
     private void disposeComposite( Composite composite )
     {
@@ -295,8 +326,15 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
     }
 
 
+    // ── Refreshing the What Panel From the Context Model ─────────────────────
+    // Called when the Visual tab is shown. Tarkin reads the current what-clause
+    // type from the model and checks the corresponding checkbox, creating the
+    // appropriate sub-composite.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Refresh the WhatClause GUI
+     * Refreshes the WHAT panel from the current ACL context. Reads the model's
+     * what-clause type and pre-checks the corresponding checkbox (DN, Filter, or
+     * Attributes), creating the sub-composite immediately.
      */
     public void refresh()
     {
@@ -326,8 +364,12 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
     }
 
 
+    // ── Disposing All Created SWT Widgets ─────────────────────────────────────
+    // Tarkin powers down the targeting console and releases all SWT resources.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes all created SWT widgets.
+     * Disposes the base composite (and all its children). Should be called when
+     * the visual editor composite is itself disposed.
      */
     public void dispose()
     {
@@ -339,8 +381,14 @@ public class OpenLdapAclWhatClauseWidget extends AbstractWidget
     }
 
 
+    // ── Saving Widget Settings Before Close ──────────────────────────────────
+    // The visual editor delegates saveWidgetSettings here so the attributes
+    // expandable section can persist its expand/collapse state if it is open.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves widget settings.
+     * Saves any widget-level settings (e.g. expand/collapse state). Delegates to
+     * {@link WhatClauseAttributesComposite#saveWidgetSettings()} if the attributes
+     * sub-composite is currently visible.
      */
     public void saveWidgetSettings()
     {

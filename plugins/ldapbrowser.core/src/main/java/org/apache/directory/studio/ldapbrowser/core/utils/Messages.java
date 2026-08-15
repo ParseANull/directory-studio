@@ -23,9 +23,20 @@ package org.apache.directory.studio.ldapbrowser.core.utils;
 import org.eclipse.osgi.util.NLS;
 
 
+// ── CLASS: Messages — C-3PO'S PHRASE BOOK FOR THE UTILS PACKAGE ──────────────
+// C-3PO is fluent in over six million forms of communication — the utils package
+// needs him to translate message keys into human-readable strings for file-size
+// labels and other utility outputs.  Messages extends Eclipse NLS and provides
+// static public fields that are populated from the messages.properties bundle.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class get messages from the resources file.
- *  
+ * Eclipse NLS message bundle for the {@code utils} package.
+ * Provides localised strings for file-size labels (byte, kilobyte, megabyte)
+ * and other utility messages.
+ *
+ * <p>Think of this as C-3PO's phrase book for the utils layer — each public
+ * field is automatically populated from the messages.properties resource.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class Messages extends NLS

@@ -25,20 +25,50 @@ import org.apache.directory.studio.openldap.config.acl.OpenLdapAclValueWithConte
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseTransportSsf;
 
 
+// ── CLASS: WhoClauseTransportSsfComposite — TARKIN REQUIRING TRANSPORT SSF ───
+// Grand Moff Tarkin requires the transport-layer security strength factor
+// to meet a minimum encryption tier. This composite binds
+// AbstractWhoClauseCryptoStrengthComposite to AclWhoClauseTransportSsf and also
+// implements the WhoClauseComposite interface. The SSF combo and optional custom
+// spinner are inherited from the abstract base.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * 
+ * A clause composite for the {@code transport_ssf} who-clause. Inherits the SSF
+ * preset-tier combo and custom spinner from
+ * {@link AbstractWhoClauseCryptoStrengthComposite}, and also implements
+ * {@link WhoClauseComposite}.
+ *
+ * <p>Think of this class as Grand Moff Tarkin requiring a minimum transport-layer
+ * encryption tier before the rule applies.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class WhoClauseTransportSsfComposite extends AbstractWhoClauseCryptoStrengthComposite<AclWhoClauseTransportSsf>
     implements
     WhoClauseComposite<AclWhoClauseTransportSsf>
 {
+    // ── Constructor With Explicit Clause ──────────────────────────────────────
+    /**
+     * Creates a new Transport-SSF who-clause composite with an explicit clause.
+     *
+     * @param context               The ACL context.
+     * @param clause                The Transport-SSF clause to edit.
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhoClauseTransportSsfComposite( OpenLdapAclValueWithContext context, AclWhoClauseTransportSsf clause, Composite visualEditorComposite )
     {
         super( context, clause, visualEditorComposite );
     }
 
 
+    // ── Constructor Without Explicit Clause ───────────────────────────────────
+    /**
+     * Creates a new Transport-SSF who-clause composite with a default
+     * {@link AclWhoClauseTransportSsf} instance.
+     *
+     * @param context               The ACL context.
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhoClauseTransportSsfComposite( OpenLdapAclValueWithContext context, Composite visualEditorComposite )
     {
         super( context, new AclWhoClauseTransportSsf(), visualEditorComposite );

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor.text;
@@ -69,12 +69,45 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
 
 
+// ── CLASS: LdifDamagerRepairer — C-3PO COLOUR-CODES THE TRANSMISSION ──────────
+// C-3PO reads every line of the incoming communiqué and annotates each token
+// with its diplomatic colour code: DN lines are one colour, attribute names
+// another, keywords another, and so on — all driven by the current preference
+// settings so the colour scheme can be changed at runtime.
+// LdifDamagerRepairer implements both Eclipse's damage (mark what changed) and
+// repair (repaint with token colours) roles — always repainting the whole
+// partition so colours stay consistent after incremental edits.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Eclipse {@link IPresentationDamager} and {@link IPresentationRepairer} for
+ * the LDIF editor.
+ * Always damages the full partition on any change ({@link #getDamageRegion}
+ * returns the partition), then walks every overlapping {@link LdifContainer}'s
+ * parts and adds {@link StyleRange}s colour-coded by token type (comments, DNs,
+ * attribute names, value types, values, changetype keywords, and moddn/add/
+ * modify/delete type colours).
+ * Think of this as C-3PO colour-coding every line of the transmission according
+ * to its diplomatic token class.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class LdifDamagerRepairer implements IPresentationDamager, IPresentationRepairer
 {
+    /** The LDIF editor whose model drives the colour decisions. */
     private ILdifEditor editor;
 
+    /**
+     * Optional runtime overrides: maps preference key (rgb/style suffix included)
+     * to {@link RGB} or {@link Integer} for live preview.
+     */
     private Map<String, Object> textAttributeKeyToValueMap;
 
+    // ── CONSTRUCT ─────────────────────────────────────────────────────────────
+    /**
+     * Creates a new damager-repairer for {@code editor}.
+     *
+     * @param editor  the LDIF editor whose model and preferences to use
+     */
     public LdifDamagerRepairer( ILdifEditor editor )
     {
         super();
@@ -82,17 +115,41 @@ public class LdifDamagerRepairer implements IPresentationDamager, IPresentationR
     }
 
 
+    // ── DOCUMENT CHANGED ──────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>No-op — the document reference is obtained from the model each time.</p>
+     */
     public void setDocument( IDocument document )
     {
     }
 
 
+    // ── MARK THE DAMAGE REGION ───────────────────────────────────────────────
+    // The whole partition is always repainted; LDIF tokens can span multiple
+    // lines so we cannot predict a smaller safe region.
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Always returns the full {@code partition} as the damage region.</p>
+     */
     public IRegion getDamageRegion( ITypedRegion partition, DocumentEvent event, boolean documentPartitioningChanged )
     {
         return partition;
     }
 
 
+    // ── REPAINT THE PRESENTATION ─────────────────────────────────────────────
+    // C-3PO walks the model containers that overlap the damaged region and
+    // adds a colour range for each token segment.
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Collects all {@link LdifContainer}s whose region overlaps {@code damage},
+     * then delegates to {@link #highlight} to add {@link StyleRange}s for each
+     * token segment.</p>
+     */
     public void createPresentation( TextPresentation presentation, ITypedRegion damage )
     {
 
@@ -116,6 +173,18 @@ public class LdifDamagerRepairer implements IPresentationDamager, IPresentationR
     }
 
 
+    // ── LOAD A TEXT ATTRIBUTE FROM PREFERENCES ───────────────────────────────
+    /**
+     * Reads the {@link TextAttribute} for {@code key} from the preference store.
+     * If {@link #textAttributeKeyToValueMap} contains an override for the colour
+     * or style key, that value is used instead.
+     * Uses {@code null} colour when the preference value is the default-default
+     * string, so system high-contrast themes are not overridden.
+     *
+     * @param key  the base preference key
+     *             (e.g. {@code PREFERENCE_LDIFEDITOR_SYNTAX_COMMENT})
+     * @return     the resolved {@link TextAttribute}
+     */
     private TextAttribute getTextAttribute( String key )
     {
         IPreferenceStore store = LdifEditorActivator.getDefault().getPreferenceStore();
@@ -149,17 +218,20 @@ public class LdifDamagerRepairer implements IPresentationDamager, IPresentationR
     }
 
 
+    // ── RUNTIME COLOUR OVERRIDE ───────────────────────────────────────────────
+    // The preference page calls this to show a live preview without saving.
     /**
-     * Overwrites the style set in preference store
-     * 
-     * @param key
-     *                the key
-     *                LdifEditorConstants.PREFERENCE_LDIFEDITOR_SYNTAX_xxx +
-     *                LdifEditorConstants.PREFERENCE_LDIFEDITOR_SYNTAX_RGB_SUFFIX
-     *                ore
-     *                LdifEditorConstants.PREFERENCE_LDIFEDITOR_SYNTAX_STYLE_SUFFIX
-     * @param newValue
-     *                RGB object or Integer object
+     * Overrides the colour and style used for {@code key} without changing
+     * the preference store.  The override is stored in
+     * {@link #textAttributeKeyToValueMap} and takes effect on the next repaint.
+     *
+     * <p>The {@code key} should be one of the
+     * {@code PREFERENCE_LDIFEDITOR_SYNTAX_xxx} constants (without the
+     * {@code _rgb} or {@code _style} suffix).</p>
+     *
+     * @param key    the base preference key
+     * @param rgb    the new foreground colour
+     * @param style  the new SWT font style
      */
     public void setTextAttribute( String key, RGB rgb, int style )
     {
@@ -173,6 +245,19 @@ public class LdifDamagerRepairer implements IPresentationDamager, IPresentationR
     }
 
 
+    // ── WALK AND COLOUR EACH TOKEN ────────────────────────────────────────────
+    // C-3PO inspects each part of each container and applies the matching
+    // colour range to the presentation.
+    /**
+     * Adds colour {@link StyleRange}s to {@code presentation} for each part of
+     * each container.  Handles: version line, comment, dn, attr-val, changetype,
+     * newrdn, deleteoldrdn, newsuperior, modspec-type, modspec-sep, control, and
+     * nested {@link LdifModSpec}.
+     *
+     * @param containers   the containers to highlight
+     * @param presentation the text presentation to add style ranges to
+     * @param damage       the damaged region (used when recursing into mod-specs)
+     */
     private void highlight( LdifContainer[] containers, TextPresentation presentation, ITypedRegion damage )
     {
         TextAttribute COMMENT_TEXT_ATTRIBUTE = getTextAttribute(
@@ -210,13 +295,6 @@ public class LdifDamagerRepairer implements IPresentationDamager, IPresentationR
                 if ( parts[i] instanceof LdifLineBase )
                 {
                     LdifLineBase line = ( LdifLineBase ) parts[i];
-
-                    // String debug = line.getClass().getName() +
-                    // "("+line.getOffset()+","+line.getLength()+"):
-                    // "+line.toString();
-                    // debug = debug.replaceAll("\n", "\\\\n");
-                    // debug = debug.replaceAll("\r", "\\\\r");
-                    // System.out.println(debug);
 
                     if ( line instanceof LdifVersionLine )
                     {
@@ -317,14 +395,6 @@ public class LdifDamagerRepairer implements IPresentationDamager, IPresentationR
                         this.addStyleRange( presentation, offset + newsuperiorSpecLength + valueTypeLength,
                             newsuperiorLength, VALUE_TEXT_ATTRIBUTE );
                     }
-                    // else if(line instanceof LdifDeloldrdnLine) {
-                    // this.addStyleRange(presentation, offset,
-                    // line.getLength(), MODTYPE_TEXT_ATTRIBUTE);
-                    // }
-                    // else if(line instanceof LdifNewsuperiorLine) {
-                    // this.addStyleRange(presentation, offset,
-                    // line.getLength(), MODTYPE_TEXT_ATTRIBUTE);
-                    // }
                     else if ( line instanceof LdifModSpecTypeLine )
                     {
                         LdifModSpecTypeLine modSpecTypeLine = ( LdifModSpecTypeLine ) line;
@@ -400,6 +470,18 @@ public class LdifDamagerRepairer implements IPresentationDamager, IPresentationR
     }
 
 
+    // ── ADD A STYLE RANGE TO THE PRESENTATION ────────────────────────────────
+    /**
+     * Adds a {@link StyleRange} to {@code presentation} if {@code offset >= 0}
+     * and {@code length > 0}.
+     * Translates the {@link TextAttribute} into foreground colour, background,
+     * bold/italic style, underline, and strikethrough.
+     *
+     * @param presentation  the text presentation to update
+     * @param offset        the character offset of the range
+     * @param length        the length of the range
+     * @param textAttribute the visual style to apply
+     */
     private void addStyleRange( TextPresentation presentation, int offset, int length, TextAttribute textAttribute )
     {
         if ( offset >= 0 && length > 0 )

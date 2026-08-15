@@ -6,22 +6,31 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration;
 
 
+// ── CLASS: ApacheDS2ConfigurationPluginConstants — DEATH STAR TECHNICAL SCHEMATICS REFERENCE
+// The Death Star technical readout is full of part numbers, section codes, and resource paths.
+// Nobody memorises them — you look them up in the reference appendix.
+// This interface is that appendix: every image path, every file name constant, and the
+// plugin ID, collected in one place so the rest of the plugin can reference them by name.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This interface contains all the Constants used in the Plugin.
+ * Symbolic constants for the {@code apacheds.configuration} plugin — plugin ID, image resource
+ * paths, and well-known LDIF file names.
+ * All values are compile-time constants accessed directly as static fields.
+ * Think of it as the Death Star technical readout's reference appendix.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */

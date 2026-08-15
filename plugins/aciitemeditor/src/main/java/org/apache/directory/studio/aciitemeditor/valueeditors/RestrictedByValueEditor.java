@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.valueeditors;
 
@@ -47,8 +47,21 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
 
+// ── CLASS: RestrictedByValueEditor — ISB CROSS-ATTRIBUTE RESTRICTION TERMINAL ──
+// The ISB terminal for the "restrictedBy" protected-item row specifies that
+// the values of one attribute type are constrained by the values of another.
+// The row encodes as "{ type cn, valuesIn sn }" — two attribute types.
+// This editor parses that pair, opens a two-combo dialog for editing, and
+// re-encodes on confirmation.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * ACI item editor specific value editor to edit the RestrictedBy protected item.
+ * {@link AbstractDialogStringValueEditor} for the {@code restrictedBy}
+ * protected-item category in the ACI visual editor.
+ * Parses the current row value (format: {@code { type atA, valuesIn atB }}),
+ * opens an inner {@code RestrictedByDialog} for editing, and re-encodes the
+ * result on confirmation.
+ * Think of this as the ISB cross-attribute restriction terminal: two combos,
+ * two attribute types, one cross-reference constraint.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -61,20 +74,35 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
     private static final String EMPTY = ""; //$NON-NLS-1$
 
 
+    // ── OPEN THE TWO-COMBO DIALOG ─────────────────────────────────────────────
+    // The ISB terminal opens a dialog with two schema-driven combos.
+    // If the officer confirms both fields as non-empty, we encode the pair as
+    // "{ type atA, valuesIn atB }" and store it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
-     * 
-     * This implementation opens the RestrictedByDialog.
+     * Opens the inner {@code RestrictedByDialog} and, if the user confirms
+     * both attribute type fields as non-empty, stores the encoded result.
+     *
+     * <p>For example — editing an existing restrictedBy row:</p>
+     * <pre>
+     *   cellEditor.activate();
+     *   // → RestrictedByDialog opens pre-filled with "sn", "cn"
+     *   // user changes valuesIn to "givenName"
+     *   // → setValue("{ type sn, valuesIn givenName }") is called
+     * </pre>
+     *
+     * @param shell  the parent shell for the dialog
+     * @return       {@code true} if the user confirmed two non-empty attribute types
      */
     public boolean openDialog( Shell shell )
     {
         Object value = getValue();
-        
+
         if ( value instanceof RestrictedByValueEditorRawValueWrapper )
         {
             RestrictedByValueEditorRawValueWrapper wrapper = ( RestrictedByValueEditorRawValueWrapper ) value;
             RestrictedByDialog dialog = new RestrictedByDialog( shell, wrapper.schema, wrapper.type, wrapper.valuesIn );
-            
+
             if ( dialog.open() == TextDialog.OK && !EMPTY.equals( dialog.getType() )
                 && !EMPTY.equals( dialog.getValuesIn() ) )
             {
@@ -82,15 +110,19 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
                 return true;
             }
         }
-        
+
         return false;
     }
 
 
+    // ── BUILD THE RAW VALUE WRAPPER FROM AN IVALUE ────────────────────────────
     /**
-     * {@inheritDoc}
-     * 
-     * Returns an AttributeTypeAndValueValueEditorRawValueWrapper.
+     * Returns a {@link RestrictedByValueEditorRawValueWrapper} containing the
+     * schema and parsed attribute type pair from {@code value}.
+     * Returns {@code null} if the value is unavailable.
+     *
+     * @param value  the LDAP attribute value to wrap
+     * @return       the raw value wrapper, or {@code null}
      */
     public Object getRawValue( IValue value )
     {
@@ -99,20 +131,32 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
             return getRawValue( value.getAttribute().getEntry().getBrowserConnection(), value
                 .getStringValue() );
         }
-        
+
         return null;
     }
 
 
+    // ── PARSE THE ENCODED STRING ──────────────────────────────────────────────
+    // We regex-parse "{ type atA, valuesIn atB }" and bundle the pieces with
+    // the schema into a wrapper for the inner dialog.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Parses {@code value} as {@code { type atA, valuesIn atB }} and bundles
+     * the pieces with the schema from {@code connection} into a raw value wrapper.
+     *
+     * @param connection  the browser connection whose schema to use
+     * @param value       the encoded row string to parse
+     * @return            the wrapper, or {@code null} if no schema or invalid input
+     */
     private Object getRawValue( IBrowserConnection connection, Object value )
     {
         Schema schema = null;
-        
+
         if ( connection != null )
         {
             schema = connection.getSchema();
         }
-        
+
         if ( schema == null || !( value instanceof String ) )
         {
             return null;
@@ -140,15 +184,19 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
         return wrapper;
     }
 
+    // ── CLASS: RestrictedByValueEditorRawValueWrapper — SCHEMA + TYPE + VALUESIN
+    // A private DTO bundling schema and the two parsed attribute type names so
+    // they travel together from getRawValue() to openDialog().
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * The RestrictedByValueEditorRawValueWrapper is used to pass contextual 
-     * information to the opened RestrictedByDialog.
+     * Private DTO that bundles the schema and parsed attribute type pair for
+     * the inner {@code RestrictedByDialog}.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
     private class RestrictedByValueEditorRawValueWrapper
     {
-        /** 
+        /**
          * The schema, used in RestrictedByDialog to build the list
          * with possible attribute types.
          */
@@ -161,12 +209,13 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
         private final String valuesIn;
 
 
+        // ── BUNDLE THE THREE PIECES ───────────────────────────────────────────
         /**
-         * Creates a new instance of RestrictedByValueEditorRawValueWrapper.
-         * 
-         * @param schema the schema
-         * @param type the type
-         * @param valuesIn the values in
+         * Creates a new {@code RestrictedByValueEditorRawValueWrapper}.
+         *
+         * @param schema    the LDAP schema for both combos
+         * @param type      the pre-parsed "type" attribute type
+         * @param valuesIn  the pre-parsed "valuesIn" attribute type
          */
         private RestrictedByValueEditorRawValueWrapper( Schema schema, String type, String valuesIn )
         {
@@ -176,8 +225,14 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
         }
     }
 
+    // ── CLASS: RestrictedByDialog — TWO-COMBO CROSS-ATTRIBUTE EDITOR DIALOG ───
+    // The inner dialog lays out: "{ type " + combo + ", valuesIn " + combo + " }"
+    // mirroring the ACI encoding so officers can see exactly what they're editing.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This class provides a dialog to enter the RestrictedBy values.
+     * Private inner {@link Dialog} presenting two schema-driven attribute-type
+     * combos (with content assist), arranged inline to mirror the ACI encoding
+     * {@code { type atA, valuesIn atB }}.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -206,13 +261,14 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
         private String returnValuesIn;
 
 
+        // ── OPEN THE TWO-COMBO DIALOG ─────────────────────────────────────────
         /**
-         * Creates a new instance of RestrictedByDialog.
-         * 
-         * @param parentShell the parent shell
-         * @param schema the schema
-         * @param initialType the initial type
-         * @param initialValuesIn the initial values in
+         * Creates a new {@code RestrictedByDialog}.
+         *
+         * @param parentShell      the parent SWT shell
+         * @param schema           the LDAP schema for both combos
+         * @param initialType      the pre-parsed "type" attribute type
+         * @param initialValuesIn  the pre-parsed "valuesIn" attribute type
          */
         public RestrictedByDialog( Shell parentShell, Schema schema, String initialType, String initialValuesIn )
         {
@@ -226,6 +282,7 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
         }
 
 
+        // ── SET TITLE AND ICON ────────────────────────────────────────────────
         /**
          * {@inheritDoc}
          */
@@ -237,6 +294,7 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
         }
 
 
+        // ── SNAPSHOT BOTH COMBOS ON OK ────────────────────────────────────────
         /**
          * {@inheritDoc}
          */
@@ -248,6 +306,10 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
         }
 
 
+        // ── BUILD THE INLINE FIVE-WIDGET FORM ─────────────────────────────────
+        // Layout: label + type combo + label + valuesIn combo + label, mirroring
+        // the ACI text "{ type atA, valuesIn atB }".
+        // ─────────────────────────────────────────────────────────────────────
         /**
          * {@inheritDoc}
          */
@@ -288,10 +350,12 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
         }
 
 
+        // ── RETURN THE CONFIRMED TYPE ─────────────────────────────────────────
         /**
-         * Gets the type.
-         * 
-         * @return the type, null if canceled
+         * Returns the "type" attribute type confirmed in the combo, or {@code null}
+         * if cancelled.
+         *
+         * @return the attribute type, or {@code null}
          */
         public String getType()
         {
@@ -299,10 +363,12 @@ public class RestrictedByValueEditor extends AbstractDialogStringValueEditor
         }
 
 
+        // ── RETURN THE CONFIRMED VALUESIN ─────────────────────────────────────
         /**
-         * Gets the values in.
-         * 
-         * @return the values in, null if canceled
+         * Returns the "valuesIn" attribute type confirmed in the combo, or
+         * {@code null} if cancelled.
+         *
+         * @return the attribute type, or {@code null}
          */
         public String getValuesIn()
         {

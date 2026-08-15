@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.dialogs.properties;
@@ -45,9 +45,25 @@ import org.eclipse.ui.IWorkbenchPropertyPage;
 import org.eclipse.ui.dialogs.PropertyPage;
 
 
+// ── CLASS: EntryPropertyPage — LUKE'S BINARY SUNSET ON TATOOINE ───────────────
+// Luke stands at his viewpoint and sees the full panorama: the DN of the planet
+// (where it sits in the galaxy), the URL you'd use to navigate there, who created
+// it and when, who last modified it and when, how big it is, how many children
+// it has, and how many attributes and values it carries.
+// This property page is that same panorama for an LDAP entry — the complete
+// overview, with refresh buttons so Luke can re-check conditions that might have
+// changed since the page was first opened.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This page shows some info about the selected Entry.
- * 
+ * Eclipse property page displaying all metadata for a selected LDAP entry.
+ * Shows DN, LDAP URL, operational timestamps (createTimestamp, creatorsName,
+ * modifyTimestamp, modifiersName), and sizing statistics (byte size, child count,
+ * attribute count, value count).
+ * Two refresh buttons let the user reload operational attributes or the full
+ * entry on demand without closing the page.
+ * Think of this page as Luke's binary sunset — the complete entry panorama laid
+ * out for inspection.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class EntryPropertyPage extends PropertyPage implements IWorkbenchPropertyPage
@@ -93,8 +109,19 @@ public class EntryPropertyPage extends PropertyPage implements IWorkbenchPropert
     private Button reloadEntryButton;
 
 
+    // ── LUKE STEPS UP TO THE VIEWPOINT ────────────────────────────────────────
+    // Luke walks out and claims his spot — no Apply, no Defaults buttons clutter
+    // his view.  He's here to see, not to configure.
+    // This is a read-only information page; we hide the default and apply buttons.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EntryPropertyPage.
+     * Creates the property page and suppresses the Default and Apply buttons.
+     * The page is informational; entry metadata is not something the user edits here.
+     *
+     * <p>For example — Luke arrives without tools, just his eyes:</p>
+     * <pre>
+     *   noDefaultAndApplyButton() → clean read-only view
+     * </pre>
      */
     public EntryPropertyPage()
     {
@@ -103,8 +130,36 @@ public class EntryPropertyPage extends PropertyPage implements IWorkbenchPropert
     }
 
 
+    // ── LUKE TAKES IN THE FULL ENTRY PANORAMA ─────────────────────────────────
+    // Luke's viewpoint has two panels: "Create/Modify Information" (who made this
+    // and when, with a refresh button for operational attributes) and "Sizing
+    // Information" (how big is it, how many children, with a full reload button).
+    // We build the same two-panel layout here, wired to entryUpdated() which fills
+    // every field from the live entry data.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the property page UI: a header section (DN, URL), a
+     * Create/Modify Information group (four operational attribute fields plus a
+     * "Refresh" button for operational attributes), and a Sizing Information group
+     * (size, children, attributes, values, include-operational checkbox, and a full
+     * reload button).
+     * Calls {@link #entryUpdated(IEntry)} at the end to populate all fields.
+     *
+     * <p>For example — Luke's panoramic viewpoint layout:</p>
+     * <pre>
+     *   DN:  uid=jedi,ou=people,dc=force,dc=com
+     *   URL: ldap://yoda.force.com/uid=jedi,…
+     *   Create/Modify group:
+     *     Create Timestamp: 2025-05-04T00:00:00Z
+     *     Creators Name: cn=admin,dc=force,dc=com
+     *     ...  [Refresh]
+     *   Sizing group:
+     *     Entry Size: 1.2 kB, Children: 3, Attributes: 12, Values: 18
+     *     [✓] Include operational attributes  [Refresh]
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse's property dialog.
+     * @return        The composite we built.
      */
     protected Control createContents( Composite parent )
     {
@@ -237,8 +292,24 @@ public class EntryPropertyPage extends PropertyPage implements IWorkbenchPropert
     }
 
 
+    // ── LUKE REFOCUSES ON THE OPERATIONAL DETAILS ─────────────────────────────
+    // Luke squints at the horizon to get operational details — how long ago did
+    // the sun rise (createTimestamp), who lit it (creatorsName)?  He refreshes
+    // his view by marking that he wants the full operational data and re-fetching
+    // from the server.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reload operational attributes.
+     * Reloads the entry's operational attributes from the LDAP server and refreshes
+     * the Create/Modify Information group's text fields.
+     * Triggered by the "Refresh" button in the CMI group.
+     * Sets {@code initOperationalAttributes = true} on the entry so the server
+     * includes them in the fetch.
+     *
+     * <p>For example — Luke re-checks the operational conditions at the horizon:</p>
+     * <pre>
+     *   entry.setInitOperationalAttributes(true) →
+     *   InitializeAttributesRunnable runs → creatorsName, modifyTimestamp updated
+     * </pre>
      */
     private void reloadOperationalAttributes()
     {
@@ -250,8 +321,23 @@ public class EntryPropertyPage extends PropertyPage implements IWorkbenchPropert
     }
 
 
+    // ── LUKE TAKES A FRESH LOOK AT THE WHOLE LANDSCAPE ────────────────────────
+    // Sometimes the scene has changed since Luke first stepped up to the viewpoint
+    // — new entries added, children reorganized.  He reloads the full landscape:
+    // children list first, then all attributes, so the sizing numbers are accurate.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reload entry.
+     * Reloads the entry's full attribute set (including operational) and its
+     * children list from the LDAP server, then refreshes all sizing fields.
+     * Triggered by the "Refresh" button in the Sizing Information group.
+     * Runs two runnables sequentially: first children, then attributes.
+     *
+     * <p>For example — Luke takes a completely fresh look at the landscape:</p>
+     * <pre>
+     *   InitializeChildrenRunnable runs → child count updated
+     *   InitializeAttributesRunnable runs → attribute/value counts updated
+     *   entryUpdated(entry) → all fields repainted
+     * </pre>
      */
     private void reloadEntry()
     {
@@ -265,12 +351,24 @@ public class EntryPropertyPage extends PropertyPage implements IWorkbenchPropert
     }
 
 
+    // ── LUKE IDENTIFIES WHICH PLANET HE'S LOOKING AT ─────────────────────────
+    // Luke knows he's on Tatooine but needs to extract the formal address — the
+    // DN — from whatever Eclipse hands him as the selection element.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the entry.
-     * 
-     * @param element the element
-     * 
-     * @return the entry
+     * Extracts the {@link IEntry} from the given Eclipse selection element using
+     * the {@link IAdaptable} adapter mechanism.
+     * Returns {@code null} if the element doesn't adapt to {@link IEntry}.
+     * This is package-visible (not private) because {@link SchemaPropertyPage} and
+     * {@link RootDSEPropertyPage} reuse it to get the connection.
+     *
+     * <p>For example — Luke identifies his coordinates:</p>
+     * <pre>
+     *   element.getAdapter(IEntry.class) → IEntry(uid=jedi,…) → page populated
+     * </pre>
+     *
+     * @param element  The Eclipse selection element; typically an {@link IAdaptable}.
+     * @return         The {@link IEntry} for the selected LDAP entry, or {@code null}.
      */
     static IEntry getEntry( Object element )
     {
@@ -283,10 +381,23 @@ public class EntryPropertyPage extends PropertyPage implements IWorkbenchPropert
     }
 
 
+    // ── LUKE CHECKS IF THE VIEWING SPOT IS STILL ACCESSIBLE ──────────────────
+    // If a dust storm rolled in and obscured the viewpoint while Luke was away,
+    // the sunset widget would be disposed and unusable.  We check this before
+    // anyone tries to repaint the screen.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if is disposed.
-     * 
-     * @return true, if is disposed
+     * Returns {@code true} if the page's DN text widget has been disposed,
+     * which happens when the property dialog is closed.
+     * Used by callers (like EntryPropertyPageUniversalListener) to know whether
+     * they can still push updates into this page.
+     *
+     * <p>For example — Luke checks if the viewpoint is still clear:</p>
+     * <pre>
+     *   dialog closed → dnText disposed → isDisposed() = true → no more updates
+     * </pre>
+     *
+     * @return  {@code true} if the root text widget is disposed.
      */
     public boolean isDisposed()
     {
@@ -294,12 +405,25 @@ public class EntryPropertyPage extends PropertyPage implements IWorkbenchPropert
     }
 
 
+    // ── LUKE EXTRACTS A CLEAR READING FROM THE DATA ───────────────────────────
+    // Luke can read both suns' colors even when the atmosphere distorts things;
+    // if an attribute is null (the data hasn't been fetched yet) he substitutes
+    // a dash rather than leaving the field blank or throwing an NPE.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the non-null string value.
-     * 
-     * @param att the attribute
-     * 
-     * @return the non-null string value
+     * Returns the string value of an attribute, or {@code "-"} if the attribute is
+     * null (meaning it hasn't been fetched from the server yet).
+     * Used for the operational attribute fields where the server may not have
+     * returned createTimestamp etc.
+     *
+     * <p>For example — Luke reports a sun reading even when partially obscured:</p>
+     * <pre>
+     *   attribute null (not fetched) → "-"
+     *   attribute present → attribute.getStringValue()
+     * </pre>
+     *
+     * @param att  The attribute to read, may be {@code null}.
+     * @return     The attribute's string value, or {@code "-"} if null.
      */
     private String getNonNullStringValue( IAttribute att )
     {
@@ -312,10 +436,28 @@ public class EntryPropertyPage extends PropertyPage implements IWorkbenchPropert
     }
 
 
+    // ── LUKE REFRESHES THE FULL PANORAMIC VIEW ────────────────────────────────
+    // The landscape updates — a new child settlement appeared, the size changed —
+    // so Luke's viewpoint needs repainting.  We repopulate every text field
+    // from the entry's current state, counting attributes and values on the fly
+    // (optionally including operational attributes based on the checkbox).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the text widgets if the entry was updated.
-     * 
-     * @param entry the entry
+     * Repopulates all text fields in this page from the current state of the
+     * given entry.
+     * Skips the update silently if the DN text widget is already disposed (the
+     * dialog was closed).
+     * Counts attributes, values, and bytes dynamically; optionally includes
+     * operational attributes in the count based on the checkbox state.
+     *
+     * <p>For example — Luke repaints the panorama after the landscape changes:</p>
+     * <pre>
+     *   entry updated → dnText, urlText, ctText, cnText, mtText, mnText refreshed
+     *   attribute/value/size counts recalculated
+     *   childrenText shows "5+" if there are more children than fetched
+     * </pre>
+     *
+     * @param entry  The LDAP entry to read current data from; must not be null.
      */
     private void entryUpdated( IEntry entry )
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.valueeditors.time;
@@ -35,22 +35,49 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: GeneralizedTimeValueEditor — MON MOTHMA'S MISSION TIMESTAMP READER ─
+// Mon Mothma's mission-log display shows timestamps in the locale-aware format
+// ("Dec 15, 2023 12:00:00 PM UTC (20231215120000Z)") so every Rebel officer can
+// read them without decoding the raw LDAP string.  When an officer needs to edit
+// a timestamp, the reader opens the full mission clock console
+// (GeneralizedTimeValueDialog).  If the stored value is malformed, the reader
+// pops a confirmation asking whether to proceed with today's date instead.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Implementation of IValueEditor for syntax 1.3.6.1.4.1.1466.115.121.1.24 
- * (Generalized Time). 
- * 
- * Currently only the getDisplayXXX() methods are implemented.
- * For modification the raw string must be edited.
+ * Value editor for LDAP GeneralizedTime syntax
+ * (OID 1.3.6.1.4.1.1466.115.121.1.24).
+ * In the table we format the raw timestamp into a locale-aware string
+ * (e.g. {@code "Dec 15, 2023 12:00:00 PM UTC (20231215120000Z)"}) so it is
+ * human-readable without losing the raw value.
+ * For editing we open {@link GeneralizedTimeValueDialog} which provides
+ * time spinners, a calendar, a timezone combo, and a raw text field kept
+ * in sync bidirectionally.
+ * If the stored string is malformed we ask the user whether to proceed with
+ * today's date/time or cancel.
+ * Think of this as Mon Mothma's mission timestamp reader — annotates the table
+ * and opens the full clock console on demand.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class GeneralizedTimeValueEditor extends AbstractDialogStringValueEditor
 {
+
+    // ── Mon Mothma Formats the Timestamp for the Mission Log Table ───────────
+    // The mission log shows "Dec 15, 2023 12:00:00 PM UTC (20231215120000Z)".
+    // We parse the raw string into a GeneralizedTime, format the Date in the
+    // user's locale/timezone, and append the raw value in parentheses for
+    // reference.  If the string can't be parsed, we show the raw string.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
-     * 
-     * Returns the proper formatted date and time, timezone is 
-     * converted to the default locale. 
+     * Returns a locale-formatted date/time string with the raw GeneralizedTime
+     * appended in parentheses.
+     * Example: {@code "Dec 15, 2023 12:00:00 PM UTC (20231215120000Z)"}.
+     * If the raw value cannot be parsed as GeneralizedTime, the raw string is
+     * returned unchanged.
+     * In raw-values mode the parent's default display is used.
+     *
+     * @param value  The LDAP attribute value holding the raw GeneralizedTime string.
+     * @return       The formatted display string.
      */
     public String getDisplayValue( IValue value )
     {
@@ -76,8 +103,30 @@ public class GeneralizedTimeValueEditor extends AbstractDialogStringValueEditor
     }
 
 
+    // ── Mon Mothma Opens the Mission Clock Console for Editing ────────────────
+    // When an officer double-clicks a timestamp cell, the reader tries to parse
+    // the current value.  If the value is malformed, a confirmation dialog asks
+    // whether to start with today's date instead; if the officer declines, we
+    // cancel without opening the clock console.  On OK we write the new
+    // GeneralizedTime back to the attribute (with or without fraction).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Opens {@link GeneralizedTimeValueDialog} for the user to edit the timestamp.
+     * If the current value fails to parse as GeneralizedTime, a confirm dialog
+     * asks whether to proceed with the current date/time instead.
+     * Returns {@code true} if the user clicked OK and a new value was set;
+     * {@code false} if the dialog was cancelled or the user declined the bogus-value prompt.
+     *
+     * <p>For example — the reader opens the clock console:</p>
+     * <pre>
+     *   boolean changed = editor.openDialog(shell);
+     *   if (changed) {
+     *       // attribute now holds the new GeneralizedTime string
+     *   }
+     * </pre>
+     *
+     * @param shell  The parent SWT shell for GeneralizedTimeValueDialog.
+     * @return       {@code true} if a new timestamp was committed; {@code false} otherwise.
      */
     protected boolean openDialog( Shell shell )
     {
@@ -118,7 +167,7 @@ public class GeneralizedTimeValueEditor extends AbstractDialogStringValueEditor
             {
                 GeneralizedTime newGeneralizedTime = dialog.getGeneralizedTime();
 
-                // Checking if we need to save the generalized time 
+                // Checking if we need to save the generalized time
                 // with or without fraction
                 if ( newGeneralizedTime.getFraction() == 0 )
                 {

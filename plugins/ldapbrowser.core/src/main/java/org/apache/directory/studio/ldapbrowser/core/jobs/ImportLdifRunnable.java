@@ -78,8 +78,19 @@ import org.apache.directory.studio.ldifparser.model.lines.LdifModSpecTypeLine;
 import org.apache.directory.studio.ldifparser.parser.LdifParser;
 
 
+// ── CLASS: ImportLdifRunnable — CLONE TROOPER EXECUTING LDIF ATTACK ORDERS ───
+// Order 66 arrives as an LDIF file.  This runnable parses every record and
+// dispatches each operation (content-add, change-add, change-delete,
+// change-modify, change-modDN) to the live LDAP server.  All outcomes —
+// successes and failures — are appended to an optional LDIF log file.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
  * Runnable used to import an LDIF file.
+ *
+ * <p>Think of this as a clone trooper executing Order 66 from a plain-text
+ * LDIF battle plan — each record is dispatched to the live server in sequence;
+ * every success and failure is chronicled in a log file so the commanding
+ * officer can audit the campaign.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -101,14 +112,18 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     private boolean continueOnError;
 
 
+    // ── Clone Trooper Receives Full LDIF Import Orders With Log File ─────────────
+    // Stores all mission parameters: connection, source LDIF file, optional log
+    // file, whether existing entries should be updated on LDAP error 68,
+    // and whether the import should continue past individual record errors.
     /**
      * Creates a new instance of ImportLdifRunnable.
-     * 
+     *
      * @param browserConnection the browser connection
-     * @param ldifFile the LDIF file
-     * @param logFile the log file
-     * @param updateIfEntryExists the update if entry exists flag
-     * @param continueOnError the continue on error flag
+     * @param ldifFile the LDIF file to import
+     * @param logFile the log file (may be {@code null})
+     * @param updateIfEntryExists true to REPLACE-modify an existing entry rather than failing
+     * @param continueOnError true to continue past individual record errors
      */
     public ImportLdifRunnable( IBrowserConnection browserConnection, File ldifFile, File logFile,
         boolean updateIfEntryExists, boolean continueOnError )
@@ -121,13 +136,16 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Receives LDIF Import Orders Without A Log File ─────────────
+    // Convenience overload that delegates to the five-argument constructor
+    // with a null log file — operation outcomes are not persisted.
     /**
-     * Creates a new instance of ImportLdifRunnable.
-     * 
-     * @param connection the connection
-     * @param ldifFile the LDIF file
-     * @param updateIfEntryExists the update if entry exists flag
-     * @param continueOnError the continue on error flag
+     * Creates a new instance of ImportLdifRunnable without a log file.
+     *
+     * @param connection the browser connection
+     * @param ldifFile the LDIF file to import
+     * @param updateIfEntryExists true to REPLACE-modify an existing entry rather than failing
+     * @param continueOnError true to continue past individual record errors
      */
     public ImportLdifRunnable( IBrowserConnection connection, File ldifFile, boolean updateIfEntryExists,
         boolean continueOnError )
@@ -136,6 +154,7 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Reports The LDAP Connection This Mission Uses ───────────────
     /**
      * {@inheritDoc}
      */
@@ -146,6 +165,7 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Reports The Human-Readable LDIF Import Mission Name ────────
     /**
      * {@inheritDoc}
      */
@@ -155,6 +175,7 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Locks The LDIF File Against Concurrent Import Missions ─────
     /**
      * {@inheritDoc}
      */
@@ -166,6 +187,7 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Returns The Error Message If The LDIF Import Mission Fails ─
     /**
      * {@inheritDoc}
      */
@@ -175,6 +197,10 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Executes Order 66: Parse LDIF And Import All Records ────────
+    // Opens the LDIF file with LdifParser, opens or creates a no-op log writer,
+    // then delegates to importLdif() for the main import loop.
+    // Closes all I/O streams after the import completes or fails.
     /**
      * {@inheritDoc}
      */
@@ -227,6 +253,9 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Fires A Bulk-Modification Event After The Mission ──────────
+    // Obi-Wan senses a disturbance in the Force: the EventRegistry notifies all
+    // listeners that bulk modifications occurred on this connection.
     /**
      * {@inheritDoc}
      */
@@ -236,14 +265,18 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Iterates The LDIF Enumeration And Executes Each Record ─────
+    // Main import loop: dispatches each LdifRecord to importLdifRecord(), logs
+    // successes and failures, invalidates affected cache entries after each op,
+    // and either stops or continues past errors depending on continueOnError.
     /**
-     * Imports the LDIF enumeration
-     * 
+     * Imports the LDIF enumeration.
+     *
      * @param browserConnection the browser connection
-     * @param enumeration the LDIF enumeration
+     * @param enumeration the LDIF enumeration to iterate
      * @param logWriter the log writer
-     * @param updateIfEntryExists the update if entry exists flag
-     * @param continueOnError the continue on error flag
+     * @param updateIfEntryExists true to update on LDAP error 68
+     * @param continueOnError true to continue past individual record errors
      * @param monitor the progress monitor
      */
     static void importLdif( IBrowserConnection browserConnection, LdifEnumeration enumeration, Writer logWriter,
@@ -390,14 +423,19 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Dispatches One LDIF Record To The Correct LDAP Operation ───
+    // Han shoots first: validates the record, then routes it to createEntry,
+    // deleteEntry, modifyEntry, or renameEntry based on its concrete type.
+    // If a content-add fails with error 68 and updateIfEntryExists is set,
+    // falls back to a REPLACE modification batch on the same DN.
     /**
-     * Imports the LDIF record.
-     * 
+     * Imports a single LDIF record by dispatching it to the appropriate LDAP operation.
+     *
      * @param browserConnection the browser connection
-     * @param record the LDIF record
-     * @param updateIfEntryExists the update if entry exists flag
+     * @param record the LDIF record to import
+     * @param updateIfEntryExists true to fall back to a REPLACE modify on LDAP error 68
      * @param monitor the progress monitor
-     * @throws LdapInvalidDnException
+     * @throws LdapException if the LDAP operation fails
      */
     static void importLdifRecord( IBrowserConnection browserConnection, LdifRecord record, boolean updateIfEntryExists,
         StudioProgressMonitor monitor ) throws LdapException
@@ -529,12 +567,15 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Extracts LDAP Controls From An LDIF Change Record ──────────
+    // Reads LdifControlLine items from a LdifChangeRecord and converts them to
+    // LDAP API Control objects ready for the connection wrapper.
+    // Returns null for non-change (content) records that carry no controls.
     /**
-     * Gets the controls.
-     * 
+     * Gets the LDAP controls embedded in the given LDIF record.
+     *
      * @param record the LDIF record
-     * 
-     * @return the controls
+     * @return the controls array, or {@code null} if none are present
      */
     private static Control[] getControls( LdifRecord record )
     {
@@ -555,13 +596,17 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Writes A "#!RESULT ERROR" Entry To The Log File ────────────
+    // Records the connection URL, timestamp, error message, and the failing
+    // LDIF record so the log file is a complete audit trail of what went wrong.
+    // Any IOException during log writing is forwarded to the progress monitor.
     /**
-     * Log a modification error to the given writer.
-     * 
+     * Logs a modification error to the given writer.
+     *
      * @param browserConnection the browser connection
      * @param logWriter the log writer
-     * @param record the record
-     * @param exception the exception
+     * @param record the LDIF record that caused the error
+     * @param exception the exception that was thrown
      * @param monitor the progress monitor
      */
     private static void logModificationError( IBrowserConnection browserConnection, Writer logWriter,
@@ -595,12 +640,15 @@ public class ImportLdifRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Writes A "#!RESULT OK" Entry To The Log File ───────────────
+    // Records the connection URL, timestamp, and the successfully imported LDIF
+    // record so the log file is a complete audit trail of what succeeded.
     /**
-     * Log a modification to the given writer.
-     * 
+     * Logs a successful modification to the given writer.
+     *
      * @param browserConnection the browser connection
      * @param logWriter the log writer
-     * @param record the record
+     * @param record the LDIF record that was successfully imported
      * @param monitor the progress monitor
      */
     private static void logModification( IBrowserConnection browserConnection, Writer logWriter, LdifRecord record,

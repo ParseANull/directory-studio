@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.core;
@@ -26,15 +26,43 @@ import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 
 
+// ── CLASS: ConnectionCorePreferencesInitializer — CHEWIE SETS THE FACTORY DIALS
+// Before the Falcon leaves the shipyard for the first time, a technician walks
+// through the cockpit and sets every dial to its factory-recommended default.
+// This class is that technician: it runs once on first launch and writes
+// sensible default values for all connection.core preferences.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to set default preference values.
+ * Sets factory-default values for all connection.core preferences.
+ * Eclipse calls {@link #initializeDefaultPreferences()} once via the
+ * {@code org.eclipse.core.runtime.preferences} extension point.
+ * Without this, preferences that have never been user-set would return 0/false/null —
+ * which would be wrong for things like "log file count" (should default to 10).
+ * Think of this class as Chewie's technician setting the Falcon's factory defaults
+ * before the first mission.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ConnectionCorePreferencesInitializer extends AbstractPreferenceInitializer
 {
+    // ── INITIALIZE DEFAULT PREFERENCES — CHEWIE'S TECHNICIAN SETS EVERY DIAL ─────
+    // The technician walks through the cockpit setting each switch to its recommended
+    // factory position: cert validation on, 10 log files, 100 KB max size, etc.
+    // We write factory defaults into both the legacy Preferences and the new
+    // IEclipsePreferences default scope so every preference has a sane baseline.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Writes all factory-default values for connection.core preferences.
+     * Eclipse calls this exactly once, before any user-set value exists in the store.
+     * We set defaults for certificate validation, Kerberos login module, modification
+     * logs, search logs, and the passwords keystore preference.
+     *
+     * <p>For example — the technician sets the dials:</p>
+     * <pre>
+     *   PREFERENCE_MODIFICATIONLOGS_FILE_COUNT → 10
+     *   PREFERENCE_MODIFICATIONLOGS_FILE_SIZE  → 100 KB
+     *   PREFERENCE_VALIDATE_CERTIFICATES       → true
+     * </pre>
      */
     public void initializeDefaultPreferences()
     {

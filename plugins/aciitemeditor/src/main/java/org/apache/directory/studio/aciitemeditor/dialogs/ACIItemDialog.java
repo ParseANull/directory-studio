@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.dialogs;
 
@@ -39,8 +39,23 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
 
+// ── CLASS: ACIItemDialog — GRAND MOFF TARKIN REVIEWING A SECURITY DIRECTIVE ──
+// Grand Moff Tarkin opens the full ACI security directive on his console:
+// he sees a Visual tab for point-and-click editing and a Source tab for raw text.
+// Two extra buttons — Format and Check Syntax — sit in the button bar so he can
+// tidy the directive and verify it before sealing and filing it.
+// ACIItemDialog is that console: the main entry point for the user to edit an
+// aciItem LDAP attribute.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The main dialog of the ACI item editor.
+ * Main JFace {@link Dialog} for editing an ACI item string.
+ * Contains an {@link ACIItemTabFolderComposite} (Visual + Source tabs) and two
+ * extra buttons — Format and Check Syntax — in addition to the standard OK/Cancel.
+ * Pressing OK validates the ACI string and stores the result; pressing Cancel
+ * discards changes.
+ * Think of this class as Grand Moff Tarkin's security-directive console: he opens
+ * it, reviews the directive visually or in raw source, checks the syntax, and then
+ * signs it off with OK.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -59,11 +74,27 @@ public class ACIItemDialog extends Dialog
     private ACIItemTabFolderComposite tabFolderComposite;
 
 
+    // ── OPEN THE DIRECTIVE CONSOLE ─────────────────────────────────────────────
+    // Grand Moff Tarkin sits at his console, the briefing packet in hand.
+    // The context carries the connection, the target entry, and the current
+    // ACI string — everything the console needs to pre-populate itself.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ACIItemDialog.
-     * 
-     * @param parentShell the shell
-     * @param context the context
+     * Creates a new {@code ACIItemDialog} for editing the ACI string held in
+     * {@code context}.
+     * The context must be non-null and must contain a non-null ACI item value and
+     * a non-null connection.
+     *
+     * <p>For example — opening the dialog from ACIItemValueEditor:</p>
+     * <pre>
+     *   ACIItemDialog dialog = new ACIItemDialog(shell, valueWithContext);
+     *   if (dialog.open() == Dialog.OK) {
+     *     String newValue = dialog.getACIItemValue();
+     *   }
+     * </pre>
+     *
+     * @param parentShell  the parent SWT shell
+     * @param context      the DTO carrying the current connection, entry, and ACI string
      */
     public ACIItemDialog( Shell parentShell, ACIItemValueWithContext context )
     {
@@ -80,9 +111,13 @@ public class ACIItemDialog extends Dialog
     }
 
 
+    // ── TITLE AND ICON ON THE CONSOLE WINDOW ──────────────────────────────────
+    // The orderly labels Grand Moff Tarkin's console window with the official
+    // title and the ISB shield icon so there is no mistaking its purpose.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the dialog image and text.
-     * 
+     * Sets the dialog title and icon from the NLS messages bundle.
+     *
      * {@inheritDoc}
      */
     protected void configureShell( Shell shell )
@@ -93,7 +128,14 @@ public class ACIItemDialog extends Dialog
     }
 
 
+    // ── ADD FORMAT AND CHECK-SYNTAX BUTTONS ───────────────────────────────────
+    // The orderly installs two extra buttons on the console: Format (to tidy the
+    // raw text) and Check Syntax (to verify the directive without committing).
+    // The standard OK and Cancel buttons follow them in the bar.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Adds the Format and Check Syntax buttons before the standard OK/Cancel buttons.
+     *
      * @see org.eclipse.jface.dialogs.Dialog#createButtonsForButtonBar(org.eclipse.swt.widgets.Composite)
      */
     protected void createButtonsForButtonBar( Composite parent )
@@ -105,10 +147,19 @@ public class ACIItemDialog extends Dialog
     }
 
 
+    // ── DISPATCH THE EXTRA BUTTON CLICKS ─────────────────────────────────────
+    // When Grand Moff Tarkin presses Format, the console tidies the raw text.
+    // When he presses Check Syntax, the console parses the ACI and either shows
+    // a green "syntax OK" dialog or a red error pop-up with the parse exception.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Handles the Format and Check Syntax buttons in addition to the standard
+     * OK/Cancel buttons.
+     * Format delegates to {@link ACIItemTabFolderComposite#format()};
+     * Check Syntax calls {@link ACIItemTabFolderComposite#getInput()} and shows
+     * either a success message or an {@link ErrorDialog} with the parse exception.
+     *
      * {@inheritDoc}
-     * 
-     * This implementation checks if the Format button was pressed.
      */
     protected void buttonPressed( int buttonId )
     {
@@ -139,8 +190,17 @@ public class ACIItemDialog extends Dialog
     }
 
 
+    // ── VALIDATE AND COMMIT ON OK ─────────────────────────────────────────────
+    // Grand Moff Tarkin presses OK: the console attempts to parse the current
+    // ACI text.  If it parses cleanly, the result is stored and the dialog
+    // closes.  If not, an error pop-up appears and the dialog stays open.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reimplementation: Checks for valid syntax first and sets the return value.
+     * Validates the current ACI string before closing.
+     * Calls {@link ACIItemTabFolderComposite#getInput()} to parse; if successful
+     * the result is stored in {@code returnValue} and the dialog closes.
+     * If a {@link ParseException} is thrown an {@link ErrorDialog} is shown
+     * and the dialog remains open.
      */
     protected void okPressed()
     {
@@ -158,12 +218,16 @@ public class ACIItemDialog extends Dialog
     }
 
 
+    // ── BUILD THE VISUAL AREA ─────────────────────────────────────────────────
+    // The orderly installs the two-tab composite into the dialog's content area
+    // and pre-loads it with the initial ACI string from the context.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the tabFolderComposite.
-     * 
-     * @param parent the parent
-     * 
-     * @return the control
+     * Creates the {@link ACIItemTabFolderComposite} and pre-populates it with
+     * the ACI string from the constructor context.
+     *
+     * @param parent  the parent composite provided by the Dialog framework
+     * @return        the fully constructed dialog content area
      */
     protected Control createDialogArea( Composite parent )
     {
@@ -187,11 +251,15 @@ public class ACIItemDialog extends Dialog
     }
 
 
+    // ── RETURN THE COMMITTED ACI STRING ──────────────────────────────────────
+    // After Grand Moff Tarkin seals the directive, the value editor retrieves
+    // the signed ACI string and stores it back in the LDAP attribute.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the string representation of the ACI item. Returns
-     * null if Cancel button was pressed.
+     * Returns the validated ACI item string after the dialog was closed with OK.
+     * Returns {@code null} if the dialog was cancelled or has not yet been opened.
      *
-     * @return the string representation of the ACI item or null
+     * @return the serialised ACI item string, or {@code null}
      */
     public String getACIItemValue()
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.controller.actions;
 
@@ -41,8 +41,18 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 
 
+// ── CLASS: DeleteProjectAction — Clone Troopers Storm The Jedi Temple ────────
+// When Order 66 hits its final phase, clone troopers march into the Jedi Temple
+// itself and erase the Jedi presence there — thorough, irreversible, confirmed.
+// This action does the same to schema projects: it asks for confirmation, then
+// removes every selected project from the workspace, closing any that are still open.
+// ────────────────────────────────────────────────────────────────────────────
 /**
- * This action deletes one or more Projects from the ProjectsView.
+ * Deletes one or more schema projects from the Projects view.
+ * We show a confirmation dialog first (listing project names for small selections),
+ * then close any open projects before removing them entirely from the handler.
+ * Think of this as clone troopers securing the Jedi Temple: they confirm the
+ * target list, then execute systematically — no project left standing.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -52,11 +62,19 @@ public class DeleteProjectAction extends Action implements IWorkbenchWindowActio
     private TableViewer viewer;
 
 
+    // ── Troopers Receive The Target List ──────────────────────────────────────
+    // The clone captain studies the Temple floor plan and registers which corridors
+    // to watch — he's ready to update the target count as the mission unfolds.
+    // We attach a selection listener so we know how many projects are selected and
+    // can update our label ("Delete Project" vs "Delete Projects") accordingly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DeleteProjectAction.
+     * Creates a new DeleteProjectAction wired to the given viewer.
+     * We hook a selection listener so we can enable/disable and adjust our label
+     * depending on how many projects the user has selected.
      *
-     * @param view
-     *      the associated view
+     * @param viewer  the TableViewer listing the projects; we watch its selection
+     *                to know when we should be enabled and what label to show
      */
     public DeleteProjectAction( TableViewer viewer )
     {
@@ -92,8 +110,18 @@ public class DeleteProjectAction extends Action implements IWorkbenchWindowActio
     }
 
 
+    // ── Troopers Confirm Targets Then Open Fire ───────────────────────────────
+    // The clone captain assembles the name list, shows it to command for sign-off,
+    // and only then gives the order to proceed — then each target is taken down
+    // in sequence, closed first if still active.
+    // We build a confirmation message (listing names when there are five or fewer),
+    // ask the user to confirm, then close-then-remove each selected project.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Asks the user to confirm, then deletes every selected project.
+     * For selections of five or fewer we list the project names in the dialog; for
+     * larger batches we use a generic count message to keep the dialog manageable.
+     * Any open project is closed before deletion so the handler stays consistent.
      */
     public void run()
     {
@@ -147,7 +175,7 @@ public class DeleteProjectAction extends Action implements IWorkbenchWindowActio
 
                     if ( project.getState() == ProjectState.OPEN )
                     {
-                        // Closing the project before removing it. 
+                        // Closing the project before removing it.
                         projectsHandler.closeProject( project );
                     }
 
@@ -158,8 +186,14 @@ public class DeleteProjectAction extends Action implements IWorkbenchWindowActio
     }
 
 
+    // ── Order Relayed Through Imperial Comms ──────────────────────────────────
+    // The command arrives via the standard Imperial communications relay — the
+    // trooper executes the same action regardless of which channel it came through.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Delegates to {@link #run()} when called via the workbench action delegate channel.
+     *
+     * @param action  the workbench action proxy; we ignore it and call our own run()
      */
     public void run( IAction action )
     {
@@ -167,8 +201,12 @@ public class DeleteProjectAction extends Action implements IWorkbenchWindowActio
     }
 
 
+    // ── Temple Secured: Nothing Left To Release ───────────────────────────────
+    // The troopers withdraw — the Temple is empty, the mission is done, nothing
+     // to hand back. We hold no resources that need cleanup.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op dispose — we hold no resources that need explicit cleanup.
      */
     public void dispose()
     {
@@ -176,8 +214,14 @@ public class DeleteProjectAction extends Action implements IWorkbenchWindowActio
     }
 
 
+    // ── Captain Reports To Command: No Special Orders ─────────────────────────
+    // The clone captain checks in at the command post but receives no additional
+    // instructions tied to this workbench window — standing orders suffice.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op init — we don't need the workbench window reference.
+     *
+     * @param window  the workbench window; not used here
      */
     public void init( IWorkbenchWindow window )
     {
@@ -185,8 +229,15 @@ public class DeleteProjectAction extends Action implements IWorkbenchWindowActio
     }
 
 
+    // ── Comms Idle: Workbench Selection Ignored ────────────────────────────────
+    // The trooper's own viewer listener already handles selection updates; the
+    // workbench-level selection event carries nothing new for us.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — we track selection through our own viewer listener, not this callback.
+     *
+     * @param action     the workbench action proxy; not used
+     * @param selection  the workbench selection; not used
      */
     public void selectionChanged( IAction action, ISelection selection )
     {

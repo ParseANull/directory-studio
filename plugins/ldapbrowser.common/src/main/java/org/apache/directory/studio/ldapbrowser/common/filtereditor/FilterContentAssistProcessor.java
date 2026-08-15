@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.filtereditor;
@@ -60,8 +60,24 @@ import org.eclipse.jface.text.templates.TemplateContextType;
 import org.eclipse.swt.graphics.Image;
 
 
+// ── CLASS: FilterContentAssistProcessor — R2 PROJECTS THE DEATH STAR PLANS ───
+// In the Rebel base on Yavin IV, R2-D2 projects the holographic Death Star
+// schematics and highlights every possible attack route as the pilots lean in.
+// He knows the full layout (the schema) and, depending on where the briefing
+// pointer is hovering, he highlights the relevant section of the plan.
+// We do exactly that: using the LDAP schema as our "schematics", we look at
+// where the cursor is in the filter string and project the most relevant
+// attribute types, filter operators, object classes, or matching rules as
+// autocomplete proposals for the user to pick from.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The FilterContentAssistProcessor computes the content proposals for the filter editor.
+ * Computes autocomplete proposals for the LDAP filter editor. We inspect the
+ * current cursor position in the filter string, figure out what kind of token
+ * we're editing (attribute type, filter operator, object class value, or
+ * extensible matching rule), and return a sorted list of matching suggestions
+ * drawn from the connected directory's LDAP schema.
+ * Think of this as R2-D2 projecting the Death Star hologram: point to any spot
+ * and R2 highlights what's relevant right there.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -113,10 +129,21 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     private Map<String, MatchingRule> possibleMatchingRules;
 
 
+    // ── R2 SETS UP WITHOUT A DISPLAY SCREEN ──────────────────────────────────
+    // Sometimes R2 can project the plans without a full briefing room — just
+    // him and the parser, no viewer screen attached. He still queues up the
+    // full schema lookup chain, ready to answer when someone asks.
+    // We delegate to the two-arg constructor with a null source viewer so the
+    // logic stays in one place.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of FilterContentAssistProcessor.
-     * 
-     * @param parser the parser
+     * Constructs a processor with no source viewer. Use this when the filter
+     * editor is embedded in a simple text field (not a full
+     * {@link ISourceViewer}) — template proposals won't be offered, but all
+     * schema-driven proposals still work.
+     *
+     * @param parser  the filter parser we use to locate the cursor's position
+     *                inside the filter tree
      */
     public FilterContentAssistProcessor( LdapFilterParser parser )
     {
@@ -124,11 +151,25 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 FIRES UP THE HOLOGRAM PROJECTOR ───────────────────────────────────
+    // Standing before the full Rebel briefing room, R2 initialises the
+    // holographic projector and pre-loads the activation triggers: every key
+    // the pilots might press that could reveal a new attack route gets
+    // registered so the projection pops up automatically.
+    // We do the same: store the parser and source viewer, then build the full
+    // auto-activation character array covering every alphanumeric and LDAP
+    // operator character.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of FilterContentAssistProcessor.
-     * 
-     * @param sourceViewer the source viewer
-     * @param parser the parser
+     * Constructs a fully-configured processor wired to both a source viewer and
+     * a parser. We pre-build the auto-activation character array (all letters,
+     * digits, and LDAP operator characters) so Eclipse pops up the proposal list
+     * automatically as the user types.
+     *
+     * @param sourceViewer  the source viewer hosting the filter editor;
+     *                      may be {@code null} if running in a simple text field
+     * @param parser        the filter parser we call to find the current token
+     *                      under the cursor
      */
     public FilterContentAssistProcessor( ISourceViewer sourceViewer, LdapFilterParser parser )
     {
@@ -159,10 +200,25 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 LOADS THE DEATH STAR SCHEMATICS ───────────────────────────────────
+    // Before the briefing, a Rebel technician hands R2 the complete Death Star
+    // blueprints. R2 indexes every corridor, turret, and exhaust port so he can
+    // instantly answer any question about any part of the station.
+    // We index all attribute types, filter operators, object classes, and matching
+    // rules from the LDAP schema so proposal lookups are fast.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the schema, used to retrieve attributeType and objectClass information.
-     * 
-     * @param schema the schema
+     * Loads an LDAP {@link Schema} and pre-indexes all attribute types, object
+     * classes, filter operators, and matching rules into sorted maps. After this
+     * call, all proposal methods can run in O(log n) time against the pre-built
+     * indexes.
+     * <p>
+     * Call this whenever the user connects to a different LDAP server or the
+     * schema changes — the old index is discarded and rebuilt from scratch.
+     * </p>
+     *
+     * @param schema  the schema to index; passing {@code null} clears all
+     *                proposals (useful when we are disconnected)
      */
     public void setSchema( Schema schema )
     {
@@ -214,8 +270,18 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 TELLS PILOTS WHICH KEYS TRIGGER THE HOLOGRAM ──────────────────────
+    // R2 registers every button on the briefing console that should auto-trigger
+    // the hologram projection so pilots don't have to press a special key —
+    // the plans appear the moment they start typing a relevant character.
+    // We return our pre-built array of auto-activation characters to Eclipse.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.text.templates.TemplateCompletionProcessor#getCompletionProposalAutoActivationCharacters()
+     * Returns the set of characters that should automatically trigger the
+     * content-assist popup without the user pressing Ctrl+Space. We activate on
+     * all letters, digits, and LDAP filter punctuation ({@code ( ) & | ! : .}).
+     *
+     * @return  the auto-activation character array
      */
     public char[] getCompletionProposalAutoActivationCharacters()
     {
@@ -223,8 +289,21 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 PROJECTS PLANS FOR THE CURRENT POINTER POSITION ───────────────────
+    // A pilot points his laser at a specific section of the Death Star hologram.
+    // R2 reads the pointer position, finds the relevant section, and highlights
+    // all the attack routes that apply to that spot.
+    // We adapt the ITextViewer-based Eclipse API to our internal offset-based
+    // logic by extracting the offset and delegating.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.text.templates.TemplateCompletionProcessor#computeCompletionProposals(org.eclipse.jface.text.ITextViewer, int)
+     * Computes completion proposals for the given cursor position in the filter
+     * editor. This is the method Eclipse calls for source-viewer-style content
+     * assist — we just extract the offset and delegate to our internal method.
+     *
+     * @param viewer  the text viewer hosting the filter editor
+     * @param offset  the cursor position in the document
+     * @return        an array of matching proposals (never {@code null})
      */
     public ICompletionProposal[] computeCompletionProposals( ITextViewer viewer, int offset )
     {
@@ -232,8 +311,23 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 ADAPTS THE HOLOGRAM FOR A SIMPLE FIELD READER ─────────────────────
+    // Some crew members don't have a full holographic display — they use a
+    // portable data pad instead. R2 reformats the same Death Star plans into
+    // a simpler data-pad compatible format without losing any information.
+    // We convert Eclipse's ICompletionProposal objects to the simpler
+    // IContentProposal format used by the JFace field-assist API.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.fieldassist.IContentProposalProvider#getProposals(java.lang.String, int)
+     * Computes proposals in the simpler JFace field-assist format
+     * ({@link IContentProposal}). This is used when the filter editor is
+     * embedded in a plain text widget rather than a full source viewer. We run
+     * the normal proposal computation and then wrap each result in an adapter
+     * that speaks the {@link IContentProposalProvider} contract.
+     *
+     * @param contents  the full filter string currently in the field
+     * @param position  the cursor position within {@code contents}
+     * @return          an array of adapted proposals
      */
     public IContentProposal[] getProposals( final String contents, final int position )
     {
@@ -284,12 +378,31 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 IDENTIFIES THE ATTACK ROUTE AT THE CURSOR ─────────────────────────
+    // When the briefing pointer stops at a spot on the Death Star hologram, R2
+    // analyses exactly what structure is at that location — a corridor, a
+    // turret emplacement, the exhaust port — and projects the relevant attack
+    // options accordingly.
+    // We inspect the filter parse tree at the cursor offset and build proposals
+    // appropriate to the token type: attribute name, filter operator, object
+    // class value, or extensible matching rule.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Computes completion proposals.
-     * 
-     * @param offset the offset
-     * 
-     * @return the matching completion proposals
+     * Core proposal computation. We look at the cursor offset in the currently
+     * parsed filter tree and branch across four cases:
+     * <ol>
+     *   <li>Cursor after {@code (} with no filter component yet — offer templates
+     *       and all attribute types.</li>
+     *   <li>Cursor on a simple filter's attribute token — offer matching attribute
+     *       types.</li>
+     *   <li>Cursor on a simple filter's operator — offer matching filter
+     *       operators.</li>
+     *   <li>Cursor inside an extensible filter — offer attribute types, dn: flag,
+     *       and matching rules as appropriate.</li>
+     * </ol>
+     *
+     * @param offset  the cursor position in the filter string
+     * @return        a (possibly empty) array of matching proposals
      */
     private ICompletionProposal[] computeCompletionProposals( int offset )
     {
@@ -416,12 +529,23 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 HIGHLIGHTS ATTRIBUTE CORRIDORS ON THE HOLOGRAM ────────────────────
+    // R2 scans the schematics index and illuminates every corridor whose label
+    // starts with the prefix the pilot has already typed — giving them a
+    // narrowed-down list of valid routes to the target.
+    // We filter the pre-built attribute-type map by the typed prefix and add
+    // a CompletionProposal for each match.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the possible attribute types to the proposal list.
-     * 
-     * @param proposalList the proposal list
-     * @param attributeType the current attribute type
-     * @param offset the offset
+     * Appends all known attribute types whose name or OID starts with
+     * {@code attributeType} (case-insensitive) to {@code proposalList}.
+     * Each proposal includes the type's OID and human-readable name as the
+     * display string, and the LDIF schema line as the additional info popup.
+     *
+     * @param proposalList   the list we are building; proposals are added here
+     * @param attributeType  the prefix the user has typed so far — may be empty
+     *                       to list all types
+     * @param offset         document offset at which the replacement starts
      */
     private void addPossibleAttributeTypes( List<ICompletionProposal> proposalList, String attributeType, int offset )
     {
@@ -452,12 +576,25 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 HIGHLIGHTS VALID ATTACK OPERATORS ─────────────────────────────────
+    // Once a pilot has identified an attribute corridor, R2 highlights only the
+    // attack operators that make sense for that corridor type — equality strike,
+    // presence scan, range bombardment — filtering out options that don't apply.
+    // We consult the attribute's matching rules in the schema and remove filter
+    // operators that aren't supported.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the possible attribute types to the proposal list.
-     * 
-     * @param proposalList the proposal list
-     * @param attributeType the current attribute type
-     * @param offset the offset
+     * Appends matching filter-operator proposals ({@code =}, {@code <=},
+     * {@code >=}, {@code ~=}, {@code =*}) to {@code proposalList}. We first
+     * prune operators that the given attribute's schema doesn't support — for
+     * example, if there is no ordering matching rule we remove {@code <=} and
+     * {@code >=}.
+     *
+     * @param proposalList   the list we are building
+     * @param attributeType  the attribute type the user has already typed —
+     *                       used to look up supported matching rules
+     * @param filterType     the operator prefix the user has typed so far
+     * @param offset         document offset at which the replacement starts
      */
     private void addPossibleFilterTypes( List<ICompletionProposal> proposalList, String attributeType,
         String filterType, int offset )
@@ -491,12 +628,21 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 HIGHLIGHTS KNOWN SPECIES ON THE HOLOGRAM ──────────────────────────
+    // The Death Star schematics include a registry of all known alien species
+    // docked in the station. R2 searches that registry for species names that
+    // match the prefix the pilot typed and highlights them on the hologram.
+    // We do the same for LDAP object classes: filter the map and add proposals.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the possible object classes to the proposal list.
-     * 
-     * @param proposalList the proposal list
-     * @param objectClasses the object class
-     * @param offset the offset
+     * Appends object-class proposals matching the given prefix to
+     * {@code proposalList}. This is triggered when the user is editing the
+     * value part of an {@code objectClass=} filter — we show only the object
+     * classes defined in the schema that start with the typed prefix.
+     *
+     * @param proposalList  the list we are building
+     * @param objectClass   the prefix the user has typed so far
+     * @param offset        document offset at which the replacement starts
      */
     private void addPossibleObjectClasses( List<ICompletionProposal> proposalList, String objectClass, int offset )
     {
@@ -528,12 +674,26 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 HIGHLIGHTS PRECISION TARGETING SYSTEMS ────────────────────────────
+    // For the exhaust port shot, the schematics list all targeting computers
+    // available. R2 highlights those whose name prefix matches what the pilot
+    // typed, and auto-appends the colon-equals suffix if not yet present.
+    // We build matching-rule proposals and conditionally append ":" and "=" to
+    // make the filter syntactically complete.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the possible matching rules (that fits to the given attribute type) to the proposal list.
-     * 
-     * @param proposalList the proposal list
-     * @param matchingRule the matching rule
-     * @param offset the offset
+     * Appends matching-rule proposals to {@code proposalList}. Used for
+     * extensible filters ({@code attr:matchingRule:=value}). We auto-complete
+     * the colon and equals-sign suffixes if they haven't been typed yet, so a
+     * single proposal click produces a ready-to-use extensible filter operator.
+     *
+     * @param proposalList       the list we are building
+     * @param matchingRule       the prefix the user has typed so far
+     * @param offset             document offset at which the replacement starts
+     * @param equalsColonToken   the token for the colon before {@code =};
+     *                           {@code null} if not yet present in the filter
+     * @param equalsToken        the token for the {@code =} sign;
+     *                           {@code null} if not yet present
      */
     private void addPossibleMatchingRules( List<ICompletionProposal> proposalList, String matchingRule, int offset,
         LdapFilterToken equalsColonToken, LdapFilterToken equalsToken )
@@ -573,12 +733,22 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 ADDS THE DN ROUTE TO THE PROPOSAL LIST ────────────────────────────
+    // In the schematics, R2 recognises "dn:" as the special route through the
+    // Death Star's DN corridor — he only adds it to the route list if the pilot
+    // has typed a prefix that could still match "dn".
+    // We add the "dn:" proposal when the user might be typing the dn:attr flag
+    // of an extensible filter.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the dn: proposal to the proposal list.
-     * 
-     * @param proposalList the proposal list
-     * @param dnAttr the dn attr
-     * @param offset the offset
+     * Adds a {@code dn:} proposal if the given prefix could be a prefix of
+     * {@code "dn"}. In LDAP extensible filters, {@code dn:} means "also match
+     * the DN components"; we offer it here so users don't have to remember the
+     * exact syntax.
+     *
+     * @param proposalList  the list we are building
+     * @param dnAttr        the prefix the user has typed so far
+     * @param offset        document offset at which the replacement starts
      */
     private void addDnAttr( List<ICompletionProposal> proposalList, String dnAttr, int offset )
     {
@@ -593,10 +763,16 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 FETCHES THE ATTRIBUTE TYPE ICON ───────────────────────────────────
+    // Each section of the hologram has its own icon so pilots can distinguish
+    // corridors from turrets at a glance. R2 fetches the attribute-type icon
+    // from the shared plugin image registry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the attribute type image.
-     * 
-     * @return the attribute type image
+     * Returns the {@link Image} used to represent an attribute-type proposal in
+     * the completion popup. Loaded from the shared plugin image registry.
+     *
+     * @return  the attribute-type icon
      */
     private Image getAttributeTypeImage()
     {
@@ -604,10 +780,15 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 FETCHES THE FILTER OPERATOR ICON ──────────────────────────────────
+    // Filter operators get their own hologram symbol — a targeting reticle —
+    // so the pilot can spot them instantly in the proposal list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the filter type image.
-     * 
-     * @return the filter type image
+     * Returns the {@link Image} used to represent a filter-operator proposal
+     * ({@code =}, {@code <=}, etc.) in the completion popup.
+     *
+     * @return  the filter-type icon
      */
     private Image getFilterTypeImage()
     {
@@ -615,10 +796,16 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 FETCHES THE OBJECT CLASS ICON ─────────────────────────────────────
+    // Object classes appear as alien-species badges in the hologram — R2 pulls
+    // the right badge image from the image registry so each proposal is easy
+    // to recognise.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the object class image.
-     * 
-     * @return the object class image
+     * Returns the {@link Image} used to represent an object-class proposal in
+     * the completion popup.
+     *
+     * @return  the object-class icon
      */
     private Image getObjectClassImage()
     {
@@ -626,10 +813,15 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 FETCHES THE MATCHING RULE ICON ────────────────────────────────────
+    // Matching rules appear as precision-targeting symbols in the hologram.
+    // R2 retrieves the icon from the shared plugin image registry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the matching rule image.
-     * 
-     * @return the matching rule image
+     * Returns the {@link Image} used to represent a matching-rule proposal in
+     * the completion popup.
+     *
+     * @return  the matching-rule icon
      */
     private Image getMatchingRuleImage()
     {
@@ -637,8 +829,19 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 RETRIEVES THE SAVED ATTACK ROUTE TEMPLATES ────────────────────────
+    // Before the briefing, the Rebellion stored a set of pre-approved attack
+    // route templates in R2's memory. He retrieves them by context type so the
+    // right templates appear for the right part of the hologram.
+    // We retrieve Eclipse JFace filter templates from the plugin's template store.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.text.templates.TemplateCompletionProcessor#getTemplates(java.lang.String)
+     * Returns the Eclipse JFace {@link Template} objects that apply to the given
+     * context type. These are the filter snippet templates the user can configure
+     * via {@code Window > Preferences > LDAP Browser > Filter Templates}.
+     *
+     * @param contextTypeId  the template context type ID
+     * @return               the matching templates from the plugin's store
      */
     protected Template[] getTemplates( String contextTypeId )
     {
@@ -648,8 +851,21 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 LOOKS UP THE CONTEXT TYPE FOR THE CURRENT REGION ──────────────────
+    // Different parts of the Death Star hologram use different template
+    // coordinate systems. R2 resolves which coordinate system applies to the
+    // region the pilot is pointing at.
+    // We look up the Eclipse template context type registered for the filter
+    // editor so the right templates appear.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.text.templates.TemplateCompletionProcessor#getContextType(org.eclipse.jface.text.ITextViewer, org.eclipse.jface.text.IRegion)
+     * Returns the Eclipse {@link TemplateContextType} for the filter editor.
+     * This tells the template engine which template variables and resolvers apply
+     * to the current editing context.
+     *
+     * @param viewer  the text viewer (not used; kept for API symmetry)
+     * @param region  the region being edited (not used)
+     * @return        the filter-editor template context type
      */
     protected TemplateContextType getContextType( ITextViewer viewer, IRegion region )
     {
@@ -659,8 +875,17 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 RESOLVES THE TEMPLATE'S HOLOGRAM BADGE ────────────────────────────
+    // Each saved template has a hologram badge so pilots can distinguish route
+    // templates from live schema entries. R2 fetches the right badge image.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.text.templates.TemplateCompletionProcessor#getImage(org.eclipse.jface.text.templates.Template)
+     * Returns the {@link Image} to display next to a template proposal in the
+     * completion popup. All filter templates share the same "template" icon.
+     *
+     * @param template  the template whose icon we need (the template itself is
+     *                  not used — we always return the generic template icon)
+     * @return          the template icon
      */
     protected Image getImage( Template template )
     {
@@ -668,8 +893,19 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 FIELDS THE CONTEXT INFO REQUEST ───────────────────────────────────
+    // Sometimes a pilot asks for more detailed context about a highlighted
+    // section. R2 doesn't provide a separate context info panel for filter
+    // editing — the hover tooltip covers that use case instead.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.text.contentassist.IContentAssistProcessor#computeContextInformation(org.eclipse.jface.text.ITextViewer, int)
+     * Returns context-information popups for the current cursor position.
+     * We don't use context information for the filter editor (the hover tooltip
+     * handles that), so we always return {@code null}.
+     *
+     * @param viewer          the text viewer (not used)
+     * @param documentOffset  the cursor position (not used)
+     * @return                {@code null} always
      */
     public IContextInformation[] computeContextInformation( ITextViewer viewer, int documentOffset )
     {
@@ -677,8 +913,16 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 REPORTS NO AUTO-TRIGGER FOR CONTEXT INFO ───────────────────────────
+    // R2 doesn't have any special characters that auto-pop the context-info
+    // panel — that feature isn't wired up for filter editing.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.text.contentassist.IContentAssistProcessor#getContextInformationAutoActivationCharacters()
+     * Returns the characters that trigger the context-information popup
+     * automatically. We don't use context information, so we always return
+     * {@code null}.
+     *
+     * @return  {@code null} always
      */
     public char[] getContextInformationAutoActivationCharacters()
     {
@@ -686,8 +930,16 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 REPORTS NO CURRENT ERROR IN THE PROPOSAL SYSTEM ───────────────────
+    // R2 doesn't track a "last error" for the proposal system — if something
+    // goes wrong, he just returns an empty list silently.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.text.contentassist.IContentAssistProcessor#getErrorMessage()
+     * Returns an error message describing the last failure of the content-assist
+     * computation, or {@code null} if there was no error. We don't track errors
+     * internally, so we always return {@code null}.
+     *
+     * @return  {@code null} always
      */
     public String getErrorMessage()
     {
@@ -695,8 +947,15 @@ public class FilterContentAssistProcessor extends TemplateCompletionProcessor im
     }
 
 
+    // ── R2 REPORTS NO CONTEXT INFO VALIDATOR ─────────────────────────────────
+    // Context-information validation isn't needed for filter editing, so R2
+    // doesn't wire one up.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.text.contentassist.IContentAssistProcessor#getContextInformationValidator()
+     * Returns the validator for context-information popups. We don't use context
+     * information, so we always return {@code null}.
+     *
+     * @return  {@code null} always
      */
     public IContextInformationValidator getContextInformationValidator()
     {

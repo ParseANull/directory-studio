@@ -28,8 +28,19 @@ import java.util.Map;
 import org.apache.directory.studio.ldapbrowser.core.model.IAttribute;
 
 
+// ── CLASS: AttributeInfo — R2-D2'S ATTRIBUTE PANEL FOR ONE ENTRY ─────────────
+// R2-D2 keeps a small panel for each entry he's plugged into: a flag saying
+// "have I pulled all the attributes yet?" and a map keyed by OID string holding
+// every attribute value.  This panel lives in BrowserConnection so that entry
+// objects themselves stay tiny in memory — R2-D2 carries the heavy parts.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A ChildrenInfo is used to hold the list of attributes of an entry.
+ * Holds the loaded attribute state for a single {@link AbstractEntry}.
+ * Stored in {@link BrowserConnection}'s attribute info map rather than
+ * directly on the entry to minimise per-entry memory usage.
+ *
+ * <p>Think of this as R2-D2's attribute panel for one entry — an initialized
+ * flag plus a map from OID string to {@link IAttribute}.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -45,8 +56,11 @@ public class AttributeInfo implements Serializable
     protected volatile Map<String, IAttribute> attributeMap = new LinkedHashMap<String, IAttribute>();
 
 
+    // ── R2-D2 Creates A Fresh Empty Attribute Panel ───────────────────────────────
     /**
      * Creates a new instance of AttributeInfo.
+     * The attributes-initialized flag starts {@code false} and the attribute
+     * map starts empty.
      */
     public AttributeInfo()
     {

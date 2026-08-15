@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.views.browser;
@@ -60,9 +60,23 @@ import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.actions.ActionFactory;
 
 
+// ── CLASS: BrowserViewActionGroup — LANDO RUNNING CLOUD CITY ─────────────────
+// Lando Calrissian runs Cloud City with smooth authority: every department,
+// every guard post, every worker knows their role because Lando assigned them,
+// briefed them, and placed them exactly where they need to be. This class
+// does the same for the browser view's actions — it creates them all,
+// places them in toolbars, menus, and context menus, and wires them up to
+// the Eclipse global action system so keyboard shortcuts work.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class manages all the actions of the browser view.
- * 
+ * Manages all actions available in the LDAP browser view.
+ * This is the browser view's action hub: it constructs every action (new entry,
+ * copy, delete, import/export, fetch, etc.), slots them into the right menus
+ * and toolbars, and connects them to the Eclipse global action handlers
+ * so standard keyboard shortcuts (Ctrl+C, Delete, etc.) work in the view.
+ * Think of Lando managing Cloud City: he knows where every person should be
+ * and what they should be doing at any given moment.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class BrowserViewActionGroup extends BrowserActionGroup
@@ -195,11 +209,23 @@ public class BrowserViewActionGroup extends BrowserActionGroup
     private static final String passwordModifyExtendedOperationAction = "passwordModifyExtendedOperation"; //$NON-NLS-1$
 
 
+    // ── Lando Briefs His Department Heads ────────────────────────────────────────
+    // Lando gathers every department head in Cloud City and assigns them their
+    // posts: security to the landing pad, engineering to the reactor, protocol
+    // droids to the dining room — everyone knows their job.
+    // We instantiate every action the browser view needs and slot each one
+    // into the browser action map so the toolbar, menu, and context menu can
+    // retrieve them by name later.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BrowserViewActionGroup and 
-     * creates all the actions.
-     * 
-     * @param view the browser view
+     * Creates a new BrowserViewActionGroup and instantiates all browser view actions.
+     * Actions that are selection-sensitive are wrapped in {@link BrowserViewActionProxy}
+     * so they automatically enable/disable based on what's selected in the tree.
+     * The view's toolbar, drop-down menu, and context menu all pull from the
+     * action map this constructor populates.
+     *
+     * @param view  the browser view this action group belongs to; used to reach
+     *              the tree viewer and the action bars.
      */
     public BrowserViewActionGroup( BrowserView view )
     {
@@ -281,9 +307,21 @@ public class BrowserViewActionGroup extends BrowserActionGroup
     }
 
 
+    // ── Lando Stands Down Cloud City ─────────────────────────────────────────────
+    // Lando gives the evacuation order — every department head is relieved of
+    // duty, Cloud City is shut down, and references are cleared so nothing
+    // lingers in memory after the Empire moves in.
+    // We null out our local action references and call super to clean up the
+    // parent's action map too.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Disposes all actions managed by this group and releases their references.
+     * We null out everything explicitly so the garbage collector can reclaim
+     * the action objects — they hold references to the viewer and the view site.
      */
+    @Override
     public void dispose()
     {
         if ( openBrowserPreferencePageAction != null )
@@ -302,9 +340,23 @@ public class BrowserViewActionGroup extends BrowserActionGroup
     }
 
 
+    // ── Lando Assigns the Toolbar Posts ──────────────────────────────────────────
+    // Lando walks the main corridor and assigns specific guards to the visible
+    // posts — the ones every visitor sees right away when they step off the
+    // landing pad.
+    // We add the high-priority actions (navigate up, refresh, collapse, link)
+    // to the toolbar where they're always one click away.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Populates the browser view's toolbar with the most frequently used actions.
+     * The order here is deliberate: navigate-up and refresh are primary operations;
+     * collapse-all and link-with-editor are secondary but still toolbar-worthy.
+     *
+     * @param toolBarManager  the toolbar manager for the browser view's action bar.
      */
+    @Override
     public void fillToolBar( IToolBarManager toolBarManager )
     {
         toolBarManager.add( browserActionMap.get( UP_ACTION ) );
@@ -317,9 +369,21 @@ public class BrowserViewActionGroup extends BrowserActionGroup
     }
 
 
+    // ── Lando Configures the View Drop-Down Menu ─────────────────────────────────
+    // Lando draws up the visitor guide for Cloud City's drop-down menus —
+    // what options appear under the "View" pulldown in the corner of the panel.
+    // We add the sort, visibility toggles, and preferences into the view's
+    // pulldown menu so users can control what the browser shows.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Fills the browser view's drop-down menu (the triangle in the view toolbar)
+     * with sorting options, visibility toggles, and a preferences shortcut.
+     *
+     * @param menuManager  the menu manager for the view's drop-down menu.
      */
+    @Override
     public void fillMenu( IMenuManager menuManager )
     {
         menuManager.add( openSortDialogAction );
@@ -336,9 +400,26 @@ public class BrowserViewActionGroup extends BrowserActionGroup
     }
 
 
+    // ── Lando Runs the Context-Menu Briefing ─────────────────────────────────────
+    // Just before a guest arrives, Lando briefs his staff on exactly what to
+    // offer: "Start with new items, then navigation, then copy/paste, then
+    // import/export, then refresh." Every section in the right order.
+    // We build the right-click context menu dynamically here — the items shown
+    // depend on what's currently selected in the tree.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the context menu for the browser view dynamically just before it opens.
+     * We use submenus (New, Advanced, Import, Export, Fetch, Extended Operations)
+     * to keep the top-level menu from becoming overwhelming.
+     * This is called every time the user right-clicks, so every item you add
+     * here is recreated fresh — that's why actions check their enabled state
+     * each time rather than caching it.
+     *
+     * @param menuManager  the context menu manager; we add items and sub-managers to it.
      */
+    @Override
     public void menuAboutToShow( IMenuManager menuManager )
     {
         // new
@@ -450,9 +531,22 @@ public class BrowserViewActionGroup extends BrowserActionGroup
     }
 
 
+    // ── Lando Activates All Security Posts When Guests Arrive ────────────────────
+    // When a VIP guest lands, Lando snaps all his staff to full attention —
+    // every shortcut active, every handler registered, the city ready for
+    // whatever the visitor might need.
+    // We register our actions as Eclipse global action handlers so keyboard
+    // shortcuts like Ctrl+C, Delete, and F2 work while the browser view is active.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Registers browser actions as Eclipse global action handlers, enabling
+     * standard keyboard shortcuts (Ctrl+C, Ctrl+V, Delete, F2) to work in
+     * the browser view when it has focus.
+     * Also activates the keyboard shortcut handler for "locate entry in DIT."
      */
+    @Override
     public void activateGlobalActionHandlers()
     {
         if ( actionBars != null )
@@ -471,9 +565,21 @@ public class BrowserViewActionGroup extends BrowserActionGroup
     }
 
 
+    // ── Lando Stands Down After the Guest Leaves ─────────────────────────────────
+    // When the VIP departs, Lando quietly returns the city to normal operations —
+    // reduced security posture, shortcuts deregistered so they don't interfere
+    // with whatever the next active view needs.
+    // We clear our global action handlers so the key bindings don't stay
+    // registered when the browser view loses focus.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Clears all global action handler registrations so keyboard shortcuts revert
+     * to whatever the newly active view wants to handle.
+     * Also deactivates the "locate entry in DIT" keyboard shortcut handler.
      */
+    @Override
     public void deactivateGlobalActionHandlers()
     {
         if ( actionBars != null )

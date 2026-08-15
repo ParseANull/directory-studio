@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.view.preferences;
 
@@ -37,9 +37,25 @@ import org.apache.directory.studio.templateeditor.TemplatesManagerListener;
 import org.apache.directory.studio.templateeditor.model.Template;
 
 
+// ── CLASS: TemplatesContentProvider — PALPATINE ORGANISING HIS STANDING ORDERS ───
+// When Palpatine opens the preferences page, he needs his standing orders (templates)
+// presented in one of two arrangements: either grouped by object class (a tree where
+// each object-class node expands to show its templates) or as a flat alphabetical
+// list of all templates. This content provider supplies the correct structure for
+// the {@link CheckboxTreeViewer} based on the active presentation preference, and
+// also listens for template-added/removed events so the tree stays current.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements a content provider for the table viewer of
- * the Template Entry Editor preference page.
+ * JFace {@link ITreeContentProvider} for the templates tree viewer on the
+ * Template Entry Editor preference page. Supports two presentation modes:
+ * <ul>
+ *   <li><b>Object-class mode</b> — templates are grouped under their structural
+ *       object class as tree nodes.</li>
+ *   <li><b>Template mode</b> — templates appear as a flat sorted list with no
+ *       hierarchy.</li>
+ * </ul>
+ * Also implements {@link TemplatesManagerListener} to keep the viewer in sync when
+ * templates are added or removed via Import/Remove.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -64,13 +80,18 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     private MultiValuedMap<ObjectClass, Template> objectClassesTemplatesMap;
 
 
+    // ── CONSTRUCTOR: WIRE UP THE CONTENT PROVIDER ─────────────────────────────────
+    // Palpatine's content-provider clerk registers itself with the manager so it
+    // hears about add/remove events, and initialises the two data structures
+    // (flat list and object-class map) ready for population on first access.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of TemplatesContentProvider.
+     * Creates a new {@code TemplatesContentProvider} and registers it as a listener
+     * on the given {@link PreferencesTemplatesManager}.
      *
-     * @param page
-     *      the associated page
-     * @param manager
-     *      the templates manager
+     * @param page     the preference page that owns the viewer — called back to refresh
+     *                 the tree when templates change
+     * @param manager  the preferences-page templates manager supplying template data
      */
     public TemplatesContentProvider( TemplateEntryEditorPreferencePage page, PreferencesTemplatesManager manager )
     {
@@ -83,6 +104,11 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── GET CHILDREN: RETURN THE CHILD ELEMENTS ───────────────────────────────────
+    // Palpatine's clerk returns the children of a tree node. In object-class mode,
+    // each object-class node's children are the templates registered under it.
+    // In template mode there are no children (flat list).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -113,6 +139,9 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── GET PARENT: RETURN THE PARENT ELEMENT ────────────────────────────────────
+    // Palpatine's clerk has no parent tracking — elements at the root have no parent.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -123,6 +152,7 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── HAS CHILDREN: CHECK FOR CHILD ELEMENTS ───────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -147,6 +177,10 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── GET ELEMENTS: RETURN THE ROOT ELEMENTS ────────────────────────────────────
+    // Palpatine's clerk populates the data structures on first call and then
+    // returns the correct root elements: object-class nodes or a flat template list.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -187,6 +221,10 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── DISPOSE: DEREGISTER AS A LISTENER ─────────────────────────────────────────
+    // Palpatine's clerk signs off — removes itself from the manager's listener list
+    // to prevent stale references.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -196,6 +234,7 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── INPUT CHANGED: NOTHING TO DO ──────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -205,12 +244,12 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── IS TEMPLATE PRESENTATION: CHECK PRESENTATION MODE ────────────────────────
     /**
-     * Indicates if the template presentation is selected.
+     * Returns {@code true} if the preference page is currently in flat-template
+     * presentation mode.
      *
-     * @return
-     *      <code>true</code> if the template presentation is selected,
-     *      <code>false</code> if not
+     * @return {@code true} for flat-template mode; {@code false} otherwise
      */
     public boolean isTemplatePresentation()
     {
@@ -218,12 +257,12 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── IS OBJECT CLASS PRESENTATION: CHECK PRESENTATION MODE ────────────────────
     /**
-     * Indicates if the object class presentation is selected.
+     * Returns {@code true} if the preference page is currently in object-class-tree
+     * presentation mode.
      *
-     * @return
-     *      <code>true</code> if the object class presentation is selected,
-     *      <code>false</code> if not
+     * @return {@code true} for object-class-tree mode; {@code false} otherwise
      */
     public boolean isObjectClassPresentation()
     {
@@ -231,6 +270,10 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── TEMPLATE ADDED: UPDATE THE DATA STRUCTURES AND REFRESH ───────────────────
+    // Palpatine's clerk files the new standing order in both the flat list and the
+    // object-class map, then refreshes the tree viewer.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -248,6 +291,10 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── TEMPLATE REMOVED: UPDATE THE DATA STRUCTURES AND REFRESH ─────────────────
+    // Palpatine's clerk removes the standing order from both data structures and
+    // refreshes the tree viewer.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -265,15 +312,17 @@ public class TemplatesContentProvider implements ITreeContentProvider, Templates
     }
 
 
+    // ── TEMPLATE DISABLED: NOTHING TO DO HERE ────────────────────────────────────
     /**
      * {@inheritDoc}
      */
     public void templateDisabled( Template template )
     {
-        // Nothing to do 
+        // Nothing to do
     }
 
 
+    // ── TEMPLATE ENABLED: NOTHING TO DO HERE ─────────────────────────────────────
     /**
      * {@inheritDoc}
      */

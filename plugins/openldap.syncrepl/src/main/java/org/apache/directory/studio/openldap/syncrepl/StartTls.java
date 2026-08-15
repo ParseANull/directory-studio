@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.syncrepl;
 
@@ -23,8 +23,24 @@ package org.apache.directory.studio.openldap.syncrepl;
 import java.text.ParseException;
 
 
+// ── CLASS: StartTls — Whether to Activate the HoloNet Encryption Shield ──────
+// Before exchanging intelligence data, the sector command can request that the
+// plaintext HoloNet link be upgraded to an encrypted channel.  "yes" means
+// "try to upgrade, but proceed without encryption if the provider can't support
+// it" — a polite request.  "critical" means "refuse to proceed without the
+// encryption shield — abort the connection if TLS fails" — a hard requirement.
+// This enum models those two modes of the syncrepl "starttls" parameter.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This enum implements all the possible values for the Start TLS value.
+ * All valid values for the syncrepl {@code starttls} parameter.
+ * StartTLS is the LDAP mechanism for upgrading a plain connection to TLS
+ * within the same TCP session (contrast with LDAPS, which starts TLS immediately).
+ * {@link #YES} requests TLS but falls back to plain if the provider refuses.
+ * {@link #CRITICAL} requires TLS and aborts if it can't be established.
+ * Think of this as the sector command's HoloNet encryption policy: optional
+ * ({@code "yes"}) or mandatory ({@code "critical"}).
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public enum StartTls
 {
@@ -38,12 +54,16 @@ public enum StartTls
     private String value;
 
 
+    // ── Parse the Encryption Policy Token ────────────────────────────────────
+    // The parser matches "yes" or "critical" (case-insensitive) and returns
+    // the appropriate constant.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Parses a start tls string.
+     * Parses a StartTLS string into the corresponding enum constant.
      *
-     * @param s the string
-     * @return a bind method
-     * @throws ParseException if an error occurs during parsing
+     * @param s  the string to parse — {@code "yes"} or {@code "critical"} (case-insensitive).
+     * @return   the matching {@link StartTls} constant.
+     * @throws ParseException  if {@code s} is neither {@code "yes"} nor {@code "critical"}.
      */
     public static StartTls parse( String s ) throws ParseException
     {
@@ -64,10 +84,14 @@ public enum StartTls
     }
 
 
+    // ── Create the Constant with Its Config Token ─────────────────────────────
+    // Each constant stores its lowercase token for round-trip configuration
+    // serialisation.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of StartTls.
+     * Creates a StartTls constant with its config directive token.
      *
-     * @param value the value
+     * @param value  the lowercase token — {@code "yes"} or {@code "critical"}.
      */
     private StartTls( String value )
     {
@@ -75,8 +99,13 @@ public enum StartTls
     }
 
 
+    // ── Write the Encryption Policy Back into the Configuration ───────────────
+    // Returns the exact token OpenLDAP expects in the configuration file.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the config file token for this StartTLS policy.
+     *
+     * @return  {@code "yes"} or {@code "critical"}.
      */
     public String toString()
     {

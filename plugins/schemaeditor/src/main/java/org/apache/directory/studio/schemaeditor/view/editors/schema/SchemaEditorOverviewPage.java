@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 
 package org.apache.directory.studio.schemaeditor.view.editors.schema;
@@ -55,9 +55,23 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: SchemaEditorOverviewPage — LUKE'S BINARY SUNSET FROM THE DESERT RIDGE ──
+// Luke stands on the ridge above the Lars homestead as the twin suns set —
+// on his left, the moisture vaporators (attribute types, the structural
+// elements); on his right, the trade goods (object classes, the semantic units).
+// Both sections spread across his field of view at the same time, each one
+// a sorted catalogue of what this schema contains.
+// This page is that panorama: two side-by-side sections showing all attribute
+// types and all object classes in the selected schema, sortable and clickable.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is the Overview Page of the Schema Editore.
- *
+ * The Overview page inside the {@link SchemaEditor}.
+ * It displays all {@link AttributeType} and {@link ObjectClass} definitions in
+ * a schema side by side in two table sections. The page is read-only — users
+ * navigate to individual editors by double-clicking a row. It refreshes
+ * automatically when the underlying schema changes.
+ * Think of it as Luke's horizon view: the full inventory of the schema laid
+ * out at a glance, both halves visible simultaneously.
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SchemaEditorOverviewPage extends FormPage
@@ -231,11 +245,19 @@ public class SchemaEditorOverviewPage extends FormPage
     };
 
 
+    // ── Luke Steps Out to the Ridge ───────────────────────────────────────────
+    // Luke walks up to his favorite spot on the ridge, registers his position
+    // with the homestead sensors, and gets ready to take in the full sunset.
+    // We do the same: register this page with the parent editor, set up the
+    // tab label, and hook into the schema handler so we update whenever the
+    // schema changes while the editor is open.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SchemaFormEditorOverviewPage.
+     * Creates the Overview page and registers it with the parent editor and schema handler.
+     * We attach a {@link SchemaHandlerListener} here so the page refreshes automatically
+     * whenever any schema element is added, modified, or removed in the live schema set.
      *
-     * @param editor
-     *      the associated editor
+     * @param editor  the parent {@link SchemaEditor} that owns this page
      */
     public SchemaEditorOverviewPage( FormEditor editor )
     {
@@ -244,8 +266,21 @@ public class SchemaEditorOverviewPage extends FormPage
     }
 
 
+    // ── Luke's View Expands to Fill the Horizon ───────────────────────────────
+    // As Luke's eyes adjust to the fading light, the full horizon opens up:
+    // attribute types on the left panel, object classes on the right panel —
+    // both populated from the same schema, both wired to navigate on double-click.
+    // This method builds that two-panel UI, populates it, and wires the listeners.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the Overview page UI: two side-by-side sections, one for attribute types
+     * and one for object classes, each backed by a sortable {@link TableViewer}.
+     * After construction we populate the tables from the schema and attach double-click
+     * listeners so the user can navigate to individual element editors.
+     *
+     * @param managedForm  the Eclipse Forms managed form hosting this page
      */
     protected void createFormContent( IManagedForm managedForm )
     {
@@ -273,13 +308,20 @@ public class SchemaEditorOverviewPage extends FormPage
     }
 
 
+    // ── Luke Scans the Left Half — Moisture Vaporators ────────────────────────
+    // On his left, Luke sees all the moisture vaporators — the structural
+    // workhorses of the farm, each one carefully catalogued by name.
+    // This method builds the "Attribute Types" section panel on the left side
+    // of the form, with a table viewer that will list all the schema's attribute types.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Create the Attribute Types Section.
+     * Builds the "Attribute Types" form section.
+     * This section contains a single sortable table listing all attribute types
+     * in the schema. Double-clicking a row opens the {@link AttributeTypeEditor}
+     * for that type.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the FormToolKit to use
+     * @param parent   the parent composite that contains both sections
+     * @param toolkit  the {@link FormToolkit} used to create styled widgets
      */
     private void createAttributeTypesSection( Composite parent, FormToolkit toolkit )
     {
@@ -304,13 +346,20 @@ public class SchemaEditorOverviewPage extends FormPage
     }
 
 
+    // ── Luke Scans the Right Half — Trade Goods ───────────────────────────────
+    // On his right, Luke sees the storage bins of optional trade goods — the
+    // object classes that define the semantic types the schema supports.
+    // This method builds the "Object Classes" section panel on the right side
+    // of the form, with a table viewer that will list all the schema's object classes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Create the Object Classes Section.
+     * Builds the "Object Classes" form section.
+     * This section contains a single sortable table listing all object classes
+     * in the schema. Double-clicking a row opens the {@link ObjectClassEditor}
+     * for that class.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the FormToolKit to use
+     * @param parent   the parent composite that contains both sections
+     * @param toolkit  the {@link FormToolkit} used to create styled widgets
      */
     private void createObjectClassesSection( Composite parent, FormToolkit toolkit )
     {
@@ -335,8 +384,15 @@ public class SchemaEditorOverviewPage extends FormPage
     }
 
 
+    // ── Luke Reads Every Station on the Horizon ───────────────────────────────
+    // Luke takes it all in: each vaporator on the left and each trade bin on
+    // the right, their names updated in the section headers and their full
+    // lists loaded into the table viewers.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Fills in the fields of the User Interface.
+     * Populates both table viewers from the associated schema.
+     * We also update each section's description text with the schema name so the
+     * user can see at a glance which schema's contents are being displayed.
      */
     private void fillInUiFields()
     {
@@ -351,8 +407,16 @@ public class SchemaEditorOverviewPage extends FormPage
     }
 
 
+    // ── Luke Wires Up His Field Binoculars ────────────────────────────────────
+    // Luke raises his binoculars and locks onto each station — now when he
+    // double-taps a vaporator or a trade bin, he can zoom in for details.
+    // We do the same: attach double-click listeners to both table viewers so
+    // the user can navigate to individual element editors.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes and adds the listeners.
+     * Attaches double-click listeners to both table viewers.
+     * A double-click on an attribute type row opens its {@link AttributeTypeEditor};
+     * a double-click on an object class row opens its {@link ObjectClassEditor}.
      */
     private void addListeners()
     {
@@ -361,8 +425,15 @@ public class SchemaEditorOverviewPage extends FormPage
     }
 
 
+    // ── Luke Lowers His Binoculars ────────────────────────────────────────────
+    // When Luke is done scanning, he lowers his binoculars — deactivating the
+    // zoom-in feature so stray double-clicks don't accidentally open editors
+    // after the page has been refreshed or disposed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the listeners.
+     * Removes double-click listeners from both table viewers.
+     * We call this before a programmatic UI refresh to avoid spurious editor-open
+     * events, and on disposal to prevent memory leaks.
      */
     private void removeListeners()
     {
@@ -371,8 +442,17 @@ public class SchemaEditorOverviewPage extends FormPage
     }
 
 
+    // ── Luke Heads Back Inside — Sunset Complete ──────────────────────────────
+    // The twin suns have set. Luke turns away from the horizon, deregisters
+    // his sensors from the homestead feed, and heads inside — no lingering
+    // connections to the now-dark landscape.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Cleans up this page when it is disposed.
+     * We remove event listeners and our schema handler listener to prevent
+     * memory leaks and stale callbacks after the editor tab is closed.
      */
     public void dispose()
     {
@@ -384,8 +464,15 @@ public class SchemaEditorOverviewPage extends FormPage
     }
 
 
+    // ── Luke Does a Fresh Scan of the Horizon ─────────────────────────────────
+    // When the light changes — when something in the schema shifts — Luke does
+    // a fresh scan: he lowers his binoculars, reloads the current data, and
+    // raises them again so the view is accurate.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes the UI.
+     * Refreshes the page's table viewers from the current schema state.
+     * We temporarily remove listeners while repopulating to avoid spurious
+     * event loops, then reattach them once the data is fresh.
      */
     public void refreshUI()
     {

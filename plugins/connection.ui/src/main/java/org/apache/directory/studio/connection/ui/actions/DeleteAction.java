@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.ui.actions;
@@ -38,13 +38,28 @@ import org.eclipse.ui.IWorkbenchCommandConstants;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: DeleteAction — HAN DECOMMISSIONS SHIPS AND CLEARS BAYS ─────────────────
+// Sometimes a ship is retired from the fleet, or a cargo bay is no longer needed.
+// DeleteAction handles both: it decommissions selected connections (closes them
+// first, then removes them from the connection manager) and removes selected
+// connection folders (recursively, including all nested sub-folders and their
+// connections).
+// Before doing anything destructive, it presents a confirmation dialog listing
+// the names of up to five items; for larger selections it shows a generic count.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This Action implements the Delete Action. It deletes Connections, Entries, Searches, Bookmarks, Attributes or Values.
+ * Deletes the selected connections and/or connection folders.
+ *
+ * <p>Before deleting, presents a confirmation dialog.  Connections are closed
+ * via a {@link CloseConnectionsRunnable} before being removed from the
+ * {@link org.apache.directory.studio.connection.core.ConnectionManager}.
+ * Folders are removed recursively (sub-folders and their connections first).</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DeleteAction extends StudioAction
 {
+    // ── GET TEXT — CONTEXT-SENSITIVE LABEL ────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -52,7 +67,7 @@ public class DeleteAction extends StudioAction
     {
         Connection[] connections = getSelectedConnections();
         ConnectionFolder[] connectionFolders = getSelectedConnectionFolders();
-        
+
         if ( ( connections.length > 0 ) && ( connectionFolders.length == 0 ) )
         {
             if ( connections.length > 1 )
@@ -82,6 +97,7 @@ public class DeleteAction extends StudioAction
     }
 
 
+    // ── GET IMAGE DESCRIPTOR — ECLIPSE SHARED DELETE ICON ─────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -91,6 +107,7 @@ public class DeleteAction extends StudioAction
     }
 
 
+    // ── GET COMMAND ID — MAPS TO EDIT > DELETE ────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -100,8 +117,11 @@ public class DeleteAction extends StudioAction
     }
 
 
+    // ── RUN — CONFIRM, THEN DELETE ────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Builds a confirmation message listing up to five items by name, shows a
+     * confirmation dialog, and on OK closes then removes connections and removes folders.
      */
     public void run()
     {
@@ -110,6 +130,7 @@ public class DeleteAction extends StudioAction
 
         StringBuilder message = new StringBuilder();
 
+        // ── BUILD CONFIRMATION MESSAGE ─────────────────────────────────────────────
         if ( connections.length > 0 )
         {
             if ( connections.length <= 5 )
@@ -122,7 +143,7 @@ public class DeleteAction extends StudioAction
                 {
                     message.append( Messages.getString( "DeleteAction.SureDeleteFollowingConnections" ) ); //$NON-NLS-1$
                 }
-                
+
                 for ( Connection connection : connections )
                 {
                     message.append( ConnectionCoreConstants.LINE_SEPARATOR );
@@ -134,7 +155,7 @@ public class DeleteAction extends StudioAction
             {
                 message.append( Messages.getString( "DeleteAction.SureDeleteSelectedConnections" ) ); //$NON-NLS-1$
             }
-            
+
             message.append( ConnectionCoreConstants.LINE_SEPARATOR );
             message.append( ConnectionCoreConstants.LINE_SEPARATOR );
         }
@@ -163,11 +184,12 @@ public class DeleteAction extends StudioAction
             {
                 message.append( Messages.getString( "DeleteAction.SureDeleteSelectedConnectionFolders" ) ); //$NON-NLS-1$
             }
-            
+
             message.append( ConnectionCoreConstants.LINE_SEPARATOR );
             message.append( ConnectionCoreConstants.LINE_SEPARATOR );
         }
 
+        // ── CONFIRM AND EXECUTE ────────────────────────────────────────────────────
         if ( ( message.length() == 0 ) || MessageDialog.openConfirm( getShell(), getText(), message.toString() ) )
         {
             List<Connection> connectionsToDelete = getConnectionsToDelete();
@@ -177,7 +199,7 @@ public class DeleteAction extends StudioAction
             {
                 deleteConnections( connectionsToDelete );
             }
-            
+
             if ( !connectionsFoldersToDelete.isEmpty() )
             {
                 deleteConnectionFolders( connectionsFoldersToDelete );
@@ -186,23 +208,27 @@ public class DeleteAction extends StudioAction
     }
 
 
+    // ── GET CONNECTIONS FOLDERS TO DELETE — RECURSIVE FOLDER EXPANSION ────────────
+    /**
+     * Returns all folders to delete, recursively expanding sub-folder IDs.
+     *
+     * @return  A flat list of all folders to delete (the selection plus all descendants).
+     */
     private List<ConnectionFolder> getConnectionsFoldersToDelete()
     {
         List<ConnectionFolder> selectedFolders = new ArrayList<>( Arrays
             .asList( getSelectedConnectionFolders() ) );
         List<ConnectionFolder> foldersToDelete = new ArrayList<>();
-        
+
         while ( !selectedFolders.isEmpty() )
         {
             ConnectionFolder folder = selectedFolders.get( 0 );
 
-            List<String> subFolderIds = folder.getSubFolderIds();
-            
-            for ( String subFolderId : subFolderIds )
+            for ( String subFolderId : folder.getSubFolderIds() )
             {
                 ConnectionFolder subFolder = ConnectionCorePlugin.getDefault().getConnectionFolderManager()
                     .getConnectionFolderById( subFolderId );
-                
+
                 if ( subFolder != null )
                 {
                     selectedFolders.add( subFolder );
@@ -216,42 +242,45 @@ public class DeleteAction extends StudioAction
 
             selectedFolders.remove( folder );
         }
-        
+
         return foldersToDelete;
     }
 
 
+    // ── GET CONNECTIONS TO DELETE — INCLUDE CONNECTIONS INSIDE SELECTED FOLDERS ────
+    /**
+     * Returns all connections to delete: directly selected ones plus all connections
+     * inside selected folders (recursively).
+     *
+     * @return  A flat list of all connections to delete.
+     */
     private List<Connection> getConnectionsToDelete()
     {
         List<ConnectionFolder> selectedFolders = new ArrayList<>( Arrays
             .asList( getSelectedConnectionFolders() ) );
         List<Connection> selectedConnections = new ArrayList<>( Arrays.asList( getSelectedConnections() ) );
         List<Connection> connectionsToDelete = new ArrayList<>( selectedConnections );
-        
+
         while ( !selectedFolders.isEmpty() )
         {
             ConnectionFolder folder = selectedFolders.get( 0 );
 
-            List<String> subFolderIds = folder.getSubFolderIds();
-            
-            for ( String subFolderId : subFolderIds )
+            for ( String subFolderId : folder.getSubFolderIds() )
             {
                 ConnectionFolder subFolder = ConnectionCorePlugin.getDefault().getConnectionFolderManager()
                     .getConnectionFolderById( subFolderId );
-                
+
                 if ( subFolder != null )
                 {
                     selectedFolders.add( subFolder );
                 }
             }
 
-            List<String> connectionIds = folder.getConnectionIds();
-            
-            for ( String connectionId : connectionIds )
+            for ( String connectionId : folder.getConnectionIds() )
             {
                 Connection connection = ConnectionCorePlugin.getDefault().getConnectionManager().getConnectionById(
                     connectionId );
-                
+
                 if ( ( connection != null ) && !connectionsToDelete.contains( connection ) )
                 {
                     connectionsToDelete.add( connection );
@@ -260,11 +289,12 @@ public class DeleteAction extends StudioAction
 
             selectedFolders.remove( folder );
         }
-        
+
         return connectionsToDelete;
     }
 
 
+    // ── IS ENABLED — AT LEAST ONE CONNECTION OR FOLDER SELECTED ──────────────────
     /**
      * {@inheritDoc}
      */
@@ -274,15 +304,16 @@ public class DeleteAction extends StudioAction
     }
 
 
+    // ── DELETE CONNECTIONS — CLOSE FIRST, THEN REMOVE ────────────────────────────
     /**
-     * Deletes Connections
+     * Closes and then removes the given connections from the connection manager.
      *
-     * @param connectionsToDelete the Connections to delete
+     * @param connectionsToDelete  The connections to remove.
      */
     private void deleteConnections( List<Connection> connectionsToDelete )
     {
         new StudioConnectionJob( new CloseConnectionsRunnable( connectionsToDelete ) ).execute();
-        
+
         for ( Connection connection : connectionsToDelete )
         {
             ConnectionCorePlugin.getDefault().getConnectionManager().removeConnection( connection );
@@ -290,10 +321,11 @@ public class DeleteAction extends StudioAction
     }
 
 
+    // ── DELETE CONNECTION FOLDERS — REMOVE FROM FOLDER MANAGER ───────────────────
     /**
-     * Deletes Connection Folders
+     * Removes the given connection folders from the connection folder manager.
      *
-     * @param connectionsFoldersToDelete the Connection Folders to delete
+     * @param connectionsFoldersToDelete  The folders to remove.
      */
     private void deleteConnectionFolders( List<ConnectionFolder> connectionsFoldersToDelete )
     {

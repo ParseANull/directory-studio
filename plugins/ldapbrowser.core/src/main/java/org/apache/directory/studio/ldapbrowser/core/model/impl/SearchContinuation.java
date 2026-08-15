@@ -37,8 +37,25 @@ import org.apache.directory.studio.ldapbrowser.core.model.SearchParameter;
 import org.apache.directory.studio.ldapbrowser.core.model.schema.Schema;
 
 
+// ── CLASS: SearchContinuation — HAN FOLLOWING A REFERRAL URL TO THE NEXT JUMP ─
+// Sometimes a search comes back and says "for more results, follow this URL".
+// That is a search continuation — Han writes down the referral URL, marks the
+// continuation as UNRESOLVED, and when the user says "follow it", he resolves
+// the connection and re-runs the search.  If the user cancels, it stays
+// CANCELED.  The search parameters are cloned from the original search and
+// overridden with whatever the referral URL specifies (new base DN, filter,
+// scope, or attributes).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An {@link SearchContinuation} represents a search continuation.
+ * Represents an LDAP search continuation (a referral URL returned by a search).
+ * Extends {@link Search} and implements {@link IContinuation} to manage the
+ * referral resolution lifecycle: UNRESOLVED → RESOLVED / CANCELED.
+ * Parameters from the continuation URL override the cloned original search
+ * parameters on construction.
+ *
+ * <p>Think of this as Han following a referral URL to the next hyperspace
+ * jump — he parks the continuation as unresolved, waits for the user to pick
+ * a connection, then executes the jump.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -57,13 +74,19 @@ public class SearchContinuation extends Search implements IContinuation
     private DummyConnection dummyConnection;
 
 
+    // ── Han Sets Up The Continuation From The Original Search And A Referral URL ─
+    // "Cloning search parameters... applying URL overrides (DN, filter, scope,
+    // attributes)... state = UNRESOLVED.  Waiting for the user to pick a connection."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ContinuedSearchResultEntry.
-     * 
-     * @param dn the Dn
-     * @param resultBrowserConnection the connection 
-     * @param connection the connection of the continued search
-     * @param dn the Dn of the entry
+     * Creates a new instance of SearchContinuation.
+     * Clones the parameters from {@code originalSearch} and overrides them
+     * with any values specified by {@code searchContinuationURL}.
+     * Initial state is {@link State#UNRESOLVED}.
+     *
+     * @param originalSearch the search whose parameters should be used as
+     *                       the starting point
+     * @param searchContinuationURL the referral URL to resolve
      */
     public SearchContinuation( ISearch originalSearch, LdapUrl searchContinuationURL )
     {
@@ -105,6 +128,7 @@ public class SearchContinuation extends Search implements IContinuation
     }
 
 
+    // ── Han Returns The Resolved Connection Or A Dummy While Pending ─────────────
     @Override
     public IBrowserConnection getBrowserConnection()
     {
@@ -123,6 +147,7 @@ public class SearchContinuation extends Search implements IContinuation
     }
 
 
+    // ── Han Returns Results Only If The Jump Has Been Completed ──────────────────
     @Override
     public ISearchResult[] getSearchResults()
     {
@@ -137,6 +162,7 @@ public class SearchContinuation extends Search implements IContinuation
     }
 
 
+    // ── Han Reports The Current Jump State ───────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -146,6 +172,10 @@ public class SearchContinuation extends Search implements IContinuation
     }
 
 
+    // ── Han Executes The Jump: Resolve The Referral And Set The Connection ────────
+    // "User confirmed.  Get referral connection.  If null, mark CANCELED.
+    // Otherwise, assign the connection and mark RESOLVED."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -170,6 +200,7 @@ public class SearchContinuation extends Search implements IContinuation
     }
 
 
+    // ── Han Returns The Continuation URL ─────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -179,6 +210,7 @@ public class SearchContinuation extends Search implements IContinuation
     }
 
 
+    // ── Han Clones The Continuation For Re-Use ────────────────────────────────────
     /**
      * {@inheritDoc}
      */

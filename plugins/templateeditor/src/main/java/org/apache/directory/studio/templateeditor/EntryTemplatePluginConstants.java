@@ -6,28 +6,40 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor;
 
 
+// ── CLASS: EntryTemplatePluginConstants — THE IMPERIAL CODEBOOK ──────────────────
+// Before every mission, the Empire issues a codebook: every officer uses the same
+// code names so there is no ambiguity when issuing orders across the fleet.
+// "Target: DS-1" means exactly one thing. This interface is the same idea — a
+// single canonical source for every string constant the plugin uses. Image paths,
+// preference key names, dialog IDs — all live here so nothing is ever hard-coded
+// twice in two different classes with slightly different spellings.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This interface contains all the Constants used in the Plugin.
+ * Central repository of every string constant used by the Entry Template plugin.
+ * Image resource paths ({@code IMG_*}), Eclipse preference store keys
+ * ({@code PREF_*}), and dialog memory keys ({@code DIALOG_*}) all live here.
+ * Think of this interface as the Imperial codebook: one document, one truth,
+ * no ambiguity when passing keys across the plugin.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public interface EntryTemplatePluginConstants
 {
-    /** The plug-in ID */
+    /** The plug-in ID — derived from the package name so it stays in sync */
     String PLUGIN_ID = EntryTemplatePluginConstants.class.getPackage().getName();
 
     // Images

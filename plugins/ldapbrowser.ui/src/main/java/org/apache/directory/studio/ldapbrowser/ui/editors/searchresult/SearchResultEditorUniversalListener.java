@@ -73,8 +73,35 @@ import org.eclipse.ui.forms.events.IHyperlinkListener;
 import org.eclipse.ui.forms.widgets.Hyperlink;
 
 
+// ── CLASS: SearchResultEditorUniversalListener — Obi-Wan Sensing a Disturbance ──
+// "I felt a great disturbance in the Force, as if millions of voices suddenly
+// cried out in terror."  Obi-Wan is connected to everything — he senses shifts
+// in the galaxy, notices when Alderaan vanishes, when Luke is in danger, when
+// Han needs backup.  He doesn't act impulsively; he routes each sensation to the
+// right response.
+// This listener is Obi-Wan: it wires up every event source the editor cares about
+// (browser selection changes, part activate/deactivate, search updates, entry updates,
+// mouse moves for DN hyperlinks, keyboard for inline editing) and routes each to
+// the correct handler.  It's the editor's central nervous system.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The SearchResultEditorUniversalListener manages all events for the search result editor.
+ * The central event hub for the search result editor.
+ * We register with six different event sources and route their events to the
+ * appropriate editor sub-systems:
+ * <ul>
+ *   <li>{@link INullSelectionListener} — when the browser view selects a search,
+ *       we load it into the editor</li>
+ *   <li>{@link IPartListener2} — activate/deactivate keyboard shortcuts when the
+ *       editor gains/loses focus</li>
+ *   <li>DN hyperlink listeners — render a clickable Hyperlink widget over the DN
+ *       cell when the mouse moves into it</li>
+ *   <li>{@link SelectionListener} + {@link MouseListener} + {@link KeyListener} on
+ *       the cursor — start the value editor on double-click, enter, or printable key</li>
+ *   <li>{@link SearchUpdateListener} — refresh the table when the search model changes</li>
+ *   <li>{@link EntryUpdateListener} — refresh the table when an entry model changes;
+ *       auto-start inline editing when an empty value is added</li>
+ * </ul>
+ * Think of Obi-Wan: connected to everything, routes every disturbance to the right response.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -105,6 +132,11 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
     /** Token used to activate and deactivate shortcuts in the editor */
     private IContextActivation contextActivation;
 
+    // ── Obi-Wan Senses a New Search Selection ─────────────────────────────────
+    // The browser view's selection changed — Obi-Wan checks whether a single ISearch
+    // was selected and tells the editor to load it.  Any other selection type clears
+    // the editor to "no search".
+    // ─────────────────────────────────────────────────────────────────────────────
     /** Listener that listens for selections of ISearch objects. */
     private INullSelectionListener searchSelectionListener = new INullSelectionListener()
     {
@@ -134,6 +166,11 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
         }
     };
 
+    // ── Obi-Wan Toggles His Focus ─────────────────────────────────────────────
+    // When the editor part is activated, Obi-Wan activates the keyboard shortcut
+    // context and registers global action handlers.  When deactivated, he releases
+    // both.  This is how Eclipse knows which keybindings to apply to which editor.
+    // ─────────────────────────────────────────────────────────────────────────────
     /** The part listener used to activate and deactivate the shortcuts */
     private IPartListener2 partListener = new IPartListener2()
     {
@@ -222,6 +259,10 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
         }
     };
 
+    // ── Obi-Wan Opens the Hyperlink Door ──────────────────────────────────────
+    // When the user clicks a DN hyperlink, Obi-Wan runs OpenSearchResultAction —
+    // opening the full entry editor for that search result.
+    // ─────────────────────────────────────────────────────────────────────────────
     /** The listener used to handle clicks to the Dn hyper link */
     private IHyperlinkListener dnHyperlinkListener = new IHyperlinkListener()
     {
@@ -256,6 +297,10 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
         }
     };
 
+    // ── Obi-Wan Hides the Door When You Step Away ─────────────────────────────
+    // When the mouse exits the hyperlink widget, Obi-Wan hides it and removes
+    // it from the table editor — no stray overlapping widgets.
+    // ─────────────────────────────────────────────────────────────────────────────
     /** This listener removes the Dn link when then mouse exits the hyperlink control */
     private MouseTrackListener dnMouseTrackListener = new MouseTrackListener()
     {
@@ -287,6 +332,10 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
         }
     };
 
+    // ── Obi-Wan Renders the DN Door From the Cursor ───────────────────────────
+    // When the cursor (TableCursor widget) is over column 0 and that column is "Dn",
+    // Obi-Wan asks checkDnLink() to overlay the hyperlink widget on the cell.
+    // ─────────────────────────────────────────────────────────────────────────────
     /** This listener renders the Dn hyperlink when the mouse cursor moves over the Dn */
     private MouseMoveListener cursorMouseMoveListener = new MouseMoveListener()
     {
@@ -309,6 +358,10 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
         }
     };
 
+    // ── Obi-Wan Renders the DN Door From the Table ────────────────────────────
+    // When the mouse moves over the viewer table itself (not the cursor widget),
+    // Obi-Wan checks if it's hovering over the DN column and shows the hyperlink.
+    // ─────────────────────────────────────────────────────────────────────────────
     /** This listener renders the Dn link when the mouse cursor moves over the Dn */
     private MouseMoveListener viewerMouseMoveListener = new MouseMoveListener()
     {
@@ -332,6 +385,11 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
         }
     };
 
+    // ── Obi-Wan Highlights an Editable Cell ───────────────────────────────────
+    // When the cursor moves to a new cell (widgetSelected), Obi-Wan colors the
+    // cursor background: blue if the cell can be edited, grey if read-only.
+    // On widgetDefaultSelected (Enter), he starts the value editor.
+    // ─────────────────────────────────────────────────────────────────────────────
     /** This listener starts the value editor and toggles the cursor's background color */
     private SelectionListener cursorSelectionListener = new SelectionAdapter()
     {
@@ -376,6 +434,10 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
         }
     };
 
+    // ── Obi-Wan Opens the Editor on Double-Click ──────────────────────────────
+    // A double-click on a cell is unambiguous intent to edit — Obi-Wan runs
+    // the startEditAction immediately.
+    // ─────────────────────────────────────────────────────────────────────────────
     /** This listener starts the value editor when double-clicking a cell */
     private MouseListener cursorMouseListener = new MouseAdapter()
     {
@@ -409,6 +471,11 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
         }
     };
 
+    // ── Obi-Wan Starts Inline Editing on Keypress ─────────────────────────────
+    // If the user presses a printable character (not control keys, not modifier-only)
+    // and the best value editor is a TextCellEditor, Obi-Wan opens it and seeds it
+    // with the typed character so the user can continue typing naturally.
+    // ─────────────────────────────────────────────────────────────────────────────
     /** This listener starts the value editor when typing */
     private KeyListener cursorKeyListener = new KeyListener()
     {
@@ -449,10 +516,18 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
     };
 
 
+    // ── Obi-Wan Opens All His Channels ────────────────────────────────────────
+    // The constructor wires up every listener: DN hyperlink, cursor events,
+    // viewer mouse moves, part lifecycle, browser view selection, and the global
+    // event registry for search and entry updates.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SearchResultEditorUniversalListener.
+     * Constructs the universal listener and wires up all event sources.
+     * Creates the DN hyperlink overlay widget, registers all inner listeners on the
+     * cursor and viewer, subscribes to part lifecycle events, browser view selection
+     * changes, and the global search/entry update event bus.
      *
-     * @param editor the search result editor
+     * @param editor the search result editor whose events we manage
      */
     public SearchResultEditorUniversalListener( SearchResultEditor editor )
     {
@@ -493,8 +568,15 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
     }
 
 
+    // ── Obi-Wan Goes Into the Force ────────────────────────────────────────────
+    // The editor is closing — Obi-Wan severs all connections, deregisters from
+    // every event source, and nulls his references.  "If you strike me down, I
+    // shall become more powerful than you can possibly imagine" — but for cleanup
+    // purposes, he just becomes null.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes the listener.
+     * Deregisters all event listeners and releases all references.
+     * Safe to call multiple times.
      */
     public void dispose()
     {
@@ -516,10 +598,15 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
     }
 
 
+    // ── Obi-Wan Senses a Search Update ────────────────────────────────────────
+    // The search model changed (results refreshed, search renamed, etc.) — if the
+    // updated search is the one we're currently displaying, refresh the input.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      *
-     * This implementation refreshes the search result editor.
+     * This implementation refreshes the search result editor when the currently
+     * displayed search is the one that was updated.
      */
     public void searchUpdated( SearchUpdateEvent searchUpdateEvent )
     {
@@ -530,11 +617,16 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
     }
 
 
+    // ── Obi-Wan Senses an Entry Update ────────────────────────────────────────
+    // An entry was modified.  If it's an EmptyValueAddedEvent (the user created
+    // a new empty value), and the cursor is on that attribute, we start the value
+    // editor immediately.  Otherwise we just refresh the table display.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      *
-     * This implementation refreshes the search result editor
-     * or starts the value editor if an empty value was added.
+     * This implementation refreshes the search result editor or starts the value
+     * editor if an empty value was added to the currently selected attribute.
      */
     public void entryUpdated( EntryModificationEvent event )
     {
@@ -561,10 +653,16 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
     }
 
 
+    // ── Obi-Wan Tunes In a New Search ─────────────────────────────────────────
+    // The editor's input changed — store the new search, refresh the table, and
+    // tell the action group so it can update its enabled states.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the input.
+     * Updates the currently displayed search and triggers a full input refresh.
+     * Also notifies the action group of the new search so action enabled states
+     * can be recalculated.
      *
-     * @param search the search
+     * @param search the new search to display, or {@code null} to clear the editor
      */
     void setInput( ISearch search )
     {
@@ -574,9 +672,16 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
     }
 
 
+    // ── Obi-Wan Reconfigures the Table Layout ────────────────────────────────
+    // The search may have different returning attributes than the previous one.
+    // We rebuild the column headers, set the viewer input, update cell editors,
+    // and hide any extra columns.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes the input, makes columns visible or hides columns depending on the number
-     * of returning attributes.
+     * Refreshes the viewer to match the current search's returning attributes.
+     * Creates new table columns if needed, sets column header text, updates the
+     * label provider and cell editors, and hides unused columns.
+     * Called both when the search changes and when the search model fires an update.
      */
     void refreshInput()
     {
@@ -669,11 +774,17 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
     }
 
 
+    // ── Obi-Wan Makes Sure There Are Enough Columns ───────────────────────────
+    // If the table has fewer columns than needed, we create the missing ones.
+    // New columns start invisible (width 0) so they don't clutter the display
+    // until the column header text is set in refreshInput().
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Ensures that the table contains at least the number of
-     * the requested columns.
+     * Ensures the table has at least {@code count} columns.
+     * New columns are created with zero width and empty text; they're populated
+     * and resized by {@link #refreshInput()}.
      *
-     * @param count the requested number of columns
+     * @param count the minimum number of table columns required
      */
     private void ensureColumnCount( int count )
     {
@@ -692,10 +803,17 @@ public class SearchResultEditorUniversalListener implements SearchUpdateListener
     }
 
 
+    // ── Obi-Wan Renders the DN Hyperlink Overlay ─────────────────────────────
+    // If the "show links" preference is on and the mouse is over a real search
+    // result row's DN cell, we overlay a styled Hyperlink widget on top of the
+    // cell.  Clicking it opens the entry editor for that result.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Renders the Dn link.
+     * Renders the DN hyperlink overlay on the given table item if appropriate.
+     * The overlay is only shown if the "show links" preference is enabled and the
+     * item holds an {@link ISearchResult}.  Otherwise the overlay is hidden.
      *
-     * @param item the table item
+     * @param item the table item the mouse is hovering over; may be {@code null}
      */
     private void checkDnLink( TableItem item )
     {

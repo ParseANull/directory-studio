@@ -86,8 +86,22 @@ import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.contexts.IContextService;
 
 
+// ── CLASS: BrowserViewUniversalListener — OBI-WAN SENSES EVERY DISTURBANCE ───
+// Obi-Wan Kenobi doesn't just react to one type of event — he's attuned to
+// everything: a new connection opening is like a ship landing on Tatooine,
+// a search update is like a message arriving through the Force, a bookmark
+// change is like someone moving a marker on the desert map. He senses it all
+// and responds appropriately, keeping Luke (the browser view) fully informed
+// of what's happening across the galaxy (the LDAP model and Eclipse workspace).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The BrowserViewUniversalListener manages all events for the browser view.
+ * The central event listener for the LDAP browser view.
+ * This class registers with multiple event buses (entry events, search events,
+ * bookmark events, connection events, part events, preference events) and reacts
+ * to each one by refreshing or re-selecting elements in the browser tree.
+ * Without this class the tree would be a static snapshot — changes to the
+ * underlying LDAP model would never appear until the user manually refreshed.
+ * Think of Obi-Wan's all-encompassing Force sensitivity: no event goes unnoticed.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -242,7 +256,7 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
         }
     };
 
-    /** This listerner is used to listen on the preference settings modifications, especially 
+    /** This listerner is used to listen on the preference settings modifications, especially
      * the open mode preference value change. */
     private IPropertyChangeListener preferencePropertyChangeListener = new IPropertyChangeListener()
     {
@@ -268,10 +282,22 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     };
 
 
+    // ── Obi-Wan Opens All His Senses at Once ────────────────────────────────────
+    // Obi-Wan arrives on Tatooine and immediately extends his awareness in every
+    // direction: he tunes into the planet's Force signature, the movements of
+    // people around him, and any ripples from across the galaxy.
+    // We register with every relevant event system so no change to the LDAP model
+    // or Eclipse workspace goes unnoticed — entry events, search events, bookmark
+    // events, connection events, part events, and preference events.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BrowserViewUniversalListener.
+     * Creates a new BrowserViewUniversalListener and registers with all relevant
+     * event registries and Eclipse services.
+     * We also initialise the per-connection maps that save/restore expanded tree
+     * state when the user switches between connections — so switching back to a
+     * connection restores the exact tree state you left it in.
      *
-     * @param view the browser view
+     * @param view  the browser view this listener serves; must not be null.
      */
     public BrowserViewUniversalListener( BrowserView view )
     {
@@ -301,8 +327,20 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     }
 
 
+    // ── Obi-Wan Adjusts to the Ambient Force Conditions ─────────────────────────
+    // Depending on what's going on around him, Obi-Wan chooses whether to react
+    // to subtle ripples (selection-changed, quieter mode) or to loud shouts
+    // (double-click / open events, louder mode).
+    // We configure the viewer listeners to match the preference: historical
+    // behaviour (react to any selection change) vs. application-wide (react
+    // only to explicit open/double-click gestures).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets up the open mode listeners according the preferences.
+     * Configures the tree viewer listeners to match the current "open mode" preference.
+     * "Historical behaviour" opens the editor on every selection-changed event;
+     * "application-wide" only opens it when the user explicitly double-clicks.
+     * We have to remove one kind of listener and add the other — they're mutually
+     * exclusive and both fire {@link #openEditor(ISelection)}.
      */
     private void setupOpenModeListeners()
     {
@@ -324,10 +362,22 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     }
 
 
+    // ── Obi-Wan Acts on What He Senses ──────────────────────────────────────────
+    // Obi-Wan senses a disturbance — something has been selected — and immediately
+    // decides what the right response is: open the entry editor, open the search
+    // results editor, or blank any stale editors.
+    // We inspect the selection, route it to the right editor, and handle the
+    // multi-selection case by blanking single-tab editors first.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Opens an editor to show the given selection.
+     * Opens or updates the appropriate editor based on the current browser selection.
+     * A single entry/search-result/bookmark triggers the entry editor; a single
+     * search triggers the search result editor. Anything else blanks any open
+     * single-tab entry editors so they don't show stale content.
+     * This is called on both selection-changed and open events, depending on the
+     * open-mode preference.
      *
-     * @param selection the browser's selection.
+     * @param selection  the current selection in the browser tree viewer.
      */
     private void openEditor( ISelection selection )
     {
@@ -348,8 +398,8 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
             {
                 // Checking if there's at least one entry editor open.
                 // We need to blank them.
-                // This is done before the search result editor is opened, 
-                // otherwise the entry editor would be activated. 
+                // This is done before the search result editor is opened,
+                // otherwise the entry editor would be activated.
                 // We can blank them directly here, without using the  OpenEntryEditorRunnable.
                 blankSingleTabEntryEditors();
 
@@ -369,8 +419,17 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     }
 
 
+    // ── Obi-Wan Clears Out Old Impressions ───────────────────────────────────────
+    // Before focusing on a new disturbance, Obi-Wan clears the lingering
+    // impressions of previous events — otherwise old visions would muddy the new.
+    // We blank all single-tab entry editors that still show a resolved entry,
+    // so they don't display stale data when the user selects something different.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Blanks all single-tab entry editors.
+     * Blanks all single-tab (non-multi-window) entry editors that currently show
+     * a resolved entry, replacing their input with an empty placeholder.
+     * We do this before opening the search result editor so that the entry editor
+     * doesn't steal focus by activating itself in response to the blank operation.
      */
     private void blankSingleTabEntryEditors()
     {
@@ -403,9 +462,21 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     }
 
 
+    // ── Obi-Wan Retires From His Watch ──────────────────────────────────────────
+    // Obi-Wan's vigil is over — he withdraws from all his attunements, clears his
+    // maps, and releases his references so nothing lingers.
+    // We unregister from every event system and clear the connection-state maps
+    // to prevent memory leaks.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Unregisters from all event registries and Eclipse services, then clears
+     * all state held by this listener.
+     * Call this when the browser view is disposed; failure to do so will leave
+     * dangling listeners that keep the view object alive indefinitely.
      */
+    @Override
     public void dispose()
     {
         if ( view != null )
@@ -433,10 +504,21 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     }
 
 
+    // ── Obi-Wan Shifts His Attention to a New Planet ─────────────────────────────
+    // Obi-Wan's focus shifts: he was watching Tatooine, now he turns his awareness
+    // toward Alderaan — but first he memorises the exact state of Tatooine
+    // so he can pick up exactly where he left off when he returns.
+    // We save the current connection's expanded and selected tree state, switch
+    // the viewer's input, and restore the saved state for the new connection.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the input to the viewer and saves/restores the expanded and selected elements.
+     * Changes the browser tree's input to the given connection, saving and
+     * restoring expanded/selected state per connection.
+     * This means switching from connection A to connection B and back to A
+     * restores exactly which nodes were expanded and selected in A.
+     * Called when the user selects a different connection in the connection view.
      *
-     * @param connection the connection input
+     * @param connection  the new connection to display, or {@code null} to clear the view.
      */
     void setInput( IBrowserConnection connection )
     {
@@ -480,8 +562,24 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     }
 
 
+    // ── A Ship Lands on Tatooine — Obi-Wan Watches ──────────────────────────────
+    // A new ship descends through the atmosphere and touches down — Obi-Wan notes
+    // its arrival, extends his awareness, and prepares to interact with whoever
+    // just arrived.
+    // When a connection opens we expand the tree to show the root DSE and,
+    // optionally, the base entries, so the user sees something useful right away.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionOpened(org.apache.directory.studio.connection.core.Connection)
+     *
+     * Refreshes and auto-expands the tree when a connection opens.
+     * We expand to level 2 (root DSE children) and optionally to level 3
+     * (base entry children) based on the user's preference, giving an immediate
+     * overview of the directory without requiring manual expand clicks.
+     * Silently skips browser connections that aren't in the connection manager
+     * (e.g. temporary connections created by dialogs).
+     *
+     * @param connection  the connection that just opened.
      */
     public void connectionOpened( Connection connection )
     {
@@ -514,8 +612,22 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     }
 
 
+    // ── The Ship Lifts Off and Leaves ────────────────────────────────────────────
+    // The ship ascends and disappears — Obi-Wan watches it go and tidies up:
+    // clearing the map state he was tracking for that ship, collapsing any
+    // nodes it had expanded.
+    // When a connection closes we collapse the tree and remove saved state for
+    // that connection so memory doesn't grow unbounded.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionClosed(org.apache.directory.studio.connection.core.Connection)
+     *
+     * Collapses the tree and clears saved state when a connection is closed.
+     * We remove both the expanded-elements and selected-elements maps for the
+     * connection so we don't hold stale references to its entries.
+     * Silently skips browser connections not in the connection manager.
+     *
+     * @param connection  the connection that just closed.
      */
     public void connectionClosed( Connection connection )
     {
@@ -539,10 +651,23 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     }
 
 
+    // ── A Message Arrives Through the Force ─────────────────────────────────────
+    // Obi-Wan receives a ripple in the Force: a search has been updated.
+    // He refreshes his mental map and adjusts his focus to the updated search.
+    // We refresh the tree and move the selection to the updated search object
+    // so the user always sees the current state.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      *
-     * This viewer selects the updated search.
+     * Refreshes the tree and moves selection to the updated search.
+     * We also handle the quick-search lifecycle: if a quick search is removed
+     * we clear it from the connection so it doesn't appear as a phantom node.
+     * For continuation (referral) searches we always select the search itself;
+     * for regular searches we select the search if it still exists in the manager,
+     * otherwise we select its parent category node.
+     *
+     * @param searchUpdateEvent  the event describing what changed and why.
      */
     public void searchUpdated( SearchUpdateEvent searchUpdateEvent )
     {
@@ -584,8 +709,20 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     }
 
 
+    // ── A Bookmark Moves on the Desert Map ──────────────────────────────────────
+    // Someone moved a marker on the Tatooine desert map — Obi-Wan notices and
+    // refreshes his mental picture of where things are.
+    // We just refresh the whole viewer; bookmarks don't need fine-grained
+    // selection logic like searches do.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Refreshes the tree when a bookmark is added, removed, or changed.
+     * Bookmarks appear as nodes in the tree, so any change to them requires
+     * a viewer refresh to stay in sync.
+     *
+     * @param bookmarkUpdateEvent  the event carrying details of the bookmark change.
      */
     public void bookmarkUpdated( BookmarkUpdateEvent bookmarkUpdateEvent )
     {
@@ -593,11 +730,27 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
     }
 
 
+    // ── Obi-Wan Senses a Disturbance in the Entry Landscape ──────────────────────
+    // Something changed in the directory — an entry added, renamed, moved, or
+    // deleted. Obi-Wan's map of Tatooine needs updating: he collapses stale
+    // branches and re-expands only what's needed, then sets focus appropriately.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      *
-     * This implementation refreshes the tree and
-     * selects an entry depending on the event type.
+     * Refreshes the tree and moves selection in response to an entry modification.
+     * We handle each event type differently:
+     * <ul>
+     *   <li>{@link EntryAddedEvent}: refresh parent, select new entry.</li>
+     *   <li>{@link EntryRenamedEvent}: refresh new parent, select new entry.</li>
+     *   <li>{@link EntryMovedEvent}: refresh both old and new parents, select new entry.</li>
+     *   <li>{@link EntryDeletedEvent}: refresh parent (or root), select parent.</li>
+     *   <li>{@link BulkModificationEvent}: full viewer refresh.</li>
+     *   <li>{@link ChildrenInitializedEvent}: collapse stale child nodes to force re-expansion.</li>
+     *   <li>{@link AttributesInitializedEvent}: skipped to avoid double-loading children (see inline comment).</li>
+     * </ul>
+     *
+     * @param event  the entry modification event describing what changed.
      */
     public void entryUpdated( EntryModificationEvent event )
     {
@@ -671,7 +824,7 @@ public class BrowserViewUniversalListener extends BrowserUniversalListener imple
                     if ( viewer.getExpandedState( child ) )
                     {
                         // In that particular case, we need to remove the child from the tree viewer.
-                        // As it's a costly�operation we're only using this in that particular case,
+                        // As it's a costly operation we're only using this in that particular case,
                         // and not as default option.
                         viewer.remove( child );
                     }

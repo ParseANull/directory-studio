@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration.editor;
 
@@ -52,8 +52,20 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: PasswordPoliciesMasterDetailsBlock — THE IMPERIAL SECURITY REGISTRY ──────────
+// Vader strides into the Death Star's security hub, where the left wall lists every active
+// clearance policy and the right panel shows the full detail for whichever one he selects.
+// That split-screen command center is exactly what this class renders: master list on the
+// left, editable detail panel on the right.
+// ─────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Password Policies Master/Details Block used in the Password Policies Page.
+ * The master/details block that drives the Password Policies page of the ApacheDS
+ * configuration editor.
+ * It wires together a scrollable list of all known password policies (the master side) and
+ * the full settings panel for whichever policy is currently selected (the details side).
+ * Think of this class as the Imperial Security Registry — the left column lists every
+ * clearance rule in the Empire; tap one and the right column opens its full dossier for
+ * editing.
  *
  * <pre>
  * +------------------------------------------------------------------------------------+
@@ -66,48 +78,12 @@ import org.eclipse.ui.forms.widgets.Section;
  * | | |                     |          | |  Description : [////////////////////////] | |
  * | | |                     |          | |  Attribute   : [////////////////////////] | |
  * | | |                     |          | .-------------------------------------------. |
- * | | |                     |          | | Quality                                   | |
- * | | |                     |          | +-------------------------------------------+ |
- * | | |                     |          | | Check quality : [=======================] | |
- * | | |                     |          | | Validator :     [///////////////////////] | |
- * | | |                     |          | | [X] Enable Minimum Length                 | |
- * | | |                     |          | |   Number of chars : [NNN]                 | |
- * | | |                     |          | | [X] Enable Maximum Length                 | |
- * | | |                     |          | |   Number of chars : [NNN]                 | |
- * | | |                     |          | .-------------------------------------------. |
- * | | |                     |          | | Expiration                                | |
- * | | |                     |          | +-------------------------------------------+ |
- * | | |                     |          | | Minimum age (seconds): [NNN]              | |
- * | | |                     |          | | Maximum age (seconds): [NNN]              | |
- * | | |                     |          | | [X] Enable Expire Warning                 | |
- * | | |                     |          | |   Number of seconds  : [NNN]              | |
- * | | |                     |          | | [X] Enable Grace Authentication Limit     | |
- * | | |                     |          | |   Number of times    : [NNN]              | |
- * | | |                     |          | | [X] Enable Grace Expire                   | |
- * | | |                     |          | |   Interval (seconds) : [NNN]              | |
- * | | |                     |          | .-------------------------------------------. |
- * | | |                     |          | | Options                                   | |
- * | | |                     |          | +-------------------------------------------+ |
- * | | |                     |          | | [X] Enable Must Change                    | |
- * | | |                     |          | | [X] Enable Allow User Change              | |
- * | | |                     |          | | [X] Enable Safe Modify                    | |
- * | | |                     |          | .-------------------------------------------. |
- * | | |                     |          | | Lockout                                   | |
- * | | |                     |          | +-------------------------------------------+ |
- * | | |                     |          | | [X] Enable Lockout                        | |
- * | | |                     |          | |   Lockout duration (seconds)   : [NNN]    | |
- * | | |                     |          | |   Maximum Consecutive Failures : [NNN]    | |
- * | | |                     |          | |   Failure Count Interval       : [NNN]    | |
- * | | |                     |          | | [X] Enable Maximum Idle                   | |
- * | | |                     |          | |   Intervals                    : [NNN]    | |
- * | | |                     |          | | [X] Enable In History                     | |
- * | | |                     |          | |   Used passwords stored in Hist: [NNN]    | |
- * | | |                     |          | | [X] Delay                                 | |
- * | | |                     |          | |   Minimum delay (seconds)      : [NNN]    | |
- * | | +---------------------+          | |   Maximum delay (seconds)      : [NNN]    | |
+ * | | |                     |          | | Quality / Expiration / Options / Lockout  | |
+ * | | +---------------------+          | |   ... (see PasswordPolicyDetailsPage)     | |
  * | +----------------------------------+ +-------------------------------------------+ |
  * +------------------------------------------------------------------------------------+
  * </pre>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
@@ -128,10 +104,22 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     private Button deleteButton;
 
 
+    // ── Assembling The Imperial Command Center ────────────────────────────────────────────
+    // An Imperial officer walks into the new security hub and plugs it into the main console.
+    // She hands it a reference to the Password Policies page so it can reach shared state.
+    // We do the same: store the parent page so later methods can ask it for config data.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PasswordPoliciesMasterDetailsBlock.
+     * Builds a new PasswordPoliciesMasterDetailsBlock and ties it to its parent page.
+     * We need the page reference to reach the editor's config bean and managed form later.
      *
-     * @param page the associated page
+     * <p>For example — an Imperial officer initialises a new registry station:</p>
+     * <pre>
+     *   Officer boots the terminal and hands it the control room's master key.
+     *   From that moment the terminal knows where to send every status update.
+     * </pre>
+     *
+     * @param page  the PasswordPoliciesPage that hosts this block
      */
     public PasswordPoliciesMasterDetailsBlock( PasswordPoliciesPage page )
     {
@@ -139,8 +127,24 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Splitting The Command Screen ──────────────────────────────────────────────────────
+    // The Death Star's main display divides into two panes: the roster on the left takes up
+    // 40% of the screen, the detail briefing on the right takes the remaining 60%.
+    // We call super to lay out the sash form, then set those exact proportions.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Lays out the master/details split and sets the sash weights so the list gets 40% of
+     * the width and the detail panel gets 60%.
+     * Delegates the heavy lifting to the parent {@link MasterDetailsBlock}, then tweaks the
+     * proportions to give the detail panel more breathing room.
+     *
+     * <p>For example — the Death Star ops team sizes their split-screen display:</p>
+     * <pre>
+     *   The roster on the left shrinks to show just names.
+     *   The briefing panel on the right expands to fit all the policy settings.
+     * </pre>
+     *
+     * @param managedForm  the Eclipse managed form that owns this block's widgets
      */
     public void createContent( IManagedForm managedForm )
     {
@@ -151,8 +155,27 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Building The Master Policy Roster ────────────────────────────────────────────────
+    // An Imperial archivist sets up the left-hand roster board in the security hub.
+    // She nails up a scrollable list of every clearance policy, then pins an Add and
+    // Delete button next to it so Vader can manage entries on the fly.
+    // We do the same: build the section, table viewer, and buttons, then wire them up.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Constructs the master (left-hand) panel: a titled section containing a sorted table
+     * of all password policies plus Add and Delete action buttons.
+     * This is the list side of the master/details split — clicking an entry here drives
+     * what appears in the detail panel on the right.
+     *
+     * <p>For example — the Imperial archivist assembles the clearance registry board:</p>
+     * <pre>
+     *   She mounts a scrollable roster, each row labelled "PolicyName (enabled/disabled)".
+     *   An Add button lets commanders enrol new rules; Delete removes obsolete ones.
+     *   Selecting a row fires a selection event so the detail briefing refreshes.
+     * </pre>
+     *
+     * @param managedForm  the form that coordinates selection events between master and detail
+     * @param parent       the SWT composite to build inside
      */
     protected void createMasterPart( final IManagedForm managedForm, Composite parent )
     {
@@ -233,7 +256,7 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
                 return super.getImage( element );
             }
         } );
-        
+
         viewer.setComparator( new ViewerComparator()
         {
             public int compare( Viewer viewer, Object e1, Object e2 )
@@ -271,8 +294,24 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Loading The Security Dossiers ─────────────────────────────────────────────────────
+    // An Imperial clerk walks to the filing room, grabs every existing clearance dossier,
+    // and stacks them on the registry board for the officers to review.
+    // We ask the authentication interceptor for its list of password policies and hand
+    // that list to the table viewer as its input.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the page with the Editor input.
+     * Populates the table viewer from the current editor input by pulling the list of
+     * password policies out of the authentication interceptor.
+     * If the interceptor is missing (unusual config), we hand the viewer a null input so
+     * it shows an empty list rather than crashing.
+     *
+     * <p>For example — the Imperial clerk loads the registry from the filing room:</p>
+     * <pre>
+     *   She locates the authentication interceptor's file cabinet.
+     *   She drops all the clearance dossiers onto the roster board.
+     *   If the cabinet is locked or missing, the board just stays empty.
+     * </pre>
      */
     private void initFromInput()
     {
@@ -289,8 +328,21 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Refreshing The Registry Display ──────────────────────────────────────────────────
+    // After a change is committed, the Imperial archivist re-reads the filing cabinet and
+    // redraws every row on the roster board so nothing looks stale.
+    // We call initFromInput to reload the data model, then tell the viewer to repaint.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes the UI.
+     * Reloads the policy list from the config model and forces the table to repaint.
+     * Call this after external changes (e.g. loading a new config file) that the viewer
+     * wouldn't otherwise know about.
+     *
+     * <p>For example — the archivist refreshes the command board after a briefing update:</p>
+     * <pre>
+     *   She re-reads the filing cabinet to pick up any new orders.
+     *   The roster board redraws so every officer sees the latest picture.
+     * </pre>
      */
     public void refreshUI()
     {
@@ -299,10 +351,25 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Finding The Authentication Interceptor ────────────────────────────────────────────
+    // An Imperial agent scans the interceptor chain looking for the one guard post labelled
+    // "authenticationInterceptor" — the checkpoint that enforces every password rule.
+    // We walk the directory service's interceptor list and return that bean, or null if
+    // it is somehow missing from the chain.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the authentication interceptor.
+     * Locates the {@link AuthenticationInterceptorBean} in the directory service's
+     * interceptor chain by matching its well-known ID.
+     * We need this bean because it is the one that owns the list of password policies.
      *
-     * @return the authentication interceptor
+     * <p>For example — an Imperial agent hunts for the authentication checkpoint:</p>
+     * <pre>
+     *   She walks the entire guard-post chain, checking each post's ID badge.
+     *   When she finds the badge reading "authenticationInterceptor" she returns it.
+     *   If no post wears that badge, she reports null — something is misconfigured.
+     * </pre>
+     *
+     * @return  the authentication interceptor bean, or {@code null} if not found
      */
     private AuthenticationInterceptorBean getAuthenticationInterceptor()
     {
@@ -320,8 +387,22 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Arming The Registry Controls ─────────────────────────────────────────────────────
+    // An Imperial technician wires up the buttons and selection triggers on the registry
+    // board so every interaction fires the right response — selection enables Delete,
+    // clicking Add creates a new policy, clicking Delete removes the selected one.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Add listeners to UI fields.
+     * Attaches event listeners to the table viewer and the Add/Delete buttons.
+     * The viewer selection listener keeps the Delete button in sync with the current
+     * selection (disabled for the default policy, enabled for custom ones).
+     *
+     * <p>For example — an Imperial technician hard-wires the registry's control panel:</p>
+     * <pre>
+     *   Selecting a row lights up the Delete button — unless it's the Emperor's default.
+     *   Pressing Add triggers policy creation; pressing Delete triggers policy removal.
+     *   Every action routes through the appropriate handler method below.
+     * </pre>
      */
     private void addListeners()
     {
@@ -367,8 +448,22 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Enrolling A New Clearance Rule ────────────────────────────────────────────────────
+    // A junior Imperial officer drafts a brand-new access clearance policy on a fresh form,
+    // fills in sensible default values, and files it into the authentication interceptor's
+    // cabinet — then selects the new row so the detail panel opens immediately.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the 'Add' button is clicked.
+     * Creates a new {@link PasswordPolicyBean} with safe defaults, registers it with the
+     * authentication interceptor, refreshes the viewer, and selects the new row.
+     * We auto-select so the user lands straight in the detail panel ready to customise.
+     *
+     * <p>For example — an Imperial officer files a new clearance rule:</p>
+     * <pre>
+     *   She stamps a fresh form with a unique ID like "newPasswordPolicy1".
+     *   She fills in defaults: lockout on, 5 max failures, 5-char minimum length.
+     *   The rule goes into the registry and she highlights it so it's ready to edit.
+     * </pre>
      */
     private void addNewPasswordPolicy()
     {
@@ -408,11 +503,26 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Minting A Unique Policy ID ────────────────────────────────────────────────────────
+    // The Imperial naming bureau counts up from 1 until it finds an ID that no existing
+    // policy has claimed — "newPasswordPolicy1", then "newPasswordPolicy2", and so on.
+    // We loop through the existing policies and increment the counter until we get a
+    // collision-free name.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a new ID for a new password policy.
+     * Generates a unique ID for a new password policy by appending an incrementing counter
+     * to the base name until we find one that doesn't clash with any existing policy.
+     * This keeps IDs predictable ("newPasswordPolicy1", "newPasswordPolicy2", ...) and
+     * guarantees we never silently overwrite an existing entry.
      *
-     * @return 
-     *      a new ID for a new password policy
+     * <p>For example — the Imperial naming bureau stamps a fresh clearance badge:</p>
+     * <pre>
+     *   She checks "newPasswordPolicy1" — already taken by another rule.
+     *   She tries "newPasswordPolicy2" — the registry confirms it's free.
+     *   That becomes the new policy's ID.
+     * </pre>
+     *
+     * @return  a unique ID string that no existing password policy is currently using
      */
     private String getNewId()
     {
@@ -439,8 +549,22 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Purging A Clearance Rule From The Registry ────────────────────────────────────────
+    // An Imperial security director selects a non-default policy on the registry board and
+    // presses Delete — a confirmation dialog pops up to make sure it wasn't an accident.
+    // If confirmed, we remove the policy from the interceptor and mark the editor dirty.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the 'Delete' button is clicked.
+     * Removes the currently selected password policy after prompting the user to confirm.
+     * We guard against deleting the default policy (it cannot be removed) and against
+     * empty selections to avoid a confusing no-op.
+     *
+     * <p>For example — the security director revokes an outdated clearance rule:</p>
+     * <pre>
+     *   She selects "oldPolicy" on the roster and hits Delete.
+     *   A dialog asks: "Are you sure you want to delete 'oldPolicy'?"
+     *   On confirmation, the policy vanishes from the interceptor and the editor turns dirty.
+     * </pre>
      */
     private void deleteSelectedPasswordPolicy()
     {
@@ -465,8 +589,24 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Hooking Up The Detail Briefing Panel ──────────────────────────────────────────────
+    // The Death Star's security hub installs the detail briefing screen and tells the
+    // framework: "whenever a PasswordPolicyBean is selected, show it on this panel."
+    // We create a PasswordPolicyDetailsPage and register it for that class.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Registers {@link PasswordPolicyDetailsPage} as the details renderer for
+     * {@link PasswordPolicyBean} objects.
+     * Eclipse's MasterDetailsBlock calls this once during setup; from then on, selecting a
+     * policy in the master list automatically loads its data into the details page.
+     *
+     * <p>For example — the hub technician installs the detail briefing screen:</p>
+     * <pre>
+     *   She tells the framework: "PasswordPolicyBean goes to PasswordPolicyDetailsPage."
+     *   From that moment, every roster selection auto-populates the right-hand panel.
+     * </pre>
+     *
+     * @param detailsPart  the Eclipse details part that manages which page is shown
      */
     protected void registerPages( DetailsPart detailsPart )
     {
@@ -475,8 +615,17 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Skipping The Toolbar This Time ────────────────────────────────────────────────────
+    // The Imperial ops team checked the spec and decided the registry board needs no toolbar.
+    // This override exists because the framework requires it, but there is nothing to do.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Intentional no-op: this block does not need a toolbar, so we override the method
+     * and leave it empty.
+     * The {@link MasterDetailsBlock} contract demands we provide this method even when we
+     * have nothing to add.
+     *
+     * @param managedForm  the form that would host any toolbar actions (unused here)
      */
     protected void createToolBarActions( IManagedForm managedForm )
     {
@@ -484,8 +633,22 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Flagging The Config File As Modified ──────────────────────────────────────────────
+    // After any change to the registry, an Imperial dispatcher sends a "MODIFIED" signal
+    // to the main editor console so it knows the config file has unsaved changes.
+    // We flip the editor's dirty flag and refresh the viewer so the UI stays consistent.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the Editor as dirty.
+     * Marks the parent {@link ServerConfigurationEditor} as dirty (unsaved changes) and
+     * triggers a viewer refresh so labels update immediately.
+     * Any mutation to the policy list — add, delete, or field edit — should call this so
+     * the editor's save button lights up.
+     *
+     * <p>For example — the Imperial dispatcher signals an unsaved change:</p>
+     * <pre>
+     *   She presses the "MODIFIED" button on the console after a policy is updated.
+     *   The save indicator lights up, reminding officers to commit before shutdown.
+     * </pre>
      */
     public void setEditorDirty()
     {
@@ -494,8 +657,21 @@ public class PasswordPoliciesMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Committing The Registry To Disk ──────────────────────────────────────────────────
+    // When the Empire issues the save order, the archivist tells the detail page to flush
+    // whatever is on screen back into the in-memory model so nothing is lost.
+    // We delegate to detailsPage.commit(true) which does the heavy lifting.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the necessary elements to the input model.
+     * Saves the current state of the details page into the underlying config model.
+     * Called by the editor's save flow to make sure whatever is showing in the detail panel
+     * gets persisted alongside the rest of the configuration.
+     *
+     * <p>For example — the archivist files the open briefing document before shutdown:</p>
+     * <pre>
+     *   She takes whatever the officer was editing in the right-hand panel.
+     *   She stamps it "COMMITTED" and pushes it back into the in-memory model.
+     * </pre>
      */
     public void save()
     {

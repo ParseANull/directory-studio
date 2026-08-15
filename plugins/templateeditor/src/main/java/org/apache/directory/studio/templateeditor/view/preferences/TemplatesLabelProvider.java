@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.view.preferences;
 
@@ -39,9 +39,25 @@ import org.apache.directory.studio.templateeditor.model.Template;
 import org.apache.directory.studio.templateeditor.view.ColumnsLabelProvider;
 
 
+// ── CLASS: TemplatesLabelProvider — PALPATINE'S STANDING-ORDERS DISPLAY CLERK ────
+// When Palpatine reviews his standing orders on the preference page, each row must
+// be rendered correctly: the right icon (enabled template, disabled template, or
+// object-class node), the right text (title with a "(Default)" badge if applicable),
+// the right font (bold for the default template in object-class mode), and the
+// right foreground colour (dimmed for disabled templates). This class handles all
+// that presentation logic for the CheckboxTreeViewer.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements a label provider for the table viewer of
- * the Template Entry Editor preference page.
+ * Label provider for the templates tree viewer on the Template Entry Editor
+ * preference page. Provides per-column icons, text, font, and colour for both
+ * object-class-tree mode and flat-template-list mode.
+ *
+ * <p>Think of this as Palpatine's standing-orders display clerk:</p>
+ * <pre>
+ *   // Default template in object-class mode → bold text, "(Default)" suffix
+ *   // Disabled template → dimmed foreground colour
+ *   // Object-class node → object-class icon, names joined with ", "
+ * </pre>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -54,8 +70,15 @@ public class TemplatesLabelProvider extends ColumnsLabelProvider implements ITab
     private IPreferenceStore store;
 
 
+    // ── CONSTRUCTOR: WIRE UP THE DISPLAY CLERK ────────────────────────────────────
+    // Palpatine's display clerk takes the manager (to query enabled/default state)
+    // and the preference store (to determine presentation mode).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of TemplatesLabelProvider.
+     * Creates a new {@code TemplatesLabelProvider}.
+     *
+     * @param manager  the preferences-page templates manager used to check
+     *                 enabled/default state for display decisions
      */
     public TemplatesLabelProvider( PreferencesTemplatesManager manager )
     {
@@ -64,6 +87,11 @@ public class TemplatesLabelProvider extends ColumnsLabelProvider implements ITab
     }
 
 
+    // ── GET COLUMN IMAGE: RETURN THE ICON FOR EACH CELL ──────────────────────────
+    // Palpatine's clerk selects the correct rank badge: object-class icon for
+    // object-class nodes, enabled-template icon for active templates, and
+    // disabled-template icon for greyed-out templates.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -123,6 +151,10 @@ public class TemplatesLabelProvider extends ColumnsLabelProvider implements ITab
     }
 
 
+    // ── GET COLUMN TEXT: RETURN THE DISPLAY TEXT FOR EACH CELL ───────────────────
+    // Palpatine's clerk formats the cell text. Default templates get a "(Default)"
+    // suffix so the user can identify them at a glance.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -177,12 +209,11 @@ public class TemplatesLabelProvider extends ColumnsLabelProvider implements ITab
     }
 
 
+    // ── IS TEMPLATE PRESENTATION ──────────────────────────────────────────────────
     /**
-     * Indicates if the template presentation is selected.
+     * Returns {@code true} if the preference page is in flat-template mode.
      *
-     * @return
-     *      <code>true</code> if the template presentation is selected,
-     *      <code>false</code> if not
+     * @return {@code true} for flat-template mode
      */
     private boolean isTemplatePresentation()
     {
@@ -190,12 +221,11 @@ public class TemplatesLabelProvider extends ColumnsLabelProvider implements ITab
     }
 
 
+    // ── IS OBJECT CLASS PRESENTATION ──────────────────────────────────────────────
     /**
-     * Indicates if the object class presentation is selected.
+     * Returns {@code true} if the preference page is in object-class-tree mode.
      *
-     * @return
-     *      <code>true</code> if the object class presentation is selected,
-     *      <code>false</code> if not
+     * @return {@code true} for object-class-tree mode
      */
     private boolean isObjectClassPresentation()
     {
@@ -203,16 +233,18 @@ public class TemplatesLabelProvider extends ColumnsLabelProvider implements ITab
     }
 
 
+    // ── CONCATENATE OBJECT CLASSES: BUILD THE OBJECT-CLASS STRING ────────────────
+    // Palpatine's clerk assembles the structural + auxiliary object class names into
+    // a single display string: "inetOrgPerson <organizationalPerson, person>".
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Concatenates the object classes in a single string.
+     * Returns a single display string combining the structural object class name(s)
+     * and any auxiliary object class names. Auxiliary names are wrapped in angle
+     * brackets and separated by commas.
      *
-     * @param objectClass
-     *      the object class
-     * @param auxiliaryObjectClasses
-     *      the list of auxiliary object class names
-     * @return
-     *      a string containing all the object classes separated 
-     *      by <code>", "</code> characters.
+     * @param objectClass             the structural object class (may be {@code null})
+     * @param auxiliaryObjectClasses  the list of auxiliary object class names (may be {@code null})
+     * @return the combined display string, or {@code ""} if inputs are invalid
      */
     private String concatenateObjectClasses( ObjectClass objectClass,
         List<String> auxiliaryObjectClasses )
@@ -248,14 +280,13 @@ public class TemplatesLabelProvider extends ColumnsLabelProvider implements ITab
     }
 
 
+    // ── CONCATENATE OBJECT CLASS NAMES: JOIN A LIST OF NAMES ─────────────────────
     /**
-     * Concatenates the object class names in a single string.
+     * Joins a list of object-class names into a single comma-separated string
+     * (e.g. {@code "inetOrgPerson, person"}).
      *
-     * @param objectClasses
-     *      the object classes
-     * @return
-     *      a string containing all the object classes separated 
-     *      by <code>", "</code> characters.
+     * @param names  the list of names to join (may be {@code null} or empty)
+     * @return the joined string, or {@code ""} if the list is empty or {@code null}
      */
     private String concatenateObjectClassNames( List<String> names )
     {
@@ -280,6 +311,10 @@ public class TemplatesLabelProvider extends ColumnsLabelProvider implements ITab
     }
 
 
+    // ── GET FONT: BOLD FOR DEFAULT TEMPLATES ──────────────────────────────────────
+    // Palpatine's clerk renders the default template in bold so it stands out from
+    // the other candidates in the object-class tree.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -302,6 +337,10 @@ public class TemplatesLabelProvider extends ColumnsLabelProvider implements ITab
     }
 
 
+    // ── GET FOREGROUND: DIM DISABLED TEMPLATES ────────────────────────────────────
+    // Palpatine's clerk dims the text of disabled templates. The TODO here means
+    // a proper system-disabled colour should eventually replace the null default.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -320,6 +359,7 @@ public class TemplatesLabelProvider extends ColumnsLabelProvider implements ITab
     }
 
 
+    // ── GET BACKGROUND: NO SPECIAL BACKGROUND ────────────────────────────────────
     /**
      * {@inheritDoc}
      */

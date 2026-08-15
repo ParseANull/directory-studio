@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -38,8 +38,22 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 
 
+// ── CLASS: ExportSearchLogsWizard — R2-D2 DUMPS THE COMPUTER RECORDS ─────────
+// R2-D2 plugs into the Death Star's computer and downloads the search records
+// — every query the station received, in order. This wizard does the same:
+// it reads the search-log rolling files (stored newest-first), reverses them
+// into chronological order, and streams the whole thing to one LDIF file
+// that can be analysed offline. It's the search-log twin of
+// ExportModificationLogsWizard (which does the same for modification logs).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the wizard for exporting the search logs.
+ * One-page wizard that exports the LDAP search logs for the current connection
+ * to a single LDIF file.
+ * The search log subsystem ({@link LdifSearchLogger}) stores LDAP search
+ * operations in a rolling series of files ordered newest-to-oldest.
+ * This wizard concatenates them in reverse (oldest-to-newest) so the exported
+ * log reads in chronological order. Mirrors
+ * {@link ExportModificationLogsWizard} exactly but uses the search-log API.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -50,8 +64,12 @@ public class ExportSearchLogsWizard extends ExportBaseWizard
     private ExportLogsToWizardPage toPage;
 
 
+    // ── R2-D2 Boots Up the Download Sequence ─────────────────────────────────────
+    // The wizard title announces the search-log export operation.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExportSearchLogsWizard.
+     * Creates a new ExportSearchLogsWizard with the localised
+     * "Export Search Logs" window title.
      */
     public ExportSearchLogsWizard()
     {
@@ -59,8 +77,14 @@ public class ExportSearchLogsWizard extends ExportBaseWizard
     }
 
 
+    // ── R2-D2 Opens the Interface Port ───────────────────────────────────────────
+    // One page: just pick the destination file. No source-search configuration
+    // is needed because we always export all search logs for the current connection.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Adds the single {@link ExportLogsToWizardPage} for picking the destination file.
      */
     public void addPages()
     {
@@ -69,8 +93,22 @@ public class ExportSearchLogsWizard extends ExportBaseWizard
     }
 
 
+    // ── R2-D2 Downloads the Records ───────────────────────────────────────────────
+    // The search-log files are stored newest-first; we iterate backwards so the
+    // exported LDIF reads oldest-to-newest (chronological order).
+    // Each file is copied into the destination; missing or unreadable files are
+    // silently skipped. If the connection is not live, we do nothing.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Saves dialog settings, then concatenates all search log files for the
+     * current connection into a single LDIF file in chronological order.
+     * Iterates from the last (oldest) log file to the first (newest), skipping
+     * null, missing, or unreadable entries. Reports IO errors via the Eclipse
+     * exception handler. Does nothing if the browser connection has no live connection.
+     *
+     * @return  {@code true} always.
      */
     public boolean performFinish()
     {

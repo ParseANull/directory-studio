@@ -51,7 +51,6 @@ import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseEnum;
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseGroup;
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseSaslSsf;
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseSelf;
-import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseSsf;
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseStar;
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseTlsSsf;
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseTransportSsf;
@@ -65,8 +64,26 @@ import org.apache.directory.studio.openldap.config.acl.widgets.composites.WhoCla
 import org.apache.directory.studio.openldap.config.acl.widgets.composites.WhoClauseTransportSsfComposite;
 
 
+// ── CLASS: OpenLdapAclWhoClauseWidget — GRAND MOFF FILLING A SINGLE WHO ROW ─
+// Grand Moff Tarkin fills in one row of the security manifest: which subject
+// class (clause combo), what access level they receive, and how to control
+// the evaluation chain afterward. This widget renders that single row as three
+// combo viewers (clause, access level, control) plus a toolbar with Add/Delete/
+// Move-Up/Move-Down buttons. When the clause type changes a configuration sub-
+// composite (e.g. WhoClauseDnComposite) is dynamically created or disposed below
+// the top row. All changes are propagated back to the builder widget via
+// notifyListeners() so the model stays in sync.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * 
+ * A single WHO-clause row in the visual ACL editor. Renders three combo viewers
+ * (clause type, access level, control) and a toolbar (Add, Delete, Move Up,
+ * Move Down). When a clause type that requires configuration (DN, DN-in-attribute,
+ * Group, SASL-SSF, SSF, TLS-SSF, Transport-SSF) is selected a sub-composite is
+ * created below the top row.
+ *
+ * <p>Think of this class as Grand Moff Tarkin assigning a single row of the
+ * security directive — subject class, clearance level, and continuation control.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements SelectionListener
@@ -148,8 +165,12 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     private ToolItem moveUpButton;
     private ToolItem moveDownButton;
 
-    // Listeners
-    /** The listener for the clause combo viewer */
+    // ── Listener: Clause Combo Changed ─────────────────────────────────────────
+    // When Tarkin selects a new clause type the old configuration sub-composite
+    // is disposed, the new clause is created in the model, and the appropriate
+    // configuration UI is created below the top row.
+    // ─────────────────────────────────────────────────────────────────────────
+    /** Listener for the clause combo viewer. Disposes/creates the config sub-composite. */
     private ISelectionChangedListener clauseComboViewerListener = new ISelectionChangedListener()
     {
         public void selectionChanged( SelectionChangedEvent event )
@@ -183,7 +204,12 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
         }
     };
 
-    /** The listener for the access level combo viewer */
+    // ── Listener: Access Level Combo Changed ────────────────────────────────────
+    // When Tarkin picks "Custom..." the access-level dialog opens. If he cancels
+    // the combo reverts to its previous value. Otherwise the custom access level
+    // is stored.
+    // ─────────────────────────────────────────────────────────────────────────
+    /** Listener for the access level combo viewer. Opens access-level dialog for Custom. */
     private ISelectionChangedListener accessLevelComboViewerListener = new ISelectionChangedListener()
     {
         public void selectionChanged( SelectionChangedEvent event )
@@ -266,7 +292,10 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
         }
     };
 
-    /** The listener for the control combo viewer */
+    // ── Listener: Control Combo Changed ─────────────────────────────────────────
+    // When Tarkin changes the control (stop/continue/break) the model is updated.
+    // ─────────────────────────────────────────────────────────────────────────
+    /** Listener for the control combo viewer. Updates the clause control. */
     private ISelectionChangedListener controlComboViewerListener = new ISelectionChangedListener()
     {
         public void selectionChanged( SelectionChangedEvent event )
@@ -291,13 +320,20 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     };
 
 
+    // ── Constructing a Single Who Clause Row ─────────────────────────────────
+    // Tarkin stores the builder widget (for callbacks), the initial clause,
+    // its position index, and the context.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of OpenLdapAclWhoClauseWidget.
+     * Creates a new who clause row widget. The combos and toolbar are created
+     * later by {@link #create(Composite)}.
      *
-     * @param builderWidget the parent builder widget
-     * @param index the row index
+     * @param builderWidget  The parent builder widget (for add/delete/move callbacks).
+     * @param context        The shared ACL context.
+     * @param clause         The initial ACL who-clause for this row.
+     * @param index          The zero-based position of this row in the who-clause list.
      */
-    public OpenLdapAclWhoClauseWidget( OpenLdapAclWhoClausesBuilderWidget builderWidget, 
+    public OpenLdapAclWhoClauseWidget( OpenLdapAclWhoClausesBuilderWidget builderWidget,
                 OpenLdapAclValueWithContext context, AclWhoClause clause, int index )
     {
         this.builderWidget = builderWidget;
@@ -307,6 +343,18 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Building the Row UI ───────────────────────────────────────────────────
+    // Tarkin creates the two-column layout: the left column holds the three
+    // combo viewers; the right column holds the toolbar. The combos are
+    // initialised from the clause, then listeners are attached.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Creates the row UI inside the given parent: a two-column composite
+     * holding the clause/access-level/control combo viewers and the
+     * Add/Delete/Move-Up/Move-Down toolbar.
+     *
+     * @param parent  The parent composite (usually the who-group).
+     */
     public void create( Composite parent )
     {
         // Creating the widget base composite
@@ -332,8 +380,14 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Initialising Combos From the Current Clause ───────────────────────────
+    // Tarkin pre-selects the three combos based on the clause that was passed
+    // to the constructor. Falls back to the placeholder rows when clause is null.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the UI with the clause
+     * Initialises the three combo viewers from the current clause. Falls back to
+     * the placeholder entries (index 0 of each array) when the clause or its
+     * access level/control are null.
      */
     private void initWithClause()
     {
@@ -393,12 +447,15 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Detecting a Simple Access Level ──────────────────────────────────────
+    // A simple access level has a named level and no self-privilege modifier.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the given access level is simple or not.
+     * Returns {@code true} if the access level is "simple" — i.e. it has a named
+     * level (manage/write/read/…) with no self-privilege modifier.
      *
-     * @param accessLevel the access level
-     * @return <code>true</code> if the access level is simple,
-     *         <code>false</code> if not
+     * @param accessLevel  The access level to test; may be {@code null}.
+     * @return             {@code true} if simple.
      */
     private boolean isSimple( AclAccessLevel accessLevel )
     {
@@ -411,12 +468,15 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Detecting a Custom Access Level ──────────────────────────────────────
+    // A custom access level uses self-privilege or explicit privilege flags.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the given access level is complex or not.
+     * Returns {@code true} if the access level is "custom" — i.e. it uses the
+     * self-privilege modifier or has explicit privilege flags.
      *
-     * @param accessLevel the access level
-     * @return <code>true</code> if the access complex is simple,
-     *         <code>false</code> if not
+     * @param accessLevel  The access level to test; may be {@code null}.
+     * @return             {@code true} if custom.
      */
     private boolean isCustom( AclAccessLevel accessLevel )
     {
@@ -430,10 +490,14 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating the Clause Combo Viewer ─────────────────────────────────────
+    // The clause combo lists all who-clause types with human-readable labels.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the clause combo viewer.
+     * Creates the clause type {@link ComboViewer} with a custom label provider
+     * that maps each {@link AclWhoClauseEnum} to a human-readable string.
      *
-     * @param parent the parent composite
+     * @param parent  The parent composite.
      */
     private void createClauseComboViewer( Composite parent )
     {
@@ -485,10 +549,16 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating the Access Level Combo Viewer ────────────────────────────────
+    // The access level combo lists named levels plus a Custom option that opens
+    // the access-level dialog.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creating the access level combo viewer.
+     * Creates the access level {@link ComboViewer}. Lists named levels
+     * (manage…none) plus a "Custom…" option that opens
+     * {@link OpenLdapAccessLevelDialog}.
      *
-     * @param parent the parent composite
+     * @param parent  The parent composite.
      */
     private void createAccessLevelComboViewer( Composite parent )
     {
@@ -544,10 +614,13 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating the Control Combo Viewer ─────────────────────────────────────
+    // The control combo lists stop/continue/break options.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the control combo viewer.
+     * Creates the control {@link ComboViewer} with Stop, Continue, and Break options.
      *
-     * @param parent the parent composite
+     * @param parent  The parent composite.
      */
     private void createControlComboViewer( Composite parent )
     {
@@ -584,10 +657,14 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating the Toolbar and Buttons ──────────────────────────────────────
+    // The toolbar holds four icon buttons: Add, Delete, Move Up, Move Down.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the toolbar and buttons.
+     * Creates the SWT {@link ToolBar} with Add, Delete, Move-Up, and Move-Down
+     * {@link ToolItem}s, each configured with its icon and tooltip.
      *
-     * @param parent the parent composite
+     * @param parent  The parent composite.
      */
     private void createToolbarAndButtons( Composite parent )
     {
@@ -619,8 +696,13 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Attaching All Event Listeners ─────────────────────────────────────────
+    // Listeners for all three combo viewers and all four toolbar buttons are
+    // registered here after the UI is fully constructed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the listeners to the UI widgets.
+     * Registers the selection listeners for all three combo viewers and all four
+     * toolbar buttons. Called at the end of {@link #create(Composite)}.
      */
     private void addListeners()
     {
@@ -641,8 +723,16 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating the Configuration Sub-Composite ─────────────────────────────
+    // When a clause type that requires additional input is selected (DN, DN-attr,
+    // Group, or a crypto-strength type), a dedicated sub-composite is created
+    // below the top row.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Create the configuration UI.
+     * Creates the clause-type-specific configuration sub-composite below the
+     * top row. Clause types that require no input (* / Anonymous / Users / Self)
+     * produce nothing; types that require input (DN, DN-in-attribute, Group,
+     * SASL-SSF, SSF, TLS-SSF, Transport-SSF) produce their own composite.
      */
     private void createConfigurationUI()
     {
@@ -685,8 +775,9 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating DN Sub-Composite ─────────────────────────────────────────────
     /**
-     * Creates the UI for the DN who clause.
+     * Creates the DN sub-composite ({@link WhoClauseDnComposite}) below the top row.
      */
     private void createUIWhoClauseDn()
     {
@@ -697,8 +788,10 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating DN-in-Attribute Sub-Composite ───────────────────────────────
     /**
-     * Creates the UI for the DN Attribute who clause.
+     * Creates the DN-in-attribute sub-composite ({@link WhoClauseDnAttributeComposite})
+     * below the top row.
      */
     private void createUIWhoClauseDnAttr()
     {
@@ -709,8 +802,9 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating Group Sub-Composite ─────────────────────────────────────────
     /**
-     * Creates the UI for the Group who clause.
+     * Creates the Group sub-composite ({@link WhoClauseGroupComposite}) below the top row.
      */
     private void createUIWhoClauseGroup()
     {
@@ -721,8 +815,9 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating SASL SSF Sub-Composite ──────────────────────────────────────
     /**
-     * Creates the UI for the SASL SSF who clause.
+     * Creates the SASL-SSF sub-composite ({@link WhoClauseSaslSsfComposite}) below the top row.
      */
     private void createCompositeWhoClauseSaslSsf()
     {
@@ -733,8 +828,9 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating SSF Sub-Composite ────────────────────────────────────────────
     /**
-     * Creates the UI for the SSF who clause.
+     * Creates the SSF sub-composite ({@link WhoClauseSsfComposite}) below the top row.
      */
     private void createCompositeWhoClauseSsf()
     {
@@ -745,8 +841,9 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating TLS SSF Sub-Composite ───────────────────────────────────────
     /**
-     * Creates the UI for the TLS SSF who clause.
+     * Creates the TLS-SSF sub-composite ({@link WhoClauseTlsSsfComposite}) below the top row.
      */
     private void createCompositeWhoClauseTlsSsf()
     {
@@ -757,8 +854,10 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating Transport SSF Sub-Composite ─────────────────────────────────
     /**
-     * Creates the UI for the Transport SSF who clause.
+     * Creates the Transport-SSF sub-composite ({@link WhoClauseTransportSsfComposite})
+     * below the top row.
      */
     private void createCompositeWhoClauseTransportSsf()
     {
@@ -770,11 +869,12 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Creating a Basic (Named) Access Level ─────────────────────────────────
     /**
-     * Creates a basic access level.
+     * Constructs a simple {@link AclAccessLevel} with the given named level.
      *
-     * @param level the level
-     * @return a basic access level
+     * @param level  The named access level.
+     * @return       A new {@code AclAccessLevel} with {@code level} set.
      */
     private AclAccessLevel createBasicAccessLevel( AclAccessLevelLevelEnum level )
     {
@@ -784,8 +884,15 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Setting the Clause From the Current Combo Selection ──────────────────
+    // Tarkin creates the correct concrete clause class for the selected type,
+    // then immediately sets the access level and control on it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the clause from the current selection.
+     * Creates the concrete {@link AclWhoClause} for the current clause combo
+     * selection and stores it in {@link #clause}. Also applies the current
+     * access level and control selections. Sets clause to {@code null} when
+     * the placeholder row is selected.
      */
     private void setClause()
     {
@@ -842,8 +949,14 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Setting the Access Level From the Current Combo Selection ────────────
+    // Dispatches over the selected access level and applies the corresponding
+    // AclAccessLevel to the current clause.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the access level from the current selection.
+     * Applies the current access level combo selection to the current clause.
+     * Named levels create a simple {@link AclAccessLevel}; the Custom entry
+     * applies the value from the last custom-access-level dialog run.
      */
     private void setAccessLevel()
     {
@@ -893,10 +1006,12 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Applying an Access Level to the Clause ────────────────────────────────
     /**
-     * Sets the access level to the clause (if any).
+     * Calls {@link AclWhoClause#setAccessLevel(AclAccessLevel)} on the current clause.
+     * No-op when {@link #clause} is {@code null}.
      *
-     * @param accessLevel the access level
+     * @param accessLevel  The access level to apply; may be {@code null} to clear it.
      */
     private void setAccessLevel( AclAccessLevel accessLevel )
     {
@@ -907,8 +1022,9 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Setting the Control From the Current Combo Selection ─────────────────
     /**
-     * Sets the control from the current selection
+     * Applies the current control combo selection to the current clause.
      */
     private void setControl()
     {
@@ -938,10 +1054,12 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Applying a Control to the Clause ─────────────────────────────────────
     /**
-     * Sets the control to the clause (if any).
+     * Calls {@link AclWhoClause#setControl(AclControlEnum)} on the current clause.
+     * No-op when {@link #clause} is {@code null}.
      *
-     * @param control the control
+     * @param control  The control to apply; may be {@code null} to clear it.
      */
     private void setControl( AclControlEnum control )
     {
@@ -952,10 +1070,11 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Returning the Current Who Clause ─────────────────────────────────────
     /**
-     * Gets the who clause.
+     * Returns the current {@link AclWhoClause} for this row.
      *
-     * @return the who clause
+     * @return  The current clause; may be {@code null} when the placeholder is selected.
      */
     public AclWhoClause getClause()
     {
@@ -963,10 +1082,11 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Returning the Row Index ───────────────────────────────────────────────
     /**
-     * Gets the row index.
+     * Returns the zero-based position of this row in the who-clause list.
      *
-     * @return the row index
+     * @return  The row index.
      */
     public int getIndex()
     {
@@ -974,7 +1094,13 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Dispatching Toolbar Button Events ────────────────────────────────────
+    // When a toolbar button is pressed Tarkin calls the corresponding method
+    // on the builder widget, which modifies the model and refreshes the rows.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Dispatches toolbar button selection events to the builder widget.
+     *
      * {@inheritDoc}
      */
     public void widgetSelected( SelectionEvent e )
@@ -1009,10 +1135,11 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Accessor: Add Button ──────────────────────────────────────────────────
     /**
-     * Gets the 'Add' button.
+     * Returns the Add toolbar button.
      *
-     * @return the 'Add' button
+     * @return  The Add {@link ToolItem}.
      */
     public ToolItem getAddButton()
     {
@@ -1020,10 +1147,11 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Accessor: Delete Button ───────────────────────────────────────────────
     /**
-     * Gets the 'Delete' button.
+     * Returns the Delete toolbar button.
      *
-     * @return the 'Delete' button
+     * @return  The Delete {@link ToolItem}.
      */
     public ToolItem getDeleteButton()
     {
@@ -1031,10 +1159,11 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Accessor: Move Up Button ──────────────────────────────────────────────
     /**
-     * Gets the 'Move Up' button.
+     * Returns the Move Up toolbar button.
      *
-     * @return the 'Move Up' button
+     * @return  The Move Up {@link ToolItem}.
      */
     public ToolItem getMoveUpButton()
     {
@@ -1042,10 +1171,11 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Accessor: Move Down Button ────────────────────────────────────────────
     /**
-     * Gets the 'Move Down' button.
+     * Returns the Move Down toolbar button.
      *
-     * @return the 'Move Down button
+     * @return  The Move Down {@link ToolItem}.
      */
     public ToolItem getMoveDownButton()
     {
@@ -1053,8 +1183,13 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
 
+    // ── Disposing All Created SWT Widgets ─────────────────────────────────────
+    // Tarkin powers down this row's widgets and releases all SWT resources.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes all created SWT widgets.
+     * Disposes the base composite, the clause combo, the toolbar, and the
+     * configuration sub-composite (if any). Called by the builder widget when
+     * rebuilding the rows.
      */
     public void dispose()
     {
@@ -1085,28 +1220,32 @@ public class OpenLdapAclWhoClauseWidget extends AbstractWidget implements Select
     }
 
     /**
-     * A private object for the first row of the clause combo viewer.
+     * A private placeholder object for the first row of the clause combo viewer.
+     * Displays "&lt; Clause &gt;" as a prompt.
      */
     class ClauseComboViewerName
     {
     }
 
     /**
-     * A private object for the first row of the access level combo viewer.
+     * A private placeholder object for the first row of the access level combo viewer.
+     * Displays "&lt; Access Level &gt;" as a prompt.
      */
     private class AccessLevelComboViewerName
     {
     }
 
     /**
-     * A private object for the last row of the access level combo viewer.
+     * A private placeholder object for the last row of the access level combo viewer.
+     * Displays "Custom..." (or "Custom... [value]" when a custom level is active).
      */
     private class AccessLevelComboViewerCustom
     {
     }
 
     /**
-     * A private object for the first row of the control combo viewer.
+     * A private placeholder object for the first row of the control combo viewer.
+     * Displays "&lt; Control &gt;" as a prompt.
      */
     private class ControlComboViewerName
     {

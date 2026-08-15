@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.wizards;
 
@@ -54,12 +54,20 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: ExportSchemasForADSWizardPage — Jyn At The Scarif Control Console ──
+// Jyn Erso reaches the top of the Scarif communications tower and faces the
+// transmission control panel — she must choose which data modules to send and
+// whether to scatter them in multiple bursts or consolidate into one signal.
+// This wizard page is that control panel: pick schemas, choose a destination,
+// and authorize the LDIF transmission to ApacheDS.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the WizardPage of the ExportSchemasForADSWizard.
- * <p>
- * It is used to let the user enter the informations about the
- * schemas he wants to export and where to export.
- *
+ * The configuration page inside {@link ExportSchemasForADSWizard}.
+ * It shows a checkbox list of all available schemas and lets the user choose
+ * whether to export each one as its own {@code .ldif} file or bundle everything
+ * into a single combined file — matching the structure ApacheDS expects.
+ * Think of this as Jyn's transmission console at Scarif: she picks which
+ * blueprint modules go out and specifies the exact transmission channel.
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ExportSchemasForADSWizardPage extends AbstractWizardPage
@@ -87,8 +95,26 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     private Button exportSingleFileButton;
 
 
+    // ── Jyn Powers Up The Scarif Console ──────────────────────────────────────
+    // Jyn reaches the communications tower control room and flips the master
+    // power switch — title, mission description, and the interface icon all
+    // light up as the systems come online.
+    // Our constructor sets up the page metadata that Eclipse uses to build
+    // the wizard header before we render any widgets.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExportSchemasAsXmlWizardPage.
+     * Creates a new page instance, setting the title, description, and icon.
+     * Eclipse needs these metadata items before it calls {@link #createControl(Composite)},
+     * so we supply them in the constructor.
+     * We also grab a reference to the {@link SchemaHandler} so we can populate
+     * the schema list when the page becomes visible.
+     *
+     * <p>For example — Jyn activates the Scarif control room:</p>
+     * <pre>
+     *   The console lights up: "SCARIF TRANSMISSION SYSTEM — ACTIVE"
+     *   Title: "Export schemas for ApacheDS." Description: "Select schemas to export."
+     *   Mission parameters set; awaiting further instructions.
+     * </pre>
      */
     protected ExportSchemasForADSWizardPage()
     {
@@ -101,8 +127,28 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Lays Out The Transmission Controls ────────────────────────────────
+    // Jyn surveys the Scarif control panel and arranges the controls she needs:
+    // a manifest of available data modules on the left, and the transmission
+    // mode selector — scatter across multiple bursts or consolidate into one.
+    // We build all those SWT widgets here and wire up their event listeners.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all the SWT widgets that make up this wizard page's UI.
+     * Eclipse calls this once, just before the page becomes visible.
+     * We create a checkbox table listing available schemas (sorted alphabetically)
+     * and two radio buttons letting the user choose between multiple LDIF files
+     * or one combined file. Listeners are attached to everything so validation
+     * fires on every change.
+     *
+     * <p>For example — Jyn configures the Scarif transmission console:</p>
+     * <pre>
+     *   Top section: schema manifest with checkboxes. Select the modules to transmit.
+     *   Bottom section: "Multiple files" or "Single file" — choose your burst mode.
+     *   A directory picker or file picker lights up depending on the choice.
+     * </pre>
+     *
+     * @param parent  the SWT composite Eclipse provides as our page container
      */
     public void createControl( Composite parent )
     {
@@ -276,8 +322,26 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Loads The Schema Manifest ─────────────────────────────────────────
+    // Jyn pulls up the Scarif data vault index on the control screen — a sorted
+    // list of every blueprint module available. She pre-checks the ones she was
+    // briefed on, and sets the default delivery mode to multi-burst.
+    // We sort all schemas alphabetically, populate the checkbox table, and
+    // restore any pre-selected schemas from the wizard.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the UI Fields.
+     * Seeds the UI with initial values before the page becomes visible.
+     * We fetch all available schemas from the {@link SchemaHandler}, sort them
+     * alphabetically, and load them into the checkbox table.
+     * Any schemas pre-selected via {@link #setSelectedSchemas(Schema[])} are
+     * ticked automatically. The page defaults to multi-file export mode.
+     *
+     * <p>For example — Jyn reviews the Scarif vault index:</p>
+     * <pre>
+     *   "Available modules: apache, cosine, inetOrgPerson, nis..."
+     *   Pre-flagged modules appear checked. Multi-burst mode is default.
+     *   Error cleared, Finish button locked until validation passes.
+     * </pre>
      */
     private void initFields()
     {
@@ -309,8 +373,23 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Selects Multi-Burst Transmission Mode ─────────────────────────────
+    // Jyn decides to scatter the plans across multiple transmission bursts —
+    // one blueprint module per burst — so each arrives as its own LDIF file.
+    // We enable the directory controls and disable the single-file controls.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the exportMultipleFiles radio button is selected.
+     * Switches the UI to "export each schema as a separate LDIF file" mode.
+     * Enables the directory path field and Browse button, and disables the
+     * single-file path field and its Browse button.
+     * Called from the radio-button listener and from {@link #initFields()} to set
+     * the initial default state.
+     *
+     * <p>For example — Jyn sets the Scarif dish to multi-burst mode:</p>
+     * <pre>
+     *   "One LDIF file per schema," Jyn decides. "Scatter them across the directory."
+     *   The directory controls light up; the single-file controls go dark.
+     * </pre>
      */
     private void exportMultipleFilesSelected()
     {
@@ -326,8 +405,23 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Switches To Single-Capsule Transmission Mode ──────────────────────
+    // Jyn chooses to consolidate all the blueprint modules into one transmission
+    // burst — one combined LDIF file that the rebel fleet receives as a unit.
+    // We enable the single-file controls and disable the directory controls.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the exportSingleFile radio button is selected.
+     * Switches the UI to "export all schemas into one combined LDIF file" mode.
+     * Disables the directory path field and Browse button, and enables the
+     * single-file path field and its Browse button.
+     * Called from the single-file radio-button listener.
+     *
+     * <p>For example — Jyn consolidates into a single transmission:</p>
+     * <pre>
+     *   "Combine everything into one burst," Jyn tells Cassian.
+     *   The single-file controls activate; the directory controls go dark.
+     *   All schemas will land in one consolidated LDIF file.
+     * </pre>
      */
     private void exportSingleFileSelected()
     {
@@ -343,8 +437,23 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Dials In The Destination Coordinates ──────────────────────────────
+    // Jyn enters the destination sector coordinates into the Scarif dish — the
+    // directory where each individual LDIF file will land.
+    // We open a DirectoryDialog defaulting to the last-used path from preferences.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the exportMultipleFiles 'browse' button is selected.
+     * Opens a folder-browser dialog so the user can pick the export directory.
+     * If the text field already has a path, we use that as the starting location;
+     * otherwise we fall back to the preference store's last known directory.
+     * The chosen path is written back into the text field on success.
+     *
+     * <p>For example — Jyn inputs the transmission destination sector:</p>
+     * <pre>
+     *   The directory dialog opens: "Choose the destination sector."
+     *   Jyn selects /apacheds/schemas/ and confirms.
+     *   The directory field updates with her choice.
+     * </pre>
      */
     private void chooseExportDirectory()
     {
@@ -369,8 +478,22 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Points The Single Beam At Its Target ───────────────────────────────
+    // Jyn fine-tunes the dish for a single precision transmission — one file,
+    // one exact path, everything bundled together into a {@code .ldif} file.
+    // We open a file-save dialog filtered for LDIF files.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the exportSingleFile 'browse' button is selected.
+     * Opens a file-save dialog so the user can specify the single combined LDIF file.
+     * We filter for {@code *.ldif} files by default but also allow all files.
+     * The chosen path is written back into the text field.
+     *
+     * <p>For example — Jyn targets the single transmission beam:</p>
+     * <pre>
+     *   "Single burst to: /home/jyn/all-schemas.ldif"
+     *   The file dialog opens with *.ldif filter active.
+     *   Jyn confirms; the path appears in the text field.
+     * </pre>
      */
     private void chooseExportFile()
     {
@@ -400,8 +523,27 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Runs Pre-Transmission Systems Check ────────────────────────────────
+    // Before throwing the switch, Jyn runs through her checklist: is the vault
+    // accessible? Is there at least one module selected? Is the target sector
+    // reachable and writable? Everything must be green before she authorizes.
+    // We validate the page state on every UI change and update the error banner.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the user modifies something in the UI.
+     * Validates the current page state and updates the error message accordingly.
+     * Called on every user interaction — checkbox toggle, text edit, radio click.
+     * We check in order: (1) a schema project is open, (2) at least one schema is
+     * checked, (3) the chosen destination is valid and writable.
+     * Passing {@code null} to {@link #displayErrorMessage} clears any previous
+     * error and enables the Finish button.
+     *
+     * <p>For example — Jyn's Scarif pre-transmission checklist:</p>
+     * <pre>
+     *   "Vault connection active? Check."
+     *   "At least one schema module selected? Check."
+     *   "Destination directory exists and is writable? Check."
+     *   "All systems green. Transmission authorized."
+     * </pre>
      */
     private void dialogChanged()
     {
@@ -475,11 +617,23 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Hands Over The Selected Data Modules ──────────────────────────────
+    // After the transmission authorization, Cassian asks Jyn which modules actually
+    // made it into the burst — the ones she checked, nothing else.
+    // We read the checked elements from the table and return them as a Schema array.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the selected schemas.
+     * Returns the schemas the user checked in the table.
+     * The wizard calls this in {@link ExportSchemasForADSWizard#performFinish()}
+     * to know exactly which schemas to convert and write.
      *
-     * @return
-     *      the selected schemas
+     * <p>For example — Cassian reads off the selected modules:</p>
+     * <pre>
+     *   "inetOrgPerson: checked. cosine: unchecked. nis: checked."
+     *   Only the ticked schemas go into the LDIF export.
+     * </pre>
+     *
+     * @return  the schemas the user has ticked in the checkbox table, as an array
      */
     public Schema[] getSelectedSchemas()
     {
@@ -495,11 +649,24 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Pre-flags The Priority Modules ────────────────────────────────────
+    // The mission briefing specified which vault modules are critical — Jyn marks
+    // them on her manifest before arriving at the control tower so she doesn't
+    // have to search the list from scratch.
+    // We store these for use when the table is populated in initFields().
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the selected projects.
+     * Pre-selects schemas so they start checked when the wizard page opens.
+     * The wizard calls this immediately after creating the page, forwarding
+     * whatever was passed to {@link ExportSchemasForADSWizard#setSelectedSchemas(Schema[])}.
      *
-     * @param schemas
-     *      the schemas
+     * <p>For example — Jyn's pre-mission schema prioritization:</p>
+     * <pre>
+     *   "These three schemas are flagged as mission-critical."
+     *   When the manifest appears, they're already checked.
+     * </pre>
+     *
+     * @param schemas  the schemas to pre-check; applied in {@link #initFields()}
      */
     public void setSelectedSchemas( Schema[] schemas )
     {
@@ -507,13 +674,23 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Checks The Transmission Mode Setting ──────────────────────────────
+    // Jyn glances at the mode indicator on the Scarif console — is it set to
+    // multi-burst or single-beam? The answer tells the wizard which export
+    // branch to execute when the user clicks Finish.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the type of export.
-     * <p>
-     * Values can either EXPORT_MULTIPLE_FILES or EXPORT_SINGLE_FILE.
-     * 
-     * @return
-     *      the type of export
+     * Returns whether the user chose multi-file or single-file export mode.
+     * The wizard reads this in {@link ExportSchemasForADSWizard#performFinish()}
+     * to decide which export branch to run.
+     *
+     * <p>For example — Jyn reads the Scarif mode indicator:</p>
+     * <pre>
+     *   Multi-burst mode selected → EXPORT_MULTIPLE_FILES.
+     *   Single-beam mode selected → EXPORT_SINGLE_FILE.
+     * </pre>
+     *
+     * @return  {@link #EXPORT_MULTIPLE_FILES} or {@link #EXPORT_SINGLE_FILE}
      */
     public int getExportType()
     {
@@ -526,16 +703,26 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
             return EXPORT_SINGLE_FILE;
         }
 
-        // Default 
+        // Default
         return EXPORT_MULTIPLE_FILES;
     }
 
 
+    // ── Jyn Reads The Multi-Burst Destination Sector ──────────────────────────
+    // Jyn checks the navigation readout showing the destination directory —
+    // where each individual LDIF file will land after the burst goes out.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the export directory.
+     * Returns the directory path for multi-file export.
+     * Used by the wizard when {@link #getExportType()} returns {@link #EXPORT_MULTIPLE_FILES}.
      *
-     * @return
-     *      the export directory
+     * <p>For example — Jyn confirms the multi-burst destination sector:</p>
+     * <pre>
+     *   "Destination: /apacheds/schema/"
+     *   One LDIF file per schema will land there.
+     * </pre>
+     *
+     * @return  the export directory path as a string
      */
     public String getExportDirectory()
     {
@@ -543,11 +730,21 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Reads The Single-Beam Target Path ─────────────────────────────────
+    // Jyn reads the exact file path for the consolidated single-burst output —
+    // the one LDIF that will contain all selected schemas combined.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the export file.
+     * Returns the file path for single-file export.
+     * Used by the wizard when {@link #getExportType()} returns {@link #EXPORT_SINGLE_FILE}.
      *
-     * @return
-     *      the export file
+     * <p>For example — Jyn reads the single-beam target coordinates:</p>
+     * <pre>
+     *   "Single burst to: /home/jyn/combined-schemas.ldif"
+     *   All selected schemas packed into that one file.
+     * </pre>
+     *
+     * @return  the export file path as a string
      */
     public String getExportFile()
     {
@@ -555,8 +752,23 @@ public class ExportSchemasForADSWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Jyn Logs The Coordinates For The Next Mission ─────────────────────────
+    // After the Scarif transmission completes (or the tower explodes — same thing),
+    // the coordinates are logged so the next mission can pick up from the same spot.
+    // We persist the destination path to Eclipse's preference store.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the dialog settings.
+     * Persists the chosen export path to Eclipse's preference store.
+     * Next time the wizard opens, the directory or file path starts pre-filled
+     * with the user's last choice.
+     * For single-file mode we store the parent directory, not the full file name,
+     * so future sessions browse to the same folder.
+     *
+     * <p>For example — Jyn logs the Scarif coordinates before the dish explodes:</p>
+     * <pre>
+     *   "Destination logged: /apacheds/schemas/" — persisted to preferences.
+     *   Next mission, the control panel opens with that sector pre-selected.
+     * </pre>
      */
     public void saveDialogSettings()
     {

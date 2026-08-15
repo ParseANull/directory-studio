@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.wizards;
@@ -74,8 +74,25 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: NewEntryObjectclassWizardPage — LUKE PICKING THE RIGHT KYBER CRYSTAL
+// In the crystal cave on Ilum, Luke senses a cavern full of kyber crystals —
+// structural crystals (the foundation of any blade), abstract ones, and
+// auxiliary ones.  He must move at least one structural crystal into his
+// collection; pulling in a crystal automatically drags in any superior crystals
+// it depends on.  An instant-search filter lets him type the first letters of
+// a crystal's name to narrow the glowing display.
+// This wizard page mirrors that ritual: it shows all available LDAP object
+// classes on the left and the selected ones on the right, with Add/Remove buttons
+// in the middle and a live search field to filter the left-hand list.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The NewEntryTypeWizardPage is used to select the entry's object classes.
+ * The second page of {@link NewEntryWizard} (or first for {@link EditEntryWizard})
+ * — lets the user choose which LDAP object classes to assign to the new entry.
+ * Object classes are shown in two lists: available (left) and selected (right).
+ * Selecting a structural class is mandatory; adding a class automatically pulls
+ * in all of its superior classes, and removing one cascades to its subclasses.
+ * Think of this page as Luke choosing his kyber crystals in the Ilum cave —
+ * every crystal he picks shapes what his lightsaber (entry) can do.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -114,8 +131,24 @@ public class NewEntryObjectclassWizardPage extends WizardPage
 
     private LabelProvider labelProvider = new LabelProvider()
     {
+        // ── Reading a Crystal's Inscribed Name ────────────────────────────────
+        // Luke holds a crystal up to the light and reads the name inscribed on
+        // its facet — "inetOrgPerson", "person", "organizationalUnit" — each
+        // crystal has a display name that tells him what kind it is.
+        // We return the schema's toString representation of the ObjectClass.
+        // ─────────────────────────────────────────────────────────────────────
         /**
-         * {@inheritDoc}
+         * Returns the display name for an {@link ObjectClass} element, as rendered
+         * by {@link SchemaUtils#toString(ObjectClass)}.
+         * Falls back to the default label provider for non-ObjectClass objects.
+         *
+         * <p>For example — Luke reads the name off a crystal's facet:</p>
+         * <pre>
+         *   getText( inetOrgPersonOC ) → "inetOrgPerson (2.16.840.1.113730.3.2.2)"
+         * </pre>
+         *
+         * @param element  The viewer element; expected to be an {@link ObjectClass}.
+         * @return         The display string for the object class.
          */
         public String getText( Object element )
         {
@@ -130,8 +163,25 @@ public class NewEntryObjectclassWizardPage extends WizardPage
         }
 
 
+        // ── Sensing a Crystal's Nature Through the Force ───────────────────────
+        // Luke reaches out with the Force to sense whether a crystal is structural
+        // (the backbone), abstract (a blueprint), or auxiliary (a supplement).
+        // Each kind glows differently — we return a different icon for each type.
+        // ─────────────────────────────────────────────────────────────────────
         /**
-         * {@inheritDoc}
+         * Returns the icon for an {@link ObjectClass} based on its type:
+         * structural, abstract, or auxiliary.
+         * Falls back to the default image for non-ObjectClass elements.
+         *
+         * <p>For example — Luke senses the crystal type and sees its aura:</p>
+         * <pre>
+         *   STRUCTURAL → IMG_OCD_STRUCTURAL (solid icon)
+         *   ABSTRACT   → IMG_OCD_ABSTRACT   (outline icon)
+         *   AUXILIARY  → IMG_OCD_AUXILIARY  (supplemental icon)
+         * </pre>
+         *
+         * @param element  The viewer element; expected to be an {@link ObjectClass}.
+         * @return         The {@link Image} corresponding to the object class type.
          */
         public Image getImage( Object element )
         {
@@ -157,11 +207,26 @@ public class NewEntryObjectclassWizardPage extends WizardPage
     };
 
 
+    // ── Luke Enters the Crystal Cave for the First Time ───────────────────────
+    // Luke steps across the cave threshold — the available and selected crystal
+    // lists start empty, the title and description are set, and everything waits
+    // until the page becomes visible and the schema crystals materialize.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of NewEntryObjectclassWizardPage.
-     * 
-     * @param pageName the page name
-     * @param wizard the wizard
+     * Creates a new {@code NewEntryObjectclassWizardPage} with its title,
+     * description, and icon.  The available and selected object-class lists
+     * are initialised as empty; they are populated when the page first becomes
+     * visible via {@link #loadState()}.
+     *
+     * <p>For example — Luke crosses the cave threshold, crystal lists ready to fill:</p>
+     * <pre>
+     *   availableObjectClasses = new ArrayList&lt;&gt;(); // starts empty
+     *   selectedObjectClasses  = new ArrayList&lt;&gt;(); // starts empty
+     *   setPageComplete( false );  // must pick at least one crystal
+     * </pre>
+     *
+     * @param pageName  Internal wizard page identifier.
+     * @param wizard    The parent {@link NewEntryWizard} coordinating all pages.
      */
     public NewEntryObjectclassWizardPage( String pageName, NewEntryWizard wizard )
     {
@@ -178,8 +243,26 @@ public class NewEntryObjectclassWizardPage extends WizardPage
     }
 
 
+    // ── Luke Checks Whether He Has a Viable Crystal Selection ─────────────────
+    // Luke surveys the crystals in his right hand — has he picked at least one
+    // structural crystal?  Without a structural crystal the blade has no core.
+    // If the selection is non-empty but lacks a structural class, Yoda appears
+    // in Luke's mind as a warning, not a blocker.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Validates the input fields.
+     * Validates the current object-class selection and updates the Next button.
+     * The page is complete as soon as at least one object class is selected.
+     * A warning message is shown (not an error) if no structural object class
+     * is included — an entry without a structural class is unusual but sometimes
+     * necessary during editing.
+     * Calls {@link #saveState()} to persist valid selections to the prototype entry.
+     *
+     * <p>For example — Luke checks his selected crystals for a structural one:</p>
+     * <pre>
+     *   if ( selectedObjectClasses.isEmpty() )  → Next disabled
+     *   if ( no structural OC found )            → warning shown, Next still enabled
+     *   else                                     → warning cleared, Next enabled
+     * </pre>
      */
     private void validate()
     {
@@ -215,9 +298,23 @@ public class NewEntryObjectclassWizardPage extends WizardPage
     }
 
 
+    // ── Luke Surveys the Cave — Available and Chosen Crystals Appear ──────────
+    // When Luke steps into the cave the crystal clusters materialise: all known
+    // crystals from the connection's schema fill the left wall, and any crystals
+    // he already committed to in a previous visit glow on the right.
+    // We repopulate both lists from the prototype entry's objectClass attribute.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the state of selected and available object classes from
-     * the prototype entry. Called when this page becomes visible.
+     * Reloads the available and selected object-class lists from the connection's
+     * schema and the prototype entry's current objectClass attribute.
+     * Called each time the page becomes visible so navigating back and forward
+     * always reflects the current prototype state.
+     *
+     * <p>For example — Luke re-enters the cave; available and chosen crystals re-appear:</p>
+     * <pre>
+     *   availableObjectClasses ← all schema object classes
+     *   selectedObjectClasses  ← those already on the prototype entry's objectClass attr
+     * </pre>
      */
     private void loadState()
     {
@@ -250,8 +347,21 @@ public class NewEntryObjectclassWizardPage extends WizardPage
     }
 
 
+    // ── Luke Locks His Chosen Crystals Into the Blade Blueprint ──────────────
+    // Luke decides on his final crystal set and presses them into the hilt mould
+    // — the prototype entry's objectClass attribute is updated to reflect exactly
+    // what Luke selected, replacing any previous choices.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the state of selected object classes to the entry.
+     * Writes the currently selected object classes to the prototype entry's
+     * {@code objectClass} attribute, replacing any previous values.
+     * Called each time {@link #validate()} determines the selection is non-empty.
+     *
+     * <p>For example — Luke presses his chosen crystals into the lightsaber mould:</p>
+     * <pre>
+     *   ocAttribute.getValues() → cleared
+     *   for each selectedObjectClass → ocAttribute.addValue( ocName )
+     * </pre>
      */
     private void saveState()
     {
@@ -285,11 +395,23 @@ public class NewEntryObjectclassWizardPage extends WizardPage
     }
 
 
+    // ── Luke Steps Into the Cave — Crystals Materialise ───────────────────────
+    // Every time Luke enters the cave the crystals rearrange based on what he's
+    // already committed to — we call loadState() to reflect the prototype entry,
+    // validate() to set the Next button, and focus the search field so Luke can
+    // type immediately.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
-     * 
-     * This implementation initializes the list of available and selected
-     * object classes when this page becomes visible.
+     * Called by the wizard dialog whenever this page is shown or hidden.
+     * On becoming visible we reload the object-class lists from the current
+     * prototype state, re-validate, and focus the search field for keyboard navigation.
+     *
+     * <p>For example — Luke steps into the cave and the crystals re-arrange around him:</p>
+     * <pre>
+     *   if ( visible ) { loadState(); validate(); availableSearch.setFocus(); }
+     * </pre>
+     *
+     * @param visible  {@code true} when this page is being shown, {@code false} when hidden.
      */
     public void setVisible( boolean visible )
     {
@@ -304,8 +426,29 @@ public class NewEntryObjectclassWizardPage extends WizardPage
     }
 
 
+    // ── The Crystal Cave Interior Is Revealed ─────────────────────────────────
+    // Luke's eyes adjust to the cave light — he sees the full layout: the left
+    // wall of available crystals with a search lantern, an Add/Remove panel in
+    // the middle, and the right wall where his chosen crystals gather.
+    // We build the SWT layout: instant-search + left TableViewer, button panel,
+    // and right TableViewer, all wired with listeners and a reload button.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all the SWT controls for this page.
+     * Creates a three-column layout: available object classes with a search
+     * field and a schema-reload button on the left, Add/Remove buttons in the
+     * middle, and selected object classes on the right.
+     * Double-clicking in either list triggers the corresponding add or remove action.
+     *
+     * <p>For example — the crystal cave's full interior appears before Luke:</p>
+     * <pre>
+     *   [ Available OCs (filterable) ] [Add &gt;] [&lt; Remove] [ Selected OCs ]
+     *   [ Search: _____________       ]                      [              ]
+     *   [ inetOrgPerson               ]                      [ person       ]
+     *   [ organizationalUnit          ]                      [ top          ]
+     * </pre>
+     *
+     * @param parent  The parent composite supplied by the wizard dialog.
      */
     public void createControl( Composite parent )
     {
@@ -467,11 +610,26 @@ public class NewEntryObjectclassWizardPage extends WizardPage
     }
 
 
+    // ── Luke Reaches for Crystals and Pulls Them to His Side ─────────────────
+    // Luke extends his hand and draws a crystal from the left wall — it joins
+    // his collection on the right.  Any superior crystals that crystal depends
+    // on are automatically drawn along with it; a lightsaber blade needs its
+    // whole crystal lineage.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the selected object classes and all superiors
-     * to the list of selected object classes.
-     * 
-     * @param iselection the selection
+     * Moves the selected object classes from the available list to the selected
+     * list, recursively adding all superior (parent) object classes as well.
+     * After adding, both viewers are refreshed, {@link #validate()} is called,
+     * and the instant-search field is cleared to make room for the next search.
+     *
+     * <p>For example — Luke pulls a crystal and its ancestors toward him:</p>
+     * <pre>
+     *   add( selection of "inetOrgPerson" )
+     *   // also pulls in "organizationalPerson", "person", "top" automatically
+     * </pre>
+     *
+     * @param iselection  The viewer selection from the available list; expected
+     *                    to contain {@link ObjectClass} elements.
      */
     private void add( ISelection iselection )
     {
@@ -508,11 +666,27 @@ public class NewEntryObjectclassWizardPage extends WizardPage
     }
 
 
+    // ── Luke Returns a Crystal to the Cave Wall ────────────────────────────────
+    // Luke decides a crystal isn't right for his blade and places it back on
+    // the wall — but the cave is smart: any crystals that only existed because
+    // of the one being returned are also pulled back, and any remaining crystals'
+    // ancestor requirements are re-added to keep the selection consistent.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the selected object classes and all sub classes
-     * from the list of selected object classes.
-     * 
-     * @param iselection the iselection
+     * Moves the selected object classes from the selected list back to the
+     * available list, recursively removing all sub-classes that depended on them.
+     * After removal, superior classes of the remaining selected classes are
+     * re-added to maintain consistency, and both viewers are refreshed.
+     *
+     * <p>For example — Luke returns "person" and the cave reclaims its subclass crystals:</p>
+     * <pre>
+     *   remove( selection of "person" )
+     *   // "organizationalPerson" and "inetOrgPerson" are also removed
+     *   // superiors of any remaining selected classes are re-added
+     * </pre>
+     *
+     * @param iselection  The viewer selection from the selected list; expected
+     *                    to contain {@link ObjectClass} elements.
      */
     private void remove( ISelection iselection )
     {
@@ -554,8 +728,18 @@ public class NewEntryObjectclassWizardPage extends WizardPage
         validate();
     }
 
+    // ── CLASS: InstantSearchFilter — THE CRYSTAL-FINDING LANTERN ─────────────
+    // Luke holds up a glowing lantern as he types — only the crystals whose
+    // names start with the letters he enters catch the light; all others stay
+    // dark.  This ViewerFilter is that lantern: it hides any object class whose
+    // name doesn't start with the current search text.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * The Class InstantSearchFilter.
+     * A {@link ViewerFilter} that hides object classes whose names don't start
+     * with the current text in the instant-search field.
+     * Matching is case-insensitive and checks all known identifiers
+     * (name and OID) of each {@link ObjectClass}.
+     *
      */
     private class InstantSearchFilter extends ViewerFilter
     {
@@ -564,10 +748,22 @@ public class NewEntryObjectclassWizardPage extends WizardPage
         private Text filterText;
 
 
+        // ── Luke Lights the Crystal-Finding Lantern ────────────────────────────
+        // Luke picks up the lantern and aims it at the crystal wall — from this
+        // point on, only crystals that catch the lantern's beam are visible.
+        // The constructor stores the search text widget so we can read it on
+        // every filter pass.
+        // ─────────────────────────────────────────────────────────────────────
         /**
-         * Creates a new instance of InstantSearchFilter.
-         * 
-         * @param filterText the filter text
+         * Creates a new {@code InstantSearchFilter} bound to the given search field.
+         *
+         * <p>For example — Luke holds the lantern; the beam focuses on {@code filterText}:</p>
+         * <pre>
+         *   new InstantSearchFilter( availableObjectClassesInstantSearch )
+         * </pre>
+         *
+         * @param filterText  The SWT {@link Text} widget whose content is used as
+         *                    the prefix filter; read on every {@link #select} call.
          */
         private InstantSearchFilter( Text filterText )
         {
@@ -575,8 +771,28 @@ public class NewEntryObjectclassWizardPage extends WizardPage
         }
 
 
+        // ── The Lantern Beam Reveals Only Matching Crystals ───────────────────
+        // Luke sweeps the lantern across the wall — if a crystal's name starts
+        // with the letters Luke typed, it catches the light and stays visible;
+        // otherwise it fades into the shadows.
+        // ─────────────────────────────────────────────────────────────────────
         /**
-         * {@inheritDoc}
+         * Returns {@code true} if the given object class should be visible in the
+         * available-list viewer — i.e., if any of its identifiers (names/OID) start
+         * with the current search text (case-insensitive).
+         * Non-{@link ObjectClass} elements are hidden.
+         *
+         * <p>For example — Luke sweeps the lantern and only matching crystals glow:</p>
+         * <pre>
+         *   filterText = "inet"
+         *   select( viewer, parent, inetOrgPersonOC ) → true  (starts with "inet")
+         *   select( viewer, parent, personOC )        → false (doesn't start with "inet")
+         * </pre>
+         *
+         * @param viewer         The viewer applying this filter; not used directly.
+         * @param parentElement  The parent element in the content tree; not used.
+         * @param element        The element to test; expected to be an {@link ObjectClass}.
+         * @return               {@code true} if the element passes the filter.
          */
         public boolean select( Viewer viewer, Object parentElement, Object element )
         {

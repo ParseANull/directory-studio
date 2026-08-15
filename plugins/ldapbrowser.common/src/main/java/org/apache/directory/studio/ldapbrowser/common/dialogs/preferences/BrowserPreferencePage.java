@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.dialogs.preferences;
@@ -44,8 +44,21 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: BrowserPreferencePage — GENERAL DODONNA'S TACTICAL BRIEFING ───────
+// In the Yavin 4 briefing room, General Dodonna stands at the holotable and
+// walks every pilot through the tactical parameters for the Death Star run:
+// how to label your targeting display (DN, RDN, or just the value), how many
+// entries to fold into a page before paginating, whether to pre-expand base
+// entries, and whether to probe each node for children before rendering the tree.
+// Get these settings right and the pilots navigate efficiently; get them wrong
+// and they're flying blind through the trench.  This page is that briefing.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The BrowserPreferencePage contains general settings for the browser view.
+ * The Eclipse preference page for controlling how the LDAP browser tree behaves:
+ * entry label format, abbreviation limits, folding/pagination thresholds, and
+ * whether the browser checks for child entries proactively.
+ * Think of this class as General Dodonna's briefing — the navigation parameters
+ * that every pilot (browser view) follows on every run.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -81,8 +94,15 @@ public class BrowserPreferencePage extends PreferencePage implements IWorkbenchP
     private Button checkForChildrenButton;
 
 
+    // ── DODONNA CALLS THE BRIEFING TO ORDER ──────────────────────────────────────
+    // General Dodonna steps up to the podium, announces "Browser — General
+    // Settings," and points the room to the right operational manual so that
+    // any changes written here end up in the correct preferences file.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BrowserPreferencePage.
+     * Constructs the page, sets its title and description, and wires it to the
+     * correct preference store.  Eclipse calls this when the user opens the
+     * Browser node in the preference tree.
      */
     public BrowserPreferencePage()
     {
@@ -92,16 +112,44 @@ public class BrowserPreferencePage extends PreferencePage implements IWorkbenchP
     }
 
 
+    // ── DODONNA ACKNOWLEDGES THE ROOM ─────────────────────────────────────────────
+    // Dodonna glances at the assembled pilots, nods, and gets on with it.
+    // Nothing actionable — just satisfying the interface contract.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Required by {@link IWorkbenchPreferencePage} — not used here because we
+     * don't need anything from the workbench at construction time.
+     *
+     * @param workbench  The Eclipse workbench instance — not used.
      */
     public void init( IWorkbench workbench )
     {
     }
 
 
+    // ── DODONNA WALKS THE PILOTS THROUGH THE TACTICAL DISPLAY ────────────────────
+    // Dodonna gestures at the holotable: "Entry labels — use DN, RDN, or just the
+    // value?  Abbreviate if longer than N characters?  Same for search results.
+    // Folding — how many children before we paginate?  Expand base entries on
+    // connection?  Check for children proactively?"  Each section is its own
+    // Group widget so pilots can focus on one concern at a time.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the full preference page UI: three groups (entry label, search result
+     * label, folding) plus two standalone checkboxes (expand base entries, check for
+     * children).  Pre-fills every control from the current stored preference values.
+     *
+     * <p>For example — Dodonna's briefing panels:</p>
+     * <pre>
+     *   Entry Label:         [DN ▼]  [x] Limit to 50 chars
+     *   Search Result Label: [RDN ▼] [ ] Limit
+     *   Folding:             [x] Enable  Size: [100]
+     *   [x] Expand base entries on connect
+     *   [x] Check for children before rendering
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse.
+     * @return        The composite containing all browser preference widgets.
      */
     protected Control createContents( Composite parent )
     {
@@ -275,8 +323,18 @@ public class BrowserPreferencePage extends PreferencePage implements IWorkbenchP
     }
 
 
+    // ── DODONNA COMMITS THE FLIGHT PARAMETERS TO THE MISSION LOG ─────────────────
+    // Dodonna's adjutant writes every finalized parameter into the mission log:
+    // label format, abbreviation limits, folding thresholds, expand-on-connect
+    // flag, and child-probe setting.  These become the standing orders for all
+    // browser views until the next briefing.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves all browser preference values to the preference store when the user
+     * clicks OK or Apply.  We write to both the common preference store (for
+     * UI settings) and the core plugin preferences (for child-probing behavior).
+     *
+     * @return  Always true — there's no blocking validation preventing a save.
      */
     public boolean performOk()
     {
@@ -315,8 +373,16 @@ public class BrowserPreferencePage extends PreferencePage implements IWorkbenchP
     }
 
 
+    // ── DODONNA REINSTATES THE ORIGINAL MISSION PARAMETERS ───────────────────────
+    // Dodonna pulls out the original briefing document — the one that came with
+    // the manual — and resets every control to its factory-default value.  The
+    // pilots are back to standard parameters, as if the customizations never happened.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Resets all browser preference controls to their plugin-defined default values.
+     * Called when the user clicks "Restore Defaults."  We repopulate every widget
+     * from the default values in the preference stores so the UI reflects what
+     * will be saved.
      */
     protected void performDefaults()
     {

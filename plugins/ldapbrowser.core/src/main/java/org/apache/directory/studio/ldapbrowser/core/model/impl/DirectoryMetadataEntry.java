@@ -25,9 +25,23 @@ import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.studio.ldapbrowser.core.model.IBrowserConnection;
 
 
+// ── CLASS: DirectoryMetadataEntry — JEDI ARCHIVES SPECIAL SECTOR ─────────────
+// The Jedi Archives has certain special vaults that are listed in the root
+// catalogue but don't have children in the normal sense — the schema vault,
+// the monitorContext, the configContext.  DirectoryMetadataEntry marks those
+// special entries.  It extends BaseDNEntry and adds a flag to say "this one is
+// the schema entry" so the UI can render it differently and skip loading its
+// children when it is the schema sub-entry.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The DirectoryMetadataEntry class represents entries that are listed in the root DSE.
- * Examples are the schema sub-entry, the monitorContext or the configContext entry.
+ * Represents a special directory metadata entry that is listed in the root DSE,
+ * such as the schema sub-entry, monitorContext, or configContext.
+ * Extends {@link BaseDNEntry} with a {@code schemaEntry} flag that causes
+ * {@link #hasChildren()} to return {@code false} when this entry is the
+ * connection's schema DN.
+ *
+ * <p>Think of this as the Jedi Archives' special restricted vault — present in
+ * the index but treated differently from regular entries.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -40,16 +54,18 @@ public class DirectoryMetadataEntry extends BaseDNEntry
     private boolean schemaEntry;
 
 
+    // ── No-Arg Constructor For Serialisation ─────────────────────────────────────
     protected DirectoryMetadataEntry()
     {
     }
 
 
+    // ── Jedi Archives: Create A Metadata Vault Entry ─────────────────────────────
     /**
      * Creates a new instance of DirectoryMetadataEntry.
-     * 
-     * @param dn the Dn
-     * @param browserConnection the browser connection
+     *
+     * @param dn the Dn of this metadata entry
+     * @param browserConnection the browser connection this entry belongs to
      */
     public DirectoryMetadataEntry( Dn dn, IBrowserConnection browserConnection )
     {
@@ -60,6 +76,7 @@ public class DirectoryMetadataEntry extends BaseDNEntry
     }
 
 
+    // ── Mace Windu: Schema Vaults Have No Children In The Tree ───────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.impl.AbstractEntry#hasChildren()
      */
@@ -76,10 +93,11 @@ public class DirectoryMetadataEntry extends BaseDNEntry
     }
 
 
+    // ── Jedi Archives: Is This The Schema Sub-Entry? ─────────────────────────────
     /**
      * Checks if is schema entry.
-     * 
-     * @return true, if is schema entry
+     *
+     * @return {@code true} if this entry is the connection's schema sub-entry
      */
     public boolean isSchemaEntry()
     {
@@ -87,10 +105,11 @@ public class DirectoryMetadataEntry extends BaseDNEntry
     }
 
 
+    // ── Jedi Archives: Mark This Entry As The Schema Sub-Entry ───────────────────
     /**
      * Sets the schema entry flag.
-     * 
-     * @param schemaEntry the schema entry flag
+     *
+     * @param schemaEntry {@code true} to mark this entry as the schema sub-entry
      */
     public void setSchemaEntry( boolean schemaEntry )
     {

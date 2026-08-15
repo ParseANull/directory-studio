@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 package org.apache.directory.studio.schemaeditor.controller;
 
@@ -89,8 +89,21 @@ import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.contexts.IContextService;
 
 
+// ── CLASS: SchemaViewController — LUKE'S BINARY SUNSET ──────────────────────
+// Luke stands on Tatooine's ridge at dusk, arms at his sides, watching the
+// twin suns paint the whole horizon — seeing every schema, every attribute
+// type, every object class spread out in one sweeping tree view before him.
+// This controller wires up the SchemaView: it keeps the tree in sync with
+// the SchemaHandler, handles double-click navigation to editors, manages
+// keyboard shortcuts, and ties in the SchemaChecker for live error overlay.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Controller for the SchemaView.
+ * Controller for the Schema View in the Schema Editor.
+ * We initialize actions, toolbar, menus, context menu, project and schema
+ * handler listeners, the schema checker listener, double-click navigation,
+ * preference listeners, and part-activation keyboard shortcuts.
+ * Think of this class as Luke on the ridge — our job is to keep the full
+ * schema picture visible, interactive, and in sync no matter what changes.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -270,11 +283,26 @@ public class SchemaViewController
 
     //    private CommitChangesAction commitChanges;
 
+    // ── Luke Takes In Every Horizon Line At Once ──────────────────────────────
+    // Luke stands on the ridge and in one long exhale takes in everything:
+    // the suns, the dunes, the distant settlement, the moisture farms — he
+    // knows exactly where each one is before he even starts walking.
+    // We do the same here: initialize every action, toolbar, menu, listener,
+    // and state in one constructor call so the view is immediately complete.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SchemasViewController.
+     * Constructs the controller and fully initializes the SchemaView.
+     * Every piece — actions, toolbar, menu, context menu, project listener,
+     * schema checker listener, double-click handler, preferences listener,
+     * initial state, and part listener — is set up here.
      *
-     * @param view
-     *      the associated view
+     * <p>For example — Luke configures his whole vantage point at once:</p>
+     * <pre>
+     *   controller = new SchemaViewController( view );
+     *   // From this point the view is live and responds to all schema changes
+     * </pre>
+     *
+     * @param view  the SchemaView we are controlling; must not be null
      */
     public SchemaViewController( SchemaView view )
     {
@@ -295,8 +323,22 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Clips Every Tool Onto His Belt ───────────────────────────────────
+    // Before setting out across the dunes, Luke clips every tool — macrobinoculars,
+    // grappling hook, comlink, survival kit — onto his belt in their correct
+    // positions.  We do the same: instantiate all twenty-ish Action objects.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Actions.
+     * Instantiates all Action objects used by the schema view's toolbar, menus,
+     * and context menu.  We create them here so they're fully configured before
+     * any UI element queries their enabled state or label.
+     *
+     * <p>For example — Luke lays out every tool before the journey starts:</p>
+     * <pre>
+     *   newSchema       = new NewSchemaAction();
+     *   newAttributeType = new NewAttributeTypeAction( viewer );
+     *   // ... all actions ready
+     * </pre>
      */
     private void initActions()
     {
@@ -324,8 +366,21 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Arranges His Most-Used Tools At The Front ────────────────────────
+    // The three tools Luke reaches for most often — macrobinoculars, grappling
+    // hook, and comlink — ride at the front of his belt for immediate access.
+    // New Schema, New Attribute Type, and New Object Class sit first in the
+    // toolbar for the same reason.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Toolbar.
+     * Populates the view toolbar with the most-used schema-creation and navigation actions.
+     * We add a separator between creation actions and utility actions (collapse, link)
+     * to create a clear visual grouping.
+     *
+     * <p>For example — Luke's most-used tools are right at the front:</p>
+     * <pre>
+     *   toolbar: [ newSchema | newAttributeType | newObjectClass | --- | collapseAll | linkWithEditor ]
+     * </pre>
      */
     private void initToolbar()
     {
@@ -341,8 +396,21 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Maps The Full Horizon In His Head ────────────────────────────────
+    // Luke mentally maps every landmark he can see from the ridge — sorting
+    // them, framing them, choosing which way to go.  The view drop-down menu
+    // is that map: sorting options, presentation mode, link-to-editor, and prefs.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Menu.
+     * Populates the view's drop-down menu with sorting, presentation, link, and preferences actions.
+     * The schema-presentation sub-menu lets users switch between flat and hierarchical
+     * display modes without opening the full preferences page.
+     *
+     * <p>For example — Luke surveys every option before choosing his path:</p>
+     * <pre>
+     *   menu: [ sortingDialog | --- | SchemaPresentation&gt;[flat|hierarchical] |
+     *           --- | linkWithEditor | --- | openPreference ]
+     * </pre>
      */
     private void initMenu()
     {
@@ -361,8 +429,21 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Can Reach Every Landmark From Where He Stands ───────────────────
+    // From the ridge Luke can see and access every part of his world — and the
+    // right-click context menu is that same comprehensive reach: new elements,
+    // open, hierarchy, delete, rename, import, export.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the ContextMenu.
+     * Builds and registers the right-click context menu on the schema tree viewer.
+     * The menu is rebuilt each time it's shown so enabled states are always current.
+     * We also register it with the site so third-party plugins can contribute entries.
+     *
+     * <p>For example — every part of the schema landscape is reachable from the ridge:</p>
+     * <pre>
+     *   right-click: [ New&gt;[schema|at|oc] | --- | Open | TypeHierarchy | --- |
+     *                  Delete | --- | Rename | --- | Import&gt; | Export&gt; ]
+     * </pre>
      */
     private void initContextMenu()
     {
@@ -412,8 +493,24 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Adjusts His Horizon As The Project Changes ──────────────────────
+    // When Luke switches which direction he's looking, his whole horizon
+    // changes — a new project means a new schema landscape, and the old one's
+    // listener should be cleaned up before the new one's is wired in.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the ProjectsHandlerListener.
+     * Registers a ProjectsHandlerListener that wires/unwires the schema handler
+     * listener as the active project changes.
+     * When a new project opens we attach our schemaHandlerListener to its
+     * SchemaHandler and reload the viewer.  When the project closes we detach
+     * the listener and clear the viewer.
+     *
+     * <p>For example — Luke re-scans the horizon when he turns to face a new direction:</p>
+     * <pre>
+     *   openProjectChanged( old, new ) → removeSchemaHandlerListener( old )
+     *                                  → addSchemaHandlerListener( new )
+     *                                  → view.reloadViewer()
+     * </pre>
      */
     private void initProjectsHandlerListener()
     {
@@ -463,11 +560,22 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Tunes Into A New Horizon's Frequency ────────────────────────────
+    // When Luke turns to face a new project's horizon, he tunes his macrobinoculars
+    // to that direction's frequency so every change in that landscape reaches him.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the SchemaHandlerListener.
+     * Attaches our schemaHandlerListener to the given project's SchemaHandler.
+     * Called when a new project is opened so we start receiving schema mutation
+     * events for it.
      *
-     * @param project
-     *      the project
+     * <p>For example — Luke re-tunes to the new horizon:</p>
+     * <pre>
+     *   addSchemaHandlerListener( project );
+     *   // schemaHandlerListener now receives add/modify/remove events from project
+     * </pre>
+     *
+     * @param project  the newly opened project; its SchemaHandler must not be null
      */
     private void addSchemaHandlerListener( Project project )
     {
@@ -479,11 +587,15 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Stops Watching An Old Horizon ───────────────────────────────────
+    // When Luke turns away from the first horizon he stops listening to its
+    // signals so they don't clutter his attention while he watches the new one.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the SchemaHandlerListener.
+     * Detaches our schemaHandlerListener from the given project's SchemaHandler.
+     * Called when a project is closed so we stop receiving stale events from it.
      *
-     * @param project
-     *      the project
+     * @param project  the project being closed; its SchemaHandler must not be null
      */
     private void removeSchemaHandlerListener( Project project )
     {
@@ -495,8 +607,22 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Listens For The Error-Overlay Signal ─────────────────────────────
+    // While watching the sunset, Luke keeps one ear tuned to the farm's alarm
+    // system — if something breaks in the schema, the error overlay fires and
+    // Luke knows which node needs attention before anyone else does.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Intializes the schema checker listener.
+     * Registers the SchemaCheckerListener so schema validation results trigger
+     * a view refresh with error decorators on the affected nodes.
+     * We always refresh asynchronously on the UI thread to avoid SWT
+     * cross-thread violations.
+     *
+     * <p>For example — Luke stays tuned to the farm's alarm while watching the sunset:</p>
+     * <pre>
+     *   schemaChecker.addListener( schemaCheckerListener );
+     *   // On each validation run, view.refresh() or view.refresh( selection ) fires
+     * </pre>
      */
     private void initSchemaCheckerListener()
     {
@@ -504,8 +630,23 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Zooms In For A Closer Look ──────────────────────────────────────
+    // Luke spots an interesting silhouette on the horizon and double-taps his
+    // macrobinoculars to zoom in — if it's an attribute type, he opens that
+    // editor; if it's an object class, he opens the OC editor.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the DoubleClickListener.
+     * Registers the double-click listener on the schema tree viewer.
+     * A double-click on an attribute type or object class node opens the
+     * corresponding editor.  Double-clicking a folder or schema wrapper just
+     * toggles expand/collapse without opening an editor.
+     *
+     * <p>For example — Luke zooms in on exactly the node he cares about:</p>
+     * <pre>
+     *   doubleClick( AttributeTypeWrapper ) → AttributeTypeEditor opens
+     *   doubleClick( ObjectClassWrapper )   → ObjectClassEditor opens
+     *   doubleClick( Folder | Schema )      → toggle expand/collapse
+     * </pre>
      */
     private void initDoubleClickListener()
     {
@@ -563,8 +704,22 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Notes Which Parts Of The Horizon Are Worth Watching ─────────────
+    // Luke knows which landmark changes actually matter for his mission —
+    // label format, abbreviation, grouping — and ignores the rest.
+    // We build the authorized-prefs list so the preference listener only
+    // triggers a refresh for changes that actually affect what the tree shows.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Authorized Prefs IDs.
+     * Builds the list of preference keys that should trigger a view refresh.
+     * Only prefs that affect how the schema tree renders are included; everything
+     * else is ignored to avoid unnecessary tree redraws.
+     *
+     * <p>For example — Luke only watches the landmarks that affect his route:</p>
+     * <pre>
+     *   authorizedPrefs = [ LABEL, ABBREVIATE, MAX_LENGTH, SECONDARY_LABEL_DISPLAY,
+     *                        GROUPING, SORTING_BY, SORTING_ORDER, SCHEMA_PRESENTATION, ... ]
+     * </pre>
      */
     private void initAuthorizedPrefs()
     {
@@ -584,8 +739,22 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Watches For Changes In The Light ────────────────────────────────
+    // As the suns shift, Luke notices when the light on the horizon changes —
+    // some changes are dramatic enough to require a full reload (grouping mode
+    // switch), others just a repaint (label format tweak).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the listener on the preferences store
+     * Attaches a preference-store listener that refreshes or reloads the viewer
+     * when a schema-view preference changes.
+     * Grouping and schema-presentation changes require a full reload because they
+     * restructure the tree; all other authorized-pref changes just repaint.
+     *
+     * <p>For example — Luke reacts differently to a dramatic sunset versus a slight haze:</p>
+     * <pre>
+     *   PREFS_SCHEMA_VIEW_GROUPING → view.reloadViewer()   (tree structure changes)
+     *   PREFS_SCHEMA_VIEW_LABEL    → view.refresh()        (repaint only)
+     * </pre>
      */
     private void initPreferencesListener()
     {
@@ -613,8 +782,23 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Checks Whether The Suns Are Still Up ────────────────────────────
+    // Before starting his evening routine, Luke checks: are the suns still
+    // visible?  If yes, he enables all controls; if not, he disables them.
+    // We check whether a project is currently open and configure the view
+    // accordingly so it never starts in an ambiguous half-enabled state.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the state of the View.
+     * Sets the initial enabled/disabled state of all actions based on whether
+     * a project is currently open.
+     * If a project is already open (e.g., we're being created after a restart),
+     * we wire the schema handler listener and reload the viewer immediately.
+     *
+     * <p>For example — Luke checks the sky before deciding what to do:</p>
+     * <pre>
+     *   if ( openProject != null ) { enable all; addSchemaHandlerListener; reloadViewer }
+     *   else                       { disable all }
+     * </pre>
      */
     private void initState()
     {
@@ -653,8 +837,22 @@ public class SchemaViewController
     }
 
 
+    // ── Luke Activates His Comlink When He Enters The Command Post ────────────
+    // Luke walks into the Rebel command post and clicks his comlink live —
+    // keyboard shortcuts are active only while he's there; when he steps out,
+    // he powers it down so the keys don't fire in the wrong context.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the PartListener.
+     * Registers a workbench part listener that activates keyboard shortcuts when
+     * this view gains focus and deactivates them when it loses focus.
+     * This prevents our schema-creation and navigation shortcuts from firing
+     * while the user is working in a different view or editor.
+     *
+     * <p>For example — Luke's comlink is only live when he's in the command post:</p>
+     * <pre>
+     *   partActivated   → activate CONTEXT_SCHEMA_VIEW + bind command handlers
+     *   partDeactivated → deactivate context + unbind command handlers
+     * </pre>
      */
     private void initPartListener()
     {

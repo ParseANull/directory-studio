@@ -35,9 +35,23 @@ import org.apache.directory.studio.ldifparser.LdifUtils;
 import org.eclipse.search.ui.ISearchPageScoreComputer;
 
 
+// ── CLASS: Value — ONE PIECE OF DATA IN THE DEATH STAR PANEL ─────────────────
+// Each blueprint panel has actual data in its slots.  A value is the raw
+// content of one slot: either a String or a byte array (binary), or an empty
+// sentinel if the slot was created but not yet filled.  Value knows its
+// attribute, knows whether it is string or binary, and knows how to convert
+// between the two via UTF-8.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Default implementation of IValue.
- * 
+ * Default implementation of {@link IValue}.
+ * Holds a raw value ({@link String}, {@code byte[]}, or one of the empty
+ * sentinels {@link IValue#EMPTY_STRING_VALUE} / {@link IValue#EMPTY_BINARY_VALUE})
+ * and the {@link IAttribute} it belongs to.  Provides string and binary
+ * views with automatic UTF-8 conversion.
+ *
+ * <p>Think of this as one piece of data in the Death Star blueprint panel —
+ * typed, attribute-scoped, and convertible between string and binary form.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class Value implements IValue
@@ -53,11 +67,13 @@ public class Value implements IValue
     private Object rawValue;
 
 
+    // ── Value Constructor With Actual Data ────────────────────────────────────────
     /**
      * Creates a new instance of Value.
      *
-     * @param attribute the attribute this value belongs to 
-     * @param rawValue the raw value, either a String or a byte[]
+     * @param attribute the attribute this value belongs to; must not be {@code null}
+     * @param rawValue the raw value, either a {@link String} or a {@code byte[]};
+     *                 must not be {@code null}
      */
     public Value( IAttribute attribute, Object rawValue )
     {
@@ -66,10 +82,13 @@ public class Value implements IValue
     }
 
 
+    // ── Value Constructor For An Empty Placeholder Slot ──────────────────────────
     /**
      * Creates a new instance of Value with an empty value.
+     * The empty sentinel is chosen based on whether the attribute is a
+     * string or binary type.
      *
-     * @param attribute the attribute this value belongs to
+     * @param attribute the attribute this value belongs to; must not be {@code null}
      */
     public Value( IAttribute attribute )
     {
@@ -77,11 +96,13 @@ public class Value implements IValue
     }
 
 
+    // ── R2-D2 Initialises The Internal Raw Value Field ───────────────────────────
     /**
      * Initializes this Value.
      *
-     * @param attribute the attribute this value belongs to 
-     * @param rawValue the raw value, either a String or a byte[] or null 
+     * @param attribute the attribute this value belongs to; must not be {@code null}
+     * @param rawValue the raw value, either a {@link String} or a {@code byte[]}
+     *                 or {@code null} to use the appropriate empty sentinel
      */
     private void init( IAttribute attribute, Object rawValue )
     {

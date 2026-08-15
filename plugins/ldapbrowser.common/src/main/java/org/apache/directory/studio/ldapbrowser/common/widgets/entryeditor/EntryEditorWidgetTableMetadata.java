@@ -6,35 +6,59 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.widgets.entryeditor;
 
 
+// -- CLASS: EntryEditorWidgetTableMetadata -- THE MILLENNIUM FALCON MAINTENANCE MANIFEST --
+// Hanging on the wall of Docking Bay 94 is the Millennium Falcon's official maintenance
+// manifest: a laminated sheet listing every system in the ship, its column number in the
+// master log, its column name, and the full ordered list of specs to check.
+// Nobody edits the manifest mid-flight -- it's a sealed reference document.
+// This class IS that manifest: a final utility class holding the column index constants
+// and column name strings that every other part of the entry editor needs to agree on.
+// If anyone wants to know "which column is the attribute name?", they come here.
+// ---------------------------------------------------------------------------------
 /**
- * The EntryEditorWidgetTableMetadata class contains some constants used
- * by the entry editor widget.
- * Final reference -> class shouldn't be extended
+ * A non-instantiable constants class that defines the column layout of the entry editor table.
+ * Every class that needs to know which column index maps to "attribute name" or "value"
+ * references these constants rather than hard-coding magic numbers.
+ * Think of this class as the Millennium Falcon's maintenance manifest: a single sealed
+ * reference document that every system on the ship reads from, so everyone agrees on
+ * what goes in which column.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public final class EntryEditorWidgetTableMetadata
 {
 
+    // -- THE MANIFEST IS SEALED -- NO CONSTRUCTION ALLOWED ----------------------
+    // The manifest is a laminated sheet bolted to the wall. Nobody is supposed to
+    // instantiate it -- it's just a reference document. The private constructor
+    // enforces that; any attempt to call new EntryEditorWidgetTableMetadata()
+    // would be a compile error from outside the class.
+    // ---------------------------------------------------------------------------------
     /**
-     *  Ensures no construction of this class, also ensures there is no need for final keyword above
-     *  (Implicit super constructor is not visible for default constructor),
-     *  but is still self documenting.
+     * Private constructor that prevents instantiation.
+     * This class is a pure constants holder -- all its members are static.
+     * There is never a reason to create an instance of it.
+     *
+     * <p>For example -- the manifest is bolted to the wall:</p>
+     * <pre>
+     *   Han tries to fold up the manifest and take it with him.
+     *   Chewie blocks the door: "RWARGH." (No. It stays here. Everyone needs it.)
+     * </pre>
      */
     private EntryEditorWidgetTableMetadata()
     {

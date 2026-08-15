@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.dialogs.preferences;
@@ -39,8 +39,21 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: EntryEditorPreferencePage — LUKE'S X-WING PRE-FLIGHT CHECKLIST ────
+// In the Yavin 4 hangar, Luke Skywalker sits in Red Five's cockpit working
+// through his pre-flight checklist before the Death Star run: autosave enabled
+// for single-tab and multi-tab sessions?  Folding turned on so the instrument
+// panel doesn't drown in attributes?  Threshold set so small entries stay flat
+// while huge ones collapse into scannable groups?  Auto-expand folded sections
+// so you don't have to click every group?  Every pilot runs this checklist before
+// launch.  This preference page is that checklist for the LDAP entry editor.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The EntryEditorPreferencePage contains general settings for the entry editor.
+ * The Eclipse preference page that controls the entry editor's runtime behaviour:
+ * autosave policies for single-tab and multi-tab modes, attribute folding (to
+ * avoid scrolling through hundreds of values), and auto-expand on open.
+ * Think of this class as Luke's pre-flight checklist — every setting confirmed
+ * before we commit to the mission.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -60,8 +73,15 @@ public class EntryEditorPreferencePage extends PreferencePage implements IWorkbe
     private Button autoExpandFoldedAttributesButton;
 
 
+    // ── LUKE STRAPS IN AND CALLS UP THE CHECKLIST ─────────────────────────────────
+    // Luke settles into Red Five's seat, calls up the pre-flight checklist on the
+    // instrument panel, announces the page title ("Entry Editor"), and confirms he's
+    // reading from the right mission manual (the common preference store).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EntryEditorPreferencePage.
+     * Constructs the page with its title and description text, and wires it to
+     * the correct preference store.  Eclipse calls this when the user navigates
+     * to the Entry Editor node in the preference tree.
      */
     public EntryEditorPreferencePage()
     {
@@ -71,16 +91,44 @@ public class EntryEditorPreferencePage extends PreferencePage implements IWorkbe
     }
 
 
+    // ── LUKE ACKNOWLEDGES GROUND CONTROL ──────────────────────────────────────────
+    // Luke gives a thumbs-up to the Yavin 4 ground crew.  No information is needed
+    // from the workbench at this stage — just satisfying the interface contract.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Required by {@link IWorkbenchPreferencePage} — not used here.
+     *
+     * @param workbench  The Eclipse workbench instance — not used.
      */
     public void init( IWorkbench workbench )
     {
     }
 
 
+    // ── LUKE WORKS THROUGH THE PRE-FLIGHT CHECKLIST ──────────────────────────────
+    // Luke checks each item in sequence: folding group (enable? threshold? auto-
+    // expand?), then autosave group (single-tab? multi-tab?).  He sets each control
+    // from the current stored value so the checklist reflects what's actually
+    // configured, not just the defaults.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the page UI: a folding group with enable/threshold/auto-expand
+     * controls, and an autosave group with single-tab and multi-tab checkboxes.
+     * All controls are pre-filled from the current preference store values.
+     *
+     * <p>For example — Luke's checklist panels:</p>
+     * <pre>
+     *   Folding:
+     *     [x] Enable folding
+     *         Threshold: [100]
+     *         [x] Auto-expand folded attributes
+     *   Autosave:
+     *     [x] Autosave single-tab editor
+     *     [ ] Autosave multi-tab editor
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse.
+     * @return        The composite containing all entry editor preference widgets.
      */
     protected Control createContents( Composite parent )
     {
@@ -164,8 +212,17 @@ public class EntryEditorPreferencePage extends PreferencePage implements IWorkbe
     }
 
 
+    // ── LUKE SIGNS OFF THE CHECKLIST AND POWERS UP ───────────────────────────────
+    // Luke ticks the last item on the checklist, radios "Red Five standing by,"
+    // and commits every confirmed parameter to the mission log.  Autosave modes,
+    // folding settings — all written to the preference store for persistence.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves all entry editor preferences when the user clicks OK or Apply.
+     * We persist autosave flags, folding enable/threshold, and auto-expand to
+     * the common preference store.
+     *
+     * @return  Always true — there's no blocking validation at save time.
      */
     public boolean performOk()
     {
@@ -185,8 +242,16 @@ public class EntryEditorPreferencePage extends PreferencePage implements IWorkbe
     }
 
 
+    // ── LUKE RESETS TO FACTORY CONFIGURATION ─────────────────────────────────────
+    // The ground crew hands Luke the original Red Five configuration card — every
+    // instrument reset to the default values from the factory.  Luke goes down the
+    // list and resets each control so the UI matches what will be written when he
+    // clicks OK.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Resets all entry editor preference controls to the plugin's factory defaults.
+     * Called when the user clicks "Restore Defaults."  We read defaults from the
+     * preference store and repopulate every control.
      */
     protected void performDefaults()
     {

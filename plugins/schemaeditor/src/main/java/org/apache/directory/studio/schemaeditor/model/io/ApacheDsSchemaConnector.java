@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 package org.apache.directory.studio.schemaeditor.model.io;
 
@@ -53,8 +53,20 @@ import org.apache.directory.studio.schemaeditor.model.Project;
 import org.apache.directory.studio.schemaeditor.model.Schema;
 
 
+// ── CLASS: ApacheDsSchemaConnector — Han Jumping to Hyperspace via ApacheDS ──
+// Han has a specific flight plan for reaching ApacheDS: he queries the
+// "ou=schema" subtree, enumerates each named schema, then dives into that
+// schema's sub-tree to collect attribute types, object classes, matching rules,
+// and syntaxes.  It's a precise, ApacheDS-flavored hyperspace route — different
+// from the generic fallback Han uses for other servers.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A Schema Connector for ApacheDS.
+ * A {@link SchemaConnector} that reads (and eventually writes) schema data from
+ * an Apache Directory Server by walking its DIT-based schema sub-tree under
+ * {@code ou=schema}.
+ * It is the ApacheDS-specific jump route: it identifies whether the server is
+ * actually ApacheDS by checking the {@code vendorName} root DSE attribute, then
+ * fetches each named schema and its constituent schema objects.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -70,8 +82,22 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Jumps to the ApacheDS Schema Partition ───────────────────────────
+    // Han punches the coordinates for the ApacheDS schema DIT into the nav
+    // computer and makes the jump: first he finds all the named schema containers
+    // under ou=schema, then for each one he dives in and retrieves its contents.
+    // We search ou=schema for metaSchema entries, then call getSchema() for each,
+    // collecting the resulting Schema objects into the project.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Fetches the complete schema from an Apache Directory Server and stores it
+     * in the given project's initial schema list.
+     * We do a one-level search under {@code ou=schema} to find all named schemas,
+     * then a subtree search within each to collect their elements.
+     *
+     * @param project  the project to populate — its connection must already be open
+     * @param monitor  progress monitor so the user can see what's happening
+     * @throws SchemaConnectorException  if the LDAP search or result parsing fails
      */
     public void importSchema( Project project, StudioProgressMonitor monitor )
         throws SchemaConnectorException
@@ -88,7 +114,7 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
         StudioSearchResultEnumeration answer = wrapper
             .search( SchemaConstants.OU_SCHEMA, "(objectclass=metaSchema)", constraintSearch, DEREF_ALIAS_METHOD, //$NON-NLS-1$ //$NON-NLS-2$
                 HANDLE_REFERALS_METHOD, null, monitor, null );
-        
+
         if ( answer != null )
         {
             try
@@ -123,8 +149,21 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Sniffs the Root DSE for ApacheDS Markings ────────────────────────
+    // Before committing to the ApacheDS route, Han pings the root DSE and reads
+    // the vendorName attribute — "Apache Software Foundation" means it's ApacheDS
+    // and he's cleared to use the schema DIT approach.
+    // Any other vendor name (or a missing attribute) means this connector is the
+    // wrong ship for this port, and we return false so the plugin tries a different one.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Probes the root DSE to determine whether this server is Apache Directory Server.
+     * We read the {@code vendorName} operational attribute and check whether it
+     * equals "Apache Software Foundation" (case-insensitive).
+     *
+     * @param connection  the LDAP connection to probe
+     * @param monitor     progress monitor for the search
+     * @return            true if and only if the server identifies as ApacheDS
      */
     public boolean isSuitableConnector( Connection connection, StudioProgressMonitor monitor )
     {
@@ -147,7 +186,7 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
                     Entry entry = answer.next().getEntry();
 
                     Attribute vendorNameAttribute = entry.get( SchemaConstants.VENDOR_NAME_AT );
-                    
+
                     if ( vendorNameAttribute == null )
                     {
                         return false;
@@ -181,6 +220,25 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Dives into a Single Schema's Corridor ────────────────────────────
+    // Han enters the named schema's section of the DIT ("cn=core,ou=schema"),
+    // reads every entry he finds, classifies it by type, and builds up the
+    // Schema object like filling a cargo hold.
+    // We do a subtree search under the schema's DN and dispatch each entry to
+    // the right createX() helper based on its objectClass.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Fetches all schema elements under the named schema's DIT node and assembles
+     * them into a {@link Schema} object.
+     * Each LDAP entry is classified as an attribute type, object class, matching
+     * rule, or syntax and handed off to the corresponding factory method.
+     *
+     * @param wrapper  the LDAP connection wrapper to use for searching
+     * @param name     the schema name (e.g. "core", "system")
+     * @param monitor  progress monitor
+     * @return         a fully populated Schema — never null
+     * @throws LdapException  if the search or result traversal fails
+     */
     private static Schema getSchema( ConnectionWrapper wrapper, String name, StudioProgressMonitor monitor )
         throws LdapException
     {
@@ -195,7 +253,7 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
 
         StudioSearchResultEnumeration answer = wrapper.search( "cn=" + name + ", ou=schema", LdapConstants.OBJECT_CLASS_STAR, //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             constraintSearch, DEREF_ALIAS_METHOD, HANDLE_REFERALS_METHOD, null, monitor, null );
-        
+
         if ( answer != null )
         {
             try
@@ -203,7 +261,7 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
                 while ( answer.hasMore() )
                 {
                     Entry entry = answer.next().getEntry();
-                    
+
                     switch ( getNodeType( entry ) )
                     {
                         case ATTRIBUTE_TYPE:
@@ -211,25 +269,25 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
                             at.setSchemaName( name );
                             schema.addAttributeType( at );
                             break;
-                            
+
                         case OBJECT_CLASS:
                             ObjectClass oc = createObjectClass( entry );
                             oc.setSchemaName( name );
                             schema.addObjectClass( oc );
                             break;
-                            
+
                         case MATCHING_RULE:
                             MatchingRule mr = createMatchingRule( entry );
                             mr.setSchemaName( name );
                             schema.addMatchingRule( mr );
                             break;
-                            
+
                         case SYNTAX:
                             LdapSyntax syntax = createSyntax( entry );
                             syntax.setSchemaName( name );
                             schema.addSyntax( syntax );
                             break;
-                            
+
                         default:
                             break;
                     }
@@ -245,11 +303,17 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Reads the Cargo Bay Label ─────────────────────────────────────────
+    // Each crate in the cargo hold has a label: ATTRIBUTE_TYPE, OBJECT_CLASS, etc.
+    // Han checks the objectClass attribute on the LDAP entry to figure out which
+    // type of schema element this crate contains.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Type of node of the given SearchResult.
-     * 
-     * @param entry the SearchResult to be identified
-     * @return the Type of node
+     * Classifies a DIT entry as an attribute type, object class, matching rule,
+     * syntax, or unknown, by inspecting its objectClass attribute.
+     *
+     * @param entry  the LDAP entry to classify
+     * @return       the corresponding {@link SchemaNodeTypes} value
      */
     private static SchemaNodeTypes getNodeType( Entry entry )
     {
@@ -276,13 +340,19 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Unpacks an Attribute-Type Crate ──────────────────────────────────
+    // Han pries open the crate labelled ATTRIBUTE_TYPE and reads each property
+    // off the packing slip — OID, names, syntax, matching rules, flags.
+    // We read the metaSchema attributes from the entry and set them on a new
+    // AttributeType instance.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Create the AttributeTypeImpl associated with the given SearchResult.
-     * 
-     * @param entry the search result entry
-     * @return the AttributeTypeImpl associated with the SearchResult, or null if no
-     * AttributeTypeImpl could be created
-     * @throws LdapInvalidAttributeValueException
+     * Builds an {@link AttributeType} from a DIT entry in the ApacheDS schema partition.
+     * We read the m-oid, m-name, m-syntax, etc. attributes and set each on a new instance.
+     *
+     * @param entry  the LDAP entry representing the attribute type
+     * @return       a populated AttributeType — never null
+     * @throws LdapInvalidAttributeValueException  if any attribute value can't be read
      */
     private static AttributeType createAttributeType( Entry entry ) throws LdapInvalidAttributeValueException
     {
@@ -300,18 +370,22 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
         at.setEqualityOid( getStringValue( entry, MetaSchemaConstants.M_EQUALITY_AT ) );
         at.setOrderingOid( getStringValue( entry, MetaSchemaConstants.M_ORDERING_AT ) );
         at.setSubstringOid( getStringValue( entry, MetaSchemaConstants.M_SUBSTR_AT ) );
-        
+
         return at;
     }
 
 
+    // ── Han Unpacks an Object-Class Crate ────────────────────────────────────
+    // Next crate: OBJECT_CLASS.  Han reads off the OID, names, type, superiors,
+    // mandatory and optional attribute lists from the packing slip.
+    // We build an ObjectClass from the meta-schema attributes on the entry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Create the ObjectClassImpl associated with the given SearchResult.
-     * 
-     * @param sr the SearchResult
-     * @return the ObjectClassImpl associated with the SearchResult, or null if no
-     * ObjectClassImpl could be created
-     * @throws LdapInvalidAttributeValueException
+     * Builds an {@link ObjectClass} from a DIT entry in the ApacheDS schema partition.
+     *
+     * @param sr  the LDAP entry representing the object class
+     * @return    a populated ObjectClass — never null
+     * @throws LdapInvalidAttributeValueException  if any attribute value can't be read
      */
     private static ObjectClass createObjectClass( Entry sr ) throws LdapInvalidAttributeValueException
     {
@@ -323,18 +397,21 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
         oc.setType( getType( sr ) );
         oc.setMayAttributeTypeOids( getStringValues( sr, MetaSchemaConstants.M_MAY_AT ) );
         oc.setMustAttributeTypeOids( getStringValues( sr, MetaSchemaConstants.M_MUST_AT ) );
-        
+
         return oc;
     }
 
 
+    // ── Han Unpacks a Matching-Rule Crate ────────────────────────────────────
+    // Another crate: MATCHING_RULE.  Han reads OID, names, description, obsolete
+    // flag, and the associated syntax OID from the packing slip.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Create the MatchingRule associated with the given SearchResult.
-     * 
-     * @param entry the SearchResult
-     * @return the MatchingRule associated with the SearchResult, or null if no
-     * ObjectClass could be created
-     * @throws LdapInvalidAttributeValueException 
+     * Builds a {@link MatchingRule} from a DIT entry in the ApacheDS schema partition.
+     *
+     * @param entry  the LDAP entry representing the matching rule
+     * @return       a populated MatchingRule — never null
+     * @throws LdapInvalidAttributeValueException  if any attribute value can't be read
      */
     private static MatchingRule createMatchingRule( Entry entry ) throws LdapInvalidAttributeValueException
     {
@@ -343,18 +420,21 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
         mr.setDescription( getStringValue( entry, MetaSchemaConstants.M_DESCRIPTION_AT ) );
         mr.setObsolete( getBooleanValue( entry, MetaSchemaConstants.M_OBSOLETE_AT ) );
         mr.setSyntaxOid( getStringValue( entry, MetaSchemaConstants.M_SYNTAX_AT ) );
-        
+
         return mr;
     }
 
 
+    // ── Han Unpacks a Syntax Crate ────────────────────────────────────────────
+    // Last crate type: SYNTAX.  Han reads OID, names, description, obsolete
+    // flag, and the human-readable flag from the packing slip.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Create the MatchingRule associated with the given SearchResult.
-     * 
-     * @param entry the SearchResult
-     * @return the MatchingRule associated with the SearchResult, or null if no
-     * ObjectClass could be created
-     * @throws LdapInvalidAttributeValueException
+     * Builds an {@link LdapSyntax} from a DIT entry in the ApacheDS schema partition.
+     *
+     * @param entry  the LDAP entry representing the syntax
+     * @return       a populated LdapSyntax — never null
+     * @throws LdapInvalidAttributeValueException  if any attribute value can't be read
      */
     private static LdapSyntax createSyntax( Entry entry ) throws LdapInvalidAttributeValueException
     {
@@ -363,16 +443,23 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
         syntax.setDescription( getStringValue( entry, MetaSchemaConstants.M_DESCRIPTION_AT ) );
         syntax.setObsolete( getBooleanValue( entry, MetaSchemaConstants.M_OBSOLETE_AT ) );
         syntax.setHumanReadable( isHumanReadable( entry ) );
-        
+
         return syntax;
     }
 
 
+    // ── Han Reads the "Usage" Label off the Crate ────────────────────────────
+    // Some crates are marked for USER_APPLICATIONS, some for DIRECTORY_OPERATION;
+    // Han reads the usage label and returns the right UsageEnum value.
+    // If the label is missing or unreadable we default to USER_APPLICATIONS.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the usage of the attribute type contained a SearchResult.
+     * Reads the usage value from the LDAP entry's m-usage attribute.
+     * Defaults to {@link UsageEnum#USER_APPLICATIONS} if the attribute is absent or invalid.
      *
-     * @param sr the SearchResult
-     * @return the usage of the attribute type
+     * @param entry  the LDAP entry to read from
+     * @return       the UsageEnum value — never null
+     * @throws LdapInvalidAttributeValueException  if the raw attribute value can't be read as a string
      */
     private static UsageEnum getUsage( Entry entry ) throws LdapInvalidAttributeValueException
     {
@@ -400,12 +487,17 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Reads the Size Sticker on a Syntax Crate ─────────────────────────
+    // Some crates have a maximum size sticker; Han reads the integer off it.
+    // If there's no sticker (attribute is absent) he returns -1 to signal "no limit."
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the syntax length of the attribute type contained a SearchResult.
+     * Reads the syntax length (m-length attribute) from the LDAP entry.
+     * Returns -1 if the attribute is absent or not a valid integer.
      *
-     * @param entry the SearchResult
-     * @return the syntax length of the attribute type, or -1 if no syntax length was found
-     * @throws LdapInvalidAttributeValueException if an error occurs when searching in the SearchResult
+     * @param entry  the LDAP entry to read from
+     * @return       the syntax length as a positive int, or -1 if not present
+     * @throws LdapInvalidAttributeValueException  if the raw attribute value can't be read
      */
     private static int getSyntaxLength( Entry entry ) throws LdapInvalidAttributeValueException
     {
@@ -429,13 +521,18 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Reads a Single Text Label ─────────────────────────────────────────
+    // Han reads the plain-text label on a specific slot of the packing slip.
+    // Returns null if the slot is blank (attribute absent).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the String value of a Schema element of an attribute type contained in a SearchResult.
+     * Returns the string value of the named attribute from the given entry.
+     * Returns null if the attribute is not present.
      *
-     * @param sr the SearchResult
-     * @param schemaElement The Schema Element we are looking for
-     * @return The String value if found
-     * @throws LdapInvalidAttributeValueException 
+     * @param entry          the LDAP entry to read from
+     * @param schemaElement  the attribute name to look up
+     * @return               the attribute's string value, or null if absent
+     * @throws LdapInvalidAttributeValueException  if the value can't be decoded as a string
      */
     private static String getStringValue( Entry entry, String schemaElement ) throws LdapInvalidAttributeValueException
     {
@@ -452,13 +549,18 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Reads a Yes/No Checkbox ───────────────────────────────────────────
+    // Some fields on the packing slip are just checkboxes — TRUE or FALSE.
+    // Han reads the box; if it's blank he assumes false.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Boolean value for a Schema element of an attribute type contained in a SearchResult.
+     * Returns the boolean value of the named attribute from the given entry.
+     * Returns false if the attribute is absent.
      *
-     * @param entry the SearchResult
-     * @param schemaElement The Schema Element we are looking for
-     * @return The boolean value if found
-     * @throws LdapInvalidAttributeValueException 
+     * @param entry          the LDAP entry to read from
+     * @param schemaElement  the attribute name to look up
+     * @return               the parsed boolean value, or false if absent
+     * @throws LdapInvalidAttributeValueException  if the value can't be decoded as a string
      */
     private static boolean getBooleanValue( Entry entry, String schemaElement ) throws LdapInvalidAttributeValueException
     {
@@ -475,12 +577,18 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Reads a Multi-Value List off the Packing Slip ────────────────────
+    // Some fields list multiple values — e.g. all the names an attribute type
+    // goes by.  Han reads every line and returns them as a list.
+    // We stream the attribute's values and collect each as a String.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the list of values for a schema element of an object class contained in a SearchResult.
+     * Returns all string values of the named attribute as a list.
+     * Returns an empty list if the attribute is absent.
      *
-     * @param entry the SearchResult
-     * @param schemaElement The Schema Element we are looking for
-     * @return the optional attribute types of the attribute type, or an empty array if no optional attribute type was found
+     * @param entry          the LDAP entry to read from
+     * @param schemaElement  the attribute name to look up
+     * @return               a List of string values — never null, may be empty
      */
     private static List<String> getStringValues( Entry entry, String schemaElement )
     {
@@ -490,12 +598,18 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Reads the Department Classification Label ─────────────────────────
+    // Crates labelled STRUCTURAL, ABSTRACT, or AUXILIARY are handled differently;
+    // Han reads the classification and returns the right ObjectClassTypeEnum.
+    // Defaults to STRUCTURAL if the label is missing or unrecognised.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the type of the object class contained a SearchResult.
+     * Reads the object class type (STRUCTURAL, ABSTRACT, or AUXILIARY) from the entry.
+     * Defaults to {@link ObjectClassTypeEnum#STRUCTURAL} if the attribute is absent or invalid.
      *
-     * @param entry the SearchResult
-     * @return the type of the object class
-     * @throws LdapInvalidAttributeValueException 
+     * @param entry  the LDAP entry to read from
+     * @return       the ObjectClassTypeEnum value — never null
+     * @throws LdapInvalidAttributeValueException  if the raw value can't be decoded
      */
     private static ObjectClassTypeEnum getType( Entry entry ) throws LdapInvalidAttributeValueException
     {
@@ -523,12 +637,19 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Checks the "Human Readable" Sticker ──────────────────────────────
+    // Some syntax crates are marked X-NOT-HUMAN-READABLE; Han checks the sticker
+    // and returns the inverse — if it's marked not-human-readable, we return false.
+    // If the sticker is absent we default to false (unknown readability).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets whether or not the schema object contained a SearchResult is obsolete.
+     * Determines whether the syntax in the given entry is human-readable by
+     * checking the {@code X-NOT-HUMAN-READABLE} extension attribute.
+     * Returns false (not readable) if the attribute is absent.
      *
-     * @param entry the SearchResult
-     * @return true if the schema object is obsolete, false if not
-     * @throws LdapInvalidAttributeValueException 
+     * @param entry  the LDAP entry to check
+     * @return       true if the syntax is human-readable, false otherwise
+     * @throws LdapInvalidAttributeValueException  if the raw value can't be decoded
      */
     private static boolean isHumanReadable( Entry entry ) throws LdapInvalidAttributeValueException
     {
@@ -545,8 +666,18 @@ public class ApacheDsSchemaConnector extends AbstractSchemaConnector implements 
     }
 
 
+    // ── Han Parks the Falcon — Export Not Yet Wired ──────────────────────────
+    // Han lands at the destination and realises nobody has told him what to
+    // unload yet — the export docking bay is still under construction.
+    // This method is a placeholder; schema export to ApacheDS is not yet implemented.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Exports the project's schema to the connected ApacheDS instance.
+     * Not yet implemented — this is a placeholder for a future feature.
+     *
+     * @param project  the project whose schema should be exported
+     * @param monitor  progress monitor
+     * @throws SchemaConnectorException  not currently thrown, but declared for the interface
      */
     public void exportSchema( Project project, StudioProgressMonitor monitor )
         throws SchemaConnectorException

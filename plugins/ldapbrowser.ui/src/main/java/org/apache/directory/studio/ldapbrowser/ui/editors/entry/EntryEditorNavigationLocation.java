@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.entry;
@@ -39,18 +39,39 @@ import org.eclipse.ui.INavigationLocation;
 import org.eclipse.ui.NavigationLocation;
 
 
+// ── CLASS: EntryEditorNavigationLocation — R2-D2 PLUGGING INTO THE DEATH STAR ──
+// R2-D2 jacks into the Death Star's computer port, reads the current sector
+// coordinates, serializes them to his memory banks, and can later reload them
+// to navigate right back to the same location — even after a power cycle.
+// EntryEditorNavigationLocation is that memory bank: it captures an LDAP entry's
+// DN (and connection/search/bookmark context) so Eclipse's Back/Forward history
+// can jump back to the exact entry the user was looking at.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to mark the entry editor input to the navigation history.
+ * A snapshot of what the entry editor was displaying at a point in time.
+ * Eclipse's navigation history system uses this to implement the Back and Forward
+ * buttons in the workbench toolbar — when the user navigates to a different entry,
+ * we create one of these to remember where they came from.
+ * Think of this as R2's memory bank: it records the current LDAP address (DN +
+ * connection + entry type) and can reload it later to restore the exact view.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class EntryEditorNavigationLocation extends NavigationLocation
 {
 
+    // ── R2 JACKS INTO THE DEATH STAR PORT ────────────────────────────────────
+    // R2-D2 inserts his interface arm into the computer terminal on the Death Star,
+    // establishing the connection that makes all later queries possible.
+    // We bind this navigation location to its editor so Eclipse can ask us
+    // later to restore the editor state when the user hits Back.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EntryEditorNavigationLocation.
+     * Creates a navigation location associated with the given entry editor.
+     * Eclipse will call {@link #saveState(IMemento)} immediately after construction
+     * to serialize the current entry into the workbench's persistent history.
      *
-     * @param editor the entry editor
+     * @param editor  The entry editor whose current input this location represents.
      */
     EntryEditorNavigationLocation( EntryEditor editor )
     {
@@ -58,8 +79,18 @@ public class EntryEditorNavigationLocation extends NavigationLocation
     }
 
 
+    // ── R2 DISPLAYS THE SECTOR LABEL ON HIS DOME ──────────────────────────────
+    // R2-D2 beeps out a human-readable label for the sector he's currently in —
+    // "Detention Block AA-23" — so Leia can read it on the screen above.
+    // We return the entry's display name so Eclipse can show a meaningful
+    // label for this history entry in the navigation dropdown.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns a human-readable label for this history entry.
+     * Eclipse shows this text in the navigation history dropdown so users
+     * can recognize which entry they'd be going back to.
+     *
+     * @return the entry's display name, or the superclass default if we can't compute one.
      */
     public String getText()
     {
@@ -68,8 +99,20 @@ public class EntryEditorNavigationLocation extends NavigationLocation
     }
 
 
+    // ── R2 WRITES THE COORDINATES TO HIS MEMORY BANKS ────────────────────────
+    // R2 encodes the Death Star's current sector coordinates into a compact
+    // binary format and stores them in his internal memory for later retrieval.
+    // We serialize the entry type (IEntry / ISearchResult / IBookmark), DN,
+    // connection ID, and search name into the Eclipse memento so the workbench
+    // can persist this history entry across restarts.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Serializes this navigation location into an Eclipse {@link IMemento} for persistence.
+     * Called by Eclipse when the workbench is saving session state — we write
+     * enough information to recreate the full {@link EntryEditorInput} on restore:
+     * the entry type tag, DN, connection ID, and (for search results) the search name.
+     *
+     * @param memento  The Eclipse memento to write our state into.
      */
     public void saveState( IMemento memento )
     {
@@ -104,8 +147,19 @@ public class EntryEditorNavigationLocation extends NavigationLocation
     }
 
 
+    // ── R2 READS HIS MEMORY BANKS AND NAVIGATES BACK ─────────────────────────
+    // R2 decodes the stored coordinates from his memory banks, looks up the
+    // sector in the Death Star's current map, and reconstructs the target location.
+    // We rebuild the full EntryEditorInput from the memento — resolving the
+    // connection, looking up the DN in the cache, and re-finding the search result.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Rebuilds the {@link EntryEditorInput} from a previously saved memento.
+     * Eclipse calls this at startup when restoring session history, or when
+     * the user navigates back to a history entry that was saved in a prior session.
+     * We re-resolve the connection, DN, and search/bookmark references from the stored IDs.
+     *
+     * @param memento  The memento containing the state we wrote in {@link #saveState(IMemento)}.
      */
     public void restoreState( IMemento memento )
     {
@@ -154,16 +208,33 @@ public class EntryEditorNavigationLocation extends NavigationLocation
     }
 
 
+    // ── R2 NAVIGATES TO THE STORED LOCATION ──────────────────────────────────
+    // R2 was supposed to navigate the ship back to Tatooine — but the hyperspace
+    // coordinates are already baked into the editor input, so nothing extra needed.
+    // This is intentionally empty; input restoration is handled by restoreState.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — restoring the editor state is done via input restoration, not here.
+     * Eclipse calls this after {@link #restoreState(IMemento)} to trigger any
+     * additional navigation; we don't need extra steps beyond what restoreState did.
      */
     public void restoreLocation()
     {
     }
 
 
+    // ── R2 CHECKS IF THIS PORT LEADS TO THE SAME SECTOR ──────────────────────
+    // Before plugging in again, R2 checks if the current computer port is already
+    // connected to the same sector he was just in — no point logging duplicate locations.
+    // We compare input objects to avoid duplicate adjacent entries in the history stack.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code true} if this location represents the same entry as {@code currentLocation}.
+     * Eclipse uses this to collapse adjacent identical history entries — navigating
+     * back and forth between the same two entries shouldn't grow the stack indefinitely.
+     *
+     * @param currentLocation  The most recent location on the history stack to compare against.
+     * @return {@code true} if both locations point to the same LDAP input object.
      */
     public boolean mergeInto( INavigationLocation currentLocation )
     {
@@ -196,18 +267,29 @@ public class EntryEditorNavigationLocation extends NavigationLocation
     }
 
 
+    // ── R2 REFRESHES HIS INTERNAL MAP ────────────────────────────────────────
+    // R2 receives a signal to sync his local sector map — but in this case
+    // the map is already current and no action is needed.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — we don't need to update any state when Eclipse asks us to refresh.
+     * Eclipse calls this after the editor input changes, but we rebuild lazily.
      */
     public void update()
     {
     }
 
 
+    // ── R2 RETRIEVES THE SECTOR DOSSIER FROM HIS MEMORY ──────────────────────
+    // R2 reaches into his memory banks and pulls out the typed sector dossier —
+    // the raw coordinates packaged in a format the mission planners can read.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the input.
+     * Extracts the stored input as an {@link EntryEditorInput}, or returns {@code null}.
+     * The base class stores an untyped {@code Object}; this helper casts it safely
+     * so callers get a typed reference without repeated instanceof checks.
      *
-     * @return the input
+     * @return the {@link EntryEditorInput} stored in this location, or {@code null} if none.
      */
     private EntryEditorInput getEntryEditorInput()
     {
@@ -222,8 +304,15 @@ public class EntryEditorNavigationLocation extends NavigationLocation
     }
 
 
+    // ── R2 BEEPS OUT A SUMMARY FOR THE REBELS ────────────────────────────────
+    // R2 translates his internal coordinates into a short readable status beep
+    // that C-3PO can relay to the rest of the team in plain language.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns a string representation of this navigation location for debugging.
+     * Eclipse may also use this for display in some history UIs.
+     *
+     * @return a string showing the underlying LDAP input object.
      */
     public String toString()
     {

@@ -21,6 +21,21 @@
 package org.apache.directory.studio.ldapbrowser.core.propertypageproviders;
 
 
+// ── CLASS: BookmarkPropertyPageProvider — JEDI BADGE FOR BOOKMARK OBJECTS ───
+// In the Jedi Order, every holder of a navicomp waypoint wears a navigator's
+// badge when entering the route-planning chamber.  BookmarkPropertyPageProvider
+// is that badge for IBookmark objects: implementing it tells the Eclipse
+// property-page framework that this object should expose bookmark property pages.
+// No methods — the interface is a pure marker.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Marker interface that tags a class as a provider of bookmark property pages.
+ *
+ * <p>Think of this as a Jedi navigator's badge: an object implementing this
+ * interface announces "I am an LDAP bookmark — show my property pages."</p>
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public interface BookmarkPropertyPageProvider
 {
 

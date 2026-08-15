@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.common.ui.dialogs;
 
@@ -37,9 +37,18 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: LogLevelDialog — DEATH STAR THREAT ALERT CONSOLE ──────────────────
+// Think of Grand Moff Tarkin's control room where each alert switch corresponds
+// to a different threat category: trace traffic, BER packets, ACL violations,
+// and so on. The operator flips any combination of alert switches, and the
+// console immediately computes and displays the resulting threat-level integer.
+// "None" disarms everything; "Any" lights up every indicator at once.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The LogLevelDialog is used to edit the LogLevel. Here are the possible values :
- * 
+ * We present a dialog for configuring the OpenLDAP log level. Each logging
+ * category is represented as a checkbox; we compute the resulting integer by
+ * OR-ing the bit values of the selected categories. The possible values are:
+ *
  * <ul>
  * <li>none        0</li>
  * <li>trace       1</li>
@@ -57,7 +66,7 @@ import org.eclipse.swt.widgets.Text;
  * <li>sync    16384</li>
  * <li>any       -1</li>
  * </ul>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LogLevelDialog extends Dialog
@@ -81,13 +90,13 @@ public class LogLevelDialog extends Dialog
     private Button parseCheckbox;
     private Button syncCheckbox;
     private Button anyCheckbox;
-    
+
     /** An array of all the checkboxes */
     private Button[] buttons = new Button[13];
-    
+
     // The resulting integer
     private Text logLevelText;
-    
+
     // An empty space
     protected static final String TABULATION = " ";
 
@@ -99,11 +108,11 @@ public class LogLevelDialog extends Dialog
         public void widgetSelected( SelectionEvent e )
         {
             Object object = e.getSource();
-            
+
             if ( object instanceof Button )
             {
                 Button selectedButton = (Button)object;
-                
+
                 if ( selectedButton.equals( noneCheckbox ) )
                 {
                     // None, we have to uncheck all the other checkbox
@@ -111,24 +120,24 @@ public class LogLevelDialog extends Dialog
                     {
                         button.setSelection( false );
                     }
-                    
+
                     // reset the Any button
                     anyCheckbox.setSelection( false );
-                    
+
                     // set the None button
                     noneCheckbox.setSelection( true );
                 }
                 else if ( selectedButton.equals( anyCheckbox ) )
                 {
-                    // Any, we have to check all the buttons 
+                    // Any, we have to check all the buttons
                     for ( Button button : buttons )
                     {
                         button.setSelection( true );
                     }
-                    
+
                     // reset the None button
                     noneCheckbox.setSelection( false );
-                    
+
                     // set the Any button
                     anyCheckbox.setSelection( true );
                 }
@@ -144,7 +153,7 @@ public class LogLevelDialog extends Dialog
                             count++;
                         }
                     }
-                    
+
                     if ( count == 0 )
                     {
                         anyCheckbox.setSelection( false );
@@ -162,17 +171,23 @@ public class LogLevelDialog extends Dialog
                     }
                 }
             }
-            
+
             computeLogValue();
             setLogLevelText();
         }
     };
 
 
+    // ── CONSTRUCTOR: LogLevelDialog(Shell) — OPENING THE ALERT CONSOLE ────────
+    // The operator arrives at a blank console with no alerts pre-set. We make
+    // the shell resizable so the operator can expand it for better readability,
+    // and the initial log-level integer stays at zero.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of LogLevelDialog.
-     * 
-     * @param parentShell the parent shell
+     * We create a LogLevelDialog with an initial log-level value of zero (none).
+     * The shell is made resizable so users can adjust the layout.
+     *
+     * @param parentShell  the parent shell
      */
     public LogLevelDialog( Shell parentShell )
     {
@@ -181,11 +196,18 @@ public class LogLevelDialog extends Dialog
     }
 
 
+    // ── CONSTRUCTOR: LogLevelDialog(Shell, int) — RESTORING A SAVED ALERT STATE
+    // The operator returns to a console that was previously configured: the
+    // pre-existing alert bitmask is supplied so the checkboxes can be
+    // initialized to match it when the dialog opens.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of LogLevelDialog.
-     * 
-     * @param parentShell the parent shell
-     * @param value the initial value
+     * We create a LogLevelDialog pre-initialized with an existing log-level
+     * value. The checkboxes will reflect the bit pattern of {@code value} when
+     * the dialog opens.
+     *
+     * @param parentShell  the parent shell
+     * @param value        the initial log-level bitmask to pre-select
      */
     public LogLevelDialog( Shell parentShell, int value )
     {
@@ -195,6 +217,10 @@ public class LogLevelDialog extends Dialog
     }
 
 
+    // ── METHOD: configureShell — LABELLING THE ALERT CONSOLE ─────────────────
+    // Before the control room lights up we stamp the title on the console
+    // header so every officer knows exactly what system they are operating.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -205,6 +231,11 @@ public class LogLevelDialog extends Dialog
     }
 
 
+    // ── METHOD: okPressed — LOCKING IN THE THREAT LEVEL ──────────────────────
+    // Before we seal the hatch and hand control back to the caller, we run one
+    // final computation to make sure the integer reflects the current checkbox
+    // state — no stale readings leave the control room.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -215,6 +246,11 @@ public class LogLevelDialog extends Dialog
     }
 
 
+    // ── METHOD: createDialogArea — CONSTRUCTING THE CONTROL ROOM LAYOUT ───────
+    // We build the full interior: the checkbox grid for selecting log categories,
+    // the read-only numeric display, and the listeners. After construction we
+    // call setCheckboxesValue() to reflect any pre-existing bitmask.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -229,15 +265,23 @@ public class LogLevelDialog extends Dialog
         setCheckboxesValue();
         addListeners();
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // ── METHOD: setCheckboxesValue — SYNCING SWITCH STATES TO THE BITMASK ─────
+    // The stored integer bitmask tells us which alert switches should be lit.
+    // We test each bit in turn and set the corresponding checkbox. The None
+    // and Any checkboxes use equality rather than bitwise AND because they
+    // represent sentinel values (0 and -1).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the checkboxes value.
+     * We synchronize all checkbox selections to match the current
+     * {@code logLevelValue} bitmask. Each checkbox is set by testing whether
+     * its corresponding bit is set in the stored integer.
      *
-     * @param perm the Unix permissions
+     * @param perm  the Unix permissions (parameter name inherited from copy-paste; ignored here)
      */
     private void setCheckboxesValue()
     {
@@ -259,8 +303,14 @@ public class LogLevelDialog extends Dialog
     }
 
 
+    // ── METHOD: setLogLevelText — UPDATING THE NUMERIC READOUT ───────────────
+    // After any change to the checkboxes we push the current integer value into
+    // the read-only text widget so the operator always sees the exact numeric
+    // representation of the current alert state.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the LogLevel value.
+     * We update the read-only log-level text field to display the current value
+     * of {@code logLevelValue} as a decimal string.
      */
     private void setLogLevelText()
     {
@@ -268,10 +318,19 @@ public class LogLevelDialog extends Dialog
     }
 
 
+    // ── METHOD: createLogLevelArea — WIRING UP THE ALERT SWITCH PANEL ─────────
+    // We lay out all thirteen category checkboxes in a five-column grid inside a
+    // labeled group. None and Any occupy the top row as special controls;
+    // the remaining checkboxes fill two rows of five, with three on the bottom
+    // row centered by spacer labels on each side.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the LogLevel area.
+     * We build the checkbox panel containing all log-level categories. The
+     * layout mirrors the OpenLDAP documentation grouping: None/Any at the top,
+     * alphabetical categories in the middle, and the remaining three at the
+     * bottom.
      *
-     * @param parent the parent composite
+     * @param parent  the parent composite to attach the group to
      */
     private void createLogLevelArea( Composite parent )
     {
@@ -322,10 +381,17 @@ public class LogLevelDialog extends Dialog
     }
 
 
+    // ── METHOD: createLogLevelValueArea — INSTALLING THE NUMERIC READOUT ──────
+    // Beneath the switch panel we add a read-only text field that always shows
+    // the current integer representation of the selected alert state. The field
+    // is limited to five characters because the maximum useful value is 16383.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the LogLevel value area. It's not editable
+     * We build the read-only numeric display area below the checkbox panel.
+     * The text field is not editable — it simply reflects the computed integer
+     * value of the current checkbox combination.
      *
-     * @param parent the parent composite
+     * @param parent  the parent composite to attach the group to
      */
     private void createLogLevelValueArea( Composite parent )
     {
@@ -336,13 +402,20 @@ public class LogLevelDialog extends Dialog
     }
 
 
+    // ── METHOD: addListeners — CONNECTING THE ALERT SWITCHES ─────────────────
+    // Each checkbox gets wired to the shared selection listener so that any
+    // toggle immediately recomputes the integer and refreshes the readout.
+    // None and Any get the same listener but live outside the buttons array.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds listeners.
+     * We attach the shared {@code checkboxSelectionListener} to every checkbox,
+     * including the special None and Any controls that live outside the main
+     * buttons array.
      */
     private void addListeners()
     {
         noneCheckbox.addSelectionListener( checkboxSelectionListener );
-        
+
         for ( Button button : buttons )
         {
             button.addSelectionListener( checkboxSelectionListener );
@@ -352,6 +425,17 @@ public class LogLevelDialog extends Dialog
     }
 
 
+    // ── METHOD: computeLogValue — CALCULATING THE THREAT LEVEL INTEGER ────────
+    // We inspect each checkbox and OR its bit value into the running total.
+    // None forces the result to 0; Any forces it to -1. For individual
+    // selections we also handle the edge case where we are cancelling an
+    // existing ANY selection (resetting from -1 to 0 first).
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We recompute {@code logLevelValue} from the current checkbox states. If
+     * None is checked the result is 0; if Any is checked the result is -1;
+     * otherwise we OR together the bit values of every checked category checkbox.
+     */
     private void computeLogValue()
     {
         if ( noneCheckbox.getSelection() )
@@ -370,7 +454,7 @@ public class LogLevelDialog extends Dialog
                 // to 0, as it's currently -1
                 logLevelValue = 0;
             }
-            
+
             // Now, check all the checkBox selections
             if ( aclCheckbox.getSelection() )
             {
@@ -479,7 +563,7 @@ public class LogLevelDialog extends Dialog
             {
                 logLevelValue &= ~LogLevelEnum.SYNC.getValue();
             }
-            
+
             if ( traceCheckbox.getSelection() )
             {
                 logLevelValue |= LogLevelEnum.TRACE.getValue();
@@ -490,10 +574,18 @@ public class LogLevelDialog extends Dialog
             }
         }
     }
-    
-    
+
+
+    // ── METHOD: getLogLevelValue — READING THE CONSOLE OUTPUT ────────────────
+    // After the operator confirms the settings, any component that needs the
+    // resulting integer can call this to retrieve the computed alert level.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @return The computed integer that codes for the selected LogLevels
+     * We return the integer bitmask that encodes the currently selected log
+     * level categories. This value is computed fresh when OK is pressed and
+     * also updated live as checkboxes are toggled.
+     *
+     * @return  the computed integer that codes for the selected LogLevels
      */
     public int getLogLevelValue()
     {

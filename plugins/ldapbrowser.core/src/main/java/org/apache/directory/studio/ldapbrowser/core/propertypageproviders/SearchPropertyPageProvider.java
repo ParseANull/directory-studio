@@ -21,6 +21,21 @@
 package org.apache.directory.studio.ldapbrowser.core.propertypageproviders;
 
 
+// ── CLASS: SearchPropertyPageProvider — JEDI BADGE FOR SEARCH OBJECTS ───────
+// Before Han can debrief the fleet on his search mission, he must show his
+// mission clearance badge at the briefing room door.  SearchPropertyPageProvider
+// is that badge for ISearch objects: implementing it signals to the Eclipse
+// property-page framework that this object should expose search property pages.
+// No methods — the interface is a pure marker.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Marker interface that tags a class as a provider of search property pages.
+ *
+ * <p>Think of this as Han's mission clearance badge: an object implementing
+ * this interface announces "I am an LDAP search — show my property pages."</p>
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public interface SearchPropertyPageProvider
 {
 

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.widget;
 
@@ -45,16 +45,49 @@ import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.graphics.Image;
 
 
+// ── CLASS: DifferencesWidgetPropertiesLabelProvider — C-3PO TRANSLATES FOR R2 ─
+// R2-D2 beeps and whistles in a machine language nobody else can read. C-3PO steps
+// in and translates every beep into polished English that humans can actually follow.
+// That is exactly what this class does: PropertyDifference objects are machine-level
+// data objects, and we translate each one into a human-readable string and an icon
+// that conveys what changed, how it changed, and from what to what.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the LabelProvider for the DifferencesWidget.
+ * A JFace {@link LabelProvider} for the right-panel table inside
+ * {@link DifferencesWidget}. It receives {@link PropertyDifference} objects and
+ * translates them into a display icon (add / modify / remove) and a descriptive
+ * human-readable string (e.g. "Added alias 'cn'", "Modified syntax from X to Y").
+ * Think of it as C-3PO: R2's binary beeps (raw difference objects) become sentences
+ * a junior dev can actually read without looking anything up.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DifferencesWidgetPropertiesLabelProvider extends LabelProvider
 {
+    // ── C-3PO PICKS THE RIGHT FLAG FOR THE MESSAGE ───────────────────────────────
+    // When translating for the Rebel high command, C-3PO does not just speak —
+    // he also uses the correct protocol flag (green for good news, red for threat).
+    // We pick the right icon here: green plus for added, yellow pencil for modified,
+    // red minus for removed, so the user sees the change type at a glance.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the icon for a {@link PropertyDifference} row in the table. We use a
+     * distinct image for ADDED, MODIFIED, and REMOVED changes so the user can scan
+     * the change type visually without reading the label text. Non-PropertyDifference
+     * elements fall back to the parent class's default (usually {@code null}).
+     *
+     * <p>For example — C-3PO waves the right flag:</p>
+     * <pre>
+     *   ADDED    →  green "+" icon  (IMG_DIFFERENCE_PROPERTY_ADD)
+     *   MODIFIED →  yellow "~" icon (IMG_DIFFERENCE_PROPERTY_MODIFY)
+     *   REMOVED  →  red "-" icon    (IMG_DIFFERENCE_PROPERTY_REMOVE)
+     * </pre>
+     *
+     * @param element  the table row object, expected to be a {@link PropertyDifference}
+     * @return         the appropriate {@link Image}, or the superclass default if
+     *                 the element is not a PropertyDifference
      */
+    @Override
     public Image getImage( Object element )
     {
         if ( element instanceof PropertyDifference )
@@ -79,9 +112,31 @@ public class DifferencesWidgetPropertiesLabelProvider extends LabelProvider
     }
 
 
+    // ── C-3PO TRANSLATES THE FULL MESSAGE INTO ENGLISH ───────────────────────────
+    // R2 pipes in an enormous torrent of data — alias changes, syntax changes,
+    // description deltas, matching rule updates, you name it. C-3PO listens to every
+    // subtype and constructs a clear English sentence: "Added alias 'sn'",
+    // "Modified syntax from OctetString to DirectoryString", and so on.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns a human-readable description of a {@link PropertyDifference} row.
+     * We inspect the concrete subtype of the difference (AliasDifference, SyntaxDifference,
+     * etc.) and the change type (ADDED / MODIFIED / REMOVED) to build a natural-language
+     * string like "Added alias 'cn'" or "Modified syntax: old → new". Unknown types
+     * fall back to the parent class's {@code getText()}.
+     *
+     * <p>For example — C-3PO translates every type of change:</p>
+     * <pre>
+     *   AliasDifference(ADDED, "cn")             →  "Added alias 'cn'"
+     *   SyntaxDifference(MODIFIED, old, new)     →  "Modified syntax: old → new"
+     *   MandatoryATDifference(REMOVED, "email")  →  "Removed mandatory attribute 'email'"
+     * </pre>
+     *
+     * @param element  the table row object; should be a {@link PropertyDifference} subclass
+     * @return         a localised human-readable change description, or the superclass
+     *                 default if the element type is unrecognised
      */
+    @Override
     public String getText( Object element )
     {
         if ( element instanceof AliasDifference )

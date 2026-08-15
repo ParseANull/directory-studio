@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.core.io.api;
@@ -70,31 +70,54 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 
 
+// ── CLASS: LdifSearchLogger — THE FALCON'S SENSOR SWEEP BLACK BOX ─────────────
+// Every time R2 fires the sensors (LDAP search), the black box records the
+// request details (LDAP URL, command line, scope, filter, attributes, controls)
+// and each result entry that comes back.  This helps with debugging complex
+// search scenarios and is displayed in the Search Logs view.
+// The log rotates between N files of K kb each, one per connection, using
+// Java util.logging FileHandler.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The LdifSearchLogger is used to log searches into a file.
+ * {@link ILdapLogger} implementation that records LDAP search requests, result entries,
+ * result references, and search-done messages to per-connection rotating LDIF log files.
+ * Each log entry includes LDIF comment headers ({@code #!SEARCH REQUEST},
+ * {@code #!SEARCH RESULT ENTRY}, {@code #!SEARCH RESULT DONE}, etc.) with
+ * {@code #!RESULT}, {@code #!CONNECTION}, and {@code #!DATE} lines.
+ * Sensitive attribute values are replaced with {@code "**********"}.
+ * File count and size are configurable via Eclipse preferences
+ * ({@code PREFERENCE_SEARCHLOGS_FILE_COUNT} and {@code _FILE_SIZE}).
+ * Think of this as R2's sensor sweep recorder: every search request and every
+ * result entry is written to the black box.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LdifSearchLogger implements ILdapLogger
 {
 
-    /** The ID. */
+    /** Extension point ID of this logger instance. */
     private String id;
 
-    /** The name. */
+    /** Human-readable name of this logger instance. */
     private String name;
 
-    /** The description. */
+    /** Description of this logger instance. */
     private String description;
 
-    /** The file handlers. */
+    /** Per-connection FileHandlers keyed by connection UUID. */
     private Map<String, FileHandler> fileHandlers = new HashMap<String, FileHandler>();
 
-    /** The loggers. */
+    /** Per-connection java.util.logging.Loggers keyed by connection UUID. */
     private Map<String, Logger> loggers = new HashMap<String, Logger>();
 
+
+    // ── CONSTRUCTOR — WIRE UP THE PREFERENCE CHANGE LISTENER ──────────────────────
+    // When the user changes file count or size preferences, we close all handlers
+    // and clean up rotation files beyond the new count.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of LdifSearchLogger.
+     * Creates a new {@link LdifSearchLogger} and registers a preference change listener
+     * that resets all file handlers when the log file count or size changes.
      */
     public LdifSearchLogger()
     {
@@ -138,8 +161,14 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    // ── INIT SEARCH LOGGER — CREATE LOGGER + FILE HANDLER ─────────────────────────
+    // We create an anonymous logger and attach a rotating FileHandler for this
+    // connection's search log file pattern.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Inits the search logger.
+     * Initialises the per-connection search logger on first use.
+     *
+     * @param connection  The connection to initialise logging for.
      */
     private void initSearchLogger( Connection connection )
     {
@@ -172,10 +201,12 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    // ── DISPOSE — CLOSE HANDLERS AND DELETE LOG FILES ─────────────────────────────
     /**
-     * Disposes the search logger of the given connection.
-     * 
-     * @param connection the connection
+     * Closes all file handlers for the given connection and deletes its log files.
+     * Called when a connection is removed from the connection manager.
+     *
+     * @param connection  The connection being disposed.
      */
     public void dispose( Connection connection )
     {
@@ -199,6 +230,19 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    // ── LOG — WRITE A FORMATTED LDIF RECORD + HEADERS TO THE FILE ─────────────────
+    // We prepend the result, connection URL, and date comment lines, then append
+    // the content text.  The type parameter provides the log category label
+    // (e.g. "SEARCH REQUEST (1)").
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Writes a formatted search log entry to the connection's log file.
+     *
+     * @param text        The pre-formatted LDIF content string.
+     * @param type        The log category label (e.g. {@code "SEARCH REQUEST (1)"}).
+     * @param ex          The exception, or {@code null} if the operation succeeded.
+     * @param connection  The connection that performed the search.
+     */
     private void log( String text, String type, StudioLdapException ex, Connection connection )
     {
         String id = connection.getId();
@@ -250,8 +294,15 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    // ── LOG SEARCH REQUEST — RECORD THE SEARCH PARAMETERS ─────────────────────────
+    // R2 fires the sensors — we log the full search parameters: base DN, scope,
+    // filter, attributes, alias dereferencing, size/time limits, and controls.
+    // We also log the equivalent LDAP URL and ldapsearch command line.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Logs the LDAP search request parameters including the LDAP URL and equivalent
+     * {@code ldapsearch} command line as LDIF comment lines.
      */
     public void logSearchRequest( Connection connection, String searchBase, String filter,
         SearchControls searchControls, AliasDereferencingMethod aliasesDereferencingMethod,
@@ -283,7 +334,6 @@ public class LdifSearchLogger implements ILdapLogger
             aliasesDereferencingMethod, searchControls.getCountLimit(), searchControls.getTimeLimit(), filter,
             searchControls.getReturningAttributes() );
 
-        // build 
         Collection<LdifLineBase> lines = new ArrayList<LdifLineBase>();
         lines.add( LdifCommentLine.create( "# LDAP URL     : " + url.toString() ) ); //$NON-NLS-1$
         lines.add( LdifCommentLine.create( "# command line : " + cmdLine.toString() ) ); //$NON-NLS-1$
@@ -314,8 +364,14 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    // ── LOG SEARCH RESULT ENTRY — RECORD EACH RETURNED ENTRY ─────────────────────
+    // R2 reports each sensor hit — we log it as a content LDIF record
+    // (DN + all attributes), masking any sensitive attribute values.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Logs a single LDAP search result entry as a content LDIF record.
+     * Sensitive attribute values are replaced with {@code "**********"}.
      */
     public void logSearchResultEntry( Connection connection, StudioSearchResult studioSearchResult, long requestNum,
         StudioLdapException ex )
@@ -366,8 +422,13 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    // ── LOG SEARCH RESULT REFERENCE — RECORD A REFERRAL IN THE RESULTS ────────────
+    // The server returned a search result reference (a referral mid-search) —
+    // we log its URL list as a comment line.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Logs a search result reference (mid-search referral) as a comment LDIF record.
      */
     public void logSearchResultReference( Connection connection, Referral referral,
         ReferralsInfo referralsInfo, long requestNum, StudioLdapException ex )
@@ -391,8 +452,12 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    // ── LOG SEARCH RESULT DONE — RECORD THE SEARCH COMPLETION ─────────────────────
+    // R2's sensor sweep is done — we log how many entries were returned.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Logs the search-done event, including the total entry count.
      */
     public void logSearchResultDone( Connection connection, long count, long requestNum, StudioLdapException ex )
     {
@@ -414,12 +479,13 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    // ── GET FILES — EXPOSE LOG FILES TO THE UI ─────────────────────────────────────
     /**
-     * Gets the files.
-     * 
-     * @param connection the connection
-     * 
-     * @return the files
+     * Returns the search log files for the given connection.
+     * Initialises the logger if it has not been created yet.
+     *
+     * @param connection  The connection whose log files to retrieve.
+     * @return  An array of log {@link File}s, sorted by name.
      */
     public File[] getFiles( Connection connection )
     {
@@ -443,12 +509,13 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    // ── GET LOG FILES — MATCH ROTATION FILES BY NAME PATTERN ──────────────────────
     /**
-     * Gets the log files.
-     * 
-     * @param fileHandler the file handler
-     * 
-     * @return the log files
+     * Returns all rotation log files matching the given connection's search log
+     * file name pattern.
+     *
+     * @param connection  The connection whose log files to list.
+     * @return  Sorted array of matching {@link File}s.
      */
     private static File[] getLogFiles( Connection connection )
     {
@@ -464,10 +531,10 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    // ── PREFERENCES HELPERS ────────────────────────────────────────────────────────
+
     /**
-     * Checks if search request log is enabled.
-     * 
-     * @return true, if search request log is enabled
+     * Returns {@code true} if search request logging is enabled.
      */
     private boolean isSearchRequestLogEnabled()
     {
@@ -476,9 +543,7 @@ public class LdifSearchLogger implements ILdapLogger
 
 
     /**
-     * Checks if search result entry log is enabled.
-     * 
-     * @return true, if search result log is enabled
+     * Returns {@code true} if search result entry logging is enabled.
      */
     private boolean isSearchResultEntryLogEnabled()
     {
@@ -487,9 +552,9 @@ public class LdifSearchLogger implements ILdapLogger
 
 
     /**
-     * Gets the number of log files to use.
-     * 
-     * @return the number of log files to use
+     * Returns the number of log rotation files per connection.
+     *
+     * @return  The configured file count.
      */
     private int getFileCount()
     {
@@ -498,9 +563,9 @@ public class LdifSearchLogger implements ILdapLogger
 
 
     /**
-     * Gets the maximum file size in kB.
-     * 
-     * @return the maximum file size in kB
+     * Returns the maximum size per log file in kilobytes.
+     *
+     * @return  The configured maximum file size in kB.
      */
     private int getFileSizeInKb()
     {
@@ -508,36 +573,54 @@ public class LdifSearchLogger implements ILdapLogger
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public String getId()
     {
         return id;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public void setId( String id )
     {
         this.id = id;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public String getName()
     {
         return name;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public void setName( String name )
     {
         this.name = name;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public String getDescription()
     {
         return description;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public void setDescription( String description )
     {
         this.description = description;

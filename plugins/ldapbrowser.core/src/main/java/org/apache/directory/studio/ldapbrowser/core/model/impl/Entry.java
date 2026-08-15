@@ -28,8 +28,22 @@ import org.apache.directory.studio.ldapbrowser.core.model.IBrowserConnection;
 import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 
 
+// ── CLASS: Entry — ONE ROOM ON THE DEATH STAR BLUEPRINT ──────────────────────
+// Every room on the Death Star (except the very top sector) has a parent
+// corridor it belongs to and a name that makes it unique within that corridor.
+// Entry is that room: a concrete AbstractEntry that stores a parent IEntry
+// and an RDN.  The DN is computed on the fly by appending the RDN to the
+// parent's DN — no redundant storage, just navigation up the tree.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The Entry class represents an entry with a logical parent entry.
+ * A concrete {@link AbstractEntry} implementation representing a regular
+ * LDAP directory entry with a parent entry and an RDN.
+ * The DN is computed dynamically as {@code parent.getDn().add(rdn)}.
+ * The connection is inherited from the parent chain.
+ *
+ * <p>Think of this as one room on the Death Star blueprint — it knows its name
+ * (RDN) and which corridor it hangs off (parent), and its full address (DN)
+ * is derived by walking up to the root.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -45,16 +59,18 @@ public class Entry extends AbstractEntry
     protected IEntry parent;
 
 
+    // ── No-Arg Constructor For Serialisation ─────────────────────────────────────
     protected Entry()
     {
     }
 
 
+    // ── Death Star Room Constructor: Parent + RDN Required ───────────────────────
     /**
      * Creates a new instance of Entry.
-     * 
-     * @param parent the parent entry
-     * @param rdn the Rdn
+     *
+     * @param parent the parent entry; must not be {@code null}
+     * @param rdn the Rdn; must not be {@code null} or empty
      */
     public Entry( IEntry parent, Rdn rdn )
     {
@@ -67,6 +83,7 @@ public class Entry extends AbstractEntry
     }
 
 
+    // ── Performance Opt: Return The Stored RDN Directly ──────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.impl.AbstractEntry#getRdn()
      */
@@ -77,6 +94,7 @@ public class Entry extends AbstractEntry
     }
 
 
+    // ── DN Is Derived By Appending RDN To Parent's DN ────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IEntry#getDn()
      */
@@ -95,6 +113,7 @@ public class Entry extends AbstractEntry
     }
 
 
+    // ── Blueprint: Return The Parent Corridor ─────────────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IEntry#getParententry()
      */
@@ -104,6 +123,7 @@ public class Entry extends AbstractEntry
     }
 
 
+    // ── Connection Is Inherited From The Parent Chain ─────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IEntry#getBrowserConnection()
      */
@@ -113,6 +133,7 @@ public class Entry extends AbstractEntry
     }
 
 
+    // ── Blueprint: Update This Room's RDN (e.g. after a rename) ──────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.impl.AbstractEntry#setRdn(org.apache.directory.studio.ldapbrowser.core.model.RDN)
      */
@@ -122,6 +143,7 @@ public class Entry extends AbstractEntry
     }
 
 
+    // ── Blueprint: Move This Room To A New Parent Corridor ───────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.impl.AbstractEntry#setParent(org.apache.directory.studio.ldapbrowser.core.model.IEntry)
      */

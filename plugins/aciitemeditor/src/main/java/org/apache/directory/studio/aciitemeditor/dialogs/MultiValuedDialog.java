@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.dialogs;
 
@@ -52,8 +52,21 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
 
 
+// ── CLASS: MultiValuedDialog — THE ISB MULTI-ENTRY MANIFEST EDITOR ────────────
+// Some rows on the ISB clearance manifest require multiple entries — a list of
+// DNs for a user group, several attribute types, or multiple subtree specs.
+// Grand Moff opens a small secondary form showing all current entries in a
+// table, with Add / Edit / Delete buttons to manage them.
+// MultiValuedDialog is that secondary form.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Dialog to edit user classes or protected items with multiple values.
+ * JFace {@link Dialog} for editing a list of string values for a multi-valued
+ * ACI protected item or user class.
+ * Displays the current values in a table and provides Add, Edit, and Delete
+ * buttons backed by a delegated {@link AbstractDialogStringValueEditor} for the
+ * actual value input.
+ * Think of this as the ISB multi-entry form: one dialog, one list, one editor
+ * per entry type.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -84,14 +97,28 @@ public class MultiValuedDialog extends Dialog
     private Button deleteButton = null;
 
 
+    // ── OPEN THE MULTI-ENTRY FORM ─────────────────────────────────────────────
+    // Grand Moff opens the secondary form, handing it the live values list to
+    // mutate and the value editor to open when adding or editing entries.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of MultiValuedDialog.
+     * Creates a new {@code MultiValuedDialog}.
+     * The {@code values} list is mutated directly — no copy is made — so callers
+     * see the changes immediately when the dialog closes.
      *
-     * @param parentShell the shell
-     * @param displayName the display name of the edited element
-     * @param values a modifiable list of values
-     * @param context the context
-     * @param valueEditor the detail value editor
+     * <p>For example — editing the subtree list for a user class:</p>
+     * <pre>
+     *   MultiValuedDialog dlg = new MultiValuedDialog(
+     *       shell, "Subtree", wrapper.getValues(), context, subtreeEditor);
+     *   dlg.open();
+     *   // wrapper.getValues() now reflects the user's edits
+     * </pre>
+     *
+     * @param parentShell  the parent SWT shell
+     * @param displayName  the category label used as the dialog title suffix
+     * @param values       the live, modifiable list of string values to edit
+     * @param context      the DTO carrying connection and entry for the value editor
+     * @param valueEditor  the editor to open when adding or changing an entry
      */
     public MultiValuedDialog( Shell parentShell, String displayName, List<String> values,
         ACIItemValueWithContext context, AbstractDialogStringValueEditor valueEditor )
@@ -106,10 +133,14 @@ public class MultiValuedDialog extends Dialog
     }
 
 
+    // ── SET TITLE ─────────────────────────────────────────────────────────────
+    // The orderly labels the secondary form window with the category name so
+    // Grand Moff knows which manifest row he is editing.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Sets the dialog title to a localised prefix plus the {@code displayName}.
+     *
      * {@inheritDoc}
-     * 
-     * Sets the dialog title.
      */
     protected void configureShell( Shell shell )
     {
@@ -119,10 +150,15 @@ public class MultiValuedDialog extends Dialog
     }
 
 
+    // ── ONLY AN OK BUTTON ─────────────────────────────────────────────────────
+    // The multi-entry form edits the list in-place, so Cancel is meaningless —
+    // the user just closes with OK when done.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Creates only an OK button (no Cancel — edits are applied immediately to
+     * the live list).
+     *
      * {@inheritDoc}
-     * 
-     * Creates only a OK button.
      */
     protected void createButtonsForButtonBar( Composite parent )
     {
@@ -130,7 +166,11 @@ public class MultiValuedDialog extends Dialog
     }
 
 
-    /** 
+    // ── BUILD THE TABLE-AND-BUTTONS LAYOUT ───────────────────────────────────
+    // The orderly sets up the two-column layout: table on the left, button
+    // column on the right.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
      * {@inheritDoc}
      */
     protected Control createDialogArea( Composite parent )
@@ -154,8 +194,14 @@ public class MultiValuedDialog extends Dialog
     }
 
 
+    // ── CREATE THE VALUES TABLE ───────────────────────────────────────────────
+    // The values list is bound directly to the table viewer so Add/Edit/Delete
+    // operations are immediately visible to the user.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method initializes table and table viewer
+     * Creates the table and {@link TableViewer} bound to the live values list.
+     * Installs selection and double-click listeners to enable/disable buttons
+     * and open the edit dialog.
      */
     private void createTable()
     {
@@ -192,8 +238,14 @@ public class MultiValuedDialog extends Dialog
     }
 
 
+    // ── CREATE THE BUTTON COLUMN ──────────────────────────────────────────────
+    // Three buttons — Add, Edit, Delete — sit in the right column; Edit and Delete
+    // start disabled and are enabled only when a row is selected.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method initializes buttons  
+     * Creates the Add, Edit, and Delete buttons in the right column.
+     * Edit and Delete are initially disabled; they become enabled when a row
+     * is selected in the table.
      */
     private void createButtonComposite()
     {
@@ -266,8 +318,13 @@ public class MultiValuedDialog extends Dialog
     }
 
 
+    // ── ADD A NEW ENTRY ───────────────────────────────────────────────────────
+    // Grand Moff clicks Add: the delegated value editor opens for a blank entry,
+    // and if he fills it in, the new value is appended to the list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Opens the editor and adds the new value to the list.
+     * Opens the delegated value editor for a new entry and appends the result
+     * to the values list if the user provides a non-null value.
      */
     private void addValue()
     {
@@ -290,9 +347,14 @@ public class MultiValuedDialog extends Dialog
     }
 
 
+    // ── EDIT THE SELECTED ENTRY ───────────────────────────────────────────────
+    // Grand Moff double-clicks or presses Edit: the delegated editor opens
+    // pre-filled with the selected value, and the replacement is swapped in.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Opens the editor with the currently selected
-     * value and puts the modified value into the list.
+     * Opens the delegated value editor pre-populated with the currently selected
+     * value.  If the user confirms, the old value is removed and the new value
+     * is appended.
      */
     private void editValue()
     {
@@ -320,8 +382,12 @@ public class MultiValuedDialog extends Dialog
     }
 
 
+    // ── DELETE THE SELECTED ENTRY ─────────────────────────────────────────────
+    // Grand Moff selects a row and presses Delete: the entry is removed from
+    // the list and the table refreshes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Deletes the currently selected value from list.
+     * Removes the currently selected value from the list and refreshes the table.
      */
     private void deleteValue()
     {
@@ -334,9 +400,13 @@ public class MultiValuedDialog extends Dialog
     }
 
 
+    // ── ENABLE/DISABLE BUTTONS ON SELECTION ──────────────────────────────────
+    // When a row is selected, Edit and Delete activate; when the selection is
+    // cleared, they go back to disabled.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Called when value is selected in table viewer.
-     * Updates the enabled/disabled state of the buttons.
+     * Updates the enabled state of the Edit and Delete buttons based on whether
+     * a row is currently selected in the table.
      */
     private void valueSelected()
     {
@@ -355,8 +425,15 @@ public class MultiValuedDialog extends Dialog
     }
 
 
+    // ── RETRIEVE THE SELECTED ROW ─────────────────────────────────────────────
+    // A helper that extracts the selected string from the table viewer's
+    // structured selection, or returns null if nothing is selected.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @return the value that is selected in the table viewer, or null.
+     * Returns the string value currently selected in the table viewer,
+     * or {@code null} if nothing is selected.
+     *
+     * @return the selected string, or {@code null}
      */
     private String getSelectedValue()
     {

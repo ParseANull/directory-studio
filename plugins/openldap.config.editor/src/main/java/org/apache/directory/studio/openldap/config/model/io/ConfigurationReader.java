@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.model.io;
 
@@ -75,19 +75,46 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.osgi.util.NLS;
 
 
+// ── CLASS: ConfigurationReader — R2-D2 Downloading the Death Star Plans ──────
+// R2-D2 plugs into the Imperial data terminal, pulls the Death Star schematics
+// out of the server, decodes each sector of data, and builds a complete picture
+// of the station from raw bytes. ConfigurationReader does the same: it connects
+// to an LDAP server (or reads from a local directory), fetches all the cn=config
+// entries, and uses Java reflection to decode each entry into the right OlcConfig
+// bean — giving us a live in-memory model of the OpenLDAP server configuration.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements a configuration reader for OpenLDAP.
- * 
+ * Reads an OpenLDAP server configuration from an LDAP server or a local
+ * directory of LDIF files, and returns an {@link OpenLdapConfiguration} object
+ * populated with the appropriate {@link OlcConfig} subclass beans.
+ * <p>
+ * This class uses Java reflection to map LDAP object classes to model classes
+ * and to inject attribute values into bean fields annotated with
+ * {@link ConfigurationElement}. Think of it as R2-D2 downloading and decoding
+ * the Death Star plans — raw LDAP entries in, structured Java model out.
+ * </p>
+ * <p>
+ * All methods are static; this class cannot be instantiated.
+ * </p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ConfigurationReader
 {
+    // ── constructor — R2-D2 Powers Up But Doesn't Take Orders Directly ────────────
+    // R2-D2 is always ready to help but he's a tool, not an actor — you call his
+    // static methods (his beeps and whistles) directly. You never "new" up an R2-D2.
+    // This private constructor enforces the utility-class pattern.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Private constructor — this is a static utility class and cannot be instantiated.
+     */
     private ConfigurationReader()
     {
         // Nothing to do
     }
-    
-    
+
+
     /** The package name where the model classes are stored */
     private static final String MODEL_PACKAGE_NAME = "org.apache.directory.studio.openldap.config.model";
 
@@ -98,12 +125,28 @@ public class ConfigurationReader
     private static final String OVERLAY_PACKAGE_NAME = "org.apache.directory.studio.openldap.config.model.overlay";
 
 
+    // ── readConfiguration(ConnectionServerConfigurationInput) — R2 Reads a Live Server
+    // R2-D2 jacks into the active Imperial network: he authenticates, locates the
+    // configuration subtree at cn=config, and downloads every entry using a breadth-first
+    // walk. Then he decodes each raw LDAP entry into the right OlcConfig bean.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the configuration.
+     * Reads the OpenLDAP configuration from a live LDAP server connection.
+     * We connect to the server, search for all entries under cn=config, and
+     * convert each one to the appropriate {@link OlcConfig} subclass using
+     * reflection. Overlays are attached to their parent database; the global
+     * config and databases are stored in the returned {@link OpenLdapConfiguration}.
      *
-     * @param input the input
-     * @return the OpenLDAP configuration
-     * @throws Exception
+     * <p>For example — R2 downloads plans from the live Death Star:</p>
+     * <pre>
+     *   ConnectionServerConfigurationInput input = ...;
+     *   OpenLdapConfiguration cfg = ConfigurationReader.readConfiguration( input );
+     *   OlcGlobal global = cfg.getGlobal();
+     * </pre>
+     *
+     * @param input  the connection and server configuration input
+     * @return  the populated {@link OpenLdapConfiguration}
+     * @throws Exception  if the server cannot be reached or the configuration cannot be read
      */
     public static OpenLdapConfiguration readConfiguration( ConnectionServerConfigurationInput input ) throws Exception
     {
@@ -176,12 +219,23 @@ public class ConfigurationReader
     }
 
 
+    // ── readConfiguration(DirectoryServerConfigurationInput) — R2 Reads a Local Directory
+    // R2-D2 reads from a local filesystem rather than a live server — he parses the
+    // LDIF files in the directory and builds the same configuration model.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the configuration.
+     * Reads the OpenLDAP configuration from a local directory of LDIF files.
+     * Delegates to {@link #readConfiguration(File)} using the directory from the input.
      *
-     * @param input the input
-     * @return the OpenLDAP configuration
-     * @throws Exception
+     * <p>For example — R2 reads plans from a local storage cartridge:</p>
+     * <pre>
+     *   DirectoryServerConfigurationInput input = ...;
+     *   OpenLdapConfiguration cfg = ConfigurationReader.readConfiguration( input );
+     * </pre>
+     *
+     * @param input  the directory server configuration input (carries a local directory path)
+     * @return  the populated {@link OpenLdapConfiguration}
+     * @throws Exception  if the directory cannot be read or parsed
      */
     public static OpenLdapConfiguration readConfiguration( DirectoryServerConfigurationInput input ) throws Exception
     {
@@ -189,12 +243,24 @@ public class ConfigurationReader
     }
 
 
+    // ── readConfiguration(File) — R2 Reads Plans from a Local LDIF Directory ──────
+    // R2-D2 cracks open the local data cartridge, walks the directory tree of LDIF
+    // files, and assembles the full configuration object tree from the entries found.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the configuration.
+     * Reads the OpenLDAP configuration from a local directory of LDIF files.
+     * We use {@link ExpandedLdifUtils} to parse the directory into a DN tree,
+     * then walk that tree to create {@link OlcConfig} beans for each entry.
      *
-     * @param directory the directory
-     * @return the OpenLDAP configuration
-     * @throws Exception
+     * <p>For example — R2 reads plans from a local filesystem directory:</p>
+     * <pre>
+     *   File dir = new File( "/etc/openldap/slapd.d" );
+     *   OpenLdapConfiguration cfg = ConfigurationReader.readConfiguration( dir );
+     * </pre>
+     *
+     * @param directory  the local directory containing slapd.d LDIF files
+     * @return  the populated {@link OpenLdapConfiguration}
+     * @throws Exception  if the directory is empty or cannot be parsed
      */
     public static OpenLdapConfiguration readConfiguration( File directory ) throws Exception
     {
@@ -211,11 +277,18 @@ public class ConfigurationReader
     }
 
 
+    // ── createConfigurationObjects(tree, config) — R2 Walks the Entry Tree ────────
+    // R2-D2 traverses each sector of the data download, building the map of DN-to-bean
+    // pairs so he can wire overlays to their parent databases correctly.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the configuration objects.
+     * Creates {@link OlcConfig} objects from a DN-based tree of LDAP entries and
+     * populates the given configuration with them.
+     * This overload initialises the DN-to-bean tracking map before recursing.
      *
-     * @param configuration the configuration
-     * @param dnToConfigObjectMap the maps to store
+     * @param tree           the DN tree of parsed LDAP entries
+     * @param configuration  the configuration to populate
+     * @throws ConfigurationException  if any entry cannot be converted to a bean
      */
     /**
      * Creates the configuration objects.
@@ -234,13 +307,21 @@ public class ConfigurationReader
     }
 
 
+    // ── createConfigurationObjects(node, config, map) — R2 Decodes Each Entry Node ─
+    // R2-D2 processes each node in the tree: decode the entry, identify what type of
+    // config object it is (overlay? database? global?), link it to its parent, and
+    // recurse into children. This recursive walk reconstructs the full hierarchy.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the configuration objects.
+     * Recursively walks the DN tree, converts each entry to an {@link OlcConfig} bean,
+     * categorises it (global, database, overlay, or other), and stores it in both
+     * the tracking map and the {@link OpenLdapConfiguration}.
+     * Overlays are attached to their parent database using the tracking map.
      *
-     * @param node the node
-     * @param configuration the configuration
-     * @param dnToConfigObjectMap the maps to associate DNs to configuration objects
-     * @throws ConfigurationException
+     * @param node                the current tree node
+     * @param configuration       the configuration to populate
+     * @param dnToConfigObjectMap a map from DN to the bean created for that DN (used to resolve overlay parents)
+     * @throws ConfigurationException  if any entry cannot be converted
      */
     private static void createConfigurationObjects( DnNode<Entry> node, OpenLdapConfiguration configuration,
         Map<Dn, OlcConfig> dnToConfigObjectMap ) throws ConfigurationException
@@ -311,12 +392,24 @@ public class ConfigurationReader
     }
 
 
+    // ── readEntries(File) — R2 Reads the LDIF Files from Disk ────────────────────
+    // R2-D2 cracks open the local storage: he reads all the LDIF files in the slapd.d
+    // directory and assembles them into a single DN tree. If the directory is empty
+    // or unreadable, he panics (throws).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the configuration entries from the input.
+     * Reads the LDIF files from the given local directory into a DN tree.
+     * Uses {@link ExpandedLdifUtils#read(File)} to do the heavy lifting.
+     * Throws if no entries are found — an empty slapd.d is not a valid configuration.
      *
-     * @param directory the directory
-     * @return the tree of configuration entries found
-     * @throws Exception if an error occurred
+     * <p>For example — R2 reads files from the local slapd.d directory:</p>
+     * <pre>
+     *   DnNode&lt;Entry&gt; tree = readEntries( new File( "/etc/openldap/slapd.d" ) );
+     * </pre>
+     *
+     * @param directory  the local slapd.d directory
+     * @return  a non-empty DN tree of parsed entries
+     * @throws Exception  if the directory is empty or cannot be read
      */
     private static DnNode<Entry> readEntries( File directory )
         throws Exception
@@ -336,11 +429,27 @@ public class ConfigurationReader
     }
 
 
+    // ── getHighestStructuralObjectClass — R2 Identifies the Right Schematic Page ──
+    // R2-D2 scans the object class list and finds the most-specific structural object
+    // class. LDAP entries inherit from a chain of object classes, and we need the leaf
+    // (most specific) one to know which Java bean class to instantiate.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the highest structural object class found in the attribute.
+     * Finds the most-derived (highest) structural object class in an entry's
+     * {@code objectClass} attribute, by eliminating any object class that appears
+     * as a superior of another.
+     * We use the schema manager to look up the class hierarchy — the remaining
+     * candidate after all superiors are removed is the one we want.
      *
-     * @param objectClassAttribute the 'objectClass' attribute
-     * @return the highest structural object class found in the attribute.
+     * <p>For example — R2 finds the leaf structural object class:</p>
+     * <pre>
+     *   ObjectClass oc = getHighestStructuralObjectClass( entry.get( "objectClass" ) );
+     *   // oc.getName() == "olcMdbConfig"
+     * </pre>
+     *
+     * @param objectClassAttribute  the {@code objectClass} attribute of an LDAP entry
+     * @return  the most-derived structural {@link ObjectClass}
+     * @throws ConfigurationException  if the schema cannot be accessed or the attribute is malformed
      */
     public static ObjectClass getHighestStructuralObjectClass( Attribute objectClassAttribute )
         throws ConfigurationException
@@ -399,11 +508,25 @@ public class ConfigurationReader
     }
 
 
+    // ── getAuxiliaryObjectClasses — R2 Identifies Optional Schematic Overlays ─────
+    // R2-D2 scans the object class list for auxiliary classes — optional structural
+    // add-ons that augment the main object class, like overlay configuration mixed
+    // into a database entry. We need these to inject their fields too.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the auxiliary object classes found in the attribute.
+     * Returns all auxiliary {@link ObjectClass} objects found in an entry's
+     * {@code objectClass} attribute.
+     * Auxiliary object classes add extra attributes to an entry on top of its
+     * structural class. We use these to find and inject auxiliary bean fields.
      *
-     * @param objectClassAttribute the 'objectClass' attribute
-     * @return the auxiliary object classes found in the attribute.
+     * <p>For example — R2 finds auxiliary object classes:</p>
+     * <pre>
+     *   ObjectClass[] aux = getAuxiliaryObjectClasses( entry.get( "objectClass" ) );
+     * </pre>
+     *
+     * @param objectClassAttribute  the {@code objectClass} attribute of an LDAP entry
+     * @return  an array of auxiliary {@link ObjectClass} objects; may be empty but never null
+     * @throws ConfigurationException  if the schema cannot be accessed
      */
     public static ObjectClass[] getAuxiliaryObjectClasses( Attribute objectClassAttribute )
         throws ConfigurationException
@@ -437,14 +560,28 @@ public class ConfigurationReader
     }
 
 
+    // ── readEntries(Dn, input, connection) — R2 Downloads Entries from a Live Server
+    // R2-D2 connects to the live Death Star network, finds the config base entry, then
+    // breadth-first-walks the entire cn=config subtree, collecting every entry. The
+    // result is a flat list ready for bean conversion.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the configuration entries from the input.
+     * Searches the live LDAP server for all entries under the configuration DN
+     * (cn=config) using a breadth-first walk.
+     * We start at the config base entry and recursively search for children until
+     * we have the complete set. Also sets up an in-memory partition on the input
+     * for later use by the editor.
      *
-     * @param configurationDn the configuration DN
-     * @param input the editor input
-     * @param browserConnection the connection
-     * @return the list of configuration entries found
-     * @throws Exception if an error occurred
+     * <p>For example — R2 downloads entries from the live server:</p>
+     * <pre>
+     *   List&lt;Entry&gt; entries = readEntries( configDn, input, browserConn );
+     * </pre>
+     *
+     * @param configurationDn   the DN of the cn=config entry
+     * @param input             the server configuration input (holds the connection)
+     * @param browserConnection the browser connection used for searches
+     * @return  the complete list of configuration entries from the server
+     * @throws Exception  if the server is unreachable or the config base entry is missing
      */
     public static List<Entry> readEntries( Dn configurationDn, ConnectionServerConfigurationInput input,
         IBrowserConnection browserConnection ) throws Exception
@@ -550,6 +687,28 @@ public class ConfigurationReader
     }
 
 
+    // ── createConfigurationObject — R2 Decodes a Single Entry into a Java Bean ────
+    // R2-D2 takes one raw LDAP entry, looks up its object class, determines which
+    // package (model / database / overlay) and which Java class matches, instantiates
+    // it via reflection, processes any auxiliary object classes, and then injects
+    // all attribute values into the bean fields.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Converts a single LDAP entry into the correct {@link OlcConfig} subclass bean.
+     * We determine the bean class by mapping the entry's highest structural object
+     * class name to the corresponding Java class in the model, database, or overlay
+     * package. Auxiliary object classes are handled separately and attached to the bean.
+     *
+     * <p>For example — R2 decodes a single slapd.d entry:</p>
+     * <pre>
+     *   OlcConfig bean = createConfigurationObject( mdbEntry );
+     *   // bean instanceof OlcMdbConfig == true
+     * </pre>
+     *
+     * @param entry  the LDAP entry to convert
+     * @return  the populated {@link OlcConfig} bean, or {@code null} if the entry has no objectClass
+     * @throws ConfigurationException  if bean instantiation or value injection fails
+     */
     private static OlcConfig createConfigurationObject( Entry entry )
         throws ConfigurationException
     {
@@ -658,12 +817,28 @@ public class ConfigurationReader
     }
 
 
+    // ── readValues — R2 Injects Attribute Values into a Bean's Fields ─────────────
+    // R2-D2 walks up the Java class hierarchy of the bean, scanning every declared
+    // field for a @ConfigurationElement annotation. For each annotated field, he
+    // finds the matching LDAP attribute in the entry and calls readAttributeValue
+    // to inject the data into the field.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the values of the entry and saves them to the bean.
+     * Injects attribute values from an LDAP entry into the annotated fields of a bean.
+     * We walk up the class hierarchy (superclass by superclass) to catch fields
+     * declared in parent classes. For each field annotated with
+     * {@link ConfigurationElement}, we find the matching LDAP attribute and inject
+     * its value(s) via {@link #readAttributeValue}.
      *
-     * @param entry the entry
-     * @param bean then bean
-     * @throws ConfigurationException
+     * <p>For example — R2 injects attribute values into an OlcMdbConfig bean:</p>
+     * <pre>
+     *   readValues( mdbEntry, olcMdbConfig );
+     *   // olcMdbConfig.getOlcDbDirectory() now holds the value from the entry
+     * </pre>
+     *
+     * @param entry  the LDAP entry containing attribute values
+     * @param bean   the bean to inject values into
+     * @throws ConfigurationException  if a field value cannot be injected
      */
     private static void readValues( Entry entry, Object bean ) throws ConfigurationException
     {
@@ -705,14 +880,28 @@ public class ConfigurationReader
     }
 
 
+    // ── readAttributeValue — R2 Decodes a Single Attribute Value into the Right Type
+    // R2-D2 reads one attribute value from the entry and injects it into the right
+    // field in the bean. String, int, Integer, long, Long, Boolean, Dn, Set, and List
+    // fields are all handled — R2 picks the right decoder for each type.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the attribute value.
+     * Injects a single LDAP attribute value into a bean field, handling all supported
+     * Java types: String, int/Integer, long/Long, boolean/Boolean, Dn, Set, and List.
+     * For collection types, we find and call the appropriate {@code addXxx()} method
+     * on the bean using reflection.
      *
-     * @param bean the bean
-     * @param field the field
-     * @param attribute the attribute
-     * @param value the value
-     * @throws ConfigurationException
+     * <p>For example — R2 decodes a single attribute value:</p>
+     * <pre>
+     *   readAttributeValue( bean, integerField, attribute, value );
+     *   // field is now set to Integer.parseInt( value.getString() )
+     * </pre>
+     *
+     * @param bean       the target bean to inject into
+     * @param field      the field to set
+     * @param attribute  the LDAP attribute containing the value
+     * @param value      the specific attribute value to decode and inject
+     * @throws ConfigurationException  if the value cannot be decoded or the field cannot be set
      */
     private static void readAttributeValue( Object bean, Field field, Attribute attribute, Value value )
         throws ConfigurationException
@@ -870,13 +1059,29 @@ public class ConfigurationReader
     }
 
 
+    // ── readSingleValue — R2 Decodes One Attribute Value to the Correct Java Type ──
+    // R2-D2 reads a raw LDAP string value and converts it to the target Java type:
+    // String stays a String, numbers get parsed, booleans get parsed, Dns get validated.
+    // If the conversion fails, he raises a ConfigurationException rather than silently
+    // storing garbage.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads a single value attribute.
+     * Converts a raw LDAP attribute value string to the target Java type.
+     * Supports String, int/Integer, long/Long, boolean/Boolean, and Dn.
+     * For Dn types, we validate the string is a legal LDAP distinguished name.
+     * Returns {@code null} for unrecognised types.
      *
-     * @param field the field
-     * @param attribute the attribute
-     * @param value the value as a String
-     * @throws ConfigurationException
+     * <p>For example — R2 decodes a raw value string:</p>
+     * <pre>
+     *   Object val = readSingleValue( Integer.class, attr, "500" );
+     *   // val == Integer(500)
+     * </pre>
+     *
+     * @param type       the target Java type to convert to
+     * @param attribute  the LDAP attribute (used in error messages)
+     * @param value      the raw string value to convert
+     * @return  the converted value, or {@code null} if the type is not supported
+     * @throws ConfigurationException  if the value cannot be parsed into the target type
      */
     private static Object readSingleValue( Class<?> type, Attribute attribute, String value )
         throws ConfigurationException

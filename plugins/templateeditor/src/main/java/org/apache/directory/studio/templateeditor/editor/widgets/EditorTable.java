@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.editor.widgets;
 
@@ -53,8 +53,20 @@ import org.apache.directory.studio.templateeditor.EntryTemplatePluginConstants;
 import org.apache.directory.studio.templateeditor.model.widgets.TemplateTable;
 
 
+// ── CLASS: EditorTable — THE TANTIVE IV MULTI-VALUE DATA PANEL ───────────────────
+// On the Tantive IV, the crew roster panel shows multiple entries in a scrollable
+// list — each officer's name on its own row. Operators can add new crew to the
+// roster, edit existing names, or delete departed crew from the list. This class
+// is that roster panel: a JFace {@link TableViewer} that displays all values of
+// a multi-valued LDAP attribute, with optional Add/Edit/Delete toolbar buttons.
+// Double-clicking a row acts as a shortcut for the Edit button.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an editor table.
+ * A multi-value editor widget that displays all string values of a single LDAP
+ * attribute in a scrollable {@link TableViewer}. Optionally provides Add, Edit,
+ * and Delete toolbar buttons for managing the list of values. Values are kept
+ * sorted case-insensitively. Double-clicking a row opens the Edit dialog.
+ * Think of this as the Tantive IV multi-value data panel (crew roster).
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -76,15 +88,17 @@ public class EditorTable extends EditorWidget<TemplateTable>
     private ToolItem deleteToolItem;
 
 
+    // ── CONSTRUCTOR: INSTALL THE MULTI-VALUE DATA PANEL ──────────────────────────
+    // The technician installs the table panel, binding it to the multi-valued LDAP
+    // attribute declared in the template model and configuring which action buttons
+    // should appear in the toolbar.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EditorTable.
-     * 
-     * @param editor
-     *      the associated editor
-     * @param templateTable
-     *      the associated template table
-     * @param toolkit
-     *      the associated toolkit
+     * Creates a new {@code EditorTable} bound to the given template table model.
+     *
+     * @param editor         the owning entry editor
+     * @param templateTable  the template model specifying attribute type and button visibility
+     * @param toolkit        the form toolkit used to create the SWT table
      */
     public EditorTable( IEntryEditor editor, TemplateTable templateTable, FormToolkit toolkit )
     {
@@ -92,8 +106,13 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── CREATE WIDGET: BUILD THE ROSTER PANEL ────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the table viewer and optional toolbar, fills the table with the
+     * current LDAP attribute values, and attaches all event listeners.
+     *
+     * @param parent  the parent composite
+     * @return the table widget composite
      */
     public Composite createWidget( Composite parent )
     {
@@ -110,13 +129,18 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── INIT WIDGET: BUILD THE TABLE AND TOOLBAR ──────────────────────────────────
+    // We create a composite with 1 column (table only) or 2 columns (table + toolbar).
+    // The TableViewer is configured with a case-insensitive comparator. The toolbar
+    // adds Add/Edit/Delete buttons based on the template's visibility flags.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and initializes the widget UI.
+     * Creates the {@link TableViewer} with a case-insensitive comparator and an
+     * optional vertical toolbar containing Add, Edit, and Delete buttons per the
+     * template model's configuration.
      *
-     * @param parent
-     *      the parent composite
-     * @return
-     *      the associated composite
+     * @param parent  the parent composite
+     * @return the table widget composite
      */
     private Composite initWidget( Composite parent )
     {
@@ -194,12 +218,12 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── NEEDS TOOLBAR: CHECK IF ANY BUTTONS ARE CONFIGURED ───────────────────────
     /**
-     * Indicates if the widget needs a toolbar for actions.
+     * Returns {@code true} if at least one toolbar button (Add, Edit, or Delete)
+     * is configured in the template model.
      *
-     * @return
-     *      <code>true</code> if the widget needs a toolbar for actions,
-     *      <code>false</code> if not
+     * @return {@code true} if a toolbar should be created
      */
     private boolean needsToolbar()
     {
@@ -207,8 +231,10 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── UPDATE WIDGET: REFRESH THE ROSTER FROM THE ATTRIBUTE ─────────────────────
     /**
-     * Updates the widget's content.
+     * Re-reads the LDAP attribute's string values and refreshes the table viewer.
+     * Shows an empty table if the attribute has no values.
      */
     private void updateWidget()
     {
@@ -224,8 +250,10 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── ADD LISTENERS: WIRE ALL TOOLBAR AND TABLE LISTENERS ──────────────────────
     /**
-     * Adds the listeners.
+     * Attaches selection listeners to the Add, Edit, and Delete toolbar buttons
+     * (if present), and selection/double-click listeners to the table viewer.
      */
     private void addListeners()
     {
@@ -290,8 +318,10 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── ADD TOOL ITEM ACTION: ADD A NEW VALUE TO THE ROSTER ──────────────────────
     /**
-     * This method is called when the 'Add...' toolbar item is clicked.
+     * Opens a {@link TextDialog} for the user to enter a new string value. Adds
+     * the entered value to the LDAP attribute and selects it in the viewer.
      */
     private void addToolItemAction()
     {
@@ -306,8 +336,10 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── EDIT TOOL ITEM ACTION: EDIT THE SELECTED VALUE ───────────────────────────
     /**
-     * This method is called when the 'Edit...' toolbar item is clicked.
+     * Opens a {@link TextDialog} pre-populated with the selected value. If the user
+     * changes it and confirms, removes the old value and adds the new one.
      */
     private void editToolItemAction()
     {
@@ -349,8 +381,10 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── DELETE TOOL ITEM ACTION: REMOVE THE SELECTED VALUE ───────────────────────
     /**
-     * This method is called when the 'Delete...' toolbar item is clicked.
+     * Opens a confirmation dialog, then removes the selected string value from the
+     * LDAP attribute if the user confirms.
      */
     private void deleteToolItemAction()
     {
@@ -367,8 +401,10 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── UPDATE BUTTONS STATES: ENABLE/DISABLE EDIT AND DELETE ────────────────────
     /**
-     * Updates the states of the buttons.
+     * Enables or disables the Edit and Delete toolbar buttons based on whether
+     * there is a current selection in the table viewer.
      */
     private void updateButtonsStates()
     {
@@ -386,8 +422,9 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── UPDATE: REFRESH THE TABLE ─────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Refreshes the table viewer from the current LDAP attribute values.
      */
     public void update()
     {
@@ -395,8 +432,9 @@ public class EditorTable extends EditorWidget<TemplateTable>
     }
 
 
+    // ── DISPOSE: NOTHING EXTRA TO CLEAN UP ───────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — the SWT Table and TableViewer are disposed by their parent composite.
      */
     public void dispose()
     {

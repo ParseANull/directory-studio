@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.widgets;
 
@@ -50,9 +50,24 @@ import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 
 
+// ── CLASS: ACIItemGrantsAndDenialsComposite — GRAND MOFF'S PERMISSION PANEL ───
+// Inside each permission row of the ACI directive the Grand Moff must specify
+// which micro-operations are granted and which are denied.  The panel shows a
+// tree with three categories (Read, Modify, Advanced) and per-row checkboxes
+// that cycle through unspecified → grant → deny → unspecified.
+// Undo/Redo buttons give him a safety net.
+// ACIItemGrantsAndDenialsComposite is that permission panel.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This composite contains GUI elements to edit ACI item grants and denials.
-
+ * SWT {@link Composite} presenting a tree of LDAP micro-operations grouped
+ * into Read, Modify, and Advanced categories, each with a three-state
+ * (unspecified / grant / deny) checkbox.
+ * Provides Grant All, Deny All, Deselect All, Undo, and Redo buttons.
+ * Used inside {@link ACIItemItemPermissionsComposite} and
+ * {@link ACIItemUserPermissionsComposite} to compose the grants-and-denials
+ * set for a single permission row.
+ * Think of this as the Grand Moff's micro-operation panel: pick each operation,
+ * grant or deny, undo if you change your mind.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -106,8 +121,12 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
                         new GrantAndDenialWrapper( GrantAndDenial.GRANT_DISCLOSE_ON_ERROR,
                             GrantAndDenial.DENY_DISCLOSE_ON_ERROR ) } ) };
 
+    // ── CLASS: GrantAndDenialCategory — MICRO-OPERATION CATEGORY ─────────────
+    // A category groups related micro-operations (Read, Modify, Advanced)
+    // for display as a collapsible tree node.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * A GrantAndDenialCategory is used to categorize grants and denials in a tree.
+     * Groups related grant/deny wrappers under a named, collapsible tree node.
      */
     private class GrantAndDenialCategory
     {
@@ -121,12 +140,12 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
         private GrantAndDenialWrapper[] grantAndDenialWrappers;
 
 
-        /** 
-         * Creates a new instance of GrantAndDenialCategory.
+        /**
+         * Creates a new {@code GrantAndDenialCategory}.
          *
-         * @param name the category name, displayed in tree
-         * @param expanded true if category should be initially expanded
-         * @param grantAndDenialWrappers the grants and denials wrappers display under this category
+         * @param name                  the category name shown as the tree node label
+         * @param expanded              {@code true} if the node should be initially expanded
+         * @param grantAndDenialWrappers the micro-operation wrappers in this category
          */
         private GrantAndDenialCategory( String name, boolean expanded, GrantAndDenialWrapper[] grantAndDenialWrappers )
         {
@@ -136,10 +155,14 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
         }
     }
 
+    // ── CLASS: GrantAndDenialWrapper — THREE-STATE MICRO-OPERATION ROW ────────
+    // Each leaf row in the tree tracks one micro-operation with three states:
+    // unspecified (null), grant, or deny.  Undo/redo stacks allow reverting
+    // bulk changes applied by the Grant All / Deny All buttons.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * A GrantAndDenialWrapper is used to display grants and denials in tree and to 
-     * track the current state (not specified, grant or deny). Additional it provides
-     * undo/redo functionality.
+     * Tracks the three-state (unspecified / grant / deny) selection for a single
+     * LDAP micro-operation and maintains undo/redo stacks.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -162,10 +185,10 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
 
         /**
-         * Creates a new instance of GrantAndDenialWrapper.
+         * Creates a new {@code GrantAndDenialWrapper} for a grant/deny pair.
          *
-         * @param grant
-         * @param denial
+         * @param grant   the grant constant for this micro-operation
+         * @param denial  the deny constant for this micro-operation
          */
         private GrantAndDenialWrapper( GrantAndDenial grant, GrantAndDenial denial )
         {
@@ -178,11 +201,16 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
     }
 
 
+    // ── CONSTRUCT THE GRANTS-AND-DENIALS TREE ────────────────────────────────
+    // The tree and button panel are built inside a two-column grid.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ACIItemGrantsAndDenialsComposite.
+     * Creates a new {@code ACIItemGrantsAndDenialsComposite}.
+     * Builds the two-column layout, creates the tree viewer, and adds the
+     * Grant All / Deny All / Deselect All / Undo / Redo buttons.
      *
-     * @param parent
-     * @param style
+     * @param parent  the parent composite
+     * @param style   SWT style bits
      */
     public ACIItemGrantsAndDenialsComposite( Composite parent, int style )
     {
@@ -216,9 +244,15 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
     }
 
 
+    // ── BUILD THE TREE VIEWER ─────────────────────────────────────────────────
+    // The two-column tree shows micro-operation names in column 1 and
+    // state icons (grant / deny / unspecified) in column 2.
+    // Clicking a state cell cycles through the three states.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method initializes tree
-     *
+     * Creates and configures the {@link TreeViewer} with two columns,
+     * a checkbox cell editor for the STATE column, and the appropriate
+     * content and label providers.
      */
     private void createTree()
     {
@@ -241,9 +275,6 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
         TreeColumn treeColumn2 = new TreeColumn( tree, SWT.LEFT, 1 );
         treeColumn2.setText( COLUMNS[1] );
         treeColumn2.setWidth( 80 );
-        //        TreeColumn c3 = new TreeColumn( tree, SWT.LEFT, 2 );
-        //        c3.setText( " " ); //$NON-NLS-1$
-        //        c3.setWidth( 0 );
 
         treeViewer = new TreeViewer( tree );
         treeViewer.setUseHashlookup( true );
@@ -273,9 +304,14 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
     }
 
 
+    // ── BUILD THE BUTTON PANEL ────────────────────────────────────────────────
+    // Grant All, Deny All, Deselect All set all rows at once; each call
+    // snapshots the current state to the undo stack first.
+    // Undo / Redo pop or push from the per-wrapper stacks.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method initializes buttonComposite  
-     *
+     * Creates the vertical button panel with Grant All, Deny All, Deselect All,
+     * Undo, and Redo buttons.
      */
     private void createButtonComposite()
     {
@@ -407,8 +443,13 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
     }
 
+    // ── CLASS: GrantsAndDenialsCellModifier — STATE CELL CYCLE HANDLER ────────
+    // Clicking the STATE cell cycles: unspecified → grant → deny → unspecified.
+    // Only GrantAndDenialWrapper rows in the STATE column are editable.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * The ICellModifier user for this tree viewer.
+     * {@link ICellModifier} that cycles the state of a {@link GrantAndDenialWrapper}
+     * through unspecified → grant → deny → unspecified on each click.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -417,11 +458,10 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
         /**
          * Only GrantAndDenialWrappers and the STATE colum is modifiable.
-         * 
-         * @param element the element
-         * @param property the property
-         * 
-         * @return true, if can modify
+         *
+         * @param element   the element
+         * @param property  the property
+         * @return          {@code true} if the cell is modifiable
          */
         public boolean canModify( Object element, String property )
         {
@@ -436,11 +476,10 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
         /**
          * The used CheckboxCellEditor accepts only Booleans.
-         * 
-         * @param element the element
-         * @param property the property
-         * 
-         * @return the value
+         *
+         * @param element   the element
+         * @param property  the property
+         * @return          {@code Boolean.TRUE} always (the checkbox editor requires it)
          */
         public Object getValue( Object element, String property )
         {
@@ -454,16 +493,17 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
 
         /**
-         * Performs the tree-state transtion.
-         * 
-         * @param element the element
-         * @param value the value
-         * @param property the property
+         * Cycles the wrapper's state: {@code null} → grant → deny → {@code null}.
+         * Saves the previous state to the undo stack before changing.
+         *
+         * @param element   the tree element (or its {@link Item} wrapper)
+         * @param value     unused (the click is the signal)
+         * @param property  the column property name
          */
         public void modify( Object element, String property, Object value )
         {
             Object target = element;
-            
+
             if ( element instanceof Item )
             {
                 target = ( ( Item ) element ).getData();
@@ -496,8 +536,13 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
     }
 
+    // ── CLASS: GrantsAndDenialsContentProvider — TREE STRUCTURE PROVIDER ──────
+    // GrantAndDenialCategory items have children (the wrappers); wrappers are
+    // leaves.  The content provider exposes this two-level hierarchy.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * The content provider used for this tree viewer.
+     * {@link ITreeContentProvider} that exposes the two-level structure:
+     * categories as roots and wrappers as leaves.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -506,10 +551,9 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
         /**
          * Only GrantAndDenialCategories have children.
-         * 
-         * @param parentElement the parent element
-         * 
-         * @return the children
+         *
+         * @param parentElement  the parent element
+         * @return               the child wrappers, or {@code null}
          */
         public Object[] getChildren( Object parentElement )
         {
@@ -525,10 +569,9 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
         /**
          * Not used.
-         * 
-         * @param element the element
-         * 
-         * @return the parent
+         *
+         * @param element  the element
+         * @return         {@code null}
          */
         public Object getParent( Object element )
         {
@@ -538,10 +581,9 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
         /**
          * Only GrantAndDenialCategories have children.
-         * 
-         * @param element the element
-         * 
-         * @return true, if has children
+         *
+         * @param element  the element
+         * @return         {@code true} if {@code element} is a category
          */
         public boolean hasChildren( Object element )
         {
@@ -550,8 +592,13 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
     }
 
+    // ── CLASS: GrantsAndDenialsLabelProvider — ICON + TEXT RENDERER ───────────
+    // Column 1 shows the category name or micro-operation name.
+    // Column 2 shows a grant icon, deny icon, or unspecified icon.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * The label provider used for this tree viewer.
+     * {@link ITableLabelProvider} that renders category names and micro-operation
+     * names in column 1, and state icons (grant / deny / unspecified) in column 2.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -560,11 +607,10 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
         /**
          * The STATE is displayed as image.
-         * 
-         * @param element the element
-         * @param columnIndex the column index
-         * 
-         * @return the column image
+         *
+         * @param element      the element
+         * @param columnIndex  the column index
+         * @return             the icon for the current state, or {@code null}
          */
         public Image getColumnImage( Object element, int columnIndex )
         {
@@ -601,11 +647,10 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
 
         /**
          * Returns GrantAndDenialCategory name or the MicroOperation name.
-         * 
-         * @param element the element
-         * @param columnIndex the column index
-         * 
-         * @return the column text
+         *
+         * @param element      the element
+         * @param columnIndex  the column index
+         * @return             the text for the cell
          */
         public String getColumnText( Object element, int columnIndex )
         {
@@ -620,7 +665,7 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
             else if ( ( element instanceof GrantAndDenialWrapper ) && ( columnIndex == 0 ) )
             {
                 GrantAndDenialWrapper wrapper = ( GrantAndDenialWrapper ) element;
-                
+
                 return wrapper.grant.getMicroOperation().getName();
             }
 
@@ -630,10 +675,12 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
     }
 
 
+    // ── POPULATE FROM A COLLECTION ────────────────────────────────────────────
     /**
-     * Sets the grants and denials. 
+     * Populates the tree from the given collection of active {@link GrantAndDenial}
+     * values, matching each to the corresponding wrapper and setting its state.
      *
-     * @param grantsAndDenials
+     * @param grantsAndDenials  the active grants and denials to display
      */
     public void setGrantsAndDenials( Collection<GrantAndDenial> grantsAndDenials )
     {
@@ -659,11 +706,13 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
     }
 
 
+    // ── COLLECT ACTIVE GRANTS AND DENIALS ─────────────────────────────────────
     /**
-     * Returns the grants and denials as selected by the user.
+     * Returns the collection of {@link GrantAndDenial} values currently active
+     * (i.e., not in the unspecified state) in the tree.
      *
-     * @return the grants and denials
-     * @throws ParseException 
+     * @return the active grants and denials
+     * @throws ParseException  not thrown; declared for interface compatibility
      */
     public Collection<GrantAndDenial> getGrantsAndDenials() throws ParseException
     {
@@ -684,8 +733,10 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
     }
 
 
-    /** 
-     * Undos the last modification.
+    // ── UNDO THE LAST CHANGE ──────────────────────────────────────────────────
+    /**
+     * Pops the previous state from each wrapper's undo stack and pushes the
+     * current state to the redo stack.  Updates button enabled states.
      */
     private void undo()
     {
@@ -706,8 +757,10 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
     }
 
 
+    // ── REDO THE LAST UNDONE CHANGE ───────────────────────────────────────────
     /**
-     * Redos the last modification
+     * Pops the next state from each wrapper's redo stack and pushes the
+     * current state to the undo stack.  Updates button enabled states.
      */
     private void redo()
     {
@@ -728,8 +781,11 @@ public class ACIItemGrantsAndDenialsComposite extends Composite
     }
 
 
+    // ── SNAPSHOT CURRENT STATE ────────────────────────────────────────────────
     /**
-     * Saves the current state to the undo stack.
+     * Saves the current state of all wrappers to their undo stacks and clears
+     * the redo stacks.  Called before any bulk mutation (Grant All, Deny All,
+     * Deselect All, or individual cell click).
      */
     private void backup()
     {

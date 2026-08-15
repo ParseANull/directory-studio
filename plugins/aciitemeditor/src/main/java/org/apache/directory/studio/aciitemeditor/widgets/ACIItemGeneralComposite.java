@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.widgets;
 
@@ -45,15 +45,19 @@ import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: ACIItemGeneralComposite — GRAND MOFF'S HEADER PANEL ───────────────
+// When the Grand Moff composes a new security directive, the first thing he sets
+// is the header: a name tag, a priority rank (0–255), the required authentication
+// level, and whether the directive is userFirst or itemFirst.
+// ACIItemGeneralComposite is that header panel — four controls, one composite.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This is used to edit general ACI item properties:
- * <ul>
- *   <li>identification tag
- *   <li>precedence
- *   <li>authentication level
- *   <li>selection for userFirst or itemFirst
- * </ul>
- * 
+ * SWT {@link Composite} that edits the four general properties of an ACI item:
+ * identification tag, precedence (0–255), authentication level, and the
+ * userFirst / itemFirst radio selection.
+ * Lives inside the Visual Editor tab of the ACI item dialog.
+ * Think of this as the Grand Moff's directive header panel: name it, rank it,
+ * set the auth requirement, pick the form.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -62,14 +66,14 @@ public class ACIItemGeneralComposite extends Composite
     /** The identification tag text field */
     private Text identificationTagText = null;
 
-    /** The spinner to select a valid precedence between 0 and 255 */
-    private Spinner precedenceSpinner = null;
-
-    /** 
+    /**
      * The combo viewer is attached to authenticationLevelCombo to work with
-     * AuthenticationLevel objects rather than Strings 
+     * AuthenticationLevel objects rather than Strings
      */
     private ComboViewer authenticationLevelComboViewer = null;
+
+    /** The spinner to select a valid precedence between 0 and 255 */
+    private Spinner precedenceSpinner = null;
 
     /** The user first radio button */
     private Button userFirstRadioButton = null;
@@ -81,11 +85,17 @@ public class ACIItemGeneralComposite extends Composite
     private List<WidgetModifyListener> listenerList = new ArrayList<WidgetModifyListener>();
 
 
+    // ── CONSTRUCT THE HEADER PANEL ────────────────────────────────────────────
+    // The Grand Moff's header panel is created as a standard SWT composite
+    // with zero margins so it fits flush inside its parent tab.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ACIItemGeneralComposite.
+     * Creates a new {@code ACIItemGeneralComposite}.
+     * Lays out the four fields (identification tag, precedence, authentication
+     * level, userFirst/itemFirst) and wires up their change listeners.
      *
-     * @param parent
-     * @param style
+     * @param parent  the parent composite
+     * @param style   SWT style bits
      */
     public ACIItemGeneralComposite( Composite parent, int style )
     {
@@ -108,9 +118,12 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── LAY OUT THE FOUR HEADER FIELDS ────────────────────────────────────────
+    // The orderly renders the three-column grid: labels in column 1,
+    // controls spanning columns 2 and 3.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method initializes composite
-     *
+     * Builds the inner three-column grid with labels and input controls.
      */
     private void createComposite()
     {
@@ -177,7 +190,7 @@ public class ACIItemGeneralComposite extends Composite
 
         Label authenticationLevelLabel = new Label( composite, SWT.NONE );
         authenticationLevelLabel.setText( Messages.getString( "ACIItemGeneralComposite.authLevel.label" ) ); //$NON-NLS-1$
-        
+
         Combo authenticationLevelCombo = new Combo( composite, SWT.READ_ONLY );
         authenticationLevelCombo.setLayoutData( authenticationLevelGridData );
         AuthenticationLevel[] authenticationLevels = new AuthenticationLevel[3];
@@ -221,46 +234,57 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── REGISTER A CHANGE LISTENER ────────────────────────────────────────────
+    // Any observer that needs to react when the officer edits the header fields
+    // registers here.  The tab-folder composite uses this to keep the source
+    // editor in sync.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Add the listener to the list of listeners.
+     * Registers a {@link WidgetModifyListener} to be notified whenever any
+     * header field changes.
      *
-     * @param listener
+     * @param listener  the listener to add; must not be {@code null}
      */
     public void addWidgetModifyListener( WidgetModifyListener listener )
     {
         checkWidget();
-        
+
         if ( listener == null )
         {
             SWT.error( SWT.ERROR_NULL_ARGUMENT );
         }
-        
+
         listenerList.add( listener );
     }
 
 
+    // ── UNREGISTER A CHANGE LISTENER ──────────────────────────────────────────
     /**
-     * Removes the listener from the list of listeners.
+     * Removes a previously registered {@link WidgetModifyListener}.
      *
-     * @param listener
+     * @param listener  the listener to remove; must not be {@code null}
      */
     public void removeWidgetModifyListener( WidgetModifyListener listener )
     {
         checkWidget();
-        
+
         if ( listener == null )
         {
             SWT.error( SWT.ERROR_NULL_ARGUMENT );
         }
-        
+
         listenerList.remove( listener );
     }
 
 
+    // ── BROADCAST A CHANGE EVENT ──────────────────────────────────────────────
+    // Any widget change fires a WidgetModifyEvent to all registered listeners
+    // so the containing composite can update its state.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Fires WidgetModifyEvents.
+     * Fires a {@link WidgetModifyEvent} to all registered listeners.
      *
-     * @param event the original event
+     * @param event  the original SWT event that triggered this notification
      */
     private void fire( TypedEvent event )
     {
@@ -271,10 +295,11 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── READ THE IDENTIFICATION TAG ───────────────────────────────────────────
     /**
-     * Returns the identification tag.
+     * Returns the current text in the identification tag field.
      *
-     * @return the identification tag
+     * @return the identification tag string
      */
     public String getIdentificationTag()
     {
@@ -282,10 +307,11 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── SET THE IDENTIFICATION TAG ────────────────────────────────────────────
     /**
-     * Sets the identification tag
+     * Sets the identification tag field to {@code identificationTag}.
      *
-     * @param identificationTag the identification tag
+     * @param identificationTag  the identification tag to display
      */
     public void setIdentificationTag( String identificationTag )
     {
@@ -293,8 +319,9 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── READ THE PRECEDENCE ───────────────────────────────────────────────────
     /**
-     * Returns the selected precedence.
+     * Returns the current spinner value as the precedence (0–255).
      *
      * @return the selected precedence
      */
@@ -304,10 +331,11 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── SET THE PRECEDENCE ────────────────────────────────────────────────────
     /**
-     * Sets the precedence
+     * Sets the precedence spinner to {@code precedence}.
      *
-     * @param precedence the precedence
+     * @param precedence  the precedence value to set (0–255)
      */
     public void setPrecedence( int precedence )
     {
@@ -315,8 +343,9 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── READ THE AUTHENTICATION LEVEL ────────────────────────────────────────
     /**
-     * Returns the selected authentication level.
+     * Returns the {@link AuthenticationLevel} currently selected in the combo.
      *
      * @return the selected authentication level
      */
@@ -327,10 +356,11 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── SET THE AUTHENTICATION LEVEL ──────────────────────────────────────────
     /**
-     * Sets the authentication level.
+     * Sets the authentication level combo to {@code authenticationLevel}.
      *
-     * @param authenticationLevel the authentication level
+     * @param authenticationLevel  the level to select
      */
     public void setAuthenticationLevel( AuthenticationLevel authenticationLevel )
     {
@@ -339,10 +369,11 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── CHECK IF USERFIRST IS SELECTED ────────────────────────────────────────
     /**
-     * Returns true if user first is selected.
+     * Returns {@code true} if the userFirst radio button is selected.
      *
-     * @return true if user first is selected
+     * @return {@code true} if userFirst is active
      */
     public boolean isUserFirst()
     {
@@ -350,8 +381,9 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── SELECT USERFIRST ──────────────────────────────────────────────────────
     /**
-     * Selects user first.
+     * Selects the userFirst radio button and deselects itemFirst.
      */
     public void setUserFirst()
     {
@@ -360,10 +392,11 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── CHECK IF ITEMFIRST IS SELECTED ────────────────────────────────────────
     /**
-     * Returns true if item first is selected.
+     * Returns {@code true} if the itemFirst radio button is selected.
      *
-     * @return true if item first is selected
+     * @return {@code true} if itemFirst is active
      */
     public boolean isItemFirst()
     {
@@ -371,8 +404,9 @@ public class ACIItemGeneralComposite extends Composite
     }
 
 
+    // ── SELECT ITEMFIRST ──────────────────────────────────────────────────────
     /**
-     * Selects item first.
+     * Selects the itemFirst radio button and deselects userFirst.
      */
     public void setItemFirst()
     {

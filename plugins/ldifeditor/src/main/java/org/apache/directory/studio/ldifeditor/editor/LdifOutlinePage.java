@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor;
@@ -58,9 +58,23 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage;
 
 
+// ── CLASS: LdifOutlinePage — REBEL TRANSMISSION INDEX ─────────────────────────
+// Alliance archivists paste a brief index on the front cover of each
+// transmission bundle: one line per record showing the target entry's DN and
+// record type.  Clicking a line in the index jumps to that record in the full
+// text.
+// LdifOutlinePage is that index: a tree view of LDIF records, attributes, and
+// values that stays in sync with the editor and lets the user navigate by
+// clicking.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Outline Page for LDIF. 
- * It used to display LDIF files and records.
+ * Eclipse {@link ContentOutlinePage} for the LDIF editor.
+ * Presents the parsed {@link LdifFile} as a tree of records, attribute groups,
+ * and individual values with type-specific icons.
+ * Clicking a record, attribute group, or value reveals and selects the
+ * corresponding text range in the editor.
+ * Think of this as the Alliance transmission index: a quick overview of all
+ * records in the file with click-to-navigate.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -73,11 +87,12 @@ public class LdifOutlinePage extends ContentOutlinePage
     private boolean isLinkedToLdapBrowser = false;
 
 
+    // ── CONSTRUCT STANDALONE ──────────────────────────────────────────────────
+    // The archivist picks up their index pad and ties it to the editor.
     /**
-     * Creates a new instance of LdifOutlinePage.
+     * Creates a new outline page attached to {@code ldifEditor}.
      *
-     * @param ldifEditor
-     *      the editor the Outline page is attached to
+     * @param ldifEditor  the LDIF editor to reflect
      */
     public LdifOutlinePage( LdifEditor ldifEditor )
     {
@@ -85,11 +100,16 @@ public class LdifOutlinePage extends ContentOutlinePage
     }
 
 
+    // ── CONSTRUCT LINKED TO LDAP BROWSER ──────────────────────────────────────
+    // The archivist can also work in linked mode where record icons are
+    // resolved from the live directory connection.
     /**
-     * Creates a new instance of LdifOutlinePage.
+     * Creates a new outline page attached to {@code ldifEditor}, optionally
+     * linked to the LDAP Browser view for richer icons.
      *
-     * @param ldifEditor
-     *      the editor the Outline page is attached to
+     * @param ldifEditor            the LDIF editor to reflect
+     * @param isLinkedToLdapBrowser {@code true} to resolve entry icons from
+     *                              the browser connection
      */
     public LdifOutlinePage( LdifEditor ldifEditor, boolean isLinkedToLdapBrowser )
     {
@@ -98,8 +118,15 @@ public class LdifOutlinePage extends ContentOutlinePage
     }
 
 
+    // ── CREATE THE OUTLINE TREE ───────────────────────────────────────────────
+    // The archivist opens the index pad, wires in the record label provider
+    // and content provider, and registers the selection and double-click handlers.
     /**
      * {@inheritDoc}
+     *
+     * <p>Configures the tree viewer with {@link LdifLabelProvider} and
+     * {@link LdifContentProvider}, then wires selection-changed and
+     * double-click listeners before triggering the first full refresh.</p>
      */
     public void createControl( Composite parent )
     {
@@ -131,7 +158,7 @@ public class LdifOutlinePage extends ContentOutlinePage
                     else if ( element instanceof List )
                     {
                         List<?> list = ( List<?> ) element;
-                        
+
                         if ( !list.isEmpty() && list.get( 0 ) instanceof LdifAttrValLine )
                         {
                             LdifAttrValLine line = ( LdifAttrValLine ) list.get( 0 );
@@ -172,11 +199,13 @@ public class LdifOutlinePage extends ContentOutlinePage
     }
 
 
+    // ── PARTIAL REFRESH ───────────────────────────────────────────────────────
+    // When a single record changes the archivist updates only that page of
+    // the index.
     /**
-     * Refreshes this viewer starting with the given element.
+     * Refreshes the tree starting from {@code element}, if the tree is not disposed.
      *
-     * @param element
-     *      the element
+     * @param element  the tree element to refresh from
      */
     public void refresh( Object element )
     {
@@ -188,8 +217,11 @@ public class LdifOutlinePage extends ContentOutlinePage
     }
 
 
+    // ── FULL REFRESH ──────────────────────────────────────────────────────────
+    // The archivist re-stamps the entire index from the current model.
     /**
-     * Refreshes this viewer completely with information freshly obtained from this viewer's model.
+     * Refreshes the entire outline tree from the editor's current LDIF model.
+     * No-ops if the tree is disposed.
      */
     public void refresh()
     {
@@ -226,8 +258,14 @@ public class LdifOutlinePage extends ContentOutlinePage
     }
 
 
+    // ── DISPOSE ───────────────────────────────────────────────────────────────
+    // The archivist closes the index pad and notifies the editor that the
+    // outline page is gone.
     /**
      * {@inheritDoc}
+     *
+     * <p>Notifies the editor that the outline page has closed, then releases
+     * the reference.</p>
      */
     public void dispose()
     {
@@ -239,8 +277,13 @@ public class LdifOutlinePage extends ContentOutlinePage
         }
     }
 
+    // ── CLASS: LdifContentProvider — TREE STRUCTURE ───────────────────────────
+    // The content provider maps the parsed LdifFile tree (file → records →
+    // attribute groups → individual values) to tree nodes.
     /**
-     * This class implements the ContentProvider used for the LDIF Outline View
+     * {@link ITreeContentProvider} that maps a {@link LdifFile} to a tree of
+     * records, attribute groups (lists of {@link LdifAttrValLine}), and individual
+     * attribute-value lines or mod-spec items.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -303,29 +346,30 @@ public class LdifOutlinePage extends ContentOutlinePage
 
 
         /**
-         * Returns a unique line of attribute values from an array of attribute value lines
+         * Groups {@code lines} by attribute description (preserving insertion order)
+         * and returns an array of {@link List} instances, one per unique attribute.
          *
-         * @param lines the attribute value lines
-         * @return a unique line of attribute values from an array of attribute values lines
+         * @param lines  the attribute-value lines to group
+         * @return       an array of attribute-value line lists
          */
         private Object[] getUniqueAttrValLineArray( LdifAttrValLine[] lines )
         {
             Map<String, List<LdifAttrValLine>> uniqueAttrMap = new LinkedHashMap<String, List<LdifAttrValLine>>();
-            
+
             for ( LdifAttrValLine ldifAttrValLine : lines )
             {
                 String key = ldifAttrValLine.getUnfoldedAttributeDescription();
                 List<LdifAttrValLine> listLdifAttrValLine = uniqueAttrMap.get( key );
-                
+
                 if ( listLdifAttrValLine == null )
                 {
                     listLdifAttrValLine = new ArrayList<LdifAttrValLine>();
                     uniqueAttrMap.put( key, listLdifAttrValLine );
                 }
-                
+
                 listLdifAttrValLine.add( ldifAttrValLine );
             }
-            
+
             return uniqueAttrMap.values().toArray();
         }
 
@@ -373,8 +417,13 @@ public class LdifOutlinePage extends ContentOutlinePage
         }
     }
 
+    // ── CLASS: LdifLabelProvider — RECORD / ATTRIBUTE / VALUE ICONS ───────────
+    // Each tree node gets a label and an icon matching its LDIF record type
+    // or attribute role.
     /**
-     * This class implements the LabelProvider used for the LDIF Outline View
+     * {@link LabelProvider} for the outline tree.
+     * Returns DN strings for records, attribute-group summaries ("cn (3)"),
+     * shortened value strings for individual lines, and type-appropriate icons.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -387,6 +436,12 @@ public class LdifOutlinePage extends ContentOutlinePage
         private boolean isLinkedToLdapBrowser = false;
 
 
+        /**
+         * Creates a label provider for the outline tree.
+         *
+         * @param ldifEditor            the attached editor
+         * @param isLinkedToLdapBrowser whether to resolve entry icons from the browser
+         */
         public LdifLabelProvider( LdifEditor ldifEditor, boolean isLinkedToLdapBrowser )
         {
             super();
@@ -440,7 +495,7 @@ public class LdifOutlinePage extends ContentOutlinePage
          */
         public Image getImage( Object element )
         {
-            
+
             // Record
             if ( element instanceof LdifContentRecord )
             {
@@ -449,11 +504,11 @@ public class LdifOutlinePage extends ContentOutlinePage
                     LdifContentRecord record = ( LdifContentRecord ) element;
 
                     LdifDnLine dnLine = record.getDnLine();
-                    
+
                     if ( dnLine != null )
                     {
                         String dn = dnLine.getUnfoldedDn();
-                        
+
                         if ( ( dn != null ) && ( dn.length() == 0 ) ) //$NON-NLS-1$
                         {
                             // Root DSE
@@ -501,7 +556,7 @@ public class LdifOutlinePage extends ContentOutlinePage
             else if ( element instanceof LdifModSpec )
             {
                 LdifModSpec modSpec = ( LdifModSpec ) element;
-                
+
                 if ( modSpec.isAdd() )
                 {
                     return LdifEditorActivator.getDefault().getImage( LdifEditorConstants.IMG_LDIF_MOD_ADD );

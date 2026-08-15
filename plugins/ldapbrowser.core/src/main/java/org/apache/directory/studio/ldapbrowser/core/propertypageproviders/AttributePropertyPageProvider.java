@@ -21,6 +21,21 @@
 package org.apache.directory.studio.ldapbrowser.core.propertypageproviders;
 
 
+// ── CLASS: AttributePropertyPageProvider — JEDI BADGE FOR ATTRIBUTE OBJECTS ─
+// In the Jedi Order, a Padawan must wear the right rank badge before they can
+// enter certain restricted chambers.  AttributePropertyPageProvider is the rank
+// badge for IAttribute objects: any class that implements it signals to the
+// Eclipse property-page framework that it is eligible to provide attribute
+// property pages.  No methods — the interface is a pure marker.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Marker interface that tags a class as a provider of attribute property pages.
+ *
+ * <p>Think of this as a Jedi rank badge: an object implementing this interface
+ * announces "I am an LDAP attribute — show my property pages."</p>
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public interface AttributePropertyPageProvider
 {
 

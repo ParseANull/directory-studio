@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.editor.widgets;
 
@@ -38,8 +38,21 @@ import org.apache.directory.studio.templateeditor.model.widgets.TemplateRadioBut
 import org.apache.directory.studio.templateeditor.model.widgets.ValueItem;
 
 
+// ── CLASS: EditorRadioButtons — THE TANTIVE IV OPTION SELECTOR BANK ──────────────
+// On the Tantive IV, certain system configurations are mutually exclusive — the
+// ship can be in "Combat", "Patrol", OR "Diplomatic Escort" mode, never two at
+// once. The crew chooses one by pressing the corresponding button on the bank.
+// This class renders that button bank as a column of SWT radio buttons, one per
+// template-configured {@link ValueItem}. Clicking a button writes that item's
+// value to the LDAP attribute and clears the previous selection.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an editor radio buttons.
+ * A radio button group widget bound to a single LDAP attribute. One radio button
+ * is created for each {@link ValueItem} in the template model. Selecting a button
+ * writes its value to the LDAP attribute; only one button can be selected at a
+ * time. When refreshing, the button matching the current attribute value is
+ * automatically selected.
+ * Think of this as the Tantive IV option selector button bank.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -66,15 +79,16 @@ public class EditorRadioButtons extends EditorWidget<TemplateRadioButtons>
     };
 
 
+    // ── CONSTRUCTOR: INSTALL THE OPTION SELECTOR BANK ────────────────────────────
+    // The technician installs the radio button bank. The template model provides
+    // the list of buttons and the LDAP attribute type they bind to.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EditorRadioButtons.
-     * 
-     * @param editor
-     *      the associated editor
-     * @param templateRadioButtons
-     *      the associated template radio buttons
-     * @param toolkit
-     *      the associated toolkit
+     * Creates a new {@code EditorRadioButtons} bound to the given template model.
+     *
+     * @param editor                  the owning entry editor
+     * @param templateRadioButtons    the template model specifying buttons and attribute type
+     * @param toolkit                 the form toolkit used to create the SWT buttons
      */
     public EditorRadioButtons( IEntryEditor editor, TemplateRadioButtons templateRadioButtons,
         FormToolkit toolkit )
@@ -83,8 +97,14 @@ public class EditorRadioButtons extends EditorWidget<TemplateRadioButtons>
     }
 
 
+    // ── CREATE WIDGET: BUILD THE RADIO BUTTON GROUP ───────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the composite with one radio button per {@link ValueItem}, selects
+     * the button matching the current LDAP attribute value, and attaches selection
+     * listeners.
+     *
+     * @param parent  the parent composite
+     * @return the radio button group composite
      */
     public Composite createWidget( Composite parent )
     {
@@ -101,13 +121,17 @@ public class EditorRadioButtons extends EditorWidget<TemplateRadioButtons>
     }
 
 
+    // ── INIT WIDGET: CREATE THE RADIO BUTTONS ────────────────────────────────────
+    // We create a composite with a single-column GridLayout (zero margins for tight
+    // packing), then add one radio button per ValueItem. Both lookup maps are
+    // populated so we can go from button → ValueItem and ValueItem → button quickly.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and initializes the widget UI.
+     * Creates a composite containing one radio {@link Button} per {@link ValueItem}.
+     * Maintains bidirectional maps between buttons and value items for fast lookup.
      *
-     * @param parent
-     *      the parent composite
-     * @return
-     *      the associated composite
+     * @param parent  the parent composite
+     * @return the composite containing the radio buttons
      */
     private Composite initWidget( Composite parent )
     {
@@ -135,8 +159,13 @@ public class EditorRadioButtons extends EditorWidget<TemplateRadioButtons>
     }
 
 
+    // ── UPDATE WIDGET: SELECT THE MATCHING BUTTON ─────────────────────────────────
+    // We read the current LDAP attribute string value and find the radio button
+    // whose ValueItem.value matches it, selecting that button and deselecting the rest.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the widget's content.
+     * Reads the current LDAP attribute value and selects the radio button whose
+     * {@link ValueItem} value matches it. Deselects all others.
      */
     private void updateWidget()
     {
@@ -157,8 +186,9 @@ public class EditorRadioButtons extends EditorWidget<TemplateRadioButtons>
     }
 
 
+    // ── ADD LISTENERS: WIRE CLICK HANDLERS TO ALL BUTTONS ────────────────────────
     /**
-     * Adds the listeners.
+     * Attaches the selection listener to every radio button in the group.
      */
     private void addListeners()
     {
@@ -173,8 +203,10 @@ public class EditorRadioButtons extends EditorWidget<TemplateRadioButtons>
     }
 
 
+    // ── UPDATE ENTRY: WRITE THE SELECTED VALUE TO THE ATTRIBUTE ──────────────────
     /**
-     * This method is called when the entry has been updated in the UI.
+     * Writes the selected {@link ValueItem}'s value to the LDAP attribute.
+     * Creates, modifies, or deletes the attribute as needed.
      */
     private void updateEntry()
     {
@@ -204,8 +236,9 @@ public class EditorRadioButtons extends EditorWidget<TemplateRadioButtons>
     }
 
 
+    // ── UPDATE: REFRESH THE SELECTION ────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Refreshes the radio button selection from the current LDAP working copy.
      */
     public void update()
     {
@@ -213,8 +246,9 @@ public class EditorRadioButtons extends EditorWidget<TemplateRadioButtons>
     }
 
 
+    // ── DISPOSE: NOTHING EXTRA TO CLEAN UP ───────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — the SWT buttons are owned by their parent composite.
      */
     public void dispose()
     {

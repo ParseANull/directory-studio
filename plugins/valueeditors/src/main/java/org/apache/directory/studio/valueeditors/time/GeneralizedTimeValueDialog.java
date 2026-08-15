@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.valueeditors.time;
 
@@ -60,8 +60,28 @@ import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: GeneralizedTimeValueDialog — MON MOTHMA'S MISSION CLOCK CONSOLE ────
+// At Rebel Alliance headquarters, Mon Mothma's mission clock console lets a
+// coordinator set the precise timestamp for a mission briefing.  The console
+// has four linked panels: time spinners (HH:MM:SS), a calendar for the date,
+// a timezone drop-down (UTC offsets plus continent/city names from Java), and a
+// raw GeneralizedTime field that shows the LDAP-format result in real time.
+// Edit any panel and the others update automatically — bidirectionally.
+// A "Discard Fraction" checkbox strips milliseconds before saving.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class provides a dialog to define a generalized time.
+ * Modal dialog for editing an LDAP GeneralizedTime attribute value
+ * (syntax OID 1.3.6.1.4.1.1466.115.121.1.24).
+ * GeneralizedTime is the standard LDAP timestamp format, e.g.
+ * {@code "20231215120000Z"}.
+ * The dialog provides four linked panels: time spinners (hours, minutes, seconds),
+ * a calendar date picker, a timezone combo (UTC offsets and continent/city IDs),
+ * and a raw text field showing the GeneralizedTime string.
+ * Editing any panel updates the others in real time.
+ * The "Discard Fraction" checkbox removes the milliseconds component before
+ * committing; this is remembered across sessions.
+ * Think of this as Mon Mothma's mission clock console — every panel is kept in
+ * sync and the raw format is always visible.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -219,13 +239,24 @@ public class GeneralizedTimeValueDialog extends Dialog
     };
 
 
+    // ── Mon Mothma Opens the Mission Clock Console ────────────────────────────
+    // The console is initialised with the mission's existing timestamp.
+    // If none is provided (brand-new mission slot), we default to the current
+    // date/time so the coordinator doesn't start with an empty field.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of GeneralizedTimeValueDialog.
-     * 
-     * @param parentShell
-     *      the parent shell
-     * @param value
-     *      the initial value
+     * Creates a new GeneralizedTimeValueDialog.
+     * If {@code value} is {@code null}, the console starts with the current
+     * date and time so the coordinator always has a valid starting point.
+     *
+     * <p>For example — the console opens for a new timestamp:</p>
+     * <pre>
+     *   GeneralizedTimeValueDialog dialog = new GeneralizedTimeValueDialog(shell, null);
+     *   dialog.open();  // opens pre-filled with "now"
+     * </pre>
+     *
+     * @param parentShell  The SWT shell that owns this dialog.
+     * @param value        The initial GeneralizedTime value, or {@code null} for now.
      */
     public GeneralizedTimeValueDialog( Shell parentShell, GeneralizedTime value )
     {
@@ -241,8 +272,14 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Labels the Console ─────────────────────────────────────────
+    // The console is labelled "Date and Time Editor" and receives the Rebel
+    // mission clock icon.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Configures the dialog shell — sets the window title and icon.
+     *
+     * @param shell  The SWT Shell to configure.
      */
     protected void configureShell( Shell shell )
     {
@@ -252,8 +289,16 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Places the Confirmation Buttons ────────────────────────────
+    // The console places OK and Cancel.  OK is disabled while the raw value is
+    // not parseable.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the OK and Cancel buttons.
+     * OK starts enabled; it is disabled by {@link #validateRawValue(boolean)} if
+     * the raw value becomes unparseable during editing.
+     *
+     * @param parent  The composite hosting the button bar.
      */
     protected void createButtonsForButtonBar( Composite parent )
     {
@@ -262,8 +307,15 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Commits the Final Timestamp ────────────────────────────────
+    // When OK is pressed, if the "Discard Fraction" checkbox is ticked we strip
+    // the milliseconds from the value before persisting, and we save the user's
+    // "discard fraction" preference for next time.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called when OK is pressed.
+     * If "Discard Fraction" is checked, the millisecond component is zeroed out
+     * before saving.  Persists the "discard fraction" preference to dialog settings.
      */
     protected void okPressed()
     {
@@ -286,8 +338,29 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Builds the Four-Panel Console ──────────────────────────────
+    // The main composite holds four panels stacked in a two-column grid:
+    // Time (HH:MM:SS spinners), Date (calendar widget), Timezone (combo),
+    // and Raw Value (text + validator image + "Discard Fraction" checkbox).
+    // All four panels are wired together with bidirectional listeners.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the dialog content — four linked panels for time, date, timezone,
+     * and raw GeneralizedTime value.
+     * Returns the top-level composite.
+     *
+     * <p>For example — the four-panel console layout:</p>
+     * <pre>
+     *   Time:     [ 12 ] : [ 00 ] : [ 00 ]
+     *   Date:     [  calendar widget  ]
+     *   Timezone: [ UTC ▼             ]
+     *   ─────────────────────────────────
+     *   Raw:      [ 20231215120000Z ✓ ]
+     *             [ ] Discard fraction
+     * </pre>
+     *
+     * @param parent  The parent composite provided by JFace.
+     * @return        The top-level composite containing all panels.
      */
     protected Control createDialogArea( Composite parent )
     {
@@ -316,11 +389,15 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Builds the Time Spinner Panel ──────────────────────────────
+    // Three spinners for HH, MM, and SS — standard 24-hour clock format.
+    // Spinners are constrained: hours 0–23, minutes 0–59, seconds 0–59.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the "Time" dialog area.
+     * Creates the "Time" panel — three spinners for hours (0–23), minutes
+     * (0–59), and seconds (0–59), separated by colon labels.
      *
-     * @param parent
-     *      the parent composite
+     * @param parent  The parent composite for the time panel.
      */
     private void createTimeDialogArea( Composite parent )
     {
@@ -359,11 +436,14 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Builds the Date Calendar Panel ─────────────────────────────
+    // A native SWT calendar widget lets the coordinator click a date.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the "Date" dialog area.
+     * Creates the "Date" panel — a native SWT {@link DateTime} calendar widget
+     * for picking the year, month, and day.
      *
-     * @param parent
-     *      the parent composite
+     * @param parent  The parent composite for the date panel.
      */
     private void createDateDialogArea( Composite parent )
     {
@@ -380,11 +460,17 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Builds the Timezone Panel ──────────────────────────────────
+    // A combo viewer lists all UTC-offset pseudo-zones first (UTC-12 … UTC+14),
+    // followed by all continent/city zones (Africa/…, America/…, etc.) sorted
+    // by ID.  The JVM's TimeZone.getAvailableIDs() provides the continent list.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the "Time Zone" dialog area.
+     * Creates the "Timezone" panel — a JFace combo viewer listing UTC-offset
+     * zones first (UTC-12 through UTC+14) and then continent/city timezone IDs.
+     * The timezone ID string is used as the display label.
      *
-     * @param parent
-     *      the parent composite
+     * @param parent  The parent composite for the timezone panel.
      */
     private void createTimeZoneDialogArea( Composite parent )
     {
@@ -414,8 +500,13 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Initialises the Full Timezone Catalogue ────────────────────
+    // All UTC-offset pseudo-zones are added first (in offset order), then all
+    // continent/city zones from Java's runtime are appended, sorted by ID.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes all the time zones.
+     * Populates {@link #allTimezonesList} and {@link #utcTimezonesMap} by calling
+     * both {@link #initUtcTimezones()} and {@link #initContinentsAndCitiesTimezones()}.
      */
     private void initAllTimezones()
     {
@@ -424,8 +515,16 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Registers All UTC-Offset Zones ─────────────────────────────
+    // Each UTC offset from -12 to +14 (including half-hour and quarter-hour
+    // offsets) is registered as a SimpleTimeZone and added to the combo list.
+    // UTC+0 maps to the standard "UTC" zone.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes all the "UTC+/-xxxx" time zones.
+     * Creates and registers all standard UTC-offset time zones
+     * (UTC-12 through UTC+14, including half-hour variants like UTC+5:30).
+     * UTC+0 is mapped to the standard {@code "UTC"} zone; all others use
+     * {@link SimpleTimeZone} with the appropriate raw offset.
      */
     private void initUtcTimezones()
     {
@@ -472,11 +571,19 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Adds a UTC-Offset Zone to the Catalogue ────────────────────
+    // Creates the TimeZone object for the given UTC-offset ID and raw offset
+    // (in milliseconds), adds it to the full list, and stores it in the lookup
+    // map so updateNonRawFields() can find the right entry by raw offset.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds an UTC time zone.
+     * Creates a UTC-offset {@link TimeZone} and registers it in both
+     * {@link #allTimezonesList} and {@link #utcTimezonesMap}.
+     * A raw offset of {@code 0} uses the standard {@code "UTC"} zone; all
+     * other offsets use a {@link SimpleTimeZone}.
      *
-     * @param tz
-     *      a time zone to add
+     * @param id         The display ID for the timezone (e.g. {@code "UTC+5:30"}).
+     * @param rawOffset  The raw UTC offset in milliseconds.
      */
     private void addUtcTimezone( String id, int rawOffset )
     {
@@ -487,8 +594,15 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Adds Continent/City Timezones to the Catalogue ────────────
+    // We query Java's runtime for all available timezone IDs and filter to
+    // those that start with a continent prefix (Africa, America, Asia, etc.).
+    // They are sorted alphabetically by ID before being appended to the full list.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes all the continents and cities time zones.
+     * Populates {@link #allTimezonesList} with all continent/city time zone IDs
+     * available from the JVM (Africa/*, America/*, Asia/*, Atlantic/*,
+     * Australia/*, Europe/*, Indian/*, Pacific/*), sorted alphabetically by ID.
      */
     private void initContinentsAndCitiesTimezones()
     {
@@ -524,11 +638,17 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Builds the Raw Value Panel ─────────────────────────────────
+    // The raw-value panel shows a separator, a text field displaying the
+    // GeneralizedTime string, a validator icon (green check or red cross),
+    // and the "Discard Fraction" checkbox.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the "Raw value" dialog area.
+     * Creates the "Raw Value" panel — a separator, a text field showing the
+     * raw GeneralizedTime string, a validator image indicating whether the
+     * string is parseable, and a "Discard Fraction" checkbox.
      *
-     * @param parent
-     *      the parent composite
+     * @param parent  The parent composite for the raw-value panel.
      */
     private void createRawValueDialogArea( Composite parent )
     {
@@ -556,8 +676,14 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Populates the Console With the Initial Value ───────────────
+    // After all panels are built, we push the initial GeneralizedTime value
+    // into both the structured panels (spinners, calendar, timezone) and the
+    // raw text field.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the UI with the value.
+     * Pushes the initial {@link GeneralizedTime} value into all UI panels.
+     * Called once after the dialog area is fully constructed.
      */
     private void initWithInitialValue()
     {
@@ -566,8 +692,17 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Syncs the Structured Panels From the Model ─────────────────
+    // Reads the current GeneralizedTime value and pushes it into the spinner,
+    // calendar, and timezone combo.  The timezone is matched by raw UTC offset;
+    // if no matching UTC pseudo-zone exists, the combo selection is cleared.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Update the non-raw UI fields.
+     * Updates the time spinners, date calendar, and timezone combo to reflect
+     * the current {@link #value}.
+     * The timezone is matched against {@link #utcTimezonesMap} by raw offset;
+     * the combo is cleared if no match is found (for continent/city zones whose
+     * DST offset differs from their raw offset).
      */
     private void updateNonRawFields()
     {
@@ -595,8 +730,16 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Syncs the Raw Text Field From the Model ────────────────────
+    // Formats the current value as a GeneralizedTime string (with or without the
+    // fractional-seconds component, depending on the checkbox) and writes it into
+    // the raw text field.  Then validates the field to update the validator icon.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Update the raw UI fields.
+     * Updates the raw text field to reflect the current {@link #value}.
+     * If "Discard Fraction" is checked, the sub-second precision is omitted.
+     * Always calls {@link #validateRawValue(boolean) validateRawValue(true)}
+     * afterwards to ensure the validator icon shows green.
      */
     private void updateRawFields()
     {
@@ -614,12 +757,16 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Validates the Raw String and Controls OK ───────────────────
+    // A green-check icon indicates the raw string is parseable; a red-cross
+    // indicates it isn't.  OK is enabled only when the string is valid.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Validates the raw value.
+     * Updates the validator icon and enables or disables the OK button.
+     * Shows a green check icon when {@code bool} is {@code true} (valid);
+     * a red cross icon when {@code false} (invalid).
      *
-     * @param bool
-     *      <code>true</code> to set the raw value as valid
-     *      <code>false</code> to set the raw value as invalid
+     * @param bool  {@code true} if the raw value is parseable; {@code false} otherwise.
      */
     private void validateRawValue( boolean bool )
     {
@@ -641,8 +788,22 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Attaches the Bidirectional Sensors ─────────────────────────
+    // Listeners on each panel fire updateValueFromNonRawFields() (to push panel
+    // changes into the model) then updateRawFields() (to reflect the model in the
+    // raw text).  The raw-text listener fires updateNonRawFields() instead so
+    // typed changes propagate back to the structured panels.
+    // Listeners are removed before any programmatic update and re-added after to
+    // prevent feedback loops.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the listeners to the UI fields.
+     * Attaches listeners to all interactive widgets.
+     * Changes to spinners, the calendar, or the timezone combo update the model
+     * and then the raw text field.
+     * Changes to the raw text field parse a new {@link GeneralizedTime} and update
+     * the structured panels.
+     * Listeners are temporarily removed during programmatic updates to prevent
+     * infinite update loops.
      */
     private void addListeners()
     {
@@ -669,8 +830,15 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Detaches the Sensors During Programmatic Updates ───────────
+    // Before we programmatically update any panel (to prevent the listener on
+    // that panel from firing back and causing an update loop), we remove all
+    // listeners, perform the update, then call addListeners() again.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the listeners from the UI fields.
+     * Removes all listeners from all interactive widgets.
+     * Called before any programmatic widget update to prevent listener feedback
+     * loops; always followed by a matching call to {@link #addListeners()}.
      */
     private void removeListeners()
     {
@@ -697,12 +865,23 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Reads the Structured Panels Back Into the Model ────────────
+    // Reads the current spinner values, calendar date, and timezone selection
+    // and applies them to the Calendar object inside the current GeneralizedTime
+    // value.  We retain the existing GeneralizedTime object (preserving any
+    // sub-second precision) and only update its Calendar fields.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the value using the non raw fields.
+     * Reads the current state of the spinners, calendar, and timezone combo and
+     * applies the changes to the underlying {@link GeneralizedTime} model by
+     * mutating its embedded {@link Calendar}.
+     * We update the calendar in place rather than creating a new
+     * {@link GeneralizedTime} so that any sub-second precision in the original
+     * value is preserved.
      */
     private void updateValueFromNonRawFields()
     {
-        // Retain the format of the GeneralizedTime value 
+        // Retain the format of the GeneralizedTime value
         // by only updating its calendar object.
         Calendar calendar = value.getCalendar();
 
@@ -725,11 +904,24 @@ public class GeneralizedTimeValueDialog extends Dialog
     }
 
 
+    // ── Mon Mothma Hands the Final Timestamp to the Caller ───────────────────
+    // After OK is pressed, callers retrieve the committed GeneralizedTime here.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the {@link GeneralizedTime} value.
+     * Returns the {@link GeneralizedTime} value after the dialog has been
+     * closed with OK.
+     * If "Discard Fraction" was checked, the millisecond component has been
+     * zeroed out before this method is called.
      *
-     * @return
-     *      the {@link GeneralizedTime} value
+     * <p>For example — the caller retrieves the committed timestamp:</p>
+     * <pre>
+     *   if (dialog.open() == Dialog.OK) {
+     *       GeneralizedTime gt = dialog.getGeneralizedTime();
+     *       // write gt.toGeneralizedTime() to the attribute
+     *   }
+     * </pre>
+     *
+     * @return  The committed {@link GeneralizedTime} value.
      */
     public GeneralizedTime getGeneralizedTime()
     {

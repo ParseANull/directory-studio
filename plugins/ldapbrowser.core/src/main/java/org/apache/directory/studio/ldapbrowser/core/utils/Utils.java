@@ -70,24 +70,40 @@ import org.apache.directory.studio.ldifparser.model.lines.LdifSepLine;
 import org.eclipse.core.runtime.Preferences;
 
 
+// ── CLASS: Utils — R2-D2'S MAIN TOOLKIT FOR THE LDAP BROWSER CORE ────────────
+// R2-D2 carries the whole toolkit: normalize DNs to OID strings, compare byte
+// arrays, serialize beans to XML, format file sizes, build LDAP URLs, compute
+// LDIF diffs between two entries, and encode/decode RFC 4517 postal addresses.
+// Utils is the general-purpose droids' helper that everything else reaches for
+// when the task doesn't fit neatly into any other class.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * General-purpose static utility methods for the ldapbrowser.core plugin.
+ * Covers DN normalisation, byte-array comparison, XML serialisation,
+ * string helpers, LDIF formatting, LDAP URL construction, entry diff
+ * computation, and RFC 4517 postal address encoding.
+ *
+ * <p>Think of this as R2-D2's main toolkit — everything the other classes
+ * reach for when they need a cross-cutting utility.</p>
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class Utils
 {
 
+    // ── R2-D2 Normalises A DN To A Lowercase OID-Keyed String ────────────────────
+    // R2-D2 replaces each RDN attribute type name with its numeric OID
+    // and lowercases the attribute value so the string is suitable as a schema
+    // cache key (stable regardless of name aliases or case differences).
+    // Example: "surname=Bar" becomes "2.5.4.4=bar".
     /**
-     * Transforms the given Dn into a normalized String, usable by the schema cache.
-     * The following transformations are performed:
-     * <ul>
-     *   <li>The attribute type is replaced by the OID
-     *   <li>The attribute value is trimmed and lowercased
-     * </ul> 
-     * Example: the surname=Bar will be transformed to
-     * 2.5.4.4=bar
-     * 
-     * 
-     * @param dn the Dn
-     * @param schema the schema
-     * 
-     * @return the oid string
+     * Transforms the given DN into a normalised OID string usable as a schema
+     * cache key.  Each RDN attribute type is replaced by its OID; values are
+     * trimmed and lowercased.
+     *
+     * @param dn the DN
+     * @param schema the schema used for OID resolution
+     * @return the normalised OID string, e.g. {@code 2.5.4.4=bar,2.5.4.3=smith}
      */
     public static String getNormalizedOidString( Dn dn, Schema schema )
     {
@@ -113,6 +129,9 @@ public class Utils
     }
 
 
+    // ── R2-D2 Converts A Single RDN To Its OID Form ──────────────────────────────
+    // Each AVA in the RDN is converted to OID=value; multi-valued RDNs join with +.
+    // Private helper called by getNormalizedOidString for each RDN component.
     private static String getOidString( Rdn rdn, Schema schema )
     {
         StringBuilder sb = new StringBuilder();
@@ -137,6 +156,10 @@ public class Utils
     }
 
 
+    // ── R2-D2 Converts A Single AVA To Its OID=value Form ────────────────────────
+    // Resolves the AVA's norm type to its numeric OID via the schema (or uses the
+    // norm type directly if schema is null), then appends the lowercased trimmed value.
+    // Private helper called by getOidString(Rdn, Schema).
     private static String getOidString( Ava ava, Schema schema )
     {
         String oid = schema != null ? schema.getAttributeTypeDescription( ava.getNormType() ).getOid() : ava
@@ -146,6 +169,16 @@ public class Utils
     }
 
 
+    // ── R2-D2 Joins A String Array Into A Comma-Separated Display String ─────────
+    // Null or empty arrays become the empty string.
+    // Elements are joined with ", " separators.
+    // Used for display-only output; not for LDAP filter construction.
+    /**
+     * Converts a String array to a comma-separated display string.
+     *
+     * @param array the array to join
+     * @return the comma-separated string, or {@code ""} if null or empty
+     */
     public static String arrayToString( String[] array )
     {
         if ( array == null || array.length == 0 )
@@ -167,6 +200,17 @@ public class Utils
     }
 
 
+    // ── R2-D2 Compares Two Byte Arrays Byte-By-Byte ──────────────────────────────
+    // Handles reference equality, null, length mismatch, and element comparison.
+    // Used by the Value class to compare binary values without java.util.Arrays.
+    // Returns true only when both arrays contain identical bytes in identical order.
+    /**
+     * Compares two byte arrays for equality.
+     *
+     * @param data1 the first byte array
+     * @param data2 the second byte array
+     * @return {@code true} if the arrays are equal
+     */
     public static boolean equals( byte[] data1, byte[] data2 )
     {
         if ( data1 == data2 )
@@ -184,6 +228,18 @@ public class Utils
     }
 
 
+    // ── R2-D2 Truncates A Long String With An Ellipsis For Display ───────────────
+    // If value exceeds length characters, R2-D2 cuts it at exactly length chars
+    // and appends "..." to signal truncation.
+    // Returns an empty string if value is null or not longer than length.
+    /**
+     * Returns a shortened version of the given string, appending {@code ...}
+     * if the value exceeds the given length.
+     *
+     * @param value the string to shorten
+     * @param length the maximum length before truncation
+     * @return the shortened string, or {@code ""} if null/not over length
+     */
     public static String getShortenedString( String value, int length )
     {
         StringBuilder sb = new StringBuilder();
@@ -197,6 +253,17 @@ public class Utils
     }
 
 
+    // ── R2-D2 Serialises A Java Bean To An XML String Via XMLEncoder ─────────────
+    // R2-D2 sets the context class loader to avoid OSGi ClassLoader issues,
+    // then uses XMLEncoder to write the object graph to a ByteArrayOutputStream,
+    // and returns the UTF-8 decoded XML string.
+    // Used for persisting preferences and configuration beans.
+    /**
+     * Serialises a Java bean to an XML string using {@link XMLEncoder}.
+     *
+     * @param o the bean to serialise
+     * @return the XML string representation
+     */
     public static String serialize( Object o )
     {
         ClassLoader ccl = Thread.currentThread().getContextClassLoader();
@@ -218,6 +285,16 @@ public class Utils
     }
 
 
+    // ── R2-D2 Deserialises An XML String Back To A Java Bean ─────────────────────
+    // R2-D2 sets the context class loader, UTF-8 encodes the string to bytes,
+    // and uses XMLDecoder to reconstruct the original object graph.
+    // Used for loading persisted preferences and configuration beans.
+    /**
+     * Deserialises a Java bean from an XML string using {@link XMLDecoder}.
+     *
+     * @param s the XML string
+     * @return the deserialised object
+     */
     public static Object deserialize( String s )
     {
         ClassLoader ccl = Thread.currentThread().getContextClassLoader();
@@ -239,12 +316,32 @@ public class Utils
     }
 
 
+    // ── R2-D2 Returns A Safe Display String For Any Object ───────────────────────
+    // C-3PO would panic at a null reference; R2-D2 calmly returns "-" instead.
+    // For non-null objects, calls toString() and returns the result.
+    // Used throughout the UI to avoid NullPointerExceptions in display code.
+    /**
+     * Returns the string representation of the object, or {@code "-"} if null.
+     *
+     * @param o the object
+     * @return the string representation or {@code "-"}
+     */
     public static String getNonNullString( Object o )
     {
         return o == null ? "-" : o.toString(); //$NON-NLS-1$
     }
 
 
+    // ── R2-D2 Formats A Byte Count As A Human-Readable File Size String ──────────
+    // R2-D2 auto-selects the best unit: megabytes > 1 MB, kilobytes > 1 KB,
+    // bytes for everything else.  The raw byte count is always shown in parentheses.
+    // Uses the NLS Messages class for localised unit strings (Byte, Bytes, KB, MB).
+    /**
+     * Formats a byte count as a human-readable file size string.
+     *
+     * @param bytes the number of bytes
+     * @return a human-readable string, e.g. {@code "1 MB (1048576 Bytes)"}
+     */
     public static String formatBytes( long bytes )
     {
         String size = ""; //$NON-NLS-1$
@@ -271,6 +368,18 @@ public class Utils
     }
 
 
+    // ── Mace Windu Checks If A Collection Contains A String Regardless Of Case ───
+    // Mace asks: "does this collection hold this identifier, in any case?"
+    // Null collection or null target string both return false immediately.
+    // Elements are compared using equalsIgnoreCase — no toLowerCase needed.
+    // Used for case-insensitive LDAP attribute name containment checks.
+    /**
+     * Checks whether the collection contains the given string, ignoring case.
+     *
+     * @param c the collection to search
+     * @param s the string to find
+     * @return {@code true} if any element equals {@code s} ignoring case
+     */
     public static boolean containsIgnoreCase( Collection<String> c, String s )
     {
         if ( c == null || s == null )
@@ -290,6 +399,17 @@ public class Utils
     }
 
 
+    // ── R2-D2 Reads The LDIF Formatting Preferences From The Plugin Store ────────
+    // R2-D2 queries the BrowserCorePlugin preferences for three settings:
+    // space-after-colon, line width, and line separator.
+    // Returns a LdifFormatParameters object pre-configured from those preferences.
+    // Used by saveToLdif and all LDIF export paths.
+    /**
+     * Builds a {@link LdifFormatParameters} instance from the current plugin
+     * preferences (space-after-colon, line width, line separator).
+     *
+     * @return the LDIF format parameters
+     */
     public static LdifFormatParameters getLdifFormatParameters()
     {
         Preferences store = BrowserCorePlugin.getDefault().getPluginPreferences();
@@ -301,16 +421,16 @@ public class Utils
     }
 
 
+    // ── Han Builds An LDAP URL From A BrowserConnection ──────────────────────────
+    // Han plots the jump coordinates: scheme (ldap or ldaps), host, and port.
+    // If the connection uses LDAPS encryption, the ldaps:// scheme is chosen.
+    // The DN and search parameters are not included; callers add those separately.
+    // Returns an empty LdapUrl if the connection has no underlying Connection.
     /**
-     * Transforms an IBrowserConnection to an LdapURL. The following parameters are
-     * used to create the LDAP URL:
-     * <ul>
-     * <li>scheme
-     * <li>host
-     * <li>port
-     * </ul>
+     * Builds an {@link LdapUrl} from a {@link IBrowserConnection}, setting the
+     * scheme (ldap/ldaps), host, and port.
      *
-     * @param entry the entry
+     * @param browserConnection the browser connection
      * @return the LDAP URL
      */
     public static LdapUrl getLdapURL( IBrowserConnection browserConnection )
@@ -336,15 +456,13 @@ public class Utils
     }
 
 
+    // ── Han Builds An LDAP URL For A Specific Entry In The Directory ─────────────
+    // Han delegates to getLdapURL(IBrowserConnection) for the connection details,
+    // then adds the entry's DN as the URL path component.
+    // The result uniquely identifies this entry in the directory.
+    // Used for copy-as-URL and drag-and-drop operations in the UI.
     /**
-     * Transforms an IEntry to an LdapURL. The following parameters are
-     * used to create the LDAP URL:
-     * <ul>
-     * <li>scheme
-     * <li>host
-     * <li>port
-     * <li>dn
-     * </ul>
+     * Builds an {@link LdapUrl} for the given entry (scheme, host, port, DN).
      *
      * @param entry the entry
      * @return the LDAP URL
@@ -358,18 +476,14 @@ public class Utils
     }
 
 
+    // ── Han Builds An LDAP URL For A Search Mission Briefing ─────────────────────
+    // Han delegates to getLdapURL(IBrowserConnection), then adds the search base,
+    // returning attributes, scope, and filter to the URL.
+    // The result encodes the full search as an RFC 4516 LDAP URL.
+    // Used for copy-as-URL and shareable search link operations in the UI.
     /**
-     * Transforms an ISearch to an LdapURL. The following search parameters are
-     * used to create the LDAP URL:
-     * <ul>
-     * <li>scheme
-     * <li>host
-     * <li>port
-     * <li>search base
-     * <li>returning attributes
-     * <li>scope
-     * <li>filter
-     * </ul>
+     * Builds an {@link LdapUrl} for the given search (scheme, host, port, base DN,
+     * attributes, scope, filter).
      *
      * @param search the search
      * @return the LDAP URL
@@ -391,15 +505,20 @@ public class Utils
     }
 
 
+    // ── R2-D2 Computes The LDIF Diff Between Two Entry Snapshots ─────────────────
+    // R2-D2 walks every attribute description that appears in either entry,
+    // decides whether to delete, add, or replace each attribute's values based on
+    // the connection's ModifyMode and ModifyOrder preferences, and builds an
+    // LdifChangeModifyRecord expressing the minimal required modification.
+    // Returns null if there are no differences — no empty LDIF sent to the server.
     /**
-     * Computes the difference between the old and the new entry
-     * and returns an LDIF that could be applied to the old entry
-     * to get new entry.
+     * Computes the LDIF change-modify record needed to transform {@code oldEntry}
+     * into {@code newEntry}.  Returns {@code null} if the two entries are identical.
+     * Respects the connection's {@link ModifyMode} and {@link ModifyOrder} settings.
      *
-     * @param oldEntry the old entry
-     * @param newEntry the new entry
-     * @return the change modify record or null if there is no difference
-     *         between the two entries
+     * @param oldEntry the original entry
+     * @param newEntry the modified entry
+     * @return the LDIF file containing the modify record, or {@code null} if no change
      */
     public static LdifFile computeDiff( IEntry oldEntry, IEntry newEntry )
     {
@@ -646,6 +765,9 @@ public class Utils
     }
 
 
+    // ── R2-D2 Creates An LDIF Attribute-Value Line For One Entry Value ────────────
+    // Chooses binary or string encoding based on the attribute's isBinary flag.
+    // Private helper used within computeDiff to build the mod spec value lines.
     private static LdifAttrValLine computeDiffCreateAttrValLine( IValue value )
     {
         IAttribute attribute = value.getAttribute();
@@ -661,22 +783,18 @@ public class Utils
     }
 
 
+    // ── C-3PO Decodes RFC 4517 Postal Address Syntax Into Readable Lines ─────────
+    // C-3PO replaces the "$" delimiter with the caller's separator (e.g. newline),
+    // un-escapes "\24" back to "$", and un-escapes "\5C" (or "\5c") back to "\".
+    // The resulting translator can be applied to a PostalAddress attribute value.
+    // Used by the postal address value editor to display multi-line addresses.
     /**
-     * Decodes the RFC 4517 Postal Address syntax.
+     * Creates a {@link CharSequenceTranslator} for decoding the RFC 4517 Postal
+     * Address syntax.  Replaces {@code $} with the given separator, and
+     * un-escapes {@code \24} and {@code \5C}.
      *
-     * <pre>
-     * PostalAddress = line *( DOLLAR line )
-     * line          = 1*line-char
-     * line-char     = %x00-23
-     *                 / (%x5C "24")  ; escaped "$"
-     *                 / %x25-5B
-     *                 / (%x5C "5C")  ; escaped "\"
-     *                 / %x5D-7F
-     *                 / UTFMB
-     * </pre>
-     *
-     * @param separator the separator to output between address lines
-     * @return a translator object for decoding
+     * @param separator the string to insert between address lines
+     * @return a translator for decoding postal address values
      */
     public static CharSequenceTranslator createPostalAddressDecoder( String separator )
     {
@@ -688,11 +806,18 @@ public class Utils
     }
 
 
+    // ── C-3PO Encodes Display Lines Into RFC 4517 Postal Address Syntax ──────────
+    // C-3PO performs the inverse of createPostalAddressDecoder:
+    // escapes "\" as "\5C", escapes "$" as "\24", and replaces the separator
+    // (e.g. newline) with the single "$" delimiter character.
+    // Used by the postal address value editor when saving back to the directory.
     /**
-     * Encodes the RFC 4517 Postal Address syntax.
+     * Creates a {@link CharSequenceTranslator} for encoding the RFC 4517 Postal
+     * Address syntax.  Escapes {@code \} as {@code \5C}, {@code $} as {@code \24},
+     * and replaces the given separator with {@code $}.
      *
-     * @param separator the separator used between address lines
-     * @return a translator object for encoding
+     * @param separator the string separating address lines in the input
+     * @return a translator for encoding postal address values
      */
     public static CharSequenceTranslator createPostalAddressEncoder( String separator )
     {

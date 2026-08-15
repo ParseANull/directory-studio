@@ -25,11 +25,23 @@ import java.util.Collection;
 import java.util.List;
 
 
+// ── CLASS: AclItem — DEATH STAR CLEARANCE MANIFEST: ONE COMPLETE RULE ────────
+// Each page on Tarkin's clearance manifest is one complete access rule: what
+// resource is being protected (the what-clause) and a list of who gets what
+// level of access (the who-clauses). Together they form a single OpenLDAP ACL
+// rule: "access to [what] by [who1] [level1] by [who2] [level2] ...". This
+// class is that one page — one AclWhatClause plus a list of AclWhoClauses.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents an ACL (Access Control List) Item for OpenLDAP. 
- * 
- * An AclItem contains an AclWhatClause and a list of AclWhoClause
- * 
+ * The top-level model object representing one complete OpenLDAP ACL rule.
+ * An ACL rule has exactly one "what" clause (identifying the resource) and a
+ * list of one-or-more "by" clauses (identifying who gets what access). The
+ * three {@code toString} overloads let us produce the rule in a compact
+ * single-line form or a pretty-printed multi-line form, with or without the
+ * leading {@code "access"} keyword.
+ * Think of this class as one page of Tarkin's Death Star clearance manifest —
+ * resource on the top, access assignments below, all sealed into one item.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class AclItem
@@ -41,19 +53,36 @@ public class AclItem
     private List<AclWhoClause> whoClauses = new ArrayList<AclWhoClause>();
 
 
+    // ── Creating a Blank Manifest Page ────────────────────────────────────────
+    // The parser creates an empty AclItem and then fills in the what-clause
+    // and who-clauses one by one as it reads tokens from the ACL string.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AclItem.
+     * Creates an empty ACL item with no what-clause and an empty who-clauses
+     * list. The parser uses this to build an item incrementally, and the visual
+     * editor uses it when creating a new rule from scratch.
      */
     public AclItem()
     {
     }
 
 
+    // ── Creating a Pre-Populated Manifest Page ────────────────────────────────
+    // When we already have a what-clause and a list of who-clauses we can
+    // package them into an AclItem in one constructor call.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AclItem.
+     * Creates an ACL item pre-populated with a what-clause and a list of
+     * who-clauses. Useful in tests or when converting from another representation.
      *
-     * @param whatClause the {@link AclWhatClause} element 
-     * @param whoClauses the {@link AclWhoClause} elements
+     * <p>For example — Tarkin filling in a complete manifest page at once:</p>
+     * <pre>
+     *   AclItem item = new AclItem(whatClause, whoClauses);
+     *   item.toString(); // → "to * by users read"
+     * </pre>
+     *
+     * @param whatClause  The resource-selector clause.
+     * @param whoClauses  The list of subject-access clauses.
      */
     public AclItem( AclWhatClause whatClause, List<AclWhoClause> whoClauses )
     {
@@ -62,10 +91,21 @@ public class AclItem
     }
 
 
+    // ── Reading the What-Clause ────────────────────────────────────────────────
+    // The adjutant reads which resource is being protected from the manifest page.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the {@link AclWhatClause} element.
-     * 
-     * @return the whatClauses the {@link AclWhatClause} element
+     * Returns the what-clause that identifies the protected resource. This is
+     * always present on a well-formed ACL item; {@code null} indicates an
+     * incomplete item being built by the parser.
+     *
+     * <p>For example — reading which resource Tarkin is protecting:</p>
+     * <pre>
+     *   AclWhatClause what = item.getWhatClause();
+     *   what.toString(); // → "dn.subtree=\"ou=Rebels,dc=galaxy,dc=far\""
+     * </pre>
+     *
+     * @return  The {@link AclWhatClause}; may be {@code null} if not yet set.
      */
     public AclWhatClause getWhatClause()
     {
@@ -73,10 +113,22 @@ public class AclItem
     }
 
 
+    // ── Reading the Who-Clauses List ──────────────────────────────────────────
+    // The adjutant reads the ordered list of who-clauses — the access
+    // assignments for each category of subject.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the {@link AclWhoClause} elements.
-     * 
-     * @return the whoClauses the {@link AclWhoClause} elements
+     * Returns the list of who-clauses defining subject-access pairs. The order
+     * matters: OpenLDAP evaluates them top-to-bottom and applies the first one
+     * that matches.
+     *
+     * <p>For example — reading Tarkin's access assignments:</p>
+     * <pre>
+     *   List&lt;AclWhoClause&gt; whos = item.getWhoClauses();
+     *   // [AclWhoClauseUsers(read), AclWhoClauseStar(none)]
+     * </pre>
+     *
+     * @return  The list of {@link AclWhoClause}; never {@code null}.
      */
     public List<AclWhoClause> getWhoClauses()
     {
@@ -84,10 +136,15 @@ public class AclItem
     }
 
 
+    // ── Stamping the What-Clause ───────────────────────────────────────────────
+    // The parser stamps the what-clause onto the manifest page after parsing the
+    // "to [what]" portion of the ACL rule.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the {@link AclWhatClause} element.
-     * 
-     * @param whatClause the {@link AclWhatClause} element to set
+     * Sets the what-clause on this ACL item. Called by the ANTLR parser after it
+     * has fully parsed the "access to [what]" portion of the rule.
+     *
+     * @param whatClause  The resource-selector clause to apply.
      */
     public void setWhatClause( AclWhatClause whatClause )
     {
@@ -95,10 +152,20 @@ public class AclItem
     }
 
 
+    // ── Appending One Who-Clause ───────────────────────────────────────────────
+    // The parser appends who-clauses one at a time as it reads each "by [who]
+    // [level]" segment from the ACL text.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds an {@link AclWhoClause} element.
-     * 
-     * @param c the {@link AclWhoClause} element to add
+     * Appends a single who-clause to this ACL item's list. Called by the parser
+     * as it finishes parsing each "by" clause in the rule.
+     *
+     * <p>For example — the parser adding a "by users read" clause:</p>
+     * <pre>
+     *   item.addWhoClause(usersClause);
+     * </pre>
+     *
+     * @param c  The {@link AclWhoClause} to append.
      */
     public void addWhoClause( AclWhoClause c )
     {
@@ -106,10 +173,14 @@ public class AclItem
     }
 
 
+    // ── Bulk-Adding Who-Clauses ────────────────────────────────────────────────
+    // When we have a pre-built collection of who-clauses we can add them all
+    // in one call rather than iterating manually.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a {@link Collection} of {@link AclWhoClause} element.
-     * 
-     * @param c the {@link Collection} of {@link AclWhoClause}
+     * Adds all elements from the given collection to the who-clauses list.
+     *
+     * @param c  Collection of {@link AclWhoClause} elements to add.
      */
     public void addAllWhoClause( Collection<? extends AclWhoClause> c )
     {
@@ -117,8 +188,14 @@ public class AclItem
     }
 
 
+    // ── Clearing the Who-Clauses List ─────────────────────────────────────────
+    // When rebuilding the who-clauses from a fresh model (e.g. after a UI
+    // refresh) we clear the list first to avoid duplicates.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Clears all {@link AclWhoClause} elements.
+     * Removes all who-clauses from this ACL item. Useful when the visual editor
+     * needs to rebuild the clause list from scratch after the user has made
+     * changes.
      */
     public void clearWhoClause()
     {
@@ -126,8 +203,21 @@ public class AclItem
     }
 
 
+    // ── Rendering the Rule: Compact Form Without "access" Prefix ─────────────
+    // Tarkin's adjutant writes the rule in the standard compact form —
+    // "to [what] by [who1] [level1] by [who2] [level2]..." on one line.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc} 
+     * Returns the compact single-line ACL rule text without the leading
+     * {@code "access"} keyword. Equivalent to {@code toString(false)}.
+     *
+     * <p>For example — default form Tarkin writes to the config file:</p>
+     * <pre>
+     *   item.toString()
+     *   // → "to * by users read by * none"
+     * </pre>
+     *
+     * @return  The ACL rule text.
      */
     public String toString()
     {
@@ -135,12 +225,49 @@ public class AclItem
     }
 
 
+    // ── Rendering the Rule: Optionally Prepend "access" Keyword ──────────────
+    // Some contexts (like writing to an LDIF entry) require the full
+    // "access to ..." form; others just want "to ...". This overload chooses.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the ACL rule text, optionally prefixed with {@code "access"}.
+     * Some OpenLDAP configuration formats require the leading keyword;
+     * others omit it.
+     *
+     * <p>For example — choosing the "access" prefix:</p>
+     * <pre>
+     *   item.toString(true)  // → "access to * by users read"
+     *   item.toString(false) // → "to * by users read"
+     * </pre>
+     *
+     * @param prependAccess  {@code true} to include the leading {@code "access"} keyword.
+     * @return               The ACL rule text.
+     */
     public String toString( boolean prependAccess )
     {
         return toString( prependAccess, false );
     }
 
 
+    // ── Rendering the Rule: Full Control Over Format ───────────────────────────
+    // For the source-editor pretty-printer we want newlines before each "by"
+    // clause so the rule is easier to read. This overload adds them.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the ACL rule text with full control over the "access" prefix and
+     * pretty-printing. When {@code prettyPrint} is {@code true}, each "by" clause
+     * is placed on its own line — useful for the source editor's formatter.
+     *
+     * <p>For example — pretty-printed output:</p>
+     * <pre>
+     *   item.toString(true, true)
+     *   // → "access to *\nby users read\nby * none"
+     * </pre>
+     *
+     * @param prependAccess  {@code true} to include the leading {@code "access"} keyword.
+     * @param prettyPrint    {@code true} to put each "by" clause on its own line.
+     * @return               The formatted ACL rule text.
+     */
     public String toString( boolean prependAccess, boolean prettyPrint )
     {
 
@@ -174,7 +301,7 @@ public class AclItem
                 {
                     sb.append( " " );
                 }
-                
+
                 sb.append( "by " );
                 sb.append( whoClause.toString() );
             }

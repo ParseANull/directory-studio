@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -39,20 +39,17 @@ import org.eclipse.swt.widgets.Shell;
 import org.apache.directory.studio.openldap.common.ui.model.DisallowFeatureEnum;
 
 
+// Like Princess Leia transmitting the list of restricted actions
+// to the Rebellion commanders, we project a compact hologram
+// of disallowable features and let the operator pick the one
+// they need to explicitly block on this server.
 /**
- * The DisallowFeatureDialog is used to select one feature to allow. The possible
- * features are :
- * <ul>
- * <li>bind_anon</li>
- * <li>bind_simple</li>
- * <li>tls_2_anon</li>
- * <li>tls_authc</li>
- * <li>proxy_authz_non_critical</li>
- * <li>dontusecopy_non_critical</li>
- * </ul>
- * 
- * The dialog overlay is like :
- * 
+ * A dialog for selecting a single disallow-feature value in the OpenLDAP
+ * configuration editor. We present checkboxes for each possible feature
+ * (bind_anon, bind_simple, tls_2_anon, tls_authc, proxy_authz_non_critical,
+ * dontusecopy_non_critical) and let the operator choose the one to add.
+ *
+ * <p>The dialog layout looks like this:
  * <pre>
  * +------------------------------------+
  * | Disallowed feature                 |
@@ -63,36 +60,49 @@ import org.apache.directory.studio.openldap.common.ui.model.DisallowFeatureEnum;
  * | | tls_authc :                [ ] | |
  * | | proxy_authz_non_critical : [ ] | |
  * | | dontusecopy_non_critical : [ ] | |
- * | '--------------------------------' |
+ * | '--------------------------------' | |
  * |                                    |
  * |  (Cancel)                    (OK)  |
  * +------------------------------------+
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
 {
     /** The array of buttons */
     private Button[] disallowFeatureCheckboxes = new Button[6];
-    
+
     /** The already selected disaallowed features */
     List<DisallowFeatureEnum> features = new ArrayList<>();
-    
+
+    // Like Leia keying up the hologram projector and configuring it
+    // for resizable output, we create the dialog with the RESIZE style
+    // so the operator can expand the window to read all the feature names
+    // without them getting cut off.
     /**
-     * Create a new instance of the DisallowFeatureDialog
-     * 
-     * @param parentShell The parent Shell
+     * Creates a new DisallowFeatureDialog attached to the given parent shell.
+     * We apply the RESIZE style so the operator can enlarge the window
+     * to comfortably read longer feature names.
+     *
+     * @param parentShell the parent shell this dialog belongs to
      */
     public DisallowFeatureDialog( Shell parentShell )
     {
         super( parentShell );
         super.setShellStyle( super.getShellStyle() | SWT.RESIZE );
     }
-    
-    
+
+
+    // Like labeling the hologram projector so everyone knows this is
+    // the "DisallowFeature" transmission and not something else, we
+    // stamp the dialog shell with the correct localized title text
+    // before the window appears to the operator.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting the window title to the
+     * localized "DisallowFeature" label.
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -100,7 +110,7 @@ public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
         super.configureShell( shell );
         shell.setText( Messages.getString( "DisallowFeature.Title" ) );
     }
-    
+
 
     /**
      * The listener in charge of exposing the changes when some checkbox is selected
@@ -111,11 +121,11 @@ public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
         public void widgetSelected( SelectionEvent e )
         {
             Object object = e.getSource();
-            
+
             if ( object instanceof Button )
             {
                 Button selectedCheckbox = (Button)object;
-                
+
                 for ( int i = 1; i < disallowFeatureCheckboxes.length; i++ )
                 {
                     if ( selectedCheckbox == disallowFeatureCheckboxes[i] )
@@ -132,8 +142,14 @@ public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
     };
 
 
+    // Like Leia's hologram flickering to life with the full disallow-feature
+    // briefing, we assemble the checkbox group and wire everything up so
+    // the operator can immediately start making their selection.
+    // The dialog is fully live when this method returns.
     /**
-     * Create the Dialog for DisallowFeature :
+     * Builds the main dialog content area, creating the disallow-feature
+     * checkbox group and initializing the selection state.
+     *
      * <pre>
      * +------------------------------------+
      * | Disallowed feature                 |
@@ -149,7 +165,9 @@ public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
      * |  (Cancel)                    (OK)  |
      * +------------------------------------+
      * </pre>
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -157,19 +175,24 @@ public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
         Composite composite = ( Composite ) super.createDialogArea( parent );
         GridData gd = new GridData( GridData.FILL_BOTH );
         composite.setLayoutData( gd );
-        
+
         createDisallowFeatureEditGroup( composite );
         initDialog();
-        
+
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // Like the projection crew carefully arranging each disallow label
+    // in the hologram frame and wiring each one to the signal receiver,
+    // we create a checkbox for each feature and hook them all up to
+    // the selection listener so operator clicks get recorded.
     /**
-     * Creates the DisallowFeature input group.
-     * 
+     * Builds the disallow-feature checkbox group, creating one checkbox
+     * per available feature and attaching the selection listener to each.
+     *
      * <pre>
      * Disallowed feature
      * .--------------------------------.
@@ -181,7 +204,8 @@ public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
      * | dontusecopy_non_critical : [ ] |
      * '--------------------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent the parent composite to attach the group to
      */
     private void createDisallowFeatureEditGroup( Composite parent )
     {
@@ -199,8 +223,17 @@ public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
             disallowFeatureCheckboxes[i].addSelectionListener( checkboxSelectionListener );
         }
     }
-    
-    
+
+
+    // Like reviewing the Rebellion's current restrictions list before
+    // the hologram display goes live, we scan the already-selected
+    // features and disable their checkboxes so duplicates can't slip
+    // through. If everything is already blocked, we kill the OK button.
+    /**
+     * Initializes the dialog by examining which disallow features are
+     * already configured and disabling those checkboxes. If all features
+     * are already in use, the OK button is disabled to prevent duplicates.
+     */
     protected void initDialog()
     {
         List<DisallowFeatureEnum> elements = getElements();
@@ -210,7 +243,7 @@ public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
         for ( int i = 1; i < disallowFeatureCheckboxes.length; i++ )
         {
             DisallowFeatureEnum value = DisallowFeatureEnum.getFeature( disallowFeatureCheckboxes[i].getText() );
-            
+
             // Disable the features already selected
             if ( elements.contains( value ) )
             {
@@ -222,7 +255,7 @@ public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
                 allSelected = false;
             }
         }
-        
+
         if ( allSelected )
         {
             // Disable the OK button
@@ -231,8 +264,13 @@ public class DisallowFeatureDialog extends AddEditDialog<DisallowFeatureEnum>
     }
 
 
+    // Like the hologram defaulting to a placeholder frame before the
+    // operator makes their selection, we seed the edited element with
+    // UNKNOWN as the clean starting point for a brand-new entry.
     /**
-     * {@inheritDoc}
+     * Seeds the dialog with a default UNKNOWN element when the operator
+     * is adding a brand-new disallow feature rather than editing
+     * an existing one.
      */
     @Override
     public void addNewElement()

@@ -47,14 +47,29 @@ import org.apache.directory.studio.ldapbrowser.core.model.ISearch;
 import org.apache.directory.studio.ldapbrowser.core.model.ISearchResult;
 
 
+// ── CLASS: RenameEntryRunnable — ANAKIN SKYWALKER BECOMES DARTH VADER ─────────
+// Anakin kneels before Palpatine.  Palpatine attempts a direct ritual
+// transformation (the LDAP moddn call).  If Anakin has too many apprentices to
+// cleanly transfer (error 66 — contextNotEmpty), Palpatine opens the SimulateRename
+// dialog: "Shall we copy the entire Jedi identity to the new Sith name, then
+// destroy the old one?"  If Anakin agrees, they copy the whole subtree under
+// "Darth Vader" and then optimistically delete everything under "Anakin Skywalker".
+// This runnable renames an LDAP entry (changes its RDN).  It tries a direct
+// LDAP moddn first.  If the server rejects it because the entry has children,
+// we ask the user via {@link SimulateRenameDialog} whether to simulate the rename
+// by copying the subtree to the new DN and then deleting the originals.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to rename an entry.
+ * A background runnable that renames an LDAP entry by changing its RDN.
+ * The primary mechanism is an LDAP moddn (modifyDN) operation.  If the server
+ * returns error 66 (NotAllowedOnNonLeaf, i.e. the entry has children), we offer
+ * the user a simulated rename via copy+delete.  After a successful rename we
+ * update the browser model: remove the old entry from cache, read back the entry
+ * under its new DN, update the parent's children list, and reset any search
+ * results that referenced the old entry.  We then fire an
+ * {@link EntryRenamedEvent} and per-search {@link SearchUpdateEvent}s.
+ * Think of it as Anakin's transformation into Darth Vader.
  *
- * First it tries to rename an entry using an modrdn operation. If
- * that operation fails with an LDAP error 66 (ContextNotEmptyException)
- * the use is asked if s/he wants to simulate such a rename by recursively
- * searching/creating/deleting entries.
- * 
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class RenameEntryRunnable implements StudioConnectionBulkRunnableWithProgress
@@ -78,12 +93,22 @@ public class RenameEntryRunnable implements StudioConnectionBulkRunnableWithProg
     private SimulateRenameDialog dialog;
 
 
+    // ── Anakin Stands Before The Throne ───────────────────────────────────────
+    // Stores the entry, the new RDN, and the dialog.  The newEntry field stays
+    // null until after the rename succeeds (we read it back from the server).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of RenameEntryRunnable.
-     * 
-     * @param entry the entry to rename
-     * @param newRdn the new Rdn
-     * @param dialog the dialog
+     * Creates a new RenameEntryRunnable.
+     *
+     * <p>For example:</p>
+     * <pre>
+     *   new StudioBrowserJob(new RenameEntryRunnable(entry, newRdn, dialog)).execute();
+     * </pre>
+     *
+     * @param entry  the entry to rename.
+     * @param newRdn the new RDN to give the entry.
+     * @param dialog the dialog to ask about simulated rename; may be
+     *               {@code null} if simulated rename should never be offered.
      */
     public RenameEntryRunnable( IEntry entry, Rdn newRdn, SimulateRenameDialog dialog )
     {
@@ -95,8 +120,13 @@ public class RenameEntryRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── The Sith Need One Comms Channel ───────────────────────────────────────
+    // One connection — all operations go to the same server.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the connection for this rename operation.
+     *
+     * @return single-element array with the underlying {@link Connection}.
      */
     public Connection[] getConnections()
     {
@@ -105,8 +135,13 @@ public class RenameEntryRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── The Job Name For The Progress Bar ─────────────────────────────────────
+    // "Rename entry..." in the Eclipse progress view.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the display name for this background job.
+     *
+     * @return a localised "Rename entry" label.
      */
     public String getName()
     {
@@ -114,8 +149,14 @@ public class RenameEntryRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── Lock The Parent Entry During The Ritual ────────────────────────────────
+    // We lock the parent because we're modifying its children list.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the parent entry as the locked object (the parent's children list
+     * changes after rename).
+     *
+     * @return single-element array with the old entry's parent.
      */
     public Object[] getLockedObjects()
     {
@@ -125,8 +166,13 @@ public class RenameEntryRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── If The Ritual Fails ────────────────────────────────────────────────────
+    // "Could not rename entry." displayed to the user.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the error message shown if renaming fails.
+     *
+     * @return a localised error string.
      */
     public String getErrorMessage()
     {
@@ -134,8 +180,20 @@ public class RenameEntryRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── Palpatine Performs The Transformation ─────────────────────────────────
+    // 1. Build the new DN.
+    // 2. Try LDAP moddn.
+    // 3. If error 66 (contextNotEmpty) and we have a dialog, ask if simulated.
+    // 4. If simulated: copy subtree then optimisticDeleteEntryRecursive.
+    // 5. On success: uncache old, read new entry, update parent's children list,
+    //    reset affected searches.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Executes the rename.  Tries LDAP moddn first; falls back to simulated
+     * rename (copy+delete) if the server returns error 66 and the user agrees.
+     * After success, reads back the new entry and updates the model.
+     *
+     * @param monitor the Eclipse progress monitor.
      */
     public void run( StudioProgressMonitor monitor )
     {
@@ -259,8 +317,15 @@ public class RenameEntryRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── Anakin Is Now Darth Vader — Announce The Change ───────────────────────
+    // Fires an EntryRenamedEvent for the browser tree plus SearchUpdateEvents
+    // for any saved searches whose results referenced the old DN.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Fires an {@link EntryRenamedEvent} and per-search {@link SearchUpdateEvent}s.
+     * Only fires if both the old and new entries are available (rename succeeded).
+     *
+     * @param monitor ignored.
      */
     public void runNotification( StudioProgressMonitor monitor )
     {
@@ -277,13 +342,22 @@ public class RenameEntryRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── The Sith Ritual Itself — The LDAP moddn Call ───────────────────────────
+    // Static so MoveEntriesRunnable can reuse it.  Adds the ManageDsaIT control
+    // when the entry is a referral (so the server modifies the referral itself
+    // rather than following it).  The "deleteOldRdn=true" flag means the old RDN
+    // attribute value is removed from the entry's attributes.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Moves/Renames an entry.
-     * 
-     * @param browserConnection the browser connection
-     * @param entry the entry to move/rename
-     * @param newDn the new Dn
-     * @param monitor the progress monitor
+     * Sends the LDAP moddn (modifyDN) request.  Adds the ManageDsaIT control
+     * for referral entries.  The old RDN attribute value is deleted
+     * ({@code deleteOldRdn = true}).
+     * Static so that {@link MoveEntriesRunnable} can reuse it.
+     *
+     * @param browserConnection the connection.
+     * @param entry             the entry to rename.
+     * @param newDn             the new DN (full, including the new parent).
+     * @param monitor           the progress monitor.
      */
     static void renameEntry( IBrowserConnection browserConnection, IEntry entry, Dn newDn,
         StudioProgressMonitor monitor )

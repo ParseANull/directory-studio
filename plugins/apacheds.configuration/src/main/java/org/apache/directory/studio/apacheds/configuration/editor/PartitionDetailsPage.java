@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration.editor;
 
@@ -84,8 +84,21 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: PartitionDetailsPage — Imperial Vault Chief's Inspection Dossier ──
+// When the registry master selects a vault from the left-hand roster, the
+// vault chief opens up the full inspection dossier on the right: vault ID,
+// suffix DN, root context entry, storage-engine specifics, and search indexes.
+// This class is the right-hand details panel of the master/details split —
+// it shows everything about whichever partition the user has selected.
+// ──────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Details Page of the Server Configuration Editor for the Partition type
+ * The details panel displayed on the right side of the Partitions master/details
+ * layout when the user selects a partition in the master list.
+ * Implements the Eclipse Forms {@link IDetailsPage} contract so the
+ * {@link PartitionsMasterDetailsBlock} can wire it in automatically.
+ * Think of this class as the Imperial vault chief's full inspection dossier:
+ * every configurable aspect of one partition — ID, suffix, context entry,
+ * storage type, and indexes — laid out in separate sections for easy review.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -131,7 +144,7 @@ public class PartitionDetailsPage implements IDetailsPage
 
     // Listeners
     /** The Text Modify Listener */
-    private ModifyListener textModifyListener = event -> 
+    private ModifyListener textModifyListener = event ->
         {
             commit( true );
             masterDetailsBlock.setEditorDirty();
@@ -281,7 +294,7 @@ public class PartitionDetailsPage implements IDetailsPage
     };
 
     /** The Selection Changed Listener for the Indexed Attributes Table Viewer */
-    private ISelectionChangedListener indexedAttributesTableViewerListener = event -> 
+    private ISelectionChangedListener indexedAttributesTableViewerListener = event ->
         {
             indexesEditButton.setEnabled( !event.getSelection().isEmpty() );
             indexesDeleteButton.setEnabled( !event.getSelection().isEmpty() );
@@ -289,7 +302,7 @@ public class PartitionDetailsPage implements IDetailsPage
 
     /** The Double Click Listener for the Indexed Attributes Table Viewer */
     private IDoubleClickListener indexedAttributesTableViewerDoubleClickListener = event -> editSelectedIndex();
-    
+
     /** The Listener for the Add button of the Indexed Attributes Section */
     private SelectionListener indexedAttributeAddButtonListener = new SelectionAdapter()
     {
@@ -320,7 +333,7 @@ public class PartitionDetailsPage implements IDetailsPage
                     newJdbmIndex.setIndexCacheSize( 100 );
 
                     JdbmIndexDialog dialog = new JdbmIndexDialog( newJdbmIndex );
-                    
+
                     if ( JdbmIndexDialog.OK == dialog.open() )
                     {
                         newIndex = dialog.getIndex();
@@ -338,7 +351,7 @@ public class PartitionDetailsPage implements IDetailsPage
                     newMavibotIndex.setIndexAttributeId( "" ); //$NON-NLS-1$
 
                     MavibotIndexDialog dialog = new MavibotIndexDialog( newMavibotIndex );
-                    
+
                     if ( MavibotIndexDialog.OK == dialog.open() )
                     {
                         newIndex = dialog.getIndex();
@@ -408,11 +421,27 @@ public class PartitionDetailsPage implements IDetailsPage
     };
 
 
+    // ── Vault Chief Receives Assignment from the Registry Master ─────────────
+    // The registry master hands the vault chief their badge and a reference to
+    // the master list they'll report back to whenever the vault record changes.
+    // We store the self-reference (used by specific details blocks to call back
+    // to us) and the master-details block reference for dirty-marking.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PartitionDetailsPage.
+     * Constructs a new {@code PartitionDetailsPage} and stores a reference
+     * to the owning {@link PartitionsMasterDetailsBlock}.
+     * We also capture a self-reference so that concrete
+     * {@link PartitionSpecificDetailsBlock} implementations can call back
+     * to this page when they need to flag a change.
      *
-     * @param pmdb
-     *      the associated Master Details Block
+     * <p>For example — the vault chief gets their briefing:</p>
+     * <pre>
+     *   The registry master walks the new chief to their desk, hands them
+     *   a comms link back to the master registry, and assigns them to stand
+     *   by until a vault is selected from the list on the left.
+     * </pre>
+     *
+     * @param pmdb  the {@link PartitionsMasterDetailsBlock} that owns this page
      */
     public PartitionDetailsPage( PartitionsMasterDetailsBlock pmdb )
     {
@@ -421,8 +450,27 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Vault Chief Lays Out the Full Inspection Dossier ────────────────────
+    // The chief spreads four documents across the desk in order: the general
+    // ID sheet, the root context entry record, the storage-engine spec sheet,
+    // and the search index registry — everything needed to fully inspect a vault.
+    // We call four section-creation helpers in sequence, each building one
+    // visual section inside the provided parent composite.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the full UI content for this details page inside the given composite.
+     * Calls four helper methods in sequence to build the General Details, Context Entry,
+     * Partition-Specific Settings, and Indexes sections that together describe one partition.
+     *
+     * <p>For example — the full dossier laid out:</p>
+     * <pre>
+     *   Section 1 : General Details (ID, suffix, type, sync-on-write)
+     *   Section 2 : Context Entry   (root LDAP entry attribute/value pairs)
+     *   Section 3 : Specific Settings (JDBM or Mavibot knobs)
+     *   Section 4 : Indexed Attributes (search index list with Add/Edit/Delete)
+     * </pre>
+     *
+     * @param parent  the composite provided by the Eclipse Forms framework
      */
     public void createContents( Composite parent )
     {
@@ -436,13 +484,28 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Vault ID and Classification Panel Built ──────────────────────────────
+    // The first page of the dossier covers the basics: what type of storage
+    // engine powers this vault, its short name, its LDAP root DN, and whether
+    // writes are synced to disk immediately.
+    // We create a two-column grid section containing a type combo, ID text field,
+    // suffix text field, and a sync-on-write checkbox.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the General Details Section
+     * Builds the "General Details" section containing the core partition properties.
+     * This section lets the user choose the storage type (JDBM or Mavibot),
+     * set the partition ID and suffix DN, and toggle sync-on-write behavior.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the toolkit to use
+     * <p>For example — the ID sheet filled in:</p>
+     * <pre>
+     *   Partition Type : [JDBM v]
+     *   Id             : [example          ]
+     *   Suffix         : [dc=example,dc=com]
+     *   [X] Synchronization on Write
+     * </pre>
+     *
+     * @param parent   the parent composite (the details page body)
+     * @param toolkit  the form toolkit for creating styled widgets
      */
     private void createGeneralDetailsSection( Composite parent, FormToolkit toolkit )
     {
@@ -483,13 +546,29 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Root Context Entry Record Panel Constructed ───────────────────────────
+    // Every vault needs a root entry — the top-level LDAP object that anchors
+    // the whole tree. This section lets the chief view and edit those root
+    // attribute/value pairs, or auto-generate them from the suffix DN.
+    // We create a table viewer with Attribute and Value columns, plus Add/Edit/Delete
+    // buttons and an auto-generate checkbox that drives the whole thing.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Context Entry Section.
+     * Builds the "Context Entry" section for viewing and editing the partition's
+     * root LDAP entry attribute/value pairs.
+     * The "Auto Generate" checkbox, when ticked, derives the context entry from
+     * the suffix DN automatically, greying out the table and buttons.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the toolkit to use
+     * <p>For example — the vault's founding document drawn up:</p>
+     * <pre>
+     *   [X] Auto-generate context entry from suffix DN
+     *   | Attribute  | Value         |   [Add]
+     *   | objectClass| domain        |   [Edit]
+     *   | dc         | example       |   [Delete]
+     * </pre>
+     *
+     * @param parent   the parent composite (the details page body)
+     * @param toolkit  the form toolkit for creating styled widgets
      */
     private void createContextEntrySection( Composite parent, FormToolkit toolkit )
     {
@@ -628,8 +707,17 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Context Entry Controls Enabled or Greyed Out ─────────────────────────
+    // If the "auto-generate" order is in effect, the vault chief can't manually
+    // edit the root record — those controls are locked. If the order is lifted,
+    // the buttons re-enable, but only the Delete and Edit become active if
+    // something is actually selected in the table.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the context entry widgets enable state.
+     * Updates the enabled/disabled state of the context entry table and its buttons
+     * based on whether auto-generation is active and whether a row is selected.
+     * When "Auto Generate" is checked, everything is locked; when unchecked,
+     * Add is always enabled and Edit/Delete only light up when a row is selected.
      */
     private void updateContextEntryEnableState()
     {
@@ -642,13 +730,29 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Storage Engine Spec Sheet Section Scaffolded ─────────────────────────
+    // The vault's tech spec section is a collapsible frame that will be filled
+    // by whichever specialist panel matches the selected storage engine type.
+    // Right now we just erect the frame; the actual specialist content is
+    // swapped in later by updatePartitionSpecificSettingsSection().
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Partition Specific Settings Section
+     * Builds the collapsible "Partition Specific Settings" section shell.
+     * The section starts empty; its inner composite is populated (and replaced
+     * when the partition type changes) by {@link #updatePartitionSpecificSettingsSection()}.
+     * The section hides itself entirely if no type-specific block is available.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the toolkit to use
+     * <p>For example — the specialist panel frame goes up:</p>
+     * <pre>
+     *   [v] Partition Specific Settings   (collapsible section header)
+     *   +--------------------------------+
+     *   |  (content injected later by    |
+     *   |   the JDBM or Mavibot block)   |
+     *   +--------------------------------+
+     * </pre>
+     *
+     * @param parent   the parent composite (the details page body)
+     * @param toolkit  the form toolkit for creating styled widgets
      */
     private void createPartitionSpecificSettingsSection( Composite parent, FormToolkit toolkit )
     {
@@ -670,8 +774,15 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Old Specialist Panel Cleared from the Frame ───────────────────────────
+    // The vault type just changed — out with the old specialist panel, before
+    // the new one can be installed. We dispose the existing inner composite
+    // so the SWT widget tree doesn't accumulate stale controls.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes the inner specific settings composite.
+     * Disposes the currently displayed type-specific settings composite, if any.
+     * We call this whenever the partition type changes so the old JDBM or Mavibot
+     * panel is fully cleaned up before the new one is constructed in its place.
      */
     private void disposeSpecificSettingsComposite()
     {
@@ -684,8 +795,17 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── New Specialist Panel Installed and Refreshed ─────────────────────────
+    // The new specialist strides in, disposes the previous panel, bolts their
+    // own instrument cluster into the frame, and reads out the current vault
+    // values so all their dials show the right readings immediately.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the partition specific settings section.
+     * Replaces the type-specific settings composite with a freshly built one
+     * from the current {@link PartitionSpecificDetailsBlock}.
+     * Disposes the old composite first, then asks the new block to build its
+     * content, triggers a layout pass so sizes re-flow, and hides the whole section
+     * if there is no type-specific block (e.g., unknown partition type).
      */
     private void updatePartitionSpecificSettingsSection()
     {
@@ -708,13 +828,27 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Search Index Registry Panel Constructed ───────────────────────────────
+    // The last page of the dossier is the vault's index ledger: a scrollable
+    // list of every LDAP attribute that has a dedicated B-tree index to speed
+    // up searches, with buttons to add, edit, or remove individual entries.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Indexes Section
+     * Builds the "Indexed Attributes" section for managing the partition's search indexes.
+     * Shows a list of current indexes with attribute ID and (for JDBM) cache size,
+     * plus Add, Edit, and Delete buttons. Edit and Delete are disabled until a row
+     * is selected in the table.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the toolkit to use
+     * <p>For example — the index ledger pinned to the wall:</p>
+     * <pre>
+     *   | objectClass [100] |   [Add]
+     *   | uid [100]         |   [Edit]
+     *   | entryUUID [100]   |   [Delete]
+     *   | ...               |
+     * </pre>
+     *
+     * @param parent   the parent composite (the details page body)
+     * @param toolkit  the form toolkit for creating styled widgets
      */
     private void createIndexesSection( Composite parent, FormToolkit toolkit )
     {
@@ -792,10 +926,17 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Standard Button Sized to Imperial Spec ───────────────────────────────
+    // Every button in the Imperial fleet is built to the same standardized
+    // dimensions — no bespoke widths that make the UI look like a cantina menu.
+    // We produce a GridData object sized to the standard dialog button width.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Create a new button grid data.
+     * Creates a {@link GridData} sized to the standard dialog button width.
+     * Re-use this whenever you need a button that aligns with Add/Edit/Delete
+     * button columns elsewhere in the form.
      *
-     * @return the new button grid data
+     * @return  a new {@link GridData} set to fill horizontally at the standard button width
      */
     private GridData createNewButtonGridData()
     {
@@ -805,8 +946,16 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Guards Posted at Every Dossier Field ─────────────────────────────────
+    // The vault chief posts a guard at each form field so that any user edit
+    // is immediately captured: text changes commit to the model, checkbox toggles
+    // commit and mark the editor dirty, and table selections enable the right buttons.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Adds listeners to UI fields.
+     * Attaches all pre-built listener instances to their matching UI controls.
+     * Called after loading data into the form so that subsequent user edits
+     * are captured. Always pair with a prior or subsequent call to
+     * {@link #removeListeners()} to bracket programmatic updates.
      */
     private void addListeners()
     {
@@ -832,8 +981,16 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Guards Stood Down Before Data Reload ─────────────────────────────────
+    // Before the refresh cycle rewrites every field from the model, the chief
+    // stands all the guards down — otherwise every programmatic text update
+    // would trigger a commit event and falsely dirty the editor.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Removes listeners to UI fields.
+     * Detaches all listener instances from their matching UI controls.
+     * We always call this before programmatically loading data into widgets
+     * so that the load doesn't fire change events. Always follow up with
+     * a call to {@link #addListeners()}.
      */
     private void removeListeners()
     {
@@ -859,8 +1016,19 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Vault Chief Reassigned to a Different Vault ───────────────────────────
+    // The registry master taps a different vault on the list; the chief picks up
+    // their dossier, walks over to the newly selected vault, and immediately starts
+    // reading its particulars into the form panels on the right.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Responds to a selection change in the master list.
+     * Extracts the newly selected {@link PartitionWrapper} from the structured
+     * selection (or clears it if nothing is selected), then triggers a full
+     * {@link #refresh()} so all panels update to show the new partition's data.
+     *
+     * @param part       the form part that fired the selection event
+     * @param selection  the new selection from the master list table viewer
      */
     public void selectionChanged( IFormPart part, ISelection selection )
     {
@@ -877,8 +1045,20 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Chief Files the Updated Vault Record Back into the Model ─────────────
+    // Inspection complete — the chief reads every dial and checkbox, writes the
+    // values onto the official partition bean, and hands the dossier back to the
+    // registry. The specific-settings specialist does the same for their section.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Writes the current widget values back into the underlying {@link PartitionBean}.
+     * Pushes the ID, suffix DN, context entry LDIF, and sync-on-write flag from
+     * the form controls into the model. Also delegates to the
+     * {@link PartitionSpecificDetailsBlock} so storage-engine settings are saved too.
+     * Does nothing if no partition is currently selected.
+     *
+     * @param onSave  {@code true} when called during an explicit Save; {@code false}
+     *                when committing for other reasons such as a page switch
      */
     public void commit( boolean onSave )
     {
@@ -925,16 +1105,33 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Vault Chief Dismissed, Desk Cleared ──────────────────────────────────
+    // The inspection is over; the vault chief packs up and leaves the room.
+    // There is nothing to explicitly release here, but the method satisfies
+    // the IDetailsPage contract.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Releases any resources held by this details page.
+     * Currently a no-op — the Eclipse Forms framework cleans up widget disposal
+     * automatically. Exists to satisfy the {@link IDetailsPage} contract.
      */
     public void dispose()
     {
     }
 
 
+    // ── Chief Receives the Master Form Toolkit Briefing ───────────────────────
+    // Before the chief can draw any widgets, they need the toolkit — the
+    // Imperial-spec tool kit that ensures every control looks consistently styled.
+    // We pull it from the managed form and stash it for later use.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Stores the {@link FormToolkit} from the managed form for later use when
+     * building widget sections.
+     * The toolkit is needed during {@link #createContents(Composite)} and the
+     * section-creation helpers, which may be called after this method.
+     *
+     * @param form  the managed form that owns this details page
      */
     public void initialize( IManagedForm form )
     {
@@ -942,8 +1139,17 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Chief Checks Whether the Dossier Needs Filing ────────────────────────
+    // A quick check: has anything in this panel been changed since the last save?
+    // We always return false here because dirty state is managed by the master
+    // block and the editor itself — not by individual detail pages.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Indicates whether this details page has unsaved changes.
+     * Always returns {@code false} because dirty tracking for partitions is
+     * managed at the {@link PartitionsMasterDetailsBlock} level, not here.
+     *
+     * @return  {@code false} always
      */
     public boolean isDirty()
     {
@@ -951,8 +1157,16 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Chief Checks Whether the Displayed Data Is Stale ─────────────────────
+    // Is the dossier out of date? Do we need to re-fetch from the master record?
+    // We always say no here — the refresh is driven externally by selection events.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Indicates whether the displayed data is stale and needs to be refreshed.
+     * Always returns {@code false} — refresh is triggered by external selection
+     * events in the master list, not by an internal staleness check.
+     *
+     * @return  {@code false} always
      */
     public boolean isStale()
     {
@@ -960,8 +1174,17 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Chief Reads the Fresh Vault Dossier Top to Bottom ────────────────────
+    // A new vault has been selected — the chief stands down the guards, reads
+    // the entire dossier from scratch, populates all four sections, swaps in
+    // the correct specialist panel, then posts the guards back.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reloads all UI sections from the currently selected {@link PartitionWrapper}.
+     * Detaches listeners first to prevent spurious change events during loading.
+     * Populates type, ID, suffix, auto-generate flag, context entry, index list,
+     * sync-on-write, and the type-specific settings block, then re-attaches listeners.
+     * If no partition is selected, the form is left in its previous state.
      */
     public void refresh()
     {
@@ -1033,6 +1256,17 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Context Entry Table Reloaded from the Partition Record ───────────────
+    // The chief flips to the root-entry page of the dossier and reads the LDIF
+    // string stored on the partition bean, parses it back into an Entry object,
+    // and feeds it into the table viewer so the rows update.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * Refreshes the context entry table viewer from the partition bean's stored LDIF string.
+     * Parses the LDIF, wraps it in a {@link DefaultEntry}, feeds it to the table,
+     * resizes the columns to fit, and updates the enable state of the buttons.
+     * Falls back to an empty entry if the stored string is missing or unparseable.
+     */
     private void refreshContextEntry()
     {
         if ( ( partitionWrapper != null ) && ( partitionWrapper.getPartition() != null ) )
@@ -1076,8 +1310,19 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Vault Root Entry Generated from Suffix DN ─────────────────────────────
+    // When the "auto-generate" order is active, the vault's root entry is derived
+    // automatically from the suffix DN — the chief doesn't have to write it by hand.
+    // We parse the current suffix text into a Dn, ask the master block to generate
+    // the standard LDIF, push it onto the partition, and refresh the table.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Auto generates the context entry.
+     * Auto-generates the context entry LDIF from the current suffix DN text field.
+     * Only runs when the "Auto Generate" checkbox is ticked and a partition is selected.
+     * Parses the suffix text as a {@link Dn}, delegates LDIF generation to
+     * {@link PartitionsMasterDetailsBlock#getContextEntryLdif(Dn)}, stores it on the
+     * partition bean, and refreshes the context entry table.
+     * Silently ignores an invalid suffix DN.
      */
     private void autoGenerateContextEntry()
     {
@@ -1102,8 +1347,15 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Context Entry Table Columns Packed to Fit Contents ───────────────────
+    // After data is loaded into the table, the chief calls the quartermaster
+    // to tighten up the column widths so nothing is clipped and nothing wastes
+    // empty space — with a little extra breathing room on the first column.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Resizes the columns to fit the size of the cells.
+     * Packs the context entry table columns so their width matches their content.
+     * Adds a small padding to the Attribute column so the text doesn't sit flush
+     * against the column separator. Call this after updating the table's input.
      */
     private void resizeContextEntryTableColumnsToFit()
     {
@@ -1117,8 +1369,14 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Cursor Directed to the ID Field ──────────────────────────────────────
+    // When the vault chief first sits down at the dossier, we direct their
+    // attention to the most important field: the partition ID text box.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Moves keyboard focus to the partition ID text field.
+     * Called by the Eclipse Forms framework when this details page becomes active,
+     * so the user can start typing immediately without clicking first.
      */
     public void setFocus()
     {
@@ -1126,8 +1384,18 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Form Input Object Offered but Declined ───────────────────────────────
+    // The forms framework occasionally offers us an input object directly;
+    // we don't use that mechanism — our input comes from selectionChanged().
+    // So we politely decline and return false every time.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Handles a direct form input offer from the Eclipse Forms framework.
+     * We always return {@code false} because we receive our input through
+     * {@link #selectionChanged(IFormPart, ISelection)} rather than this route.
+     *
+     * @param input  the proposed input object (ignored)
+     * @return       {@code false} always
      */
     public boolean setFormInput( Object input )
     {
@@ -1135,8 +1403,17 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Selected Index Record Opened for Editing ─────────────────────────────
+    // The chief picks the highlighted index entry off the ledger and opens
+    // the appropriate dialog — JDBM or Mavibot — so the attribute ID and cache
+    // size (for JDBM) can be modified before being filed back.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Opens an indexed dialog with the selected index in the indexes table viewer.
+     * Opens the appropriate index dialog for the currently selected index in the table.
+     * Detects whether the selected index is a {@link JdbmIndexBean} or
+     * {@link MavibotIndexBean}, opens the matching dialog, and if the user confirms
+     * and made changes, refreshes the table and marks the editor dirty.
+     * Does nothing if the selection is empty or the partition type is unknown.
      */
     private void editSelectedIndex()
     {
@@ -1190,9 +1467,18 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Selected Context Entry Attribute Opened for Editing ───────────────────
+    // The chief picks a row from the root-entry table and opens the attribute
+    // editor dialog. If the user changes anything, the old value is removed
+    // from the entry and the new one inserted before the table is refreshed.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Opens a Context Entry Dialog with the selected Attribute Value Object in the
-     * Context Entry Table Viewer.
+     * Opens the attribute/value editor dialog for the currently selected row in
+     * the context entry table.
+     * Removes the old attribute value from the entry and inserts the updated one.
+     * Refreshes the table, resizes columns, and marks the editor dirty if the user
+     * confirmed the dialog and made a change.
+     * Does nothing if the selection is empty.
      */
     private void editSelectedContextEntry()
     {
@@ -1250,8 +1536,15 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Editor Flagged as Having Unsaved Changes ──────────────────────────────
+    // The vault record has been modified; we signal the master registry block
+    // so it can in turn notify the Eclipse editor framework that there are
+    // pending changes and the Save button should light up.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the associated editor dirty.
+     * Propagates a dirty notification up to the {@link PartitionsMasterDetailsBlock}.
+     * Call this from type-specific detail blocks (e.g., JDBM or Mavibot) when their
+     * controls change, so the top-level editor Save button activates.
      */
     public void setEditorDirty()
     {
@@ -1259,11 +1552,20 @@ public class PartitionDetailsPage implements IDetailsPage
     }
 
 
+    // ── Vault Properties Transferred to a New Storage Engine Bean ────────────
+    // The user just changed the partition type — JDBM to Mavibot or vice versa.
+    // We need to carry over all the common properties (ID, suffix, context entry,
+    // indexes…) to the new bean, converting index types along the way.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Copies partition properties from one instance to the other.
+     * Copies all common {@link PartitionBean} properties from {@code original} to
+     * {@code destination}, converting indexes to the appropriate target type.
+     * Called when the user switches partition type in the combo so we don't lose
+     * the ID, suffix, context entry, and other settings that carry across types.
+     * Silently ignores {@code null} arguments.
      *
-     * @param original the original partition
-     * @param destination the destination partition
+     * @param original     the source partition bean to copy from
+     * @param destination  the target partition bean to copy into
      */
     private void copyPartitionProperties( PartitionBean original, PartitionBean destination )
     {

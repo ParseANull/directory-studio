@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -43,11 +43,19 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.SizeLimitWrap
 import org.apache.directory.studio.openldap.config.editor.wrappers.TimeLimitWrapper;
 
 
+// Like Princess Leia's hologram presenting a dual-channel briefing where
+// the operator can choose between a size-limit directive and a time-limit
+// directive — but not both simultaneously — we give the administrator a
+// radio-button selector to pick the limit type and then either type the
+// value directly or open the appropriate sub-dialog via an Edit button.
 /**
- * The LimitDialog is used to edit the size and time limit parameter<br/>
- * 
- * The dialog overlay is like :
- * 
+ * The SizeTimeLimitDialog is used to edit either a size limit or a time
+ * limit parameter. The operator selects which type they want via radio
+ * buttons, then enters or edits the value in the corresponding text field
+ * (or via the "Edit..." button that opens the dedicated SizeLimitDialog or
+ * TimeLimitDialog).
+ *
+ * <p>The dialog overlay is like:
  * <pre>
  * +--------------------------------------------------------------------------+
  * | Limit                                                                    |
@@ -59,81 +67,33 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.TimeLimitWrap
  * |  (Cancel)                                                         (OK)   |
  * +--------------------------------------------------------------------------+
  * </pre>
- * 
- * A second option for the Dialog would be like :
- * 
- * +--------------------------------------------------------------------------+
- * | Limit                                                                    |
- * | .----------------------------------------------------------------------. |
- * | |   (o) Size Limit                  (o) TimeLimit                      | |
- * | '----------------------------------------------------------------------' |
- * ............................................................................
- * 
- * SizeLimit :
- * ............................................................................
- * | .----------------------------------------------------------------------. |
- * | | Soft Limit :          [----------]  [] Unlimited                     | |
- * | |                                                                      | |
- * | | Hard Limit :          [----------]  [] Unlimited [] Soft             | |
- * | |                                                                      | |
- * | | Global Limit :        [----------]  [] Unlimited                     | |
- * | |                                                                      | |
- * | | Unchecked Limit :     [----------]  [] Unlimited [] Disabled         | |
- * | |                                                                      | |
- * | | Paged Results Limit : [----------]  [] Unlimited [] No Estimate      | |
- * | |                                                                      | |
- * | | Paged Results Total : [----------]  [] Unlimited [] Disabled [] Hard | |
- * | '----------------------------------------------------------------------' |
- * ............................................................................
- * TimeLimit :
- * ............................................................................
- * | .----------------------------------------------------------------------. |
- * | | Soft Limit :  [----------]  [] Unlimited                             | |
- * | |                                                                      | |
- * | | Hard Limit :  [----------]  [] Unlimited  [] Soft                    | |
- * | |                                                                      | |
- * | | Global :      [----------]  [] Unlimited                             | |
- * | '----------------------------------------------------------------------' |
- * ............................................................................
- * End :
- * ............................................................................
- * | Resulting Limit                                                          |
- * | .----------------------------------------------------------------------. |
- * | | <//////////////////////////////////////////////////////////////////> | |
- * | '----------------------------------------------------------------------' |
- * |                                                                          |
- * |  (Cancel)                                                         (OK)   |
- * +--------------------------------------------------------------------------+
- * </pre>
- * 
- * But this would mean a duplication of code.
- *  
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
 {
     /** The TimeLimit radio button */
     private Button timeLimitButton;
-    
+
     /** The Text that contains the TimeLimit (either as typed or as built from the TimeLimitDialog) */
     private Text timeLimitText;
-    
+
     /** A Button used to edit the TimeLimit value */
     private Button timeLimitEditButton;
-    
+
     /** The SizeLimit radio button */
     private Button sizeLimitButton;
-    
+
     /** The Text that contains the SizeLimit (either as typed or as built from the SizeLimitDialog) */
     private Text sizeLimitText;
-    
+
     /** A Button used to edit the SizeLimit value */
     private Button sizeLimitEditButton;
-    
+
     /**
      * Listeners for the Selector radioButtons. It will enable or disable the dnSpec or Group accordingly
      * to the selection.
-     **/ 
+     **/
     private SelectionListener sizeTimeButtonsSelectionListener = new SelectionAdapter()
     {
         @Override
@@ -141,8 +101,8 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
         {
             if ( event.getSource() instanceof Button )
             {
-                Button button = (Button)event.getSource();
-                
+                Button button = ( Button ) event.getSource();
+
                 if ( button == sizeLimitButton )
                 {
                     if ( button.getSelection() )
@@ -160,7 +120,7 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
                 else
                 {
                     setEditedElement( new TimeLimitWrapper( "" ) );
-                    
+
                     // Enable the TimeLimit elements, disable the SizeLimit ones
                     timeLimitEditButton.setEnabled( true );
                     timeLimitText.setEnabled( true );
@@ -171,8 +131,8 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
             }
         }
     };
-    
-    
+
+
     /**
      * The listener for the sizeLimit Text
      */
@@ -186,7 +146,7 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
             if ( dialog.open() == OverlayDialog.OK )
             {
                 String newSizeLimitStr = dialog.getNewLimit();
-                
+
                 if ( newSizeLimitStr != null )
                 {
                     sizeLimitText.setText( newSizeLimitStr );
@@ -194,8 +154,8 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
             }
         }
     };
-    
-    
+
+
     /**
      * The listener for the timeLimit Text
      */
@@ -209,7 +169,7 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
             if ( dialog.open() == OverlayDialog.OK )
             {
                 String newTimeLimitStr = dialog.getNewLimit();
-                
+
                 if ( newTimeLimitStr != null )
                 {
                     timeLimitText.setText( newTimeLimitStr );
@@ -218,7 +178,7 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
         }
     };
 
-    
+
     protected ModifyListener sizeLimitTextListener = event ->
         {
             Button okButton = getButton( IDialogConstants.OK_ID );
@@ -231,9 +191,9 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
 
             // The String must be a valid SizeLimit
             String sizeLimitStr = sizeLimitText.getText();
-            
+
             SizeLimitWrapper sizeLimitWrapper = new SizeLimitWrapper( sizeLimitStr );
-            
+
             if ( sizeLimitWrapper.isValid() )
             {
                 sizeLimitText.setForeground( CommonUIPlugin.getDefault().getColor( CommonUIConstants.DEFAULT_COLOR ) );
@@ -247,7 +207,7 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
             }
         };
 
-    
+
     protected ModifyListener timeLimitTextListener = event ->
         {
             Button okButton = getButton( IDialogConstants.OK_ID );
@@ -260,9 +220,9 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
 
             // The String must be a valid TimeLimit
             String timeLimitStr = timeLimitText.getText();
-            
+
             TimeLimitWrapper timeLimitWrapper = new TimeLimitWrapper( timeLimitStr );
-            
+
             if ( timeLimitWrapper.isValid() )
             {
                 timeLimitText.setForeground( CommonUIPlugin.getDefault().getColor( CommonUIConstants.DEFAULT_COLOR ) );
@@ -275,11 +235,16 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
                 okButton.setEnabled( false );
             }
         };
-    
+
+
+    // Like Leia setting up the hologram projector with no pre-loaded limit
+    // data so the operator can choose which limit type to configure from
+    // scratch, we create the dialog with a resizable shell style.
     /**
-     * Create a new instance of the SizeTimeLimitsDialog
-     * 
-     * @param parentShell The parent Shell
+     * Creates a new SizeTimeLimitDialog with no pre-loaded limit value.
+     * The RESIZE style lets the operator expand the dialog as needed.
+     *
+     * @param parentShell the parent shell
      */
     public SizeTimeLimitDialog( Shell parentShell )
     {
@@ -288,21 +253,31 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
     }
 
 
+    // Like loading an existing limit directive into the hologram before
+    // opening it so the operator can see and revise the current value,
+    // we accept a limit string at construction time for pre-population.
     /**
-     * Create a new instance of the SizeTimeLimitDialog
-     * 
-     * @param parentShell The parent Shell
-     * @param timeLimitStr The instance containing the Limits data
+     * Creates a new SizeTimeLimitDialog, accepting a limit string that
+     * may be used to pre-populate the dialog (though the current implementation
+     * does not yet parse it into the edited element at construction time).
+     *
+     * @param parentShell the parent shell
+     * @param limitStr the existing limit string (reserved for future use)
      */
     public SizeTimeLimitDialog( Shell parentShell, String limitStr )
     {
         super( parentShell );
         super.setShellStyle( super.getShellStyle() | SWT.RESIZE );
     }
-    
-    
+
+
+    // Like labeling the hologram channel "Size/Time Limit" so the operator
+    // knows they're selecting which kind of limit to configure, we stamp
+    // the shell title before the dialog opens.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to "Size/Time Limit".
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -310,10 +285,18 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
         super.configureShell( shell );
         shell.setText( "Size/Time Limit" );
     }
-    
-    
+
+
+    // Like Leia's hologram projecting a dual-option briefing so the operator
+    // can choose between a size-limit channel and a time-limit channel and
+    // edit the selected one — either by typing directly or via a sub-dialog —
+    // we build the main dialog content area with both radio-button rows.
     /**
-     * Create the Dialog for TimeLimit :
+     * Builds the dialog content area with a limit-selection group containing
+     * radio buttons, text fields, and "Edit..." buttons for both size limit
+     * and time limit. We initialize the UI state and attach listeners before
+     * returning the composite.
+     *
      * <pre>
      * Limit
      * .----------------------------------------------------------------------.
@@ -321,7 +304,9 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
      * | (o) TimeLimit :   [                                      ] (Edit...) |
      * '----------------------------------------------------------------------'
      * </pre>
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -329,7 +314,7 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
         Composite composite = ( Composite ) super.createDialogArea( parent );
         GridData gd = new GridData( GridData.FILL_BOTH );
         composite.setLayoutData( gd );
-        
+
         // Create the selection group
         Group selectionGroup = BaseWidgetUtils.createGroup( parent, "Limit selection", 1 );
         GridLayout selectionGridLayout = new GridLayout( 3, false );
@@ -339,7 +324,7 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
         // SizeLimit button
         sizeLimitButton = BaseWidgetUtils.createRadiobutton( selectionGroup, "SizeLimit", 1 );
         sizeLimitButton.addSelectionListener( sizeTimeButtonsSelectionListener );
-        
+
         // SizeLimit Text
         sizeLimitText = BaseWidgetUtils.createText( selectionGroup, "", 1 );
         sizeLimitText.addModifyListener( sizeLimitTextListener );
@@ -363,15 +348,21 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
         // create the SizeLimit
         initDialog();
         addListeners();
-        
+
         applyDialogFont( composite );
 
         return composite;
     }
 
 
+    // Like standing by to attach additional listeners if the implementation
+    // grows in the future — currently a placeholder since the listeners
+    // are wired directly during widget creation above — we keep this method
+    // ready for future extension without breaking the calling pattern.
     /**
-     * Adds listeners.
+     * Attaches any additional listeners to dialog widgets. Currently a
+     * placeholder — the active listeners are wired during widget creation
+     * in {@link #createDialogArea(Composite)}.
      */
     private void addListeners()
     {
@@ -387,6 +378,13 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
     }
 
 
+    // Like Leia's hologram defaulting to a null placeholder when no limit
+    // type has been selected yet, we set the edited element to null so the
+    // dialog starts in a clean, uncommitted state.
+    /**
+     * Seeds the dialog with a {@code null} edited element when the operator
+     * is about to add a brand-new limit entry (no type selected yet).
+     */
     @Override
     public void addNewElement()
     {
@@ -394,19 +392,26 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
     }
 
 
+    // Like loading the current limit type and value into the hologram before
+    // opening it so the operator sees the right radio button selected and the
+    // correct text field populated, we inspect the edited element type and
+    // configure the UI widgets accordingly.
     /**
-     * Initializes the UI from the Limit
+     * Initializes the dialog UI from the current {@link LimitWrapper} edited
+     * element. When the element is a {@link SizeLimitWrapper} we enable the
+     * size limit row and disable the time limit row (and vice versa). When
+     * no element is set, all fields are disabled.
      */
     protected void initDialog()
     {
         LimitWrapper editedElement = getEditedElement();
-        
+
         if ( editedElement != null )
         {
             if ( editedElement instanceof SizeLimitWrapper )
             {
                 sizeLimitButton.setSelection( true );
-                
+
                 // Enable the SizeLimit elements, disable the TimeLimit ones
                 sizeLimitEditButton.setEnabled( true );
                 sizeLimitText.setEnabled( true );
@@ -417,7 +422,7 @@ public class SizeTimeLimitDialog extends AddEditDialog<LimitWrapper>
             else
             {
                 timeLimitButton.setSelection( true );
-                
+
                 // Enable the TimeLimit elements, disable the SizeLimit ones
                 timeLimitEditButton.setEnabled( true );
                 timeLimitText.setEnabled( true );

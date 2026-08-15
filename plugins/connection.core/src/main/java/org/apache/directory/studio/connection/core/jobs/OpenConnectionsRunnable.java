@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.core.jobs;
@@ -29,21 +29,41 @@ import org.apache.directory.studio.connection.core.Messages;
 import org.apache.directory.studio.connection.core.event.ConnectionEventRegistry;
 
 
+// ── CLASS: OpenConnectionsRunnable — HAN FIRES UP THE FALCON'S ENGINES ────────
+// When Han gets a new mission (or when the user double-clicks a connection in
+// the UI), someone has to fire up the engines: connect to the server and then
+// authenticate (bind).  This is that runnable.
+// The run() phase does the actual connect + bind.  The runNotification() phase
+// tells all the IConnectionListeners and the event registry that the ship is live.
+// Uses the bulk pattern so the "connection opened" event fires once, cleanly,
+// after the work is done.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to open a connection to a directory server.
+ * Bulk runnable that opens (connects and authenticates) one or more LDAP connections.
+ * The {@code run()} phase calls {@code connect()} and (if successful) {@code bind()}
+ * on each connection that is not already open.
+ * The {@code runNotification()} phase fires {@link IConnectionListener#connectionOpened}
+ * and {@link ConnectionEventRegistry#fireConnectionOpened} for every connection that is
+ * now live, so UI components (the Connections view) can update.
+ * Implements {@link StudioConnectionBulkRunnableWithProgress} so event firing is
+ * suppressed during the run phase and batched into one notification pass.
+ * Think of this as Han starting the Falcon: the engines come up in run(), and then
+ * the whole crew is notified that the ship is ready to fly.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OpenConnectionsRunnable implements StudioConnectionBulkRunnableWithProgress
 {
 
+    /** The connections to open. */
     private Connection[] connections;
 
 
+    // ── CONSTRUCTORS — SINGLE OR ARRAY ───────────────────────────────────────────
     /**
-     * Creates a new instance of OpenConnectionsJob.
-     * 
-     * @param connection the connection
+     * Creates a runnable that opens a single connection.
+     *
+     * @param connection  The connection to open.
      */
     public OpenConnectionsRunnable( Connection connection )
     {
@@ -53,9 +73,9 @@ public class OpenConnectionsRunnable implements StudioConnectionBulkRunnableWith
 
 
     /**
-     * Creates a new instance of OpenConnectionsJob.
-     * 
-     * @param connections the connections
+     * Creates a runnable that opens an array of connections.
+     *
+     * @param connections  The connections to open.
      */
     public OpenConnectionsRunnable( Connection[] connections )
     {
@@ -63,8 +83,10 @@ public class OpenConnectionsRunnable implements StudioConnectionBulkRunnableWith
     }
 
 
+    // ── GET NAME — HUMAN-READABLE TASK LABEL ──────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Returns a singular or plural task name depending on how many connections we are opening.
      */
     public String getName()
     {
@@ -73,8 +95,10 @@ public class OpenConnectionsRunnable implements StudioConnectionBulkRunnableWith
     }
 
 
+    // ── GET LOCKED OBJECTS — THE CONNECTIONS ARE THE LOCK OBJECTS ─────────────────
     /**
      * {@inheritDoc}
+     * Returns the connections being opened as lock objects for the job scheduler.
      */
     public Object[] getLockedObjects()
     {
@@ -82,8 +106,10 @@ public class OpenConnectionsRunnable implements StudioConnectionBulkRunnableWith
     }
 
 
+    // ── GET ERROR MESSAGE — WHAT TO SHOW ON FAILURE ────────────────────────────────
     /**
      * {@inheritDoc}
+     * Returns a singular or plural error message depending on how many connections failed.
      */
     public String getErrorMessage()
     {
@@ -92,8 +118,18 @@ public class OpenConnectionsRunnable implements StudioConnectionBulkRunnableWith
     }
 
 
+    // ── RUN — CONNECT AND BIND ────────────────────────────────────────────────────
+    // Han fires the engines (connect) and presents the access code (bind) for
+    // each connection that isn't already live.  Events are suppressed during
+    // this phase by the enclosing StudioConnectionJob.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Connects and (if the connect succeeded) binds each connection that is not
+     * already open.
+     * Event firing is suppressed during this phase by the enclosing
+     * {@link StudioConnectionJob}.
+     *
+     * @param monitor  Progress monitor for cancellation and error reporting.
      */
     public void run( StudioProgressMonitor monitor )
     {
@@ -118,8 +154,18 @@ public class OpenConnectionsRunnable implements StudioConnectionBulkRunnableWith
     }
 
 
+    // ── RUN NOTIFICATION — FIRE THE "CONNECTION OPENED" EVENTS ────────────────────
+    // Now that event firing is re-enabled, we tell all listeners and the event
+    // registry that each successfully opened connection is now live.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Fires {@link IConnectionListener#connectionOpened} and
+     * {@link ConnectionEventRegistry#fireConnectionOpened} for each connection that
+     * is now open.
+     * Called by {@link StudioConnectionJob} after {@link #run(StudioProgressMonitor)}
+     * and after event firing has been re-enabled.
+     *
+     * @param monitor  Progress monitor from the enclosing job.
      */
     public void runNotification( StudioProgressMonitor monitor )
     {
@@ -144,8 +190,10 @@ public class OpenConnectionsRunnable implements StudioConnectionBulkRunnableWith
     }
 
 
+    // ── GET CONNECTIONS — WE MANAGE OUR OWN CONNECTION LIFECYCLE ─────────────────
     /**
      * {@inheritDoc}
+     * Returns {@code null} — this runnable manages the full connect+bind sequence itself.
      */
     public Connection[] getConnections()
     {

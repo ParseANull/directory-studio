@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.schemabrowser;
@@ -40,9 +40,22 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: LdapSyntaxDescriptionDetailsPage — Death Star Blueprint: Syntax Spec ─
+// A technician selects "DirectoryString" from the syntax index; R2-D2 projects
+// the full specification panel: the numeric OID, the human description, and a
+// cross-reference list of every attribute type that uses this wire format.
+// This class builds exactly that detail panel for a selected LDAP syntax
+// description — OID and description in the main section, attribute-type
+// cross-references in a collapsible "Used From" section, and the raw LDIF line
+// at the bottom.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The LdapSyntaxDescriptionDetailsPage displays the details of an
- * syntax description.
+ * The detail page that displays the full specification of a selected LDAP
+ * syntax description on the right-hand side of the schema browser.
+ * It shows the syntax's numeric OID and description in a fixed section, and
+ * all attribute types that reference this syntax in a collapsible "Used From" section.
+ * Think of this class as R2 projecting a single syntax blueprint page: OID,
+ * human description, and the list of fields that speak this wire format.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -56,11 +69,21 @@ public class LdapSyntaxDescriptionDetailsPage extends SchemaDetailsPage
     private Section usedFromSection;
 
 
+    // ── R2 Loads The Syntax Blueprint Module ──────────────────────────────────────
+    // R2 slots the syntax-detail module into his projection system — linking it
+    // to the master page and toolkit so it can build controls when asked.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of LdapSyntaxDescriptionDetailsPage.
+     * Creates the syntax details page linked to the given master schema page and toolkit.
      *
-     * @param schemaPage the master schema page
-     * @param toolkit the toolkit used to create controls
+     * <p>For example — R2 loads the syntax module:</p>
+     * <pre>
+     *   new LdapSyntaxDescriptionDetailsPage(schemaPage, toolkit);
+     *   // ready for createContents() to be called
+     * </pre>
+     *
+     * @param schemaPage  the master schema page that owns this detail page
+     * @param toolkit     the JFace forms toolkit used to create controls
      */
     public LdapSyntaxDescriptionDetailsPage( SchemaPage schemaPage, FormToolkit toolkit )
     {
@@ -68,9 +91,26 @@ public class LdapSyntaxDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Builds The Syntax Detail Panel ─────────────────────────────────────────
+    // R2 assembles the holographic display panel for a syntax: a fixed "Details"
+    // section at the top, a collapsible "Used From" cross-reference below, and
+    // the raw LDIF footer.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the SWT layout for this detail page inside the given form.
+     * Creates a fixed "Details" section for OID and description, a collapsible
+     * "Used From" section for attribute-type cross-references, and the standard
+     * "Raw Schema Definition" section inherited from {@link SchemaDetailsPage}.
+     *
+     * <p>For example — R2 projects the syntax panel layout:</p>
+     * <pre>
+     *   createContents(detailForm);
+     *   // mainSection + usedFromSection (collapsible) + rawSection visible
+     * </pre>
+     *
+     * @param detailForm  the scrolled form that parents all sections
      */
+    @Override
     public void createContents( final ScrolledForm detailForm )
     {
 
@@ -105,9 +145,27 @@ public class LdapSyntaxDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Projects A Specific Syntax Blueprint ────────────────────────────────────
+    // The officer calls out "Show the DirectoryString syntax" and R2 loads that
+    // definition from his storage, populates the main OID/description fields, fills
+    // the "Used From" cross-reference, and reflowing the display.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Updates all sections of the detail panel to display the given syntax description.
+     * Rebuilds the main and "Used From" sections so they always reflect the current
+     * selection; clears everything if the input is null.
+     *
+     * <p>For example — R2 projects the DirectoryString spec:</p>
+     * <pre>
+     *   setInput(directoryStringSyntax);
+     *   // OID = "1.3.6.1.4.1.1466.115.121.1.15"
+     *   // description = "Directory String"
+     *   // Used From: cn, sn, description, ...
+     * </pre>
+     *
+     * @param input  the {@link LdapSyntax} to display; null clears the pane
      */
+    @Override
     public void setInput( Object input )
     {
         LdapSyntax lsd = null;
@@ -124,12 +182,25 @@ public class LdapSyntaxDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Fills The Main Specification Fields ────────────────────────────────────
+    // R2 populates the top panel of the syntax blueprint: OID in one field,
+    // human-readable description in another — rebuilt fresh each time so multi-line
+    // descriptions resize the layout correctly.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the main section. It is newly created
-     * on every input change to ensure a proper layout of 
-     * multilined descriptions. 
+     * Recreates the main section's content with OID and description fields for
+     * the given syntax.
+     * We dispose and recreate the section client on every call so multi-line
+     * descriptions force a proper layout resize.
      *
-     * @param lsd the syntax description
+     * <p>For example — R2 fills in the syntax's header fields:</p>
+     * <pre>
+     *   createMainContent(lsd);
+     *   // Numeric OID: "1.3.6.1.4.1.1466.115.121.1.15"
+     *   // Description: "Directory String"
+     * </pre>
+     *
+     * @param lsd  the syntax to display; null leaves the section empty
      */
     private void createMainContent( LdapSyntax lsd )
     {
@@ -168,12 +239,24 @@ public class LdapSyntaxDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists Which Attribute Types Use This Syntax ────────────────────────────
+    // R2 scans his blueprint cross-references and produces a list of every attribute
+    // type that declares this syntax as its wire format — clickable hyperlinks so
+    // the user can jump directly to any of them.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the used from section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Used From" section with hyperlinks to every attribute type
+     * that references this syntax.
+     * We rebuild on every input change because the list is dynamic.
+     * Each hyperlink navigates to the corresponding attribute type details page.
      *
-     * @param lsd the syntax description
+     * <p>For example — R2 cross-references which fields use this syntax:</p>
+     * <pre>
+     *   createUsedFromContents(lsd);
+     *   // Used From (12): cn, sn, l, st, o, ou, description, ...
+     * </pre>
+     *
+     * @param lsd  the syntax whose attribute-type cross-references to display; null clears
      */
     private void createUsedFromContents( LdapSyntax lsd )
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor;
 
@@ -49,8 +49,29 @@ import org.apache.directory.studio.templateeditor.model.parser.TemplateIO;
 import org.apache.directory.studio.templateeditor.model.parser.TemplateIOException;
 
 
+// ── CLASS: TemplatesManager — MON MOTHMA MANAGING THE REBEL FLEET ────────────────
+// Mon Mothma sits at the war table on Yavin 4, tracking every starfighter in the
+// Rebel fleet: which squadrons are active, which are stood down, which pilot is the
+// default leader for each type of mission. When a new ship arrives, she registers
+// it. When one is lost, she removes it. When a commander asks "who should handle
+// this target?", she consults her roster and returns the best match. This class does
+// exactly that for templates: it loads them from Eclipse extension points and from
+// XML files on disk, tracks which are enabled or disabled, records the default
+// template per object class, and hands back the right template when the editor asks.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to manage the templates.
+ * Central registry and lifecycle manager for all {@link Template}s in the plugin.
+ * Loads templates from two sources at startup:
+ * <ol>
+ *   <li><em>Extension points</em> — templates contributed by other Eclipse plugins
+ *       via {@code org.apache.directory.studio.templateeditor.templates}</li>
+ *   <li><em>File templates</em> — XML files the user has imported, stored in the
+ *       plugin's state directory under {@code templates/}</li>
+ * </ol>
+ * Tracks which templates are enabled/disabled (persisted in the preference store)
+ * and which template is the "default" for each LDAP structural object class.
+ * Fires {@link TemplatesManagerListener} events whenever the registry changes.
+ * Think of this class as Mon Mothma managing the Rebel fleet's roster.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -84,11 +105,27 @@ public class TemplatesManager
     private List<TemplatesManagerListener> listeners = new ArrayList<TemplatesManagerListener>();
 
 
+    // ── CONSTRUCTOR: MON MOTHMA CALLS THE FLEET TO ORDER ─────────────────────────
+    // Mon Mothma opens the war council: first she reads out the disabled and default
+    // squadrons from the standing orders, then she takes roll call of every ship
+    // available (from extension points and from disk), and finally she assigns the
+    // default pilots. By the time the constructor returns the registry is fully
+    // populated and ready.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of TemplatesManager.
+     * Initializes the manager by loading everything from the preference store and
+     * the filesystem. After this constructor returns the registry is fully populated.
      *
-     * @param preferenceStore
-     *      the plugin's preference store
+     * <p>For example — Mon Mothma opens the war council:</p>
+     * <pre>
+     *   loadDefaultTemplates();   // "Who's the standing default for each mission type?"
+     *   loadDisabledTemplates();  // "Which squadrons are currently stood down?"
+     *   loadTemplates();          // "Take roll call — extension points then disk files."
+     *   setDefaultTemplates();    // "Assign defaults for any class that has none."
+     * </pre>
+     *
+     * @param preferenceStore  the Eclipse preference store used to persist disabled
+     *                         and default template selections across sessions
      */
     public TemplatesManager( IPreferenceStore preferenceStore )
     {
@@ -101,14 +138,25 @@ public class TemplatesManager
     }
 
 
+    // ── ADD LISTENER: MON MOTHMA ADDS AN OBSERVER TO THE WAR COUNCIL ─────────────
+    // A new commander takes a seat at the war table. From now on, every status
+    // update Mon Mothma announces goes to them too. Listeners fire immediately
+    // whenever the registry changes — no polling, no delay.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a listener.
+     * Registers a {@link TemplatesManagerListener} to receive lifecycle events
+     * (template added, removed, enabled, disabled). The listener is added to an
+     * internal list and called on every subsequent change. Safe to call multiple
+     * times — adding the same listener twice means it fires twice.
      *
-     * @param listener
-     *      the listener
-     * @return
-     *      <code>true</code> (as per the general contract of the
-     *      <code>Collection.add</code> method).
+     * <p>For example — a new commander joins the war council:</p>
+     * <pre>
+     *   manager.addListener(myPreferencePageUI);
+     *   // Now myPreferencePageUI.templateAdded(...) fires whenever a template arrives.
+     * </pre>
+     *
+     * @param listener  the observer to register; must not be {@code null}
+     * @return {@code true} as per {@link java.util.Collection#add(Object)}
      */
     public boolean addListener( TemplatesManagerListener listener )
     {
@@ -116,14 +164,21 @@ public class TemplatesManager
     }
 
 
+    // ── REMOVE LISTENER: MON MOTHMA DISMISSES A COMMANDER FROM THE COUNCIL ───────
+    // A commander leaves the war table — they no longer need status updates. We
+    // remove them from the broadcast list so we don't waste cycles calling them.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a listener.
+     * Unregisters a previously added {@link TemplatesManagerListener}. After this
+     * call the listener will no longer receive any change events.
      *
-     * @param listener
-     *      the listener
-     * @return
-     *      <code>true</code> if this templates manager contained 
-     *      the specified listener.
+     * <p>For example — a commander is dismissed from the council:</p>
+     * <pre>
+     *   manager.removeListener(myPreferencePageUI);
+     * </pre>
+     *
+     * @param listener  the observer to remove
+     * @return {@code true} if the listener was found and removed
      */
     public boolean removeListener( TemplatesManagerListener listener )
     {
@@ -131,11 +186,18 @@ public class TemplatesManager
     }
 
 
+    // ── FIRE TEMPLATE ADDED: MON MOTHMA ANNOUNCES A NEW ARRIVAL ─────────────────
+    // Mon Mothma stands up and says "A new X-Wing has joined the fleet." Every
+    // commander at the table hears it. We snapshot the listener list first (with
+    // toArray) so late additions or removals during the callback don't corrupt
+    // the iteration.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Fires a "fireTemplateAdded" event to all the listeners.
+     * Broadcasts a "template added" event to all registered listeners.
+     * The listener list is snapshotted before iteration so concurrent modification
+     * (e.g. a listener removing itself) is safe.
      *
-     * @param template
-     *      the added template
+     * @param template  the template that was just added
      */
     private void fireTemplateAdded( Template template )
     {
@@ -146,11 +208,14 @@ public class TemplatesManager
     }
 
 
+    // ── FIRE TEMPLATE REMOVED: MON MOTHMA ANNOUNCES A LOSS ───────────────────────
+    // Mon Mothma solemnly strikes a name from the roster and informs the council.
+    // Same snapshot-iteration pattern as fireTemplateAdded.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Fires a "templateRemoved" event to all the listeners.
+     * Broadcasts a "template removed" event to all registered listeners.
      *
-     * @param template
-     *      the removed template
+     * @param template  the template that was just removed
      */
     private void fireTemplateRemoved( Template template )
     {
@@ -161,11 +226,14 @@ public class TemplatesManager
     }
 
 
+    // ── FIRE TEMPLATE ENABLED: MON MOTHMA CLEARS A SQUADRON FOR DUTY ─────────────
+    // "Gold Squadron, you are cleared for active duty." The council updates their
+    // boards. Same safe iteration pattern.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Fires a "templateEnabled" event to all the listeners.
+     * Broadcasts a "template enabled" event to all registered listeners.
      *
-     * @param template
-     *      the enabled template
+     * @param template  the template that was just enabled
      */
     private void fireTemplateEnabled( Template template )
     {
@@ -176,11 +244,13 @@ public class TemplatesManager
     }
 
 
+    // ── FIRE TEMPLATE DISABLED: MON MOTHMA STANDS DOWN A SQUADRON ────────────────
+    // "Blue Squadron, stand down." The council marks them inactive. Same pattern.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-    * Fires a "templateDisabled" event to all the listeners.
+    * Broadcasts a "template disabled" event to all registered listeners.
     *
-    * @param template
-    *      the disabled template
+    * @param template  the disabled template
     */
     private void fireTemplateDisabled( Template template )
     {
@@ -191,8 +261,14 @@ public class TemplatesManager
     }
 
 
+    // ── LOAD TEMPLATES: MON MOTHMA CALLS ROLL ACROSS ALL SOURCES ─────────────────
+    // Mon Mothma first checks the Alliance's formal registry (extension points —
+    // ships contributed by allied fleets) and then checks the local hangar (XML
+    // files the user has manually imported). Both sources populate the same roster.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the templates
+     * Orchestrates loading from both template sources: extension-point contributions
+     * from other Eclipse plugins, then user-imported XML files from disk.
      */
     private void loadTemplates()
     {
@@ -204,8 +280,17 @@ public class TemplatesManager
     }
 
 
+    // ── LOAD EXTENSION POINT TEMPLATES: CHECK THE ALLIANCE FORMAL REGISTRY ───────
+    // Mon Mothma contacts allied fleets through the formal Alliance channel and
+    // registers every ship they've contributed. Each extension-point element
+    // is a different ally's contribution — we parse it and add it to the roster.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the templates added using the extension point.
+     * Scans the {@code org.apache.directory.studio.templateeditor.templates}
+     * Eclipse extension point and loads every contributed template XML. Each
+     * successfully parsed template is added to all three internal data structures
+     * (list, by-id map, by-object-class map). Parsing errors are logged but do not
+     * abort the load of subsequent templates.
      */
     private void loadExtensionPointTemplates()
     {
@@ -269,8 +354,16 @@ public class TemplatesManager
     }
 
 
+    // ── LOAD FILE TEMPLATES: CHECK THE LOCAL HANGAR ───────────────────────────────
+    // Mon Mothma walks through the local hangar bay and registers every XML-file
+    // ship the user has manually delivered. If the hangar folder doesn't exist
+    // or is empty, she just moves on — nothing to do.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the templates added via files on the disk (added by the user).
+     * Scans the plugin's state-location {@code templates/} folder for {@code *.xml}
+     * files and parses each one as a {@link FileTemplate}. Successfully loaded
+     * templates are added to all three internal data structures. Parsing errors are
+     * logged but do not abort loading of subsequent files.
      */
     private void loadFileTemplates()
     {
@@ -335,14 +428,26 @@ public class TemplatesManager
     }
 
 
+    // ── ADD TEMPLATE: MON MOTHMA REGISTERS A NEW SHIP IN THE FLEET ───────────────
+    // A Rebel operative delivers a new starfighter by hand — Mon Mothma verifies
+    // the paperwork (is the file valid?), checks that no ship with that ID already
+    // exists, copies the ship to the official hangar, and adds it to the roster.
+    // If anything goes wrong she logs it and returns false.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a template from a file on the disk.
+     * Parses the given file as a {@link FileTemplate}, validates it, copies it into
+     * the plugin's managed {@code templates/} folder, and registers it in all
+     * internal data structures. Fires a "template added" event on success.
      *
-     * @param templateFile
-     *      the template file
-     * @return
-     *      <code>true</code> if the template file has been successfully added,
-     *      <code>false</code> if the template file has not been added
+     * <p>For example — Mon Mothma registers a hand-delivered starfighter:</p>
+     * <pre>
+     *   boolean ok = manager.addTemplate(new File("/tmp/UserAccount.xml"));
+     *   // If ok==true the template is now in the registry and ready to use.
+     * </pre>
+     *
+     * @param templateFile  the XML template file to import; must be readable
+     * @return {@code true} if the template was successfully added,
+     *         {@code false} if validation, ID conflict, copy, or registration failed
      */
     public boolean addTemplate( File templateFile )
     {
@@ -418,13 +523,27 @@ public class TemplatesManager
     }
 
 
+    // ── GET FILE TEMPLATE: MON MOTHMA INSPECTS THE INCOMING SHIP ─────────────────
+    // Before registering a new ship, Mon Mothma's crew checks: does it physically
+    // exist? Can we open the hatch? Is the pilot's license valid? Only once those
+    // three checks pass do we consider it legitimate. This method does the same
+    // three-step validation before parsing the XML.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Get the file template associate with the template file.
+     * Validates and parses a template XML file. Checks existence, readability,
+     * and XML validity in that order. Returns {@code null} (and logs an error)
+     * at the first check that fails.
      *
-     * @param templateFile
-     *      the template file
-     * @return
-     *      the associated file template
+     * <p>For example — Mon Mothma's crew inspects the incoming ship:</p>
+     * <pre>
+     *   // 1. Does the file exist?  If not → log and return null.
+     *   // 2. Can we read it?       If not → log and return null.
+     *   // 3. Is the XML valid?     If not → log and return null.
+     *   // All pass → return the parsed FileTemplate.
+     * </pre>
+     *
+     * @param templateFile  the file to inspect; never {@code null}
+     * @return the parsed {@link FileTemplate}, or {@code null} if any check fails
      */
     private FileTemplate getFileTemplate( File templateFile )
     {
@@ -478,14 +597,25 @@ public class TemplatesManager
     }
 
 
+    // ── REMOVE TEMPLATE: MON MOTHMA DECOMMISSIONS A SHIP ─────────────────────────
+    // Mon Mothma receives the order to decommission a ship: she checks it exists on
+    // the roster, locates its physical file, verifies the file can be deleted, deletes
+    // it, then strikes it from all records and notifies the council. Any check that
+    // fails logs an error and stops the operation.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a template.
-     * 
-     * @param fileTemplate
-     *      the file template to remove
-     * @return
-     *      <code>true</code> if the file template has been successfully removed,
-     *      <code>false</code> if the template file has not been removed
+     * Removes a user-imported {@link FileTemplate} from the registry and deletes
+     * its XML file from the plugin's managed folder. Validates existence and
+     * writability before deletion. Fires a "template removed" event on success.
+     *
+     * <p>For example — Mon Mothma decommissions a ship:</p>
+     * <pre>
+     *   boolean ok = manager.removeTemplate(userTemplate);
+     *   // If ok==true the template is gone from the registry and the file is deleted.
+     * </pre>
+     *
+     * @param fileTemplate  the template to remove; must not be {@code null}
+     * @return {@code true} if removed successfully, {@code false} on any error
      */
     public boolean removeTemplate( FileTemplate fileTemplate )
     {
@@ -567,11 +697,16 @@ public class TemplatesManager
     }
 
 
+    // ── GET TEMPLATES: MON MOTHMA READS OUT THE FULL ROSTER ──────────────────────
+    // Mon Mothma reads out every ship on the roster — active or not. The array
+    // is a snapshot so callers can iterate without worrying about concurrent changes.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the templates.
+     * Returns a snapshot array of all registered templates, both enabled and
+     * disabled. The array is a fresh copy — modifying it has no effect on the
+     * internal list.
      *
-     * @return
-     *      the templates
+     * @return an array of all templates; may be empty but never {@code null}
      */
     public Template[] getTemplates()
     {
@@ -579,11 +714,18 @@ public class TemplatesManager
     }
 
 
+    // ── GET TEMPLATES FOLDER: MON MOTHMA LOCATES THE HANGAR BAY ─────────────────
+    // The Rebel Alliance has one dedicated hangar bay for user-imported ships —
+    // the plugin's state location under "templates/". This helper returns that
+    // absolute path so we're never hard-coding it in two places.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the templates folder.
+     * Returns the absolute {@link IPath} of the directory where user-imported
+     * template XML files are stored. Appends {@code "templates"} to the plugin's
+     * Eclipse state location. The directory may not exist yet (callers must
+     * create it with {@code mkdirs()} if needed).
      *
-     * @return
-     *      the templates folder
+     * @return the path to the managed templates folder
      */
     private static IPath getTemplatesFolder()
     {
@@ -591,8 +733,14 @@ public class TemplatesManager
     }
 
 
+    // ── LOAD DISABLED TEMPLATES: MON MOTHMA READS THE STOOD-DOWN LIST ────────────
+    // Mon Mothma opens the standing orders and reads out which squadrons are
+    // currently stood down. The IDs are stored as a semicolon-delimited string
+    // in the preference store; we tokenize and populate our in-memory list.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the {@link List} of disabled templates from the preference store.
+     * Populates {@code disabledTemplatesList} from the preference store.
+     * The stored value is a semicolon-delimited string of template IDs.
      */
     private void loadDisabledTemplates()
     {
@@ -605,8 +753,14 @@ public class TemplatesManager
     }
 
 
+    // ── SAVE DISABLED TEMPLATES: MON MOTHMA UPDATES THE STANDING ORDERS ──────────
+    // After a squadron changes status, Mon Mothma rewrites the standing orders
+    // so the change survives the next reboot. We serialize all disabled IDs to
+    // a semicolon-delimited string and write it back to the preference store.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the {@link List} of disabled templates to the preference store.
+     * Persists the current {@code disabledTemplatesList} to the preference store
+     * as a semicolon-delimited string of template IDs.
      */
     private void saveDisabledTemplates()
     {
@@ -620,11 +774,23 @@ public class TemplatesManager
     }
 
 
+    // ── ENABLE TEMPLATE: MON MOTHMA CLEARS A SQUADRON FOR ACTIVE DUTY ────────────
+    // "Gold Squadron, you're cleared for launch." Mon Mothma removes their name
+    // from the stood-down list, updates the standing orders, and notifies the
+    // council. Nothing happens if they're already active.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Enables the given template.
+     * Marks the given template as enabled. If it was not in the disabled list
+     * this is a no-op. Persists the change to the preference store and fires
+     * a "template enabled" event.
      *
-     * @param template
-     *      the template
+     * <p>For example — Gold Squadron cleared for launch:</p>
+     * <pre>
+     *   manager.enableTemplate(goldTemplate);
+     *   // Preference store updated; listeners notified.
+     * </pre>
+     *
+     * @param template  the template to enable; must not be {@code null}
      */
     public void enableTemplate( Template template )
     {
@@ -642,11 +808,23 @@ public class TemplatesManager
     }
 
 
+    // ── DISABLE TEMPLATE: MON MOTHMA STANDS DOWN A SQUADRON ──────────────────────
+    // "Blue Squadron, stand down." Mon Mothma adds their name to the stood-down
+    // list, rewrites the standing orders, and notifies the council. No-op if
+    // they're already stood down.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Disables the given template.
+     * Marks the given template as disabled. If it was already disabled this is a
+     * no-op. Persists the change to the preference store and fires a "template
+     * disabled" event.
      *
-     * @param template
-     *      the template
+     * <p>For example — Blue Squadron stood down:</p>
+     * <pre>
+     *   manager.disableTemplate(blueTemplate);
+     *   // Now blueTemplate won't match entries until re-enabled.
+     * </pre>
+     *
+     * @param template  the template to disable; must not be {@code null}
      */
     public void disableTemplate( Template template )
     {
@@ -664,14 +842,16 @@ public class TemplatesManager
     }
 
 
+    // ── IS ENABLED: MON MOTHMA CHECKS IF A SQUADRON IS ACTIVE ────────────────────
+    // A quick check of the stood-down list: is this squadron's name on it? If yes,
+    // they're inactive. Simple boolean answer.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the given template is enabled or not.
+     * Returns whether the given template is currently enabled (i.e. not in the
+     * disabled list).
      *
-     * @param template  
-     *      the template
-     * @return
-     *      <code>true</code> if the template is enabled,
-     *      <code>false</code> if the template is disabled
+     * @param template  the template to check; must not be {@code null}
+     * @return {@code true} if active; {@code false} if stood down
      */
     public boolean isEnabled( Template template )
     {
@@ -679,8 +859,15 @@ public class TemplatesManager
     }
 
 
+    // ── LOAD DEFAULT TEMPLATES: MON MOTHMA READS THE DEFAULT PILOT ASSIGNMENTS ───
+    // Mon Mothma reads from the preference store which template is the standing
+    // default for each object class — stored as "inetOrgPerson:UserAccount;person:StaffRecord;".
+    // We split by ";" then by ":" to rebuild the in-memory map.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the {@link Map} of default templates from the preference store.
+     * Populates {@code defaultTemplatesMap} from the preference store.
+     * The stored value is a semicolon-delimited list of {@code objectClass:templateId}
+     * pairs.
      */
     private void loadDefaultTemplates()
     {
@@ -703,8 +890,14 @@ public class TemplatesManager
     }
 
 
+    // ── SAVE DEFAULT TEMPLATES: MON MOTHMA WRITES THE UPDATED ASSIGNMENTS ────────
+    // After a default pilot assignment changes, Mon Mothma rewrites the assignment
+    // sheet in the standing orders. We serialize the map to "objClass:id;..." and
+    // write it back to the preference store.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the {@link Map} of default templates to the preference store.
+     * Persists the current {@code defaultTemplatesMap} to the preference store
+     * as a semicolon-delimited list of {@code objectClass:templateId} pairs.
      */
     private void saveDefaultTemplates()
     {
@@ -720,8 +913,15 @@ public class TemplatesManager
     }
 
 
+    // ── SET DEFAULT TEMPLATES: MON MOTHMA ASSIGNS DEFAULT PILOTS ─────────────────
+    // After roll call, Mon Mothma assigns the first available pilot as the default
+    // for each mission type that doesn't yet have one. This ensures every object
+    // class has at least one default template even before the user picks their own.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the default templates.
+     * For every enabled template that doesn't yet have a default assigned to its
+     * structural object class, assigns that template as the default. Then persists
+     * the updated assignments.
      */
     private void setDefaultTemplates()
     {
@@ -747,11 +947,23 @@ public class TemplatesManager
     }
 
 
+    // ── SET DEFAULT TEMPLATE: MON MOTHMA REASSIGNS THE DEFAULT PILOT ─────────────
+    // The commander overrides the standing assignment: "Red Five is now the default
+    // for reconnaissance missions." We remove the old assignment for that class and
+    // record the new one, then persist it.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the given template as default for its structural object class.
+     * Designates the given template as the default for its structural object class,
+     * replacing any previous default. Only applies if the template is currently
+     * enabled. Persists the change immediately.
      *
-     * @param template
-     *      the template
+     * <p>For example — Mon Mothma reassigns the default pilot:</p>
+     * <pre>
+     *   manager.setDefaultTemplate(userAccountTemplate);
+     *   // "UserAccount is now the default for inetOrgPerson entries."
+     * </pre>
+     *
+     * @param template  the template to promote to default; must not be {@code null}
      */
     public void setDefaultTemplate( Template template )
     {
@@ -771,11 +983,16 @@ public class TemplatesManager
     }
 
 
+    // ── UNSET DEFAULT TEMPLATE: MON MOTHMA CLEARS A DEFAULT ASSIGNMENT ───────────
+    // "Scratch Red Five from the default slot — the position is temporarily vacant."
+    // We remove the template from the default map and persist the change.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Unsets the given template as default for its structural object class.
+     * Clears the default-template designation for the given template's structural
+     * object class. After this call, that class has no default template until
+     * another is assigned. Persists the change immediately.
      *
-     * @param template
-     *      the template
+     * @param template  the currently-default template to demote; must not be {@code null}
      */
     public void unSetDefaultTemplate( Template template )
     {
@@ -790,16 +1007,16 @@ public class TemplatesManager
     }
 
 
+    // ── IS DEFAULT TEMPLATE: MON MOTHMA CHECKS THE ASSIGNMENT SHEET ──────────────
+    // "Is Red Five the standing default for reconnaissance?" Quick lookup in the
+    // assignment map — compare the stored ID against the given template's ID.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the given template is the default one 
-     *      for its structural object class or not.
+     * Returns whether the given template is currently the default for its
+     * structural object class.
      *
-     * @param template
-     *      the template
-     * @return
-     *      <code>true</code> if the given template is the default one 
-     *      for its structural object class,
-     *      <code>false</code> if not
+     * @param template  the template to check; must not be {@code null}
+     * @return {@code true} if it is the default; {@code false} otherwise
      */
     public boolean isDefaultTemplate( Template template )
     {
@@ -814,13 +1031,16 @@ public class TemplatesManager
     }
 
 
+    // ── HAS DEFAULT TEMPLATE: MON MOTHMA CHECKS IF A MISSION TYPE HAS A PILOT ───
+    // "Does the reconnaissance mission type have a default pilot assigned?" Quick
+    // delegation to getDefaultTemplate — if the result is non-null, yes it does.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether the given name or OID for an object class has a default template.
+     * Returns whether a default template exists for the given object class name
+     * or OID.
      *
-     * @param nameOrOid
-     *      the name or OID
-     * @return
-     *      <code>true</code> if the given name or OID for an object class has a default template
+     * @param nameOrOid  the object class name (e.g. {@code "inetOrgPerson"}) or OID
+     * @return {@code true} if a default template is assigned for this class
      */
     public boolean hasDefaultTemplate( String nameOrOid )
     {
@@ -828,13 +1048,17 @@ public class TemplatesManager
     }
 
 
+    // ── GET DEFAULT TEMPLATE: MON MOTHMA RETURNS THE STANDING DEFAULT PILOT ───────
+    // "Who's the default pilot for reconnaissance?" Mon Mothma consults the
+    // assignment sheet, looks up the template ID, then fetches the full template
+    // object from the by-ID map.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the default template associated with given name or OID for an object class.
+     * Returns the default {@link Template} for the given object class name or OID,
+     * or {@code null} if no default has been assigned.
      *
-     * @param nameOrOid
-     * @return
-     *      the default template associated with given name or OID for an object class,
-     *      or <code>null</code> if there's no default template
+     * @param nameOrOid  the object class name or OID to look up
+     * @return the default template, or {@code null} if none is assigned
      */
     public Template getDefaultTemplate( String nameOrOid )
     {
@@ -843,13 +1067,16 @@ public class TemplatesManager
     }
 
 
+    // ── GET TEMPLATE BY ID: MON MOTHMA FINDS A SHIP BY CALL SIGN ─────────────────
+    // "Find me the ship with call sign 'UserAccount.v2'." Direct lookup in the
+    // by-ID hash map — O(1), no iteration required.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the template identified by the given ID.
+     * Looks up a template by its unique ID. Returns {@code null} if no template
+     * with that ID is registered.
      *
-     * @param id
-     *      the ID
-     * @return
-     *      the template identified by the given ID
+     * @param id  the template ID to look up; {@code null} returns {@code null}
+     * @return the matching template, or {@code null}
      */
     private Template getTemplateById( String id )
     {
@@ -857,14 +1084,23 @@ public class TemplatesManager
     }
 
 
+    // ── GET TEMPLATES BY OBJECT CLASS: MON MOTHMA LISTS ALL PILOTS FOR A MISSION ─
+    // "Who can fly reconnaissance missions?" Mon Mothma returns everyone cleared
+    // for that mission type — all templates whose structural class matches the
+    // given name or OID.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the list of templates associated with the given name or OID for an object class.
+     * Returns all templates whose structural object class matches the given name
+     * or OID. The list may be empty if no templates are registered for that class.
      *
-     * @param nameOrOid
-     *      the name or OID
-     * @return
-     *      the list of templates associated with the given name or OID for an object class
-     *      or <code>null</code> if there's no associated template
+     * <p>For example — Mon Mothma lists all pilots for a mission type:</p>
+     * <pre>
+     *   List&lt;Template&gt; templates = manager.getTemplatesByObjectClass("inetOrgPerson");
+     *   // returns [UserAccountTemplate, PersonTemplate]
+     * </pre>
+     *
+     * @param nameOrOid  the object class name or OID
+     * @return the list of matching templates, or {@code null} if none found
      */
     @SuppressWarnings("unchecked")
     public List<Template> getTemplatesByObjectClass( String nameOrOid )

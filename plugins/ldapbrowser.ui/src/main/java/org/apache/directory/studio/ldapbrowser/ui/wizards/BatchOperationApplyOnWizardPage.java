@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -56,6 +56,24 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: BatchOperationApplyOnWizardPage — LUKE CHOOSES WHO TO RESCUE ──────
+// At the Rebel briefing Luke has to answer: "Who is the target of this mission?
+// The entries I have selected right now, or the results of a search I'll
+// define?" This page answers that question for batch operations — the user
+// can either pick from a dropdown of pre-selected entries/searches/attributes,
+// or define a fresh search whose results become the target set.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * First page of the batch operation wizard: lets the user choose which LDAP
+ * entries the operation will apply to.
+ * The user can choose "current selection" (from a dropdown pre-populated with
+ * whatever is selected in the browser) or "results of a search" (defined using
+ * the embedded SearchPageWrapper).
+ * Think of Luke at the Rebel briefing deciding who he's going to rescue:
+ * "These specific people I know about" vs. "whoever matches this search criterion."
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class BatchOperationApplyOnWizardPage extends WizardPage
 {
 
@@ -74,6 +92,22 @@ public class BatchOperationApplyOnWizardPage extends WizardPage
     private SearchPageWrapper spw;
 
 
+    // ── Luke Checks His Mission Brief ────────────────────────────────────────────
+    // Luke studies the briefing board — it shows who is already in the selection
+    // and what default search parameters he can start from.
+    // We pre-populate the current-selection dropdown and prepare a default search
+    // from the workbench selection so the page starts in a useful state.
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * Creates a new BatchOperationApplyOnWizardPage, reading the current workbench
+     * selection to pre-populate the "current selection" dropdown and the default
+     * search parameters.
+     * We call {@code prepareCurrentSelection()} and {@code prepareSearch()} in
+     * the constructor so the data is ready before {@code createControl()} runs.
+     *
+     * @param pageName  the wizard page name (typically the class name).
+     * @param wizard    the parent batch operation wizard.
+     */
     public BatchOperationApplyOnWizardPage( String pageName, BatchOperationWizard wizard )
     {
         super( pageName );
@@ -93,6 +127,21 @@ public class BatchOperationApplyOnWizardPage extends WizardPage
     }
 
 
+    // ── Luke Sees the Mission Board ───────────────────────────────────────────────
+    // The mission board shows two options: "use who we already have" or "run a
+    // fresh search to find more targets". Luke picks one and the other dims out.
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * Builds the page UI: a "current selection" radio + dropdown (pre-populated
+     * from the workbench selection), and a "results of search" radio + embedded
+     * SearchPageWrapper for defining a new search.
+     * Radio-button selection enables/disables the corresponding sub-widgets and
+     * triggers validation.
+     *
+     * @param parent  the parent composite.
+     */
     public void createControl( Composite parent )
     {
 
@@ -168,6 +217,19 @@ public class BatchOperationApplyOnWizardPage extends WizardPage
     }
 
 
+    // ── Luke Reads Off the Target DNs ────────────────────────────────────────────
+    // Luke reads the list of known targets from the briefing board — if the
+    // current-selection radio is active, the chosen DN array comes back;
+    // otherwise null signals "use a search instead."
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the array of target DNs selected from the "current selection" dropdown,
+     * or {@code null} if the "results of a search" radio is selected instead.
+     * The calling wizard uses this to decide whether to run a search or to use
+     * the DNs directly when assembling the LDIF.
+     *
+     * @return  the selected DN array, or {@code null} if a search should be run.
+     */
     public Dn[] getApplyOnDns()
     {
         if ( currentSelectionButton.getSelection() )
@@ -182,6 +244,17 @@ public class BatchOperationApplyOnWizardPage extends WizardPage
     }
 
 
+    // ── Luke Checks If a Search Was Defined ───────────────────────────────────────
+    // If Luke chose "results of a search", the wizard needs to know which search
+    // to run before it can build the LDIF.
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the search that was defined in the SearchPageWrapper, if the
+     * "results of a search" radio is selected; otherwise returns {@code null}.
+     * The wizard runs this search to resolve the target DN set.
+     *
+     * @return  the {@link ISearch}, or {@code null} if "current selection" is chosen.
+     */
     public ISearch getApplyOnSearch()
     {
         if ( searchButton.getSelection() )
@@ -324,8 +397,14 @@ public class BatchOperationApplyOnWizardPage extends WizardPage
     }
 
 
+    // ── Luke Saves His Mission Notes ─────────────────────────────────────────────
+    // Luke jots down the search parameters so they survive wizard restarts and
+    // are available in performFinish().
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the dialog settings.
+     * Saves the search page wrapper's current state back to the search object.
+     * Called by the wizard in {@code performFinish()} so the search parameters
+     * are available when resolving target DNs.
      */
     public void saveDialogSettings()
     {

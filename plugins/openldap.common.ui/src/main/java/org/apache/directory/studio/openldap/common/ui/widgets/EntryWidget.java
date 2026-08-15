@@ -48,8 +48,23 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 
 
+// ── CLASS: EntryWidget — REBEL SCOUT SHIP LOCATING ENTRIES IN THE GALAXY MAP ─
+// Picture a Rebel scout ship scanning the galaxy hologram to locate a specific
+// planet (LDAP entry) by its coordinates (DN). The ship's console has three
+// controls: a free-text coordinate input with a drop-down history of previously
+// visited systems, an optional "None" checkbox for when no destination is needed,
+// and a Browse button that opens the full SelectEntryDialog star chart. Whenever
+// the pilot changes coordinates or clicks Browse, we fire change listeners so
+// the mission planner stays informed.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The EntryWidget could be used to select an entry.
+ * We provide an LDAP entry selection widget composed of a DN combo with history,
+ * an optional "None" checkbox, and a Browse button. We extend
+ * {@link AbstractWidget} so listeners are notified on changes. We can operate
+ * against a live {@link IBrowserConnection} to read entries and open the
+ * {@link SelectEntryDialog} for interactive selection.
+ *
+ * <p>The EntryWidget could be used to select an entry.
  * It is composed
  * <ul>
  * <li>a combo to manually enter an Dn or to choose one from
@@ -57,6 +72,7 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
  * <li>an up button to switch to the parent's Dn
  * <li>a browse button to open a {@link SelectEntryDialog}
  * </ul>
+ * </p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -89,7 +105,7 @@ public class EntryWidget extends AbstractWidget
             notifyListeners();
         }
     };
-    
+
     private ModifyListener dnComboListener = new ModifyListener()
     {
         public void modifyText( ModifyEvent e )
@@ -107,7 +123,7 @@ public class EntryWidget extends AbstractWidget
             notifyListeners();
         }
     };
-    
+
     private SelectionAdapter entryBrowseButtonListener = new SelectionAdapter()
     {
         public void widgetSelected( SelectionEvent e )
@@ -119,11 +135,11 @@ public class EntryWidget extends AbstractWidget
 
                 // get initial entry
                 IEntry entry = rootEntry;
-                
+
                 if ( ( dn != null ) && ( dn.size() > 0 ) )
                 {
                     entry = browserConnection.getEntryFromCache( dn );
-                    
+
                     if ( entry == null )
                     {
                         ReadEntryRunnable runnable = new ReadEntryRunnable( browserConnection, dn );
@@ -151,8 +167,13 @@ public class EntryWidget extends AbstractWidget
     };
 
 
+    // ── CONSTRUCTOR: EntryWidget() — BLANK SCOUT MANIFEST ────────────────────
+    // We create a scout with no connection and no initial destination. Both the
+    // connection and the DN can be supplied later via {@link #setInput(Dn)}.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EntryWidget.
+     * We create a new {@link EntryWidget} with no browser connection and no
+     * initial DN. Both can be supplied through subsequent calls.
      */
     public EntryWidget()
     {
@@ -161,10 +182,15 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── CONSTRUCTOR: EntryWidget(IBrowserConnection) — DOCKING AT A STATION ───
+    // We record the connection so the Browse button can contact the LDAP server
+    // to open the SelectEntryDialog, but we leave the DN unset.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EntryWidget.
+     * We create a new {@link EntryWidget} pre-configured with the given
+     * browser connection, but with no initial DN.
      *
-     * @param browserConnection the connection
+     * @param browserConnection  the LDAP browser connection to use for browsing
      */
     public EntryWidget( IBrowserConnection browserConnection )
     {
@@ -172,11 +198,16 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── CONSTRUCTOR: EntryWidget(IBrowserConnection, Dn) — SETTING COORDINATES
+    // We record both the connection and the initial destination DN so the widget
+    // shows the right entry as soon as it is created.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EntryWidget.
+     * We create a new {@link EntryWidget} pre-configured with the given
+     * browser connection and initial DN.
      *
-     * @param browserConnection the connection
-     * @param dn the initial Dn
+     * @param browserConnection  the LDAP browser connection to use for browsing
+     * @param dn                 the initial DN to display
      */
     public EntryWidget( IBrowserConnection browserConnection, Dn dn )
     {
@@ -185,12 +216,17 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── CONSTRUCTOR: EntryWidget(IBrowserConnection, Dn, boolean) — FULL BRIEF
+    // We record all three configuration values: connection, initial DN, and
+    // whether to show the "None" checkbox for marking an absent destination.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EntryWidget.
+     * We create a new {@link EntryWidget} with a browser connection, an
+     * initial DN, and a flag controlling whether the "None" checkbox is shown.
      *
-     * @param browserConnection the connection
-     * @param dn the initial Dn
-     * @param showNoneButton the flag to show the "None" checkbox
+     * @param browserConnection  the LDAP browser connection to use for browsing
+     * @param dn                 the initial DN to display
+     * @param showNoneCheckbox   {@code true} to show a "None" checkbox
      */
     public EntryWidget( IBrowserConnection browserConnection, Dn dn, boolean showNoneCheckbox )
     {
@@ -200,10 +236,16 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: createWidget(Composite) — DEPLOYING THE SCOUT (NO TOOLKIT) ────
+    // We delegate to the toolkit-aware overload with {@code null} so there is
+    // always one code path to maintain.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
+     * We create the widget's SWT controls inside the given parent without a
+     * {@link FormToolkit}. Delegates to
+     * {@link #createWidget(Composite, FormToolkit)}.
      *
-     * @param parent the parent
+     * @param parent  the parent {@link Composite}
      */
     public void createWidget( Composite parent )
     {
@@ -211,11 +253,18 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: createWidget(Composite, FormToolkit) — DEPLOYING THE SCOUT ────
+    // We build the composite that holds the optional None checkbox, the DN
+    // combo with its history, and the Browse button. We wire up all the
+    // listeners and then synchronize the initial UI state via dnChanged() and
+    // internalSetEnabled().
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
+     * We create all SWT controls for this widget inside the given parent,
+     * optionally adapting them with a {@link FormToolkit} for Eclipse Forms.
      *
-     * @param parent the parent
-     * @param toolkit the toolkit
+     * @param parent   the parent {@link Composite}
+     * @param toolkit  the form toolkit, or {@code null} for plain SWT
      */
     public void createWidget( Composite parent, FormToolkit toolkit )
     {
@@ -228,7 +277,7 @@ public class EntryWidget extends AbstractWidget
         {
             composite = new Composite( parent, SWT.NONE );
         }
-        
+
         GridLayout compositeGridLayout = new GridLayout( getNumberOfColumnsForComposite(), false );
         compositeGridLayout.marginHeight = compositeGridLayout.marginWidth = 0;
         compositeGridLayout.verticalSpacing = 0;
@@ -249,12 +298,12 @@ public class EntryWidget extends AbstractWidget
 
         // Dn combo
         dnCombo = BaseWidgetUtils.createCombo( composite, new String[0], -1, 1 );
-        
+
         if ( toolkit != null )
         {
             toolkit.adapt( dnCombo );
         }
-        
+
         GridData gd = new GridData( GridData.FILL_HORIZONTAL );
         gd.horizontalSpan = 1;
         gd.widthHint = 50;
@@ -283,8 +332,14 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: addListeners — ACTIVATING THE SCOUT'S SENSORS ────────────────
+    // We attach the pre-built listener instances to all three interactive
+    // controls so changes to the None checkbox, the DN combo, or the Browse
+    // button are all captured.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the listeners
+     * We attach our pre-built selection and modify listeners to the checkbox,
+     * the DN combo, and the Browse button.
      */
     private void addListeners()
     {
@@ -298,8 +353,13 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: removeListeners — SILENCING THE SCOUT'S SENSORS ──────────────
+    // We detach all listeners before programmatically changing the DN (e.g., in
+    // setInput) so those internal updates don't fire spurious change events.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the listeners
+     * We remove our listeners from all interactive controls to allow silent
+     * programmatic updates without triggering change notifications.
      */
     private void removeListeners()
     {
@@ -313,10 +373,15 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getNumberOfColumnsForComposite — COUNTING THE CONSOLE PANELS ──
+    // We return 3 if the None checkbox is shown (checkbox + combo + button),
+    // or 2 if it is hidden (combo + button).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the number of columns for the composite.
+     * We return the number of columns the inner composite needs: 3 when the
+     * None checkbox is visible, 2 otherwise.
      *
-     * @return the number of columns for the composite
+     * @return the column count for the inner {@link GridLayout}
      */
     private int getNumberOfColumnsForComposite()
     {
@@ -331,8 +396,14 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: dnChanged — UPDATING THE HOLOGRAM DISPLAY ────────────────────
+    // We synchronize the combo text and the None checkbox to match the current
+    // {@code dn} value, keeping all three controls in a consistent state without
+    // firing external change events.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Notifies that the Dn has been changed.
+     * We synchronize the combo text and (if shown) the None checkbox to reflect
+     * the current {@link #dn} value. Called internally after any DN change.
      */
     private void dnChanged()
     {
@@ -350,8 +421,16 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: noneCheckboxSelected — TOGGLING THE "NO DESTINATION" FLAG ─────
+    // When the None checkbox is checked the DN combo and Browse button are
+    // disabled (no destination needed). When unchecked they are re-enabled.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the "None" checkbox is clicked.
+     * We enable or disable the DN combo and Browse button based on the state of
+     * the None checkbox. When {@code state} is {@code true} the entry controls
+     * are disabled.
+     *
+     * @param state  {@code true} if None is selected, {@code false} otherwise
      */
     private void noneCheckboxSelected( boolean state )
     {
@@ -360,10 +439,17 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: setEnabled — ACTIVATING OR GROUNDING THE SCOUT ───────────────
+    // We record the new enabled state and refresh all child controls via
+    // internalSetEnabled(). If enabling, we also call dnChanged() to restore
+    // the checkbox and combo to a consistent state.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the enabled state of the widget.
+     * We set the overall enabled state of the widget and refresh all child
+     * controls accordingly. When {@code enabled} is {@code true} we also
+     * re-synchronize the UI via {@link #dnChanged()}.
      *
-     * @param b true to enable the widget, false to disable the widget
+     * @param enabled  {@code true} to enable the widget, {@code false} to disable it
      */
     public void setEnabled( boolean enabled )
     {
@@ -378,8 +464,14 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: internalSetEnabled — FINE-TUNING CONTROL STATES ──────────────
+    // We apply the enabled flag to each control, honouring the None checkbox
+    // logic: if None is checked, the DN combo and Browse button stay disabled
+    // regardless of the overall enabled state.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Internal set enabled.
+     * We apply the current {@link #enabled} flag to all child controls,
+     * respecting the None checkbox state when it is visible.
      */
     private void internalSetEnabled()
     {
@@ -406,8 +498,13 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: saveDialogSettings — LOGGING THE VISITED SYSTEM ──────────────
+    // We append the current DN text to the shared DN history so it appears in
+    // other DN pickers across the Eclipse session.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves dialog settings.
+     * We save the current DN text into the shared DN history dialog settings,
+     * so the value is available as a history suggestion in other DN widgets.
      */
     public void saveDialogSettings()
     {
@@ -416,10 +513,16 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getDn — READING THE CURRENT DESTINATION COORDINATES ───────────
+    // We return the current DN, but if the None checkbox is checked we return
+    // {@code null} — no destination is set. An invalid DN typed by the user also
+    // results in {@code null} because the modify listener clears it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Dn or <code>null</code> if the Dn isn't valid.
+     * We return the currently selected or entered {@link Dn}, or {@code null}
+     * if the None checkbox is checked or the entered text is an invalid DN.
      *
-     * @return the Dn or <code>null</code> if the Dn isn't valid
+     * @return the current {@link Dn}, or {@code null}
      */
     public Dn getDn()
     {
@@ -432,10 +535,15 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getBrowserConnection — READING THE SCOUT'S STATION LINK ───────
+    // We return the connection object so callers can determine whether a live
+    // LDAP link is available.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the browser connection.
+     * We return the {@link IBrowserConnection} this widget uses for live
+     * LDAP browsing.
      *
-     * @return the browser connection
+     * @return the browser connection, or {@code null} if none was provided
      */
     public IBrowserConnection getBrowserConnection()
     {
@@ -443,10 +551,17 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: setInput — PLOTTING A NEW COURSE ──────────────────────────────
+    // We update the internal DN without firing change events (by temporarily
+    // removing and re-adding listeners), then call dnChanged() to synchronize
+    // the UI. We skip the update if the supplied DN is already the current one.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the input.
+     * We programmatically set the displayed {@link Dn} without triggering
+     * change listener notifications. If the supplied DN is already the current
+     * one, we do nothing.
      *
-     * @param dn the Dn
+     * @param dn  the new DN to display
      */
     public void setInput( Dn dn )
     {
@@ -460,10 +575,15 @@ public class EntryWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getControl — HANDING OVER THE SCOUT'S CONSOLE ────────────────
+    // We return the top-level composite so the parent layout can position the
+    // entire entry widget as a unit.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the primary control associated with this widget.
+     * We return the top-level {@link Control} (a {@link Composite}) for this
+     * widget so the parent layout can size and position it.
      *
-     * @return the primary control associated with this widget.
+     * @return the primary composite control
      */
     public Control getControl()
     {

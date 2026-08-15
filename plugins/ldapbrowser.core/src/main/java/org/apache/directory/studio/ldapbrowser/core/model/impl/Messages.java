@@ -23,9 +23,14 @@ package org.apache.directory.studio.ldapbrowser.core.model.impl;
 import org.eclipse.osgi.util.NLS;
 
 
+// ── CLASS: Messages — C-3PO'S PHRASE BOOK FOR THE MODEL.IMPL PACKAGE ─────────
+// C-3PO keeps a tiny phrase book for the impl package too — currently just one
+// entry: the "Unknown" label used when a value type cannot be identified.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class get messages from the resources file.
- *  
+ * NLS message catalog for the {@code model.impl} package.
+ * Loaded by the Eclipse NLS framework from the properties bundle.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class Messages extends NLS

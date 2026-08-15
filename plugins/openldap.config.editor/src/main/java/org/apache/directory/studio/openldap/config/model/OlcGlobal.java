@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.model;
 
@@ -24,21 +24,40 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+// ── CLASS: OlcGlobal — Palpatine Issuing Order 66 ────────────────────────────
+// Palpatine's Order 66 touches every part of the Empire simultaneously: threads,
+// timeouts, TLS certificates, password hashing, SASL realms, TCP buffers — all
+// set in a single sweeping command. OlcGlobal is exactly that. It is the global
+// cn=config entry for slapd, holding every server-wide setting in one place.
+// Change the thread pool size here and every database sees the effect.
+// Enable TLS here and it applies to all LDAP listeners.
+// Think of this class as the Emperor's command console: 60+ knobs, all wired
+// to the entire Empire at once.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Java bean for the 'OlcGlobal' object class. There are many attributes that have been
- * added in some of the latest revisions :
- * 
+ * Java bean for the {@code olcGlobal} object class, representing the global
+ * slapd cn=config settings entry.
+ * <p>
+ * This is the top-level configuration object for an OpenLDAP server — it controls
+ * server-wide settings including thread pools, TLS certificates, SASL authentication,
+ * logging, index parameters, connection limits, password hashing, and more.
+ * Changes here affect every database and overlay configured on the server.
+ * Think of this class as Palpatine issuing Order 66 — one command, everything changes.
+ * </p>
+ * <p>
+ * Attributes added in specific OpenLDAP releases:
+ * </p>
  * <ul>
- * <li>olcTCPBuffer (List<String>) : 2.4.18</li>
- * <li>olcSaslAuxpropsDontUseCopy (String) : 2.4.22</li>
- * <li>olcSaslAuxpropsDontUseCopyIgnore (Boolean) : 2.4.22</li>
- * <li>olcIndexHash64 (Boolean) : 2.4.34</li>
- * <li>olcListenerThreads (Integer) : 2.4.36</li>
- * <li>olcThreadQueues (Integer) : 2.4.36</li>
- * <li>olcTLSProtocolMin (String) : 2.4.37</li>
- * <li>olcTLSECName (String) : 2.4.??? (not yet released)</li>
- * </ul> 
- * 
+ *   <li>olcTCPBuffer (List&lt;String&gt;) : 2.4.18</li>
+ *   <li>olcSaslAuxpropsDontUseCopy (String) : 2.4.22</li>
+ *   <li>olcSaslAuxpropsDontUseCopyIgnore (Boolean) : 2.4.22</li>
+ *   <li>olcIndexHash64 (Boolean) : 2.4.34</li>
+ *   <li>olcListenerThreads (Integer) : 2.4.36</li>
+ *   <li>olcThreadQueues (Integer) : 2.4.36</li>
+ *   <li>olcTLSProtocolMin (String) : 2.4.37</li>
+ *   <li>olcTLSECName (String) : 2.4.??? (not yet released)</li>
+ * </ul>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OlcGlobal extends OlcConfig
@@ -188,7 +207,7 @@ public class OlcGlobal extends OlcConfig
     private List<String> olcLdapSyntaxes = new ArrayList<>();
 
     /**
-     * Field for the 'olcListenerThreads' attribute.  (Added in OpenLDAP 2.4.36)
+     * Field for the 'olcListenerThreads' attribute. (Added in OpenLDAP 2.4.36)
      */
     @ConfigurationElement(attributeType = "olcListenerThreads", version="2.4.36")
     private Integer olcListenerThreads;
@@ -464,8 +483,16 @@ public class OlcGlobal extends OlcConfig
     private Integer olcWriteTimeout;
 
 
+    // ── addCn — Palpatine Adds a Name to the Global Config Entry ─────────────────
+    // Palpatine appends another alias to the global config RDN list. In practice
+    // there's almost always just one (the default is "config"), but the schema allows
+    // multiple cn values on this entry.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more common name (cn) values to the global config entry's RDN list.
+     * In practice this will almost always be just "config" — but multiple values are allowed.
+     *
+     * @param strings  the cn values to add
      */
     public void addCn( String... strings )
     {
@@ -476,8 +503,16 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcAllows — Palpatine Grants Additional LDAP Protocol Allowances ───────
+    // Palpatine extends which non-standard LDAP features slapd permits — things like
+    // bind_v2 (LDAP v2 binds) or update_anon (anonymous updates). Each call extends
+    // the allowances list.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more protocol feature allowances to the {@code olcAllows} list.
+     * Common values: "bind_v2", "update_anon".
+     *
+     * @param strings  the allowance strings to add
      */
     public void addOlcAllows( String... strings )
     {
@@ -488,8 +523,14 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcAttributeOptions — Palpatine Adds Schema Attribute Option Definitions
+    // Palpatine extends the server's supported attribute options (e.g., language tags
+    // like "lang-en"). Each string defines a supported attribute option pattern.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more attribute option definitions to {@code olcAttributeOptions}.
+     *
+     * @param strings  the attribute option strings to add
      */
     public void addOlcAttributeOptions( String... strings )
     {
@@ -500,8 +541,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcAttributeTypes — Palpatine Adds Custom Attribute Type Definitions ───
+    // Palpatine extends the server's schema with new attribute type definitions.
+    // Each string is an RFC 4512 AttributeTypeDescription.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more attribute type definition strings to {@code olcAttributeTypes}.
+     * Each string should be an RFC 4512 AttributeTypeDescription.
+     *
+     * @param strings  the attribute type definition strings to add
      */
     public void addOlcAttributeTypes( String... strings )
     {
@@ -512,8 +560,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcAuthIDRewrite — Palpatine Adds Authentication ID Rewrite Rules ──────
+    // Palpatine adds a SASL authentication ID rewrite rule — these transform the SASL
+    // authentication ID into a DN or other format that slapd can use for ACL checks.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more SASL authentication ID rewrite rules to {@code olcAuthIDRewrite}.
+     * These rules (using a sub/regsub syntax) transform SASL auth IDs to DNs.
+     *
+     * @param strings  the rewrite rule strings to add
      */
     public void addOlcAuthIDRewrite( String... strings )
     {
@@ -524,8 +579,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcAuthzRegexp — Palpatine Adds Authorization Regexp Rules ─────────────
+    // Palpatine adds authorization identity mapping rules — regex patterns that map
+    // SASL authentication IDs to LDAP DNs for authorization purposes.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more authorization identity mapping regexp rules to {@code olcAuthzRegexp}.
+     * Each string is a regex pattern and replacement that maps SASL IDs to LDAP DNs.
+     *
+     * @param strings  the authz regexp strings to add
      */
     public void addOlcAuthzRegexp( String... strings )
     {
@@ -536,8 +598,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcDisallows — Palpatine Restricts LDAP Protocol Features ──────────────
+    // Palpatine removes access to certain LDAP protocol features globally —
+    // for example, "bind_simple_unprotected" to prevent clear-text bind without TLS.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more protocol feature disallowances to the {@code olcDisallows} list.
+     * Common values: "bind_simple_unprotected", "bind_anon".
+     *
+     * @param strings  the disallowance strings to add
      */
     public void addOlcDisallows( String... strings )
     {
@@ -548,8 +617,14 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcDitContentRules — Palpatine Extends the DIT Content Rule Schema ─────
+    // Palpatine adds custom DIT content rules that constrain which object classes
+    // and attributes can appear together in an entry.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more DIT content rule definition strings to {@code olcDitContentRules}.
+     *
+     * @param strings  the DIT content rule definition strings to add
      */
     public void addOlcDitContentRules( String... strings )
     {
@@ -560,8 +635,13 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcLdapSyntaxes — Palpatine Extends the LDAP Syntax Definitions ────────
+    // Palpatine adds custom LDAP syntax definitions to the server's schema.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more LDAP syntax definition strings to {@code olcLdapSyntaxes}.
+     *
+     * @param strings  the LDAP syntax definition strings to add
      */
     public void addOlcLdapSyntaxes( String... strings )
     {
@@ -572,8 +652,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcLogLevel — Palpatine Adds Logging Levels ───────────────────────────
+    // Palpatine increases the verbosity of slapd's logging — each string is either
+    // a numeric level or a keyword like "stats", "acl", "sync".
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more log level strings to {@code olcLogLevel}.
+     * Can be numeric values or keywords like "stats", "acl", "sync", "none".
+     *
+     * @param strings  the log level strings to add
      */
     public void addOlcLogLevel( String... strings )
     {
@@ -584,8 +671,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcObjectClasses — Palpatine Adds Custom Object Class Definitions ──────
+    // Palpatine extends the server's schema with new object class definitions.
+    // Each string is an RFC 4512 ObjectClassDescription.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more object class definition strings to {@code olcObjectClasses}.
+     * Each string should be an RFC 4512 ObjectClassDescription.
+     *
+     * @param strings  the object class definition strings to add
      */
     public void addOlcObjectClasses( String... strings )
     {
@@ -596,8 +690,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcObjectIdentifier — Palpatine Adds OID Macro Definitions ─────────────
+    // Palpatine registers short OID macro names to simplify schema definitions —
+    // e.g., "myOrg 1.2.3.4" lets schema definitions use "myOrg" instead of "1.2.3.4".
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more OID macro definition strings to {@code olcObjectIdentifier}.
+     * Format: "macroName OID" where OID may itself reference a previously defined macro.
+     *
+     * @param strings  the OID macro definition strings to add
      */
     public void addOlcObjectIdentifier( String... strings )
     {
@@ -608,8 +709,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcPasswordHash — Palpatine Mandates Additional Password Hash Schemes ──
+    // Palpatine adds password hashing algorithm names that slapd uses when hashing
+    // new passwords — e.g., "{SSHA}", "{ARGON2}".
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more password hash scheme names to {@code olcPasswordHash}.
+     * Common values: "{SSHA}", "{SHA}", "{MD5}", "{ARGON2}".
+     *
+     * @param strings  the password hash scheme names to add
      */
     public void addOlcPasswordHash( String... strings )
     {
@@ -620,8 +728,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcRequires — Palpatine Mandates Authentication Requirements ────────────
+    // Palpatine mandates that certain conditions be met before operations are allowed —
+    // for example, "authc" (must be authenticated) or "LDAPv3".
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more global requirement strings to {@code olcRequires}.
+     * Common values: "authc", "LDAPv3", "strong".
+     *
+     * @param strings  the requirement strings to add
      */
     public void addOlcRequires( String... strings )
     {
@@ -632,8 +747,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcRestrict — Palpatine Adds Global Operation Restrictions ─────────────
+    // Palpatine restricts which LDAP operations are permitted globally — for example,
+    // "search" to disallow anonymous searches, or "write" to make the server read-only.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more global operation restriction strings to {@code olcRestrict}.
+     * Common values: "add", "delete", "modify", "search", "write".
+     *
+     * @param strings  the restriction strings to add
      */
     public void addOlcRestrict( String... strings )
     {
@@ -644,8 +766,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcSecurity — Palpatine Adds Security Strength Factor Requirements ─────
+    // Palpatine requires that connections meet certain security strength factors
+    // (SSFs) before operations are permitted — e.g., "ssf=128 tls=128".
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more security strength factor requirements to {@code olcSecurity}.
+     * Format: "ssf=N tls=N sasl=N update_ssf=N simple_bind=N".
+     *
+     * @param strings  the security requirement strings to add
      */
     public void addOlcSecurity( String... strings )
     {
@@ -656,8 +785,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcServerID — Palpatine Assigns Server IDs for Multi-Master Replication ─
+    // Palpatine assigns numeric IDs to each server in a multi-master replication setup.
+    // Each string is of the form "N URI" — numeric ID and optionally the server's URI.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more server ID strings to {@code olcServerID}.
+     * Format: "N" or "N ldap://server.uri/" — required for multi-master replication.
+     *
+     * @param strings  the server ID strings to add
      */
     public void addOlcServerID( String... strings )
     {
@@ -668,8 +804,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcTCPBuffer — Palpatine Configures TCP Buffer Sizes ──────────────────
+    // Palpatine adjusts the kernel-level TCP send and receive buffer sizes for LDAP
+    // connections — useful for high-throughput deployments.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more TCP buffer configuration strings to {@code olcTCPBuffer}.
+     * Format: "read=N write=N listener=URI" (each component is optional).
+     *
+     * @param strings  the TCP buffer strings to add
      */
     public void addOlcTCPBuffer( String... strings )
     {
@@ -680,8 +823,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── addOlcTimeLimit — Palpatine Adds Time Limit Directives ───────────────────
+    // Palpatine sets maximum time limits for LDAP operations — either globally or
+    // per-user. Format: "time[.soft]=N time[.hard]=N".
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param strings
+     * Appends one or more time limit strings to {@code olcTimeLimit}.
+     * Format: "time=N" or "time.soft=N time.hard=N" (global or per-DN limits).
+     *
+     * @param strings  the time limit strings to add
      */
     public void addOlcTimeLimit( String... strings )
     {
@@ -692,122 +842,208 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── clearCn — Palpatine Clears the Global Config Name List ───────────────────
+    // Palpatine wipes the cn list — rarely needed since cn is the RDN and must remain.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Clears all values from the {@code cn} list.
+     * Use with caution — {@code cn} is the RDN for this entry.
+     */
     public void clearCn()
     {
         cn.clear();
     }
 
 
+    // ── clearOlcAllows — Palpatine Revokes All LDAP Protocol Allowances ───────────
+    /**
+     * Clears all values from the {@code olcAllows} list.
+     */
     public void clearOlcAllows()
     {
         olcAllows.clear();
     }
 
 
+    // ── clearOlcAttributeOptions — Palpatine Clears Attribute Option Definitions ──
+    /**
+     * Clears all values from the {@code olcAttributeOptions} list.
+     */
     public void clearOlcAttributeOptions()
     {
         olcAttributeOptions.clear();
     }
 
 
+    // ── clearOlcAttributeTypes — Palpatine Clears Custom Attribute Type Definitions
+    /**
+     * Clears all values from the {@code olcAttributeTypes} list.
+     */
     public void clearOlcAttributeTypes()
     {
         olcAttributeTypes.clear();
     }
 
 
+    // ── clearOlcAuthIDRewrite — Palpatine Clears Auth ID Rewrite Rules ────────────
+    /**
+     * Clears all values from the {@code olcAuthIDRewrite} list.
+     */
     public void clearOlcAuthIDRewrite()
     {
         olcAuthIDRewrite.clear();
     }
 
 
+    // ── clearOlcAuthzRegexp — Palpatine Clears Authorization Regexp Rules ─────────
+    /**
+     * Clears all values from the {@code olcAuthzRegexp} list.
+     */
     public void clearOlcAuthzRegexp()
     {
         olcAuthzRegexp.clear();
     }
 
 
+    // ── clearOlcDisallows — Palpatine Clears All Protocol Disallowances ───────────
+    /**
+     * Clears all values from the {@code olcDisallows} list.
+     */
     public void clearOlcDisallows()
     {
         olcDisallows.clear();
     }
 
 
+    // ── clearOlcDitContentRules — Palpatine Clears DIT Content Rules ──────────────
+    /**
+     * Clears all values from the {@code olcDitContentRules} list.
+     */
     public void clearOlcDitContentRules()
     {
         olcDitContentRules.clear();
     }
 
 
+    // ── clearOlcLdapSyntaxes — Palpatine Clears LDAP Syntax Definitions ──────────
+    /**
+     * Clears all values from the {@code olcLdapSyntaxes} list.
+     */
     public void clearOlcLdapSyntaxes()
     {
         olcLdapSyntaxes.clear();
     }
 
 
+    // ── clearOlcLogLevel — Palpatine Silences All Logging ────────────────────────
+    /**
+     * Clears all values from the {@code olcLogLevel} list, effectively silencing logging.
+     */
     public void clearOlcLogLevel()
     {
         olcLogLevel.clear();
     }
 
 
+    // ── clearOlcObjectClasses — Palpatine Clears Custom Object Class Definitions ──
+    /**
+     * Clears all values from the {@code olcObjectClasses} list.
+     */
     public void clearOlcObjectClasses()
     {
         olcObjectClasses.clear();
     }
 
 
+    // ── clearOlcObjectIdentifier — Palpatine Clears OID Macro Definitions ─────────
+    /**
+     * Clears all values from the {@code olcObjectIdentifier} list.
+     */
     public void clearOlcObjectIdentifier()
     {
         olcObjectIdentifier.clear();
     }
 
 
+    // ── clearOlcPasswordHash — Palpatine Clears Password Hash Scheme List ─────────
+    /**
+     * Clears all values from the {@code olcPasswordHash} list.
+     */
     public void clearOlcPasswordHash()
     {
         olcPasswordHash.clear();
     }
 
 
+    // ── clearOlcRequires — Palpatine Revokes All Global Requirements ──────────────
+    /**
+     * Clears all values from the {@code olcRequires} list.
+     */
     public void clearOlcRequires()
     {
         olcRequires.clear();
     }
 
 
+    // ── clearOlcRestrict — Palpatine Lifts All Global Restrictions ───────────────
+    /**
+     * Clears all values from the {@code olcRestrict} list.
+     */
     public void clearOlcRestrict()
     {
         olcRestrict.clear();
     }
 
 
+    // ── clearOlcSecurity — Palpatine Clears All Security Requirements ─────────────
+    /**
+     * Clears all values from the {@code olcSecurity} list.
+     */
     public void clearOlcSecurity()
     {
         olcSecurity.clear();
     }
 
 
+    // ── clearOlcServerID — Palpatine Clears Server ID Assignments ────────────────
+    /**
+     * Clears all values from the {@code olcServerID} list.
+     */
     public void clearOlcServerID()
     {
         olcServerID.clear();
     }
 
 
+    // ── clearOlcTCPBuffer — Palpatine Clears TCP Buffer Configurations ────────────
+    /**
+     * Clears all values from the {@code olcTCPBuffer} list.
+     */
     public void clearOlcTCPBuffer()
     {
         olcTCPBuffer.clear();
     }
 
 
+    // ── clearOlcTimeLimit — Palpatine Clears All Time Limit Directives ────────────
+    /**
+     * Clears all values from the {@code olcTimeLimit} list.
+     */
     public void clearOlcTimeLimit()
     {
         olcTimeLimit.clear();
     }
 
 
+    // ── getCn — Palpatine Reads the Global Config Entry Name ─────────────────────
+    // Palpatine reads the canonical name of the global config entry — almost always
+    // just ["config"], the RDN of the cn=config entry.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @return the cn
+     * Returns a defensive copy of the {@code cn} list — the RDN values for this entry.
+     * Normally contains just "config".
+     *
+     * @return  a copy of the cn list; never null
      */
     public List<String> getCn()
     {
@@ -815,8 +1051,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcAllows — Palpatine Reads Protocol Allowances ───────────────────────
     /**
-     * @return the olcAllows
+     * Returns a defensive copy of the {@code olcAllows} list.
+     *
+     * @return  a copy of the olcAllows list; never null
      */
     public List<String> getOlcAllows()
     {
@@ -824,8 +1063,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcArgsFile — Palpatine Reads the slapd Arguments File Path ────────────
+    // Palpatine reads the path to the file where slapd records its command-line
+    // arguments at startup.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @return the olcArgsFile
+     * Returns the path to the slapd arguments file.
+     * slapd writes its startup arguments to this file when it starts.
+     *
+     * @return  the args file path, or null if not set
      */
     public String getOlcArgsFile()
     {
@@ -833,8 +1079,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcAttributeOptions — Palpatine Reads Attribute Option Definitions ─────
     /**
-     * @return the olcAttributeOptions
+     * Returns a defensive copy of the {@code olcAttributeOptions} list.
+     *
+     * @return  a copy of the olcAttributeOptions list; never null
      */
     public List<String> getOlcAttributeOptions()
     {
@@ -842,8 +1091,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcAttributeTypes — Palpatine Reads Custom Attribute Type Definitions ──
     /**
-     * @return the olcAttributeTypes
+     * Returns a defensive copy of the {@code olcAttributeTypes} list.
+     *
+     * @return  a copy of the olcAttributeTypes list; never null
      */
     public List<String> getOlcAttributeTypes()
     {
@@ -851,8 +1103,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcAuthIDRewrite — Palpatine Reads Auth ID Rewrite Rules ───────────────
     /**
-     * @return the olcAuthIDRewrite
+     * Returns a defensive copy of the {@code olcAuthIDRewrite} list.
+     *
+     * @return  a copy of the olcAuthIDRewrite list; never null
      */
     public List<String> getOlcAuthIDRewrite()
     {
@@ -860,8 +1115,16 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcAuthzPolicy — Palpatine Reads the Authorization Policy ──────────────
+    // Palpatine reads the authz policy — controls who is allowed to authorize as whom
+    // (e.g., "to" or "any"). This is the global policy for olcAuthzRegexp rules.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @return the olcAuthzPolicy
+     * Returns the authorization policy string.
+     * Controls how SASL authorization identity mapping rules are applied.
+     * Common values: "none", "any", "self", "from", "to".
+     *
+     * @return  the authz policy string, or null if not set
      */
     public String getOlcAuthzPolicy()
     {
@@ -869,8 +1132,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcAuthzRegexp — Palpatine Reads Authorization Regexp Rules ────────────
     /**
-     * @return the olcAuthzRegexp
+     * Returns a defensive copy of the {@code olcAuthzRegexp} list.
+     *
+     * @return  a copy of the olcAuthzRegexp list; never null
      */
     public List<String> getOlcAuthzRegexp()
     {
@@ -878,8 +1144,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcConcurrency — Palpatine Reads the Thread Concurrency Target ─────────
+    // Palpatine reads the desired level of thread concurrency — a hint to the OS
+    // thread scheduler about how many threads should run in parallel.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @return the olcConcurrency
+     * Returns the thread concurrency hint for the operating system scheduler.
+     * On most modern systems this has little effect but may help on some platforms.
+     *
+     * @return  the concurrency value, or null if not set
      */
     public Integer getOlcConcurrency()
     {
@@ -887,8 +1160,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcConfigDir — Palpatine Reads the Configuration Directory Path ────────
     /**
-     * @return the olcConfigDir
+     * Returns the path to the slapd.d configuration directory.
+     *
+     * @return  the config directory path, or null if not set
      */
     public String getOlcConfigDir()
     {
@@ -896,8 +1172,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcConfigFile — Palpatine Reads the Configuration File Path ─────────────
     /**
-     * @return the olcConfigFile
+     * Returns the path to the slapd.conf configuration file (legacy format).
+     *
+     * @return  the config file path, or null if not set
      */
     public String getOlcConfigFile()
     {
@@ -905,8 +1184,14 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcConnMaxPending — Palpatine Reads Max Pending Anonymous Connections ───
+    // Palpatine reads the maximum number of pending connections allowed from
+    // unauthenticated (anonymous) clients before slapd starts rejecting new ones.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @return the olcConnMaxPending
+     * Returns the maximum number of pending operations from anonymous connections.
+     *
+     * @return  the max pending anonymous connection count, or null if not set
      */
     public Integer getOlcConnMaxPending()
     {
@@ -914,8 +1199,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcConnMaxPendingAuth — Palpatine Reads Max Pending Authenticated Connections
     /**
-     * @return the olcConnMaxPendingAuth
+     * Returns the maximum number of pending operations from authenticated connections.
+     *
+     * @return  the max pending authenticated connection count, or null if not set
      */
     public Integer getOlcConnMaxPendingAuth()
     {
@@ -923,8 +1211,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcDisallows — Palpatine Reads Protocol Disallowances ─────────────────
     /**
-     * @return the olcDisallows
+     * Returns a defensive copy of the {@code olcDisallows} list.
+     *
+     * @return  a copy of the olcDisallows list; never null
      */
     public List<String> getOlcDisallows()
     {
@@ -932,8 +1223,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcDitContentRules — Palpatine Reads DIT Content Rules ────────────────
     /**
-     * @return the olcDitContentRules
+     * Returns a defensive copy of the {@code olcDitContentRules} list.
+     *
+     * @return  a copy of the olcDitContentRules list; never null
      */
     public List<String> getOlcDitContentRules()
     {
@@ -941,8 +1235,14 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcGentleHUP — Palpatine Reads the Gentle HUP Setting ─────────────────
+    // Palpatine reads whether SIGHUP causes a graceful restart (draining existing
+    // connections) rather than an abrupt reload.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @return the olcGentleHUP
+     * Returns whether a SIGHUP causes a graceful restart (draining connections first).
+     *
+     * @return  true if gentle SIGHUP is enabled; false if not; null if not set
      */
     public Boolean getOlcGentleHUP()
     {
@@ -950,8 +1250,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcIdleTimeout — Palpatine Reads the Connection Idle Timeout ───────────
     /**
-     * @return the olcIdleTimeout
+     * Returns the idle timeout in seconds for connections.
+     * slapd closes connections that have been idle for this long.
+     *
+     * @return  the idle timeout in seconds, or null if not set
      */
     public Integer getOlcIdleTimeout()
     {
@@ -959,8 +1263,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcIndexHash64 — Palpatine Reads the 64-bit Index Hash Setting ─────────
     /**
-     * @return the olcIndexHash64
+     * Returns whether 64-bit hashes are used for index keys (improves performance
+     * on 64-bit platforms by reducing hash collisions).
+     *
+     * @return  true if 64-bit index hashing is enabled; false if not; null if not set
      */
     public Boolean getOlcIndexHash64()
     {
@@ -968,8 +1276,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcIndexIntLen — Palpatine Reads the Integer Index Key Length ──────────
     /**
-     * @return the olcIndexIntLen
+     * Returns the number of significant bytes used for integer index keys.
+     *
+     * @return  the integer index key length, or null if not set
      */
     public Integer getOlcIndexIntLen()
     {
@@ -977,8 +1288,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcIndexSubstrAnyLen — Palpatine Reads Substring Any-Index Length ──────
     /**
-     * @return the olcIndexSubstrAnyLen
+     * Returns the length of substrings used for "any" (mid-string) substring index keys.
+     *
+     * @return  the substring any-index key length, or null if not set
      */
     public Integer getOlcIndexSubstrAnyLen()
     {
@@ -986,8 +1300,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcIndexSubstrAnyStep — Palpatine Reads Substring Any-Index Step ───────
     /**
-     * @return the olcIndexSubstrAnyStep
+     * Returns the step size used when generating "any" substring index keys.
+     *
+     * @return  the substring any-index step size, or null if not set
      */
     public Integer getOlcIndexSubstrAnyStep()
     {
@@ -995,8 +1312,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcIndexSubstrIfMaxLen — Palpatine Reads Substring Final-Index Max Length
     /**
-     * @return the olcIndexSubstrIfMaxLen
+     * Returns the maximum length for "final" (suffix) substring index keys.
+     *
+     * @return  the substring final-index max length, or null if not set
      */
     public Integer getOlcIndexSubstrIfMaxLen()
     {
@@ -1004,8 +1324,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcIndexSubstrIfMinLen — Palpatine Reads Substring Final-Index Min Length
     /**
-     * @return the olcIndexSubstrIfMinLen
+     * Returns the minimum length for "final" (suffix) substring index keys.
+     *
+     * @return  the substring final-index min length, or null if not set
      */
     public Integer getOlcIndexSubstrIfMinLen()
     {
@@ -1013,8 +1336,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcLdapSyntaxes — Palpatine Reads LDAP Syntax Definitions ─────────────
     /**
-     * @return the olcLdapSyntaxes
+     * Returns a defensive copy of the {@code olcLdapSyntaxes} list.
+     *
+     * @return  a copy of the olcLdapSyntaxes list; never null
      */
     public List<String> getOlcLdapSyntaxes()
     {
@@ -1022,8 +1348,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcListenerThreads — Palpatine Reads the Listener Thread Count ─────────
     /**
-     * @return the olcListenerThreads
+     * Returns the number of threads dedicated to accepting new LDAP connections.
+     *
+     * @return  the listener thread count, or null if not set
      */
     public Integer getOlcListenerThreads()
     {
@@ -1031,8 +1360,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcLocalSSF — Palpatine Reads the Local Security Strength Factor ───────
     /**
-     * @return the olcLocalSSF
+     * Returns the security strength factor (SSF) for local LDAP connections
+     * (i.e., connections over a Unix domain socket, which are implicitly trusted).
+     *
+     * @return  the local SSF value, or null if not set
      */
     public Integer getOlcLocalSSF()
     {
@@ -1040,8 +1373,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcLogFile — Palpatine Reads the Log File Path ────────────────────────
     /**
-     * @return the olcLogFile
+     * Returns the path to the slapd log file (alternative to syslog).
+     *
+     * @return  the log file path, or null if not set
      */
     public String getOlcLogFile()
     {
@@ -1049,8 +1385,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcLogLevel — Palpatine Reads the Active Log Levels ───────────────────
     /**
-     * @return the olcLogLevel
+     * Returns a defensive copy of the {@code olcLogLevel} list.
+     *
+     * @return  a copy of the olcLogLevel list; never null
      */
     public List<String> getOlcLogLevel()
     {
@@ -1058,8 +1397,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcObjectClasses — Palpatine Reads Custom Object Class Definitions ─────
     /**
-     * @return the olcObjectClasses
+     * Returns a defensive copy of the {@code olcObjectClasses} list.
+     *
+     * @return  a copy of the olcObjectClasses list; never null
      */
     public List<String> getOlcObjectClasses()
     {
@@ -1067,8 +1409,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcObjectIdentifier — Palpatine Reads OID Macro Definitions ────────────
     /**
-     * @return the olcObjectIdentifier
+     * Returns a defensive copy of the {@code olcObjectIdentifier} list.
+     *
+     * @return  a copy of the olcObjectIdentifier list; never null
      */
     public List<String> getOlcObjectIdentifier()
     {
@@ -1076,8 +1421,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcPasswordCryptSaltFormat — Palpatine Reads the Password Crypt Salt Format
     /**
-     * @return the olcPasswordCryptSaltFormat
+     * Returns the format string used when generating crypt password salt.
+     * Follows the format accepted by crypt(3).
+     *
+     * @return  the crypt salt format string, or null if not set
      */
     public String getOlcPasswordCryptSaltFormat()
     {
@@ -1085,8 +1434,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcPasswordHash — Palpatine Reads the Password Hash Scheme List ────────
     /**
-     * @return the olcPasswordHash
+     * Returns a defensive copy of the {@code olcPasswordHash} list.
+     *
+     * @return  a copy of the olcPasswordHash list; never null
      */
     public List<String> getOlcPasswordHash()
     {
@@ -1094,8 +1446,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcPidFile — Palpatine Reads the PID File Path ────────────────────────
     /**
-     * @return the olcPidFile
+     * Returns the path to the file where slapd records its process ID (PID) at startup.
+     *
+     * @return  the PID file path, or null if not set
      */
     public String getOlcPidFile()
     {
@@ -1103,8 +1458,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcPluginLogFile — Palpatine Reads the Plugin Log File Path ────────────
     /**
-     * @return the olcPluginLogFile
+     * Returns the path to the plugin-specific log file.
+     *
+     * @return  the plugin log file path, or null if not set
      */
     public String getOlcPluginLogFile()
     {
@@ -1112,8 +1470,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcReadOnly — Palpatine Reads the Global Read-Only Setting ─────────────
     /**
-     * @return the olcReadOnly
+     * Returns whether the entire server is in global read-only mode.
+     * When true, all write operations (add, delete, modify) are rejected.
+     *
+     * @return  true if global read-only mode is on; false if not; null if not set
      */
     public Boolean getOlcReadOnly()
     {
@@ -1121,8 +1483,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcReferral — Palpatine Reads the Global Referral URI ─────────────────
     /**
-     * @return the olcReferral
+     * Returns the global referral URI. When set, slapd returns this referral for
+     * requests that it cannot service itself (e.g., when it is a slave/consumer).
+     *
+     * @return  the global referral URI string, or null if not set
      */
     public String getOlcReferral()
     {
@@ -1130,8 +1496,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcReplogFile — Palpatine Reads the Replication Log File Path ──────────
     /**
-     * @return the olcReplogFile
+     * Returns the path to the replication log file (used by slurpd — legacy).
+     *
+     * @return  the replog file path, or null if not set
      */
     public String getOlcReplogFile()
     {
@@ -1139,8 +1508,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcRequires — Palpatine Reads Global Requirements ─────────────────────
     /**
-     * @return the olcRequires
+     * Returns a defensive copy of the {@code olcRequires} list.
+     *
+     * @return  a copy of the olcRequires list; never null
      */
     public List<String> getOlcRequires()
     {
@@ -1148,8 +1520,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcReverseLookup — Palpatine Reads the Reverse DNS Lookup Setting ──────
     /**
-     * @return the olcReverseLookup
+     * Returns whether slapd performs reverse DNS lookups on client IP addresses
+     * to populate the connection's hostname field.
+     *
+     * @return  true if reverse lookups are performed; false if not; null if not set
      */
     public Boolean getOlcReverseLookup()
     {
@@ -1157,8 +1533,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcRestrict — Palpatine Reads Global Operation Restrictions ────────────
     /**
-     * @return the olcRestrict
+     * Returns a defensive copy of the {@code olcRestrict} list.
+     *
+     * @return  a copy of the olcRestrict list; never null
      */
     public List<String> getOlcRestrict()
     {
@@ -1166,8 +1545,15 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcRootDSE — Palpatine Reads Root DSE Extra Attributes ────────────────
+    // Palpatine reads the list of LDIF files that provide additional attributes for
+    // the root DSE entry (the special "" DN that describes the server's capabilities).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @return the olcRootDSE
+     * Returns a defensive copy of the {@code olcRootDSE} list.
+     * Each string is a path to an LDIF file providing additional root DSE attributes.
+     *
+     * @return  a copy of the olcRootDSE list; may be null if never set
      */
     public List<String> getOlcRootDSE()
     {
@@ -1175,8 +1561,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcSaslAuxprops — Palpatine Reads the SASL Auxprops Plugin List ────────
     /**
-     * @return the olcSaslAuxprops
+     * Returns the SASL auxprops plugin name(s) used for auxiliary property lookup.
+     *
+     * @return  the SASL auxprops string, or null if not set
      */
     public String getOlcSaslAuxprops()
     {
@@ -1184,8 +1573,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcSaslAuxpropsDontUseCopy — Palpatine Reads the Don't-Use-Copy Setting ─
     /**
-     * @return the olcSaslAuxpropsDontUseCopy
+     * Returns the attribute type(s) for which SASL auxprops must not use a cached copy.
+     *
+     * @return  the dont-use-copy attribute type list string, or null if not set
      */
     public String getOlcSaslAuxpropsDontUseCopy()
     {
@@ -1193,8 +1585,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcSaslAuxpropsDontUseCopyIgnore — Palpatine Reads the Ignore Flag ─────
     /**
-     * @return the olcSaslAuxpropsDontUseCopyIgnore
+     * Returns whether SASL auxprops failures on dont-use-copy attributes are ignored.
+     *
+     * @return  true if errors are ignored; false if not; null if not set
      */
     public Boolean getOlcSaslAuxpropsDontUseCopyIgnore()
     {
@@ -1202,8 +1597,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcSaslHost — Palpatine Reads the SASL Host Name ──────────────────────
     /**
-     * @return the olcSaslHost
+     * Returns the FQDN used as the SASL service host name.
+     * This is used in SASL GSSAPI (Kerberos) exchanges.
+     *
+     * @return  the SASL host name, or null if not set
      */
     public String getOlcSaslHost()
     {
@@ -1211,8 +1610,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcSaslRealm — Palpatine Reads the SASL Realm ─────────────────────────
     /**
-     * @return the olcSaslRealm
+     * Returns the SASL realm name used for SASL authentication.
+     *
+     * @return  the SASL realm string, or null if not set
      */
     public String getOlcSaslRealm()
     {
@@ -1220,8 +1622,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcSaslSecProps — Palpatine Reads the SASL Security Properties ─────────
     /**
-     * @return the olcSaslSecProps
+     * Returns the SASL security properties string.
+     * Controls minimum/maximum SSF, maximum buffer size, and other SASL options.
+     *
+     * @return  the SASL security properties string, or null if not set
      */
     public String getOlcSaslSecProps()
     {
@@ -1229,8 +1635,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcSecurity — Palpatine Reads the Security Strength Factor Requirements ─
     /**
-     * @return the olcSecurity
+     * Returns a defensive copy of the {@code olcSecurity} list.
+     *
+     * @return  a copy of the olcSecurity list; never null
      */
     public List<String> getOlcSecurity()
     {
@@ -1238,8 +1647,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcServerID — Palpatine Reads the Server ID List ──────────────────────
     /**
-     * @return the olcServerID
+     * Returns a defensive copy of the {@code olcServerID} list.
+     *
+     * @return  a copy of the olcServerID list; never null
      */
     public List<String> getOlcServerID()
     {
@@ -1247,8 +1659,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcSizeLimit — Palpatine Reads the Global Search Size Limit ────────────
     /**
-     * @return the olcSizeLimit
+     * Returns the global default search result size limit.
+     * Format: "size=N" or "size.soft=N size.hard=N".
+     *
+     * @return  the size limit string, or null if not set
      */
     public String getOlcSizeLimit()
     {
@@ -1256,8 +1672,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcSockbufMaxIncoming — Palpatine Reads the Max Incoming Socket Buffer Size
     /**
-     * @return the olcSockbufMaxIncoming
+     * Returns the maximum size of the incoming socket buffer for unauthenticated connections.
+     *
+     * @return  the max incoming socket buffer size, or null if not set
      */
     public Integer getOlcSockbufMaxIncoming()
     {
@@ -1265,8 +1684,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcSockbufMaxIncomingAuth — Palpatine Reads the Authenticated Buffer Size
     /**
-     * @return the olcSockbufMaxIncomingAuth
+     * Returns the maximum incoming socket buffer size for authenticated connections.
+     *
+     * @return  the max authenticated incoming socket buffer size string, or null if not set
      */
     public String getOlcSockbufMaxIncomingAuth()
     {
@@ -1274,8 +1696,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTCPBuffer — Palpatine Reads the TCP Buffer Configuration ────────────
     /**
-     * @return the olcTCPBuffer
+     * Returns a defensive copy of the {@code olcTCPBuffer} list.
+     *
+     * @return  a copy of the olcTCPBuffer list; never null
      */
     public List<String> getOlcTCPBuffer()
     {
@@ -1283,8 +1708,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcThreads — Palpatine Reads the Worker Thread Pool Size ───────────────
     /**
-     * @return the olcThreads
+     * Returns the number of worker threads in slapd's thread pool.
+     * More threads handle more concurrent requests, but use more memory.
+     *
+     * @return  the thread pool size, or null if not set
      */
     public Integer getOlcThreads()
     {
@@ -1292,8 +1721,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcThreadQueues — Palpatine Reads the Thread Queue Count ───────────────
     /**
-     * @return the olcThreadQueues
+     * Returns the number of task queues used by the thread pool.
+     * Multiple queues reduce lock contention on multi-core systems.
+     *
+     * @return  the thread queue count, or null if not set
      */
     public Integer getOlcThreadQueues()
     {
@@ -1301,8 +1734,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTimeLimit — Palpatine Reads the Global Time Limit List ─────────────
     /**
-     * @return the olcTimeLimit
+     * Returns a defensive copy of the {@code olcTimeLimit} list.
+     *
+     * @return  a copy of the olcTimeLimit list; never null
      */
     public List<String> getOlcTimeLimit()
     {
@@ -1310,8 +1746,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSCACertificateFile — Palpatine Reads the TLS CA Certificate File ──
     /**
-     * @return the olcTLSCACertificateFile
+     * Returns the path to the TLS CA certificate file (PEM format).
+     *
+     * @return  the TLS CA certificate file path, or null if not set
      */
     public String getOlcTLSCACertificateFile()
     {
@@ -1319,8 +1758,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSCACertificatePath — Palpatine Reads the TLS CA Certificate Directory
     /**
-     * @return the olcTLSCACertificatePath
+     * Returns the path to the directory containing TLS CA certificates (OpenSSL hash format).
+     *
+     * @return  the TLS CA certificate directory path, or null if not set
      */
     public String getOlcTLSCACertificatePath()
     {
@@ -1328,8 +1770,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSCertificateFile — Palpatine Reads the TLS Server Certificate File ─
     /**
-     * @return the olcTLSCertificateFile
+     * Returns the path to the server's TLS certificate file (PEM format).
+     *
+     * @return  the TLS certificate file path, or null if not set
      */
     public String getOlcTLSCertificateFile()
     {
@@ -1337,8 +1782,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSCertificateKeyFile — Palpatine Reads the TLS Private Key File ─────
     /**
-     * @return the olcTLSCertificateKeyFile
+     * Returns the path to the server's TLS private key file (PEM format).
+     *
+     * @return  the TLS private key file path, or null if not set
      */
     public String getOlcTLSCertificateKeyFile()
     {
@@ -1346,8 +1794,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSCipherSuite — Palpatine Reads the TLS Cipher Suite ───────────────
     /**
-     * @return the olcTLSCipherSuite
+     * Returns the TLS cipher suite string (OpenSSL format).
+     *
+     * @return  the cipher suite string, or null if not set
      */
     public String getOlcTLSCipherSuite()
     {
@@ -1355,8 +1806,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSCRLCheck — Palpatine Reads the TLS CRL Check Mode ───────────────
     /**
-     * @return the olcTLSCRLCheck
+     * Returns the TLS Certificate Revocation List check mode.
+     * Values: "none", "peer", "all".
+     *
+     * @return  the CRL check mode string, or null if not set
      */
     public String getOlcTLSCRLCheck()
     {
@@ -1364,8 +1819,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSCRLFile — Palpatine Reads the TLS CRL File Path ─────────────────
     /**
-     * @return the olcTLSCRLFile
+     * Returns the path to the TLS Certificate Revocation List (CRL) file.
+     *
+     * @return  the CRL file path, or null if not set
      */
     public String getOlcTLSCRLFile()
     {
@@ -1373,8 +1831,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSECName — Palpatine Reads the TLS Elliptic Curve Name ─────────────
     /**
-     * @return the olcTLSECName
+     * Returns the name of the elliptic curve used for TLS ECDHE key exchange.
+     *
+     * @return  the elliptic curve name, or null if not set
      */
     public String getOlcTLSECName()
     {
@@ -1382,8 +1843,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSDHParamFile — Palpatine Reads the TLS DH Parameters File ─────────
     /**
-     * @return the olcTLSDHParamFile
+     * Returns the path to the Diffie-Hellman parameters file for TLS (PEM format).
+     *
+     * @return  the DH parameters file path, or null if not set
      */
     public String getOlcTLSDHParamFile()
     {
@@ -1391,8 +1855,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSProtocolMin — Palpatine Reads the Minimum TLS Protocol Version ───
     /**
-     * @return the olcTLSProtocolMin
+     * Returns the minimum TLS protocol version slapd will accept.
+     * Format: "3.0" (SSLv3), "3.1" (TLS 1.0), "3.2" (TLS 1.1), "3.3" (TLS 1.2).
+     *
+     * @return  the minimum TLS protocol version string, or null if not set
      */
     public String getOlcTLSProtocolMin()
     {
@@ -1400,8 +1868,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSRandFile — Palpatine Reads the TLS Random Seed File ─────────────
     /**
-     * @return the olcTLSRandFile
+     * Returns the path to the file used to seed the TLS random number generator.
+     *
+     * @return  the TLS rand file path, or null if not set
      */
     public String getOlcTLSRandFile()
     {
@@ -1409,8 +1880,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcTLSVerifyClient — Palpatine Reads the TLS Client Verification Mode ──
     /**
-     * @return the olcTLSVerifyClient
+     * Returns the TLS client certificate verification mode.
+     * Values: "never", "allow", "try", "demand", "hard".
+     *
+     * @return  the client verification mode string, or null if not set
      */
     public String getOlcTLSVerifyClient()
     {
@@ -1418,8 +1893,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcToolThreads — Palpatine Reads the Tool Thread Count ────────────────
     /**
-     * @return the olcToolThreads
+     * Returns the number of threads used by slapd command-line tools (slapindex, etc.).
+     *
+     * @return  the tool thread count, or null if not set
      */
     public Integer getOlcToolThreads()
     {
@@ -1427,8 +1905,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── getOlcWriteTimeout — Palpatine Reads the Write Operation Timeout ──────────
     /**
-     * @return the olcWriteTimeout
+     * Returns the timeout in seconds for write operations.
+     * If a write operation takes longer than this, the connection is closed.
+     *
+     * @return  the write timeout in seconds, or null if not set
      */
     public Integer getOlcWriteTimeout()
     {
@@ -1436,8 +1918,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setCn — Palpatine Sets the Global Config Entry Name List ─────────────────
     /**
-     * @param cn the cn to set
+     * Replaces the {@code cn} list with a defensive copy of the given list.
+     *
+     * @param cn  the new cn list to set
      */
     public void setCn( List<String> cn )
     {
@@ -1445,8 +1930,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcAllows — Palpatine Sets the Protocol Allowances List ───────────────
     /**
-     * @param olcAllows the olcAllows to set
+     * Replaces the {@code olcAllows} list with a defensive copy of the given list.
+     *
+     * @param olcAllows  the new allows list to set
      */
     public void setOlcAllows( List<String> olcAllows )
     {
@@ -1454,8 +1942,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcArgsFile — Palpatine Sets the slapd Arguments File Path ─────────────
     /**
-     * @param olcArgsFile the olcArgsFile to set
+     * Sets the path to the slapd arguments file.
+     *
+     * @param olcArgsFile  the args file path to set
      */
     public void setOlcArgsFile( String olcArgsFile )
     {
@@ -1463,8 +1954,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcAttributeOptions — Palpatine Sets Attribute Option Definitions ──────
     /**
-     * @param olcAttributeOptions the olcAttributeOptions to set
+     * Replaces the {@code olcAttributeOptions} list with a defensive copy.
+     *
+     * @param olcAttributeOptions  the new attribute options list to set
      */
     public void setOlcAttributeOptions( List<String> olcAttributeOptions )
     {
@@ -1472,8 +1966,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcAttributeTypes — Palpatine Sets Custom Attribute Type Definitions ───
     /**
-     * @param olcAttributeTypes the olcAttributeTypes to set
+     * Replaces the {@code olcAttributeTypes} list with a defensive copy.
+     *
+     * @param olcAttributeTypes  the new attribute type definitions list to set
      */
     public void setOlcAttributeTypes( List<String> olcAttributeTypes )
     {
@@ -1481,8 +1978,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcAuthIDRewrite — Palpatine Sets Auth ID Rewrite Rules ───────────────
     /**
-     * @param olcAuthIDRewrite the olcAuthIDRewrite to set
+     * Replaces the {@code olcAuthIDRewrite} list with a defensive copy.
+     *
+     * @param olcAuthIDRewrite  the new auth ID rewrite rules to set
      */
     public void setOlcAuthIDRewrite( List<String> olcAuthIDRewrite )
     {
@@ -1490,8 +1990,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcAuthzPolicy — Palpatine Sets the Authorization Policy ───────────────
     /**
-     * @param olcAuthzPolicy the olcAuthzPolicy to set
+     * Sets the global authorization policy string.
+     *
+     * @param olcAuthzPolicy  the authz policy to set
      */
     public void setOlcAuthzPolicy( String olcAuthzPolicy )
     {
@@ -1499,8 +2002,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcAuthzRegexp — Palpatine Sets the Authorization Regexp Rules ──────────
     /**
-     * @param olcAuthzRegexp the olcAuthzRegexp to set
+     * Replaces the {@code olcAuthzRegexp} list with a defensive copy.
+     *
+     * @param olcAuthzRegexp  the new authz regexp rules to set
      */
     public void setOlcAuthzRegexp( List<String> olcAuthzRegexp )
     {
@@ -1508,8 +2014,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcConcurrency — Palpatine Sets the Thread Concurrency Target ──────────
     /**
-     * @param olcConcurrency the olcConcurrency to set
+     * Sets the thread concurrency hint for the operating system scheduler.
+     *
+     * @param olcConcurrency  the concurrency value to set
      */
     public void setOlcConcurrency( Integer olcConcurrency )
     {
@@ -1517,8 +2026,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcConfigDir — Palpatine Sets the Configuration Directory Path ─────────
     /**
-     * @param olcConfigDir the olcConfigDir to set
+     * Sets the path to the slapd.d configuration directory.
+     *
+     * @param olcConfigDir  the config directory path to set
      */
     public void setOlcConfigDir( String olcConfigDir )
     {
@@ -1526,8 +2038,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcConfigFile — Palpatine Sets the Configuration File Path ─────────────
     /**
-     * @param olcConfigFile the olcConfigFile to set
+     * Sets the path to the slapd.conf configuration file (legacy format).
+     *
+     * @param olcConfigFile  the config file path to set
      */
     public void setOlcConfigFile( String olcConfigFile )
     {
@@ -1535,8 +2050,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcConnMaxPending — Palpatine Sets Max Pending Anonymous Connections ────
     /**
-     * @param olcConnMaxPending the olcConnMaxPending to set
+     * Sets the maximum number of pending operations from anonymous connections.
+     *
+     * @param olcConnMaxPending  the max pending anonymous count to set
      */
     public void setOlcConnMaxPending( Integer olcConnMaxPending )
     {
@@ -1544,8 +2062,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcConnMaxPendingAuth — Palpatine Sets Max Pending Authenticated Connections
     /**
-     * @param olcConnMaxPendingAuth the olcConnMaxPendingAuth to set
+     * Sets the maximum number of pending operations from authenticated connections.
+     *
+     * @param olcConnMaxPendingAuth  the max pending authenticated count to set
      */
     public void setOlcConnMaxPendingAuth( Integer olcConnMaxPendingAuth )
     {
@@ -1553,8 +2074,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcDisallows — Palpatine Sets the Protocol Disallowances List ──────────
     /**
-     * @param olcDisallows the olcDisallows to set
+     * Replaces the {@code olcDisallows} list with a defensive copy.
+     *
+     * @param olcDisallows  the new disallows list to set
      */
     public void setOlcDisallows( List<String> olcDisallows )
     {
@@ -1562,8 +2086,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcDitContentRules — Palpatine Sets DIT Content Rule Definitions ───────
     /**
-     * @param olcDitContentRules the olcDitContentRules to set
+     * Replaces the {@code olcDitContentRules} list with a defensive copy.
+     *
+     * @param olcDitContentRules  the new DIT content rules to set
      */
     public void setOlcDitContentRules( List<String> olcDitContentRules )
     {
@@ -1571,8 +2098,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcGentleHUP — Palpatine Sets Gentle SIGHUP Behavior ──────────────────
     /**
-     * @param olcGentleHUP the olcGentleHUP to set
+     * Sets whether SIGHUP causes a graceful restart (draining existing connections).
+     *
+     * @param olcGentleHUP  true for gentle HUP; false for immediate reload
      */
     public void setOlcGentleHUP( Boolean olcGentleHUP )
     {
@@ -1580,8 +2110,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcIdleTimeout — Palpatine Sets the Connection Idle Timeout ────────────
     /**
-     * @param olcIdleTimeout the olcIdleTimeout to set
+     * Sets the idle timeout in seconds for connections.
+     *
+     * @param olcIdleTimeout  the idle timeout in seconds to set
      */
     public void setOlcIdleTimeout( Integer olcIdleTimeout )
     {
@@ -1589,8 +2122,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcIndexHash64 — Palpatine Sets the 64-bit Index Hash Flag ─────────────
     /**
-     * @param olcIndexHash64 the olcIndexHash64 to set
+     * Sets whether 64-bit hashes are used for index keys.
+     *
+     * @param olcIndexHash64  true to enable 64-bit index hashing
      */
     public void setOlcIndexHash64( Boolean olcIndexHash64 )
     {
@@ -1598,8 +2134,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcIndexIntLen — Palpatine Sets the Integer Index Key Length ────────────
     /**
-     * @param olcIndexIntLen the olcIndexIntLen to set
+     * Sets the number of significant bytes used for integer index keys.
+     *
+     * @param olcIndexIntLen  the integer index key length to set
      */
     public void setOlcIndexIntLen( Integer olcIndexIntLen )
     {
@@ -1607,8 +2146,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcIndexSubstrAnyLen — Palpatine Sets the Substring Any-Index Length ───
     /**
-     * @param olcIndexSubstrAnyLen the olcIndexSubstrAnyLen to set
+     * Sets the length of substrings used for "any" substring index keys.
+     *
+     * @param olcIndexSubstrAnyLen  the substring any-index key length to set
      */
     public void setOlcIndexSubstrAnyLen( Integer olcIndexSubstrAnyLen )
     {
@@ -1616,8 +2158,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcIndexSubstrAnyStep — Palpatine Sets the Substring Any-Index Step ────
     /**
-     * @param olcIndexSubstrAnyStep the olcIndexSubstrAnyStep to set
+     * Sets the step size for "any" substring index key generation.
+     *
+     * @param olcIndexSubstrAnyStep  the substring any-index step size to set
      */
     public void setOlcIndexSubstrAnyStep( Integer olcIndexSubstrAnyStep )
     {
@@ -1625,8 +2170,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcIndexSubstrIfMaxLen — Palpatine Sets Substring Final-Index Max Length ─
     /**
-     * @param olcIndexSubstrIfMaxLen the olcIndexSubstrIfMaxLen to set
+     * Sets the maximum length for "final" (suffix) substring index keys.
+     *
+     * @param olcIndexSubstrIfMaxLen  the substring final-index max length to set
      */
     public void setOlcIndexSubstrIfMaxLen( Integer olcIndexSubstrIfMaxLen )
     {
@@ -1634,8 +2182,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcIndexSubstrIfMinLen — Palpatine Sets Substring Final-Index Min Length ─
     /**
-     * @param olcIndexSubstrIfMinLen the olcIndexSubstrIfMinLen to set
+     * Sets the minimum length for "final" (suffix) substring index keys.
+     *
+     * @param olcIndexSubstrIfMinLen  the substring final-index min length to set
      */
     public void setOlcIndexSubstrIfMinLen( Integer olcIndexSubstrIfMinLen )
     {
@@ -1643,8 +2194,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcLdapSyntaxes — Palpatine Sets LDAP Syntax Definitions ──────────────
     /**
-     * @param olcLdapSyntaxes the olcLdapSyntaxes to set
+     * Replaces the {@code olcLdapSyntaxes} list with a defensive copy.
+     *
+     * @param olcLdapSyntaxes  the new LDAP syntax definitions to set
      */
     public void setOlcLdapSyntaxes( List<String> olcLdapSyntaxes )
     {
@@ -1652,8 +2206,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcListenerThreads — Palpatine Sets the Listener Thread Count ──────────
     /**
-     * @param olcListenerThreads the olcListenerThreads to set
+     * Sets the number of threads dedicated to accepting new LDAP connections.
+     *
+     * @param olcListenerThreads  the listener thread count to set
      */
     public void setOlcListenerThreads( Integer olcListenerThreads )
     {
@@ -1661,8 +2218,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcLocalSSF — Palpatine Sets the Local Security Strength Factor ────────
     /**
-     * @param olcLocalSSF the olcLocalSSF to set
+     * Sets the security strength factor for local LDAP connections.
+     *
+     * @param olcLocalSSF  the local SSF value to set
      */
     public void setOlcLocalSSF( Integer olcLocalSSF )
     {
@@ -1670,8 +2230,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcLogFile — Palpatine Sets the Log File Path ─────────────────────────
     /**
-     * @param olcLogFile the olcLogFile to set
+     * Sets the path to the slapd log file.
+     *
+     * @param olcLogFile  the log file path to set
      */
     public void setOlcLogFile( String olcLogFile )
     {
@@ -1679,8 +2242,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcLogLevel — Palpatine Sets the Active Log Levels ────────────────────
     /**
-     * @param olcLogLevel the olcLogLevel to set
+     * Replaces the {@code olcLogLevel} list with a defensive copy.
+     *
+     * @param olcLogLevel  the new log level strings to set
      */
     public void setOlcLogLevel( List<String> olcLogLevel )
     {
@@ -1688,8 +2254,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcObjectClasses — Palpatine Sets Custom Object Class Definitions ──────
     /**
-     * @param olcObjectClasses the olcObjectClasses to set
+     * Replaces the {@code olcObjectClasses} list with a defensive copy.
+     *
+     * @param olcObjectClasses  the new object class definitions to set
      */
     public void setOlcObjectClasses( List<String> olcObjectClasses )
     {
@@ -1697,8 +2266,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcObjectIdentifier — Palpatine Sets OID Macro Definitions ─────────────
     /**
-     * @param olcObjectIdentifier the olcObjectIdentifier to set
+     * Replaces the {@code olcObjectIdentifier} list with a defensive copy.
+     *
+     * @param olcObjectIdentifier  the new OID macro definitions to set
      */
     public void setOlcObjectIdentifier( List<String> olcObjectIdentifier )
     {
@@ -1706,8 +2278,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcPasswordCryptSaltFormat — Palpatine Sets the Crypt Salt Format ──────
     /**
-     * @param olcPasswordCryptSaltFormat the olcPasswordCryptSaltFormat to set
+     * Sets the crypt(3) salt format string used when hashing passwords.
+     *
+     * @param olcPasswordCryptSaltFormat  the crypt salt format string to set
      */
     public void setOlcPasswordCryptSaltFormat( String olcPasswordCryptSaltFormat )
     {
@@ -1715,8 +2290,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcPasswordHash — Palpatine Sets the Password Hash Scheme List ─────────
     /**
-     * @param olcPasswordHash the olcPasswordHash to set
+     * Replaces the {@code olcPasswordHash} list with a defensive copy.
+     *
+     * @param olcPasswordHash  the new password hash scheme list to set
      */
     public void setOlcPasswordHash( List<String> olcPasswordHash )
     {
@@ -1724,8 +2302,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcPidFile — Palpatine Sets the PID File Path ─────────────────────────
     /**
-     * @param olcPidFile the olcPidFile to set
+     * Sets the path to the slapd PID file.
+     *
+     * @param olcPidFile  the PID file path to set
      */
     public void setOlcPidFile( String olcPidFile )
     {
@@ -1733,8 +2314,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcPluginLogFile — Palpatine Sets the Plugin Log File Path ─────────────
     /**
-     * @param olcPluginLogFile the olcPluginLogFile to set
+     * Sets the path to the plugin-specific log file.
+     *
+     * @param olcPluginLogFile  the plugin log file path to set
      */
     public void setOlcPluginLogFile( String olcPluginLogFile )
     {
@@ -1742,8 +2326,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcReadOnly — Palpatine Sets the Global Read-Only Mode ────────────────
     /**
-     * @param olcReadOnly the olcReadOnly to set
+     * Sets whether the entire server is in global read-only mode.
+     *
+     * @param olcReadOnly  true to enable global read-only mode
      */
     public void setOlcReadOnly( Boolean olcReadOnly )
     {
@@ -1751,8 +2338,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcReferral — Palpatine Sets the Global Referral URI ──────────────────
     /**
-     * @param olcReferral the olcReferral to set
+     * Sets the global referral URI returned for requests the server cannot handle.
+     *
+     * @param olcReferral  the referral URI string to set
      */
     public void setOlcReferral( String olcReferral )
     {
@@ -1760,8 +2350,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcReplogFile — Palpatine Sets the Replication Log File Path ───────────
     /**
-     * @param olcReplogFile the olcReplogFile to set
+     * Sets the path to the replication log file (legacy slurpd-based replication).
+     *
+     * @param olcReplogFile  the replog file path to set
      */
     public void setOlcReplogFile( String olcReplogFile )
     {
@@ -1769,8 +2362,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcRequires — Palpatine Sets the Global Requirements List ──────────────
     /**
-     * @param olcRequires the olcRequires to set
+     * Replaces the {@code olcRequires} list with a defensive copy.
+     *
+     * @param olcRequires  the new requirements list to set
      */
     public void setOlcRequires( List<String> olcRequires )
     {
@@ -1778,8 +2374,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcReverseLookup — Palpatine Sets the Reverse DNS Lookup Flag ──────────
     /**
-     * @param olcReverseLookup the olcReverseLookup to set
+     * Sets whether slapd performs reverse DNS lookups on client IP addresses.
+     *
+     * @param olcReverseLookup  true to enable reverse DNS lookups
      */
     public void setOlcReverseLookup( Boolean olcReverseLookup )
     {
@@ -1787,8 +2386,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcRestrict — Palpatine Sets the Global Operation Restrictions ─────────
     /**
-     * @param olcRestrict the olcRestrict to set
+     * Replaces the {@code olcRestrict} list with a defensive copy.
+     *
+     * @param olcRestrict  the new restrictions list to set
      */
     public void setOlcRestrict( List<String> olcRestrict )
     {
@@ -1796,8 +2398,12 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcRootDSE — Palpatine Sets the Root DSE Supplement Files ─────────────
     /**
-     * @param olcRootDSE the olcRootDSE to set
+     * Replaces the {@code olcRootDSE} list with a defensive copy.
+     * Each string is a path to an LDIF file providing extra root DSE attributes.
+     *
+     * @param olcRootDSE  the new root DSE file paths list to set
      */
     public void setOlcRootDSE( List<String> olcRootDSE )
     {
@@ -1805,8 +2411,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcSaslAuxprops — Palpatine Sets the SASL Auxprops Plugin ─────────────
     /**
-     * @param olcSaslAuxprops the olcSaslAuxprops to set
+     * Sets the SASL auxprops plugin name(s) for auxiliary property lookup.
+     *
+     * @param olcSaslAuxprops  the SASL auxprops string to set
      */
     public void setOlcSaslAuxprops( String olcSaslAuxprops )
     {
@@ -1814,8 +2423,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcSaslAuxpropsDontUseCopy — Palpatine Sets the Don't-Use-Copy Attribute
     /**
-     * @param olcSaslAuxpropsDontUseCopy the olcSaslAuxpropsDontUseCopy to set
+     * Sets the attribute type(s) for which SASL auxprops must not use a cached copy.
+     *
+     * @param olcSaslAuxpropsDontUseCopy  the dont-use-copy attribute type list string to set
      */
     public void setOlcSaslAuxpropsDontUseCopy( String olcSaslAuxpropsDontUseCopy )
     {
@@ -1823,8 +2435,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcSaslAuxpropsDontUseCopyIgnore — Palpatine Sets the Ignore Flag ──────
     /**
-     * @param olcSaslAuxpropsDontUseCopyIgnore the olcSaslAuxpropsDontUseCopyIgnore to set
+     * Sets whether SASL auxprops failures on dont-use-copy attributes are silently ignored.
+     *
+     * @param olcSaslAuxpropsDontUseCopyIgnore  true to ignore errors; false to propagate them
      */
     public void setOlcSaslAuxpropsDontUseCopyIgnore( Boolean olcSaslAuxpropsDontUseCopyIgnore )
     {
@@ -1832,8 +2447,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcSaslHost — Palpatine Sets the SASL Host Name ───────────────────────
     /**
-     * @param olcSaslHost the olcSaslHost to set
+     * Sets the FQDN used as the SASL service host name.
+     *
+     * @param olcSaslHost  the SASL host name to set
      */
     public void setOlcSaslHost( String olcSaslHost )
     {
@@ -1841,8 +2459,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcSaslRealm — Palpatine Sets the SASL Realm ──────────────────────────
     /**
-     * @param olcSaslRealm the olcSaslRealm to set
+     * Sets the SASL realm name used for SASL authentication.
+     *
+     * @param olcSaslRealm  the SASL realm string to set
      */
     public void setOlcSaslRealm( String olcSaslRealm )
     {
@@ -1850,8 +2471,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcSaslSecProps — Palpatine Sets the SASL Security Properties ──────────
     /**
-     * @param olcSaslSecProps the olcSaslSecProps to set
+     * Sets the SASL security properties string.
+     *
+     * @param olcSaslSecProps  the SASL security properties string to set
      */
     public void setOlcSaslSecProps( String olcSaslSecProps )
     {
@@ -1859,8 +2483,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcSecurity — Palpatine Sets the Security Strength Factor Requirements ─
     /**
-     * @param olcSecurity the olcSecurity to set
+     * Replaces the {@code olcSecurity} list with a defensive copy.
+     *
+     * @param olcSecurity  the new security requirement strings to set
      */
     public void setOlcSecurity( List<String> olcSecurity )
     {
@@ -1868,8 +2495,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcServerID — Palpatine Sets the Server ID List ───────────────────────
     /**
-     * @param olcServerID the olcServerID to set
+     * Replaces the {@code olcServerID} list with a defensive copy.
+     *
+     * @param olcServerID  the new server ID strings to set
      */
     public void setOlcServerID( List<String> olcServerID )
     {
@@ -1877,8 +2507,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcSizeLimit — Palpatine Sets the Global Search Size Limit ─────────────
     /**
-     * @param olcSizeLimit the olcSizeLimit to set
+     * Sets the global default search result size limit.
+     *
+     * @param olcSizeLimit  the size limit string to set
      */
     public void setOlcSizeLimit( String olcSizeLimit )
     {
@@ -1886,8 +2519,14 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcSockbufMaxIncoming — Palpatine Sets the Max Incoming Socket Buffer ───
+    // Note: the parameter is a primitive int (not Integer), matching the original source.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @param olcSockbufMaxIncoming the olcSockbufMaxIncoming to set
+     * Sets the maximum incoming socket buffer size for unauthenticated connections.
+     * Note: this setter takes a primitive {@code int}, not {@code Integer}.
+     *
+     * @param olcSockbufMaxIncoming  the max incoming socket buffer size to set
      */
     public void setOlcSockbufMaxIncoming( int olcSockbufMaxIncoming )
     {
@@ -1895,8 +2534,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcSockbufMaxIncomingAuth — Palpatine Sets the Authenticated Buffer Size ─
     /**
-     * @param olcSockbufMaxIncomingAuth the olcSockbufMaxIncomingAuth to set
+     * Sets the maximum incoming socket buffer size for authenticated connections.
+     *
+     * @param olcSockbufMaxIncomingAuth  the max authenticated incoming socket buffer size string to set
      */
     public void setOlcSockbufMaxIncomingAuth( String olcSockbufMaxIncomingAuth )
     {
@@ -1904,8 +2546,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTCPBuffer — Palpatine Sets the TCP Buffer Configuration ─────────────
     /**
-     * @param olcTCPBuffer the olcTCPBuffer to set
+     * Replaces the {@code olcTCPBuffer} list with a defensive copy.
+     *
+     * @param olcTCPBuffer  the new TCP buffer configuration strings to set
      */
     public void setOlcTCPBuffer( List<String> olcTCPBuffer )
     {
@@ -1913,8 +2558,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcThreads — Palpatine Sets the Worker Thread Pool Size ───────────────
     /**
-     * @param olcThreads the olcThreads to set
+     * Sets the number of worker threads in slapd's thread pool.
+     *
+     * @param olcThreads  the thread pool size to set
      */
     public void setOlcThreads( Integer olcThreads )
     {
@@ -1922,8 +2570,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcThreadQueues — Palpatine Sets the Thread Queue Count ───────────────
     /**
-     * @param olcThreadQueues the olcThreadQueues to set
+     * Sets the number of task queues used by the thread pool.
+     *
+     * @param olcThreadQueues  the thread queue count to set
      */
     public void setOlcThreadQueues( Integer olcThreadQueues )
     {
@@ -1931,8 +2582,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTimeLimit — Palpatine Sets the Global Time Limit List ──────────────
     /**
-     * @param olcTimeLimit the olcTimeLimit to set
+     * Replaces the {@code olcTimeLimit} list with a defensive copy.
+     *
+     * @param olcTimeLimit  the new time limit strings to set
      */
     public void setOlcTimeLimit( List<String> olcTimeLimit )
     {
@@ -1940,8 +2594,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSCACertificateFile — Palpatine Sets the TLS CA Certificate File ───
     /**
-     * @param olcTLSCACertificateFile the olcTLSCACertificateFile to set
+     * Sets the path to the TLS CA certificate file (PEM format).
+     *
+     * @param olcTLSCACertificateFile  the TLS CA certificate file path to set
      */
     public void setOlcTLSCACertificateFile( String olcTLSCACertificateFile )
     {
@@ -1949,8 +2606,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSCACertificatePath — Palpatine Sets the TLS CA Certificate Directory
     /**
-     * @param olcTLSCACertificatePath the olcTLSCACertificatePath to set
+     * Sets the path to the directory containing TLS CA certificates.
+     *
+     * @param olcTLSCACertificatePath  the TLS CA certificate directory path to set
      */
     public void setOlcTLSCACertificatePath( String olcTLSCACertificatePath )
     {
@@ -1958,8 +2618,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSCertificateFile — Palpatine Sets the TLS Server Certificate File ─
     /**
-     * @param olcTLSCertificateFile the olcTLSCertificateFile to set
+     * Sets the path to the server's TLS certificate file (PEM format).
+     *
+     * @param olcTLSCertificateFile  the TLS certificate file path to set
      */
     public void setOlcTLSCertificateFile( String olcTLSCertificateFile )
     {
@@ -1967,8 +2630,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSCertificateKeyFile — Palpatine Sets the TLS Private Key File ─────
     /**
-     * @param olcTLSCertificateKeyFile the olcTLSCertificateKeyFile to set
+     * Sets the path to the server's TLS private key file (PEM format).
+     *
+     * @param olcTLSCertificateKeyFile  the TLS private key file path to set
      */
     public void setOlcTLSCertificateKeyFile( String olcTLSCertificateKeyFile )
     {
@@ -1976,8 +2642,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSCipherSuite — Palpatine Sets the TLS Cipher Suite ───────────────
     /**
-     * @param olcTLSCipherSuite the olcTLSCipherSuite to set
+     * Sets the TLS cipher suite string (OpenSSL format).
+     *
+     * @param olcTLSCipherSuite  the TLS cipher suite string to set
      */
     public void setOlcTLSCipherSuite( String olcTLSCipherSuite )
     {
@@ -1985,8 +2654,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSCRLCheck — Palpatine Sets the TLS CRL Check Mode ────────────────
     /**
-     * @param olcTLSCRLCheck the olcTLSCRLCheck to set
+     * Sets the TLS Certificate Revocation List check mode.
+     *
+     * @param olcTLSCRLCheck  the CRL check mode to set ("none", "peer", or "all")
      */
     public void setOlcTLSCRLCheck( String olcTLSCRLCheck )
     {
@@ -1994,8 +2666,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSCRLFile — Palpatine Sets the TLS CRL File Path ──────────────────
     /**
-     * @param olcTLSCRLFile the olcTLSCRLFile to set
+     * Sets the path to the TLS Certificate Revocation List file.
+     *
+     * @param olcTLSCRLFile  the CRL file path to set
      */
     public void setOlcTLSCRLFile( String olcTLSCRLFile )
     {
@@ -2003,8 +2678,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSDHParamFile — Palpatine Sets the TLS DH Parameters File ──────────
     /**
-     * @param olcTLSDHParamFile the olcTLSDHParamFile to set
+     * Sets the path to the Diffie-Hellman parameters file for TLS.
+     *
+     * @param olcTLSDHParamFile  the DH parameters file path to set
      */
     public void setOlcTLSDHParamFile( String olcTLSDHParamFile )
     {
@@ -2012,8 +2690,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSECName — Palpatine Sets the TLS Elliptic Curve Name ─────────────
     /**
-     * @param olcTLSECName the olcTLSECName to set
+     * Sets the name of the elliptic curve for TLS ECDHE key exchange.
+     *
+     * @param olcTLSECName  the elliptic curve name to set (e.g., "prime256v1")
      */
     public void setOlcTLSECName( String olcTLSECName )
     {
@@ -2021,8 +2702,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSProtocolMin — Palpatine Sets the Minimum TLS Protocol Version ────
     /**
-     * @param olcTLSProtocolMin the olcTLSProtocolMin to set
+     * Sets the minimum TLS protocol version slapd will accept.
+     *
+     * @param olcTLSProtocolMin  the minimum TLS protocol version string to set
      */
     public void setOlcTLSProtocolMin( String olcTLSProtocolMin )
     {
@@ -2030,8 +2714,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSRandFile — Palpatine Sets the TLS Random Seed File ──────────────
     /**
-     * @param olcTLSRandFile the olcTLSRandFile to set
+     * Sets the path to the TLS random number generator seed file.
+     *
+     * @param olcTLSRandFile  the TLS rand file path to set
      */
     public void setOlcTLSRandFile( String olcTLSRandFile )
     {
@@ -2039,8 +2726,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcTLSVerifyClient — Palpatine Sets the TLS Client Verification Mode ───
     /**
-     * @param olcTLSVerifyClient the olcTLSVerifyClient to set
+     * Sets the TLS client certificate verification mode.
+     *
+     * @param olcTLSVerifyClient  the client verification mode to set
      */
     public void setOlcTLSVerifyClient( String olcTLSVerifyClient )
     {
@@ -2048,8 +2738,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcToolThreads — Palpatine Sets the Tool Thread Count ─────────────────
     /**
-     * @param olcToolThreads the olcToolThreads to set
+     * Sets the number of threads used by slapd command-line tools.
+     *
+     * @param olcToolThreads  the tool thread count to set
      */
     public void setOlcToolThreads( Integer olcToolThreads )
     {
@@ -2057,8 +2750,11 @@ public class OlcGlobal extends OlcConfig
     }
 
 
+    // ── setOlcWriteTimeout — Palpatine Sets the Write Operation Timeout ───────────
     /**
-     * @param olcWriteTimeout the olcWriteTimeout to set
+     * Sets the timeout in seconds for write operations.
+     *
+     * @param olcWriteTimeout  the write timeout in seconds to set
      */
     public void setOlcWriteTimeout( Integer olcWriteTimeout )
     {

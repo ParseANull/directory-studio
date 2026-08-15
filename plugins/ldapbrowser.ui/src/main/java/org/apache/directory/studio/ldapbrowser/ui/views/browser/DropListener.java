@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.views.browser;
@@ -24,20 +24,31 @@ package org.apache.directory.studio.ldapbrowser.ui.views.browser;
 import org.eclipse.swt.dnd.DropTargetListener;
 
 
+// ── CLASS: DropListener — HAN SHOOTS FIRST (ON THE RECEIVING END) ────────────
+// After Han fires, Greedo slumps onto the table — someone had to be on the
+// receiving end of that decisive action. In drag-and-drop, the DropListener
+// is the receiving end: it decides what happens when dragged data lands on a
+// tree node. Does this become a copy? A move? A merge?
+// Like the cantina scene, the implementation is all stubbed out — the DnD
+// support was never completed, so for now everything is commented-out history.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the {@link DropTargetListener} for the browser view.
- * 
- * TODO: The code isn't working yet, just a test implementation.
+ * Placeholder for the drop-target listener in the LDAP browser view.
+ * This class was intended to handle drop events (dragEnter, dragOver, drop, etc.)
+ * when users release dragged entries, searches, or search results onto a tree node.
+ * The implementation is entirely commented out and not yet functional.
+ * Think of it as the other side of Han's shot: the mechanics of what happens
+ * when something lands somewhere — still waiting to be written.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DropListener /* implements DropTargetListener, ModelModifier */
 {/*
-* 
+*
 * private Shell shell; private Clipboard systemClipboard; private
 * InternalClipboard internalClipboard;
-* 
-* 
+*
+*
 * public DropListener(Shell shell, Clipboard systemClipboard,
 * InternalClipboard internalClipboard) { this.shell = shell;
 * this.systemClipboard = systemClipboard; this.internalClipboard =
@@ -45,35 +56,35 @@ public class DropListener /* implements DropTargetListener, ModelModifier */
 *  } public void dispose() { this.shell = null; this.systemClipboard =
 * null; this.internalClipboard = null;
 *  }
-* 
+*
 * private int dragOperation = DND.DROP_NONE;
-* 
+*
 * public void dragEnter(DropTargetEvent event) {
 * //System.out.println("dragEnter: " + event.detail); dragOperation =
 * event.detail; event.currentDataType =
 * BrowserTransfer.getInstance().getSupportedTypes()[0];
 * this.check(event); }
-* 
+*
 * public void dragLeave(DropTargetEvent event) {
 * //System.out.println("dragLeave: " + event.detail); dragOperation =
 * DND.DROP_NONE; }
-* 
+*
 * public void dragOperationChanged(DropTargetEvent event) {
 * //System.out.println("dragOperationChanged: " + event.detail);
 * dragOperation = event.detail; this.check(event); }
-* 
+*
 * public void dragOver(DropTargetEvent event) {
 * //System.out.println("dragOver: " + event.item.getData());
-* 
+*
 * this.check(event);
-* 
+*
 * //System.out.println("dragOver: " + event.detail);
-* 
+*
 * //System.out.println();
 * //System.out.println(event.item.getClass().getName());
 * //System.out.println(event.item.getData().getClass().getName());
 * //System.out.println(event.currentDataType.type); }
-* 
+*
 * private void check(DropTargetEvent event) { if(event.item != null &&
 * event.item.getData() != null) { if
 * (BrowserTransfer.getInstance().isSupportedType(event.currentDataType)) {
@@ -87,50 +98,50 @@ public class DropListener /* implements DropTargetListener, ModelModifier */
 * event.detail = dragOperation; return; } else if(event.item.getData()
 * instanceof IEntry && this.internalClipboard.getObjectToTransfer()
 * instanceof IEntry[]) { event.detail = dragOperation;
-* 
+*
 * IEntry[] entries =
 * (IEntry[])this.internalClipboard.getObjectToTransfer(); for(int i=0;
 * i<entries.length; i++) { if(entries[i].hasChildren()) { event.detail =
 * DND.DROP_COPY; return; } }
-* 
+*
 * return; } else if(event.item.getData() instanceof IEntry &&
 * this.internalClipboard.getObjectToTransfer() instanceof
 * ISearchResult[]) { event.detail = dragOperation;
-* 
+*
 * ISearchResult[] srs =
 * (ISearchResult[])this.internalClipboard.getObjectToTransfer();
 * for(int i=0; i<srs.length; i++) {
 * if(!srs[i].getEntry().hasChildren()) { event.detail = DND.DROP_COPY;
 * return; } }
-* 
+*
 * return; } else { event.detail = DND.DROP_NONE; } } else {
 * event.detail = DND.DROP_NONE; } } else { event.detail =
 * DND.DROP_NONE; } }
-* 
+*
 * public void drop(DropTargetEvent event) {
-* 
+*
 * //System.out.println("drop: " + event);
-* 
+*
 * try {
-* 
+*
 * if
 * (BrowserTransfer.getInstance().isSupportedType(event.currentDataType) &&
 * event.data instanceof String &&
 * this.internalClipboard.getClass().getName().equals(event.data)) {
-* 
+*
 * if(event.detail == DND.DROP_MOVE) {
 * this.internalClipboard.setOperationType(InternalClipboard.TYPE_MOVE_OPERATION); }
 * else if(event.detail == DND.DROP_COPY) {
 * this.internalClipboard.setOperationType(InternalClipboard.TYPE_DUPLICATE_OPERATION); }
 * else {
 * this.internalClipboard.setOperationType(InternalClipboard.TYPE_UNKNOWN); }
-* 
-* 
+*
+*
 * ISearch[] selectedSearches = new ISearch[0]; IEntry[] selectedEntries =
 * new IEntry[0]; ISearchResult[] selectedSearchResults = new
 * ISearchResult[0]; BrowserCategory[] selectedBrowserViewCategories =
 * new BrowserCategory[0];
-* 
+*
 * if (event.item != null && event.item.getData() instanceof ISearch) {
 * selectedSearches = new ISearch[]{(ISearch) event.item.getData()}; }
 * else if (event.item != null && event.item.getData() instanceof
@@ -142,12 +153,12 @@ public class DropListener /* implements DropTargetListener, ModelModifier */
 * event.item.getData() instanceof BrowserCategory) {
 * selectedBrowserViewCategories = new
 * BrowserCategory[]{(BrowserCategory) event.item.getData()}; }
-* 
+*
 * this.runPaste(this.internalClipboard, selectedSearches,
 * selectedEntries, selectedSearchResults,
 * selectedBrowserViewCategories);
-* 
-* 
+*
+*
 *  // // get search to handle and its search manager // ISearch[]
 * searches = (ISearch[]) event.data; // for(int i=0; i<searches.length;
 * i++) { // ISearch search = searches[i]; // IConnection connection =
@@ -174,25 +185,25 @@ public class DropListener /* implements DropTargetListener, ModelModifier */
 * dragSearchManager != dropSearchManager)) { // ISearch newSearch =
 * (ISearch) search.clone(); //
 * newSearch.setConnection(dropSearchManager.getConnection()); //
-* dropSearchManager.addSearch(dropPosition, newSearch); // // } // else { //
+* dropSearchManager.addSearch(dropPosition, newSearch); // // } else { //
 * event.detail = DND.DROP_NONE; // } // } } } catch (Exception e) {
 * event.detail = DND.DROP_NONE; e.printStackTrace(); }
 *  }
-* 
+*
 * public void dropAccept(DropTargetEvent event) {
 * //System.out.println("dropAccept: " + event.detail + event.feedback);
 * event.currentDataType =
 * BrowserTransfer.getInstance().getSupportedTypes()[0]; check(event); }
-* 
-* 
-* 
-* 
+*
+*
+*
+*
 * public void runPaste(InternalClipboard internalClipboard, ISearch[]
 * selectedSearches, IEntry[] selectedEntries, ISearchResult[]
 * selectedSearchResults, BrowserCategory[]
 * selectedBrowserViewCategories) { Object objectToTransfer =
 * internalClipboard.getObjectToTransfer();
-* 
+*
 * if (objectToTransfer != null && objectToTransfer instanceof ISearch[] &&
 * selectedSearches.length > 0 && selectedEntries.length == 0 &&
 * selectedSearchResults.length == 0) { ISearch[] searchesToTransfer =
@@ -201,9 +212,9 @@ public class DropListener /* implements DropTargetListener, ModelModifier */
 * selectedSearches[selectedSearches.length-1]; IConnection connection =
 * pasteSearch.getConnection(); SearchManager searchManager =
 * connection.getSearchManager();
-* 
+*
 * int index = searchManager.indexOf(pasteSearch);
-* 
+*
 * for(int i=0; i<searchesToTransfer.length; i++) { ISearch newSearch =
 * (ISearch) searchesToTransfer[i].clone();
 * newSearch.setConnection(connection);
@@ -254,13 +265,13 @@ public class DropListener /* implements DropTargetListener, ModelModifier */
 * if(internalClipboard.getOperationType() ==
 * InternalClipboard.TYPE_MOVE_OPERATION) this.move(selectedEntries[0],
 * entries); } }
-* 
+*
 * if(internalClipboard.getOperationType() ==
 * InternalClipboard.TYPE_MOVE_OPERATION) { internalClipboard.clear(); } }
-* 
+*
 * private void move (final IEntry newParent, final IEntry[]
 * entriesToMove) {
-* 
+*
 * for(int i=0; i<entriesToMove.length; i++) { try {
 * entriesToMove[i].moveTo(newParent, this); }
 * catch(ModelModificationException mme) {
@@ -268,7 +279,7 @@ public class DropListener /* implements DropTargetListener, ModelModifier */
 * mme); } catch(Exception e) {
 * BrowserUIPlugin.getDefault().getExceptionHandler().handleException(e.getMessage(),
 * e); } }
-* 
+*
 * //EventRegistry.fireEntryUpdated(new
 * ChildrenInitializedEvent(newParent, newParent.getConnection()),
 * this); }

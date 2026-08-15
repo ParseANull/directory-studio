@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.pages;
 
@@ -55,79 +55,57 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.TimeLimitWrap
 import org.apache.directory.studio.openldap.config.model.OlcGlobal;
 
 
+// ── CLASS: TuningPage — The Star Destroyer's Engineering Bay ──────────────────
+// The Death Star's engineering bay is where the real performance work happens:
+// adjusting the reactor's thread allocation, tuning the network buffer sizes,
+// setting connection limits for the main turbolaser banks and the backup
+// systems, and capping index depth so queries don't consume the whole ship's
+// compute cluster.  TuningPage is that engineering bay in the OpenLDAP editor:
+// it controls network TCP buffers, concurrency thread pools, LDAP operation
+// limits, and index depth limits — everything that makes the server go fast
+// without falling over.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Tuning Page of the Server Configuration Editor. We
- * manage the global tuning of the server, and more specifically, those parameters :
- * <ul>
- *   <li>Network :
- *     <ul>
- *       <li>olcTCPBuffers</li>
- *       <li>olcSockbufMaxIncoming</li>
- *       <li>olcSockbufMaxIncomingAuth</li>
- *     </ul>
- *   </li>
- *   <li>Concurrency :
- *     <ul>
- *       <li>olcConcurrency</li>
- *       <li>olcConnMaxPending</li>
- *       <li>olcConnMaxPendingAuth</li>
- *       <li>olcListenerThreads</li>
- *       <li>olcThreads</li>
- *       <li>olcToolThreads</li>
- *     </ul>
- *   </li>
- *   <li>LDAP limits :
- *     <ul>
- *       <li>olcIdleTimeout</li>
- *       <li>olcSizeLimit</li>
- *       <li>olcTimeLimit</li>
- *       <li>olcWriteTimeout</li>
- *     </ul>
- *   </li>
- *   <li>Index limits :
- *     <ul>
- *       <li>olcIndexIntLen</li>
- *       <li>olcIndexSubstrAnyLen</li>
- *       <li>olcIndexSubstrAnyStep</li>
- *       <li>olcIndexSubstrIfMaxLen</li>
- *       <li>olcIndexSubstrIfMinLen</li>
- *     </ul>
- *   </li>
- * </ul>
- * 
+ * The "Tuning" tab page of the OpenLDAP server configuration editor.
+ * It manages the server's performance parameters: network buffer sizes,
+ * thread pool configuration, LDAP operation timeouts and size limits,
+ * and index depth constraints.
+ * Think of it as the Star Destroyer's engineering bay — all the knobs that
+ * let the operator squeeze peak performance out of the server safely.
+ *
  * <pre>
  *   +---------------------------------------------------------------------------------+
  *   | Tuning                                                                          |
  *   +---------------------------------------------------------------------------------+
  *   | .-------------------------------------. .-------------------------------------. |
- *   | | TCP configuration                   | | Concurrency                         | |
+ *   | | TCP configuration                   | | Concurrency                         | |
  *   | +-------------------------------------+ +-------------------------------------+ |
- *   | | TCPBuffers                          | |                                     | |
- *   | | +-----------------------+           | | Concurrency              : [      ] | |
- *   | | | xyz                   | (Add)     | | Max Pending Conn         : [      ] | |
- *   | | | abc                   | (Edit)    | | Max Pending Conn Auth    : [      ] | |
- *   | | |                       | (Delete)  | | Nb Threads               : [      ] | |
- *   | | +-----------------------+           | | Nb Threads Tool Mode     : [      ] | |
- *   | |                                     | | Nb Listener threads      : [      ] | |
- *   | | Max Incoming Buffer      : [      ] | |                                     | |
- *   | | Max Incoming Buffer Auth : [      ] | |                                     | |
+ *   | | TCPBuffers                          | |                                     | |
+ *   | | +-----------------------+           | | Concurrency              : [      ] | |
+ *   | | | xyz                   | (Add)     | | Max Pending Conn         : [      ] | |
+ *   | | | abc                   | (Edit)    | | Max Pending Conn Auth    : [      ] | |
+ *   | | |                       | (Delete)  | | Nb Threads               : [      ] | |
+ *   | | +-----------------------+           | | Nb Threads Tool Mode     : [      ] | |
+ *   | |                                     | | Nb Listener threads      : [      ] | |
+ *   | | Max Incoming Buffer      : [      ] | |                                     | |
+ *   | | Max Incoming Buffer Auth : [      ] | |                                     | |
  *   | +-------------------------------------+ +-------------------------------------+ |
  *   | .-------------------------------------. .-------------------------------------. |
- *   | | LDAP Limits                         | | Index Limits                        | |
+ *   | | LDAP Limits                         | | Index Limits                        | |
  *   | +-------------------------------------+ +-------------------------------------+ |
- *   | | Write Timeout : [      ]            | | Integer Indices Length   : [      ] | |
- *   | | Idle Timeout  : [      ]            | | Subany Indices Length    : [      ] | |
- *   | | Size Limit : [             ] (Edit) | | Subany Indices Step      : [      ] | |
- *   | | Time Limit : [             ] (Edit) | | Sub indices Max length   : [      ] | |
- *   | | +-----------------------+           | | Sub indices Min length   : [      ] | |
- *   | | | xyz                   | (Add)     | +-------------------------------------+ |
- *   | | | abc                   | (Edit)    |                                         |
- *   | | |                       | (Delete)  |                                         |
- *   | | +-----------------------+           |                                         |
+ *   | | Write Timeout : [      ]            | | Integer Indices Length   : [      ] | |
+ *   | | Idle Timeout  : [      ]            | | Subany Indices Length    : [      ] | |
+ *   | | Size Limit : [             ] (Edit) | | Subany Indices Step      : [      ] | |
+ *   | | Time Limit : [             ] (Edit) | | Sub indices Max length   : [      ] | |
+ *   | | +-----------------------+           | | Sub indices Min length   : [      ] | |
+ *   | | | xyz                   | (Add)     | +-------------------------------------+ |
+ *   | | | abc                   | (Edit)    |                                         |
+ *   | | |                       | (Delete)  |                                         |
+ *   | | +-----------------------+           |                                         |
  *   | +-------------------------------------+                                         |
  *   +---------------------------------------------------------------------------------+
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class TuningPage extends OpenLDAPServerConfigurationEditorPage
@@ -141,48 +119,48 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
     // UI Controls for the Network part
     /** The olcSockbufMaxIncoming Text */
     private Text sockbufMaxIncomingText;
-    
+
     /** The olcSockbufMaxIncomingAuth Text */
     private Text sockbufMaxIncomingAuthText;
-    
+
     /** The olcTCPBuffer widget */
     private TableWidget<TcpBufferWrapper> tcpBufferTableWidget;
-    
+
     // UI Controls for the Concurrency part
     /** The olcConcurrency Text */
     private Text concurrencyText;
 
     /** The olcConnMaxPending Text */
     private Text connMaxPendingText;
-    
+
     /** The olcConnMaxPendingAuth Text */
     private Text connMaxPendingAuthText;
-    
+
     /** The olcListenerThreads Text */
     private Text listenerThreadsText;
-    
+
     /** The olcThreads Text */
     private Text threadsText;
-    
+
     /** The olcToolThreads Text */
     private Text toolThreadsText;
-    
+
     // UI Controls for the LDAP Limits
     /** The olcSizeLimit */
     private Text sizeLimitText;
-    
+
     /** The SizeLimit edit Button */
     private Button sizeLimitEditButton;
-    
+
     /** The TimeLimit edit Button */
     private TableWidget<TimeLimitWrapper> timeLimitTableViewer;
 
     /** The olcWriteTimeout */
     private Text writeTimeoutText;
-    
+
     /** The olcIdleTimeout */
     private Text idleTimeoutText;
-    
+
     // UI Controls for the Index Limits
     /** The olcIndexIntLenText Text */
     private Text indexIntLenText;
@@ -200,6 +178,11 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
     private Text indexSubstrIfMinLenText;
 
 
+    // ── Constructor — The Engineering Bay Crew Reports for Duty ───────────────
+    // The engineering crew reports to the engineering bay and registers with
+    // the bridge commander (the editor).  From here they can tune the server's
+    // performance parameters.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates a new instance of TuningPage.
      *
@@ -209,8 +192,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
     {
         super( editor, ID, TITLE );
     }
-    
-    
+
+
     /**
      * The listener for the sockbufMaxIncomingText Text
      */
@@ -228,7 +211,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     sockbufMaxIncomingText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 sockbufMaxIncomingText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcSockbufMaxIncoming( sockbufMaxIncomingValue );
             }
@@ -238,8 +221,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 sockbufMaxIncomingText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the sockbufMaxIncomingAuthText Text
      */
@@ -258,7 +241,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     sockbufMaxIncomingAuthText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 sockbufMaxIncomingAuthText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcSockbufMaxIncomingAuth( sockbufMaxIncomingAuthstr );
             }
@@ -268,8 +251,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 sockbufMaxIncomingAuthText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the concurrencyText Text
      */
@@ -287,7 +270,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     concurrencyText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 concurrencyText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcConcurrency( concurrencyValue );
             }
@@ -297,8 +280,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 concurrencyText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the connMaxPendingText Text
      */
@@ -316,7 +299,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     connMaxPendingText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 connMaxPendingText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcConnMaxPending( connMaxPendingValue );
             }
@@ -326,8 +309,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 connMaxPendingText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the connMaxPendingAuthText Text
      */
@@ -345,7 +328,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     connMaxPendingAuthText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 connMaxPendingAuthText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcConnMaxPendingAuth( connMaxPendingAuthValue );
             }
@@ -355,8 +338,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 connMaxPendingAuthText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the listenerThreadsText Text
      */
@@ -374,7 +357,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     listenerThreadsText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 listenerThreadsText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcListenerThreads( listenerThreadsValue );
             }
@@ -384,8 +367,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 listenerThreadsText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the ThreadsText Text
      */
@@ -403,7 +386,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     threadsText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 threadsText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcThreads( threadsValue );
             }
@@ -413,8 +396,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 threadsText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the ToolThreadsText Text
      */
@@ -432,7 +415,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     toolThreadsText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 toolThreadsText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcToolThreads( toolThreadsValue );
             }
@@ -442,8 +425,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 toolThreadsText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the IndexIntLenText Text
      */
@@ -461,7 +444,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     indexIntLenText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 indexIntLenText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcIndexIntLen( indexIntLenValue );
             }
@@ -471,8 +454,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 indexIntLenText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the IndexSubstrAnyLenText Text
      */
@@ -490,7 +473,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     indexSubstrAnyLenText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 indexSubstrAnyLenText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcIndexSubstrAnyLen( indexSubstrAnyLenValue );
             }
@@ -500,8 +483,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 indexSubstrAnyLenText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the IndexSubstrAnyStepText Text
      */
@@ -519,7 +502,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     indexSubstrAnyStepText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 indexSubstrAnyStepText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcIndexSubstrAnyStep( indexSubstrAnyStepValue );
             }
@@ -529,8 +512,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 indexSubstrAnyStepText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the IndexSubstrIfMaxLenText Text
      */
@@ -548,7 +531,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     indexSubstrIfMaxLenText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 indexSubstrIfMaxLenText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcIndexSubstrIfMaxLen( indexSubstrIfMaxLenValue );
             }
@@ -558,8 +541,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 indexSubstrIfMaxLenText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the IndexSubstrIfMinLenText Text
      */
@@ -577,7 +560,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     indexSubstrIfMinLenText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 indexSubstrIfMinLenText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcIndexSubstrIfMinLen( indexSubstrIfMinLenValue );
             }
@@ -587,8 +570,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 indexSubstrIfMinLenText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the writeTimeout Text
      */
@@ -606,7 +589,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     writeTimeoutText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 writeTimeoutText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcWriteTimeout( writeTimeoutValue );
             }
@@ -616,8 +599,8 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 writeTimeoutText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     /**
      * The listener for the idleTimeout Text
      */
@@ -635,7 +618,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                     idleTimeoutText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     return;
                 }
-                
+
                 idleTimeoutText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getConfiguration().getGlobal().setOlcIdleTimeout( idleTimeoutValue );
             }
@@ -645,21 +628,21 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 idleTimeoutText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
     private WidgetModifyListener timeLimitTableListener = event ->
         {
             List<String> timeLimits = new ArrayList<>();
-            
+
             for ( LimitWrapper limitWrapper : timeLimitTableViewer.getElements() )
             {
                 timeLimits.add( limitWrapper.toString() );
             }
-            
+
             getConfiguration().getGlobal().setOlcTimeLimit( timeLimits );
         };
-    
-    
+
+
     /**
      * The listener for the sizeLimit Text
      */
@@ -673,7 +656,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
             if ( dialog.open() == OverlayDialog.OK )
             {
                 String newSizeLimitStr = dialog.getNewLimit();
-                
+
                 if ( newSizeLimitStr != null )
                 {
                     sizeLimitText.setText( newSizeLimitStr );
@@ -682,29 +665,33 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
             }
         }
     };
-    
-    
+
+
     // The listener for the TcpBufferTableWidget
     private WidgetModifyListener tcpBufferTableWidgetListener = event ->
         {
             // Process the parameter modification
             TableWidget<TcpBufferWrapper> tcpBufferWrapperTable = (TableWidget<TcpBufferWrapper>)event.getSource();
             List<String> tcpBuffers = new ArrayList<>();
-            
+
             for ( Object tcpBufferWrapper : tcpBufferWrapperTable.getElements() )
             {
                 String str = tcpBufferWrapper.toString();
                 tcpBuffers.add( str );
             }
-            
+
             getConfiguration().getGlobal().setOlcTCPBuffer( tcpBuffers );
         };
-    
-    
+
+
+    // ── createFormContent — The Engineering Bay Assembles Its Four Panels ──────
+    // The engineering bay is organized into a 2x2 grid: Network and Concurrency
+    // on the top row, LDAP Limits and Index Limits on the bottom row.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the OpenLDAP tuning config Tab. It contains 2 rows, with
      * 2 columns :
-     * 
+     *
      * <pre>
      * +-----------------------------------+---------------------------------+
      * |                                   |                                 |
@@ -760,7 +747,12 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
         createIndexLimitsSection( toolkit, indexLimitsComposite );
     }
 
-    
+
+    // ── createNetworkSection — The Network Buffer Engineering Panel ────────────
+    // The network panel controls how much data the server accepts from
+    // unauthenticated connections (sockbufMaxIncoming) and authenticated ones
+    // (sockbufMaxIncomingAuth), plus the per-listener TCP buffer sizes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the Network section. We support the configuration
      * of those parameters :
@@ -769,23 +761,23 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
      *   <li>olcSockbufMaxIncomingAuth</li>
      *   <li>olcTCPBuffer</li>
      * </ul>
-     * 
+     *
      * <pre>
      * .-------------------------------------.
-     * | TCP configuration                   |
+     * | TCP configuration                   |
      * +-------------------------------------+
-     * | TCPBuffers                          |
-     * | +-----------------------+           |
-     * | | xyz                   | (Add)     |
-     * | | abc                   | (Edit)    |
-     * | |                       | (Delete)  |
-     * | +-----------------------+           |
-     * |                                     |
-     * | Max Incoming Buffer      : [      ] |
-     * | Max Incoming Buffer Auth : [      ] |
+     * | TCPBuffers                          |
+     * | +-----------------------+           |
+     * | | xyz                   | (Add)     |
+     * | | abc                   | (Edit)    |
+     * | |                       | (Delete)  |
+     * | +-----------------------+           |
+     * |                                     |
+     * | Max Incoming Buffer      : [      ] |
+     * | Max Incoming Buffer Auth : [      ] |
      * +-------------------------------------+
      * </pre>
-     * 
+     *
      *
      * @param toolkit the toolkit
      * @param parent the parent composite
@@ -810,7 +802,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
         tcpBufferTableWidget.addWidgetModifyListener( tcpBufferTableWidgetListener );
 
         // The olcSockbufMaxIncoming parameter.
-        toolkit.createLabel( networkSectionComposite, 
+        toolkit.createLabel( networkSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.SockbufMaxIncoming" ) ); //$NON-NLS-1$
         sockbufMaxIncomingText = toolkit.createText( networkSectionComposite, "" );
         sockbufMaxIncomingText.setLayoutData( new GridData( SWT.LEFT, SWT.NONE, false, false ) );
@@ -820,7 +812,7 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
         sockbufMaxIncomingText.addModifyListener( sockbufMaxIncomingTextListener );
 
         // The olcSockbufMaxIncomingAuth parameter.
-        toolkit.createLabel( networkSectionComposite, 
+        toolkit.createLabel( networkSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.SockbufMaxIncomingAuth" ) ); //$NON-NLS-1$
         sockbufMaxIncomingAuthText = toolkit.createText( networkSectionComposite, "" );
         sockbufMaxIncomingAuthText.setLayoutData( new GridData( SWT.LEFT, SWT.NONE, false, false ) );
@@ -829,8 +821,13 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
         // Attach a listener to check the value
         sockbufMaxIncomingAuthText.addModifyListener( sockbufMaxIncomingAuthTextListener );
     }
-    
 
+
+    // ── createConcurrencySection — The Thread Pool Engineering Panel ───────────
+    // The concurrency panel adjusts the server's thread allocation: how many
+    // threads serve client requests, how many handle background tool tasks,
+    // how many listen for new connections, and the pending-connection limits.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the Concurrency section. We support the configuration
      * of those parameters :
@@ -842,17 +839,17 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
      *   <li>olcThreads</li>
      *   <li>olcToolThreads</li>
      * </ul>
-     * 
+     *
      * <pre>
      * .-------------------------------------.
-     * | Concurrency                         |
+     * | Concurrency                         |
      * +-------------------------------------+
-     * | Concurrency              : [      ] |
-     * | Max Pending Conn         : [      ] |
-     * | Max Pending Conn Auth    : [      ] |
-     * | Nb Threads               : [      ] |
-     * | Nb Threads Tool Mode     : [      ] |
-     * | Nb Listener threads      : [      ] |
+     * | Concurrency              : [      ] |
+     * | Max Pending Conn         : [      ] |
+     * | Max Pending Conn Auth    : [      ] |
+     * | Nb Threads               : [      ] |
+     * | Nb Threads Tool Mode     : [      ] |
+     * | Nb Listener threads      : [      ] |
      * +-------------------------------------+
      * </pre>
      *
@@ -868,31 +865,37 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
         Composite concurrencySectionComposite = createSectionComposite( toolkit, section, 2, false );
 
         // The olcConcurrency parameter.
-        concurrencyText = CommonUIUtils.createText( toolkit, concurrencySectionComposite, 
+        concurrencyText = CommonUIUtils.createText( toolkit, concurrencySectionComposite,
             Messages.getString( "OpenLDAPTuningPage.Concurrency" ), "", 5, concurrencyTextListener );
 
         // The olcConnMaxPending parameter.
-        connMaxPendingText = CommonUIUtils.createText( toolkit, concurrencySectionComposite, 
+        connMaxPendingText = CommonUIUtils.createText( toolkit, concurrencySectionComposite,
             Messages.getString( "OpenLDAPTuningPage.ConnMaxPending" ), "", 5, connMaxPendingTextListener );
 
         // The olcConnMaxPendingAuth parameter.
-        connMaxPendingAuthText = CommonUIUtils.createText( toolkit, concurrencySectionComposite, 
+        connMaxPendingAuthText = CommonUIUtils.createText( toolkit, concurrencySectionComposite,
             Messages.getString( "OpenLDAPTuningPage.ConnMaxPendingAuth" ), "", 5, connMaxPendingAuthTextListener );
 
         // The olcListenerThreads parameter.
-        listenerThreadsText = CommonUIUtils.createText( toolkit, concurrencySectionComposite, 
+        listenerThreadsText = CommonUIUtils.createText( toolkit, concurrencySectionComposite,
             Messages.getString( "OpenLDAPTuningPage.ListenerThreads" ), "", 5, listenerThreadsTextListener );
 
         // The olcThreads parameter.
-        threadsText = CommonUIUtils.createText( toolkit, concurrencySectionComposite, 
+        threadsText = CommonUIUtils.createText( toolkit, concurrencySectionComposite,
             Messages.getString( "OpenLDAPTuningPage.Threads" ), "", 5, threadsTextListener );
 
         // The olcToolThreads parameter.
-        toolThreadsText = CommonUIUtils.createText( toolkit, concurrencySectionComposite, 
+        toolThreadsText = CommonUIUtils.createText( toolkit, concurrencySectionComposite,
             Messages.getString( "OpenLDAPTuningPage.ToolThreads" ), "", 5, toolThreadsTextListener );
     }
 
-    
+
+    // ── createLdapLimitsSection — The LDAP Operations Limits Panel ────────────
+    // The LDAP limits panel is where the engineer caps how long the server
+    // waits for idle or write-stalled connections, how many entries a single
+    // search can return, and how long each time-limited operation is allowed
+    // to run.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * The Index Limits section. We support the configuration
      * of those parameters :
@@ -904,21 +907,21 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
      *   <li>olcWriteTimeout</li>
      * <pre>
      * .-------------------------------------.
-     * | LDAP Limits                         |
+     * | LDAP Limits                         |
      * +-------------------------------------+
-     * | Write Timeout            : [      ] |
-     * | Idle Timeout             : [      ] |
+     * | Write Timeout            : [      ] |
+     * | Idle Timeout             : [      ] |
      * | Size Limit : [                    ] |
      * | Time Limit :                        |
-     * | +-----------------------+           |
-     * | | xyz                   | (Add)     |
-     * | | abc                   | (Edit)    |
-     * | |                       | (Delete)  |
-     * | +-----------------------+           |
+     * | +-----------------------+           |
+     * | | xyz                   | (Add)     |
+     * | | abc                   | (Edit)    |
+     * | |                       | (Delete)  |
+     * | +-----------------------+           |
      * |                                     |
      * +-------------------------------------+
      * </pre>
-     * 
+     *
      * @param toolkit the toolkit
      * @param parent the parent composite
      */
@@ -929,25 +932,25 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
 
         // The content
         Composite ldapLimitSectionComposite = createSectionComposite( toolkit, section, 4, false );
-        
+
         // The olcWriteTimeout parameter.
-        toolkit.createLabel( ldapLimitSectionComposite, 
+        toolkit.createLabel( ldapLimitSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.WriteTimeout" ) ); //$NON-NLS-1$
         writeTimeoutText = toolkit.createText( ldapLimitSectionComposite, "" );
         writeTimeoutText.setLayoutData( new GridData( SWT.FILL, SWT.NONE, false, false ) );
         // Attach a listener to check the value
         writeTimeoutText.addModifyListener( writeTimeoutTextListener );
-        
+
         // The olcIdleTimeout parameter.
-        toolkit.createLabel( ldapLimitSectionComposite, 
+        toolkit.createLabel( ldapLimitSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.IdleTimeout" ) ); //$NON-NLS-1$
         idleTimeoutText = toolkit.createText( ldapLimitSectionComposite, "" );
         idleTimeoutText.setLayoutData( new GridData( SWT.FILL, SWT.NONE, false, false ) );
         // Attach a listener to check the value
         idleTimeoutText.addModifyListener( idleTimeoutTextListener );
-        
+
         // The olcSizeLimit parameter.
-        toolkit.createLabel( ldapLimitSectionComposite, 
+        toolkit.createLabel( ldapLimitSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.SizeLimit" ) ); //$NON-NLS-1$
         sizeLimitText = toolkit.createText( ldapLimitSectionComposite, "" );
         GridData sizeLimitData= new GridData( SWT.FILL, SWT.NONE, false, false, 1, 1 );
@@ -958,14 +961,14 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
         sizeLimitText.setEditable( false );
 
         // The SizeLimit edit button
-        sizeLimitEditButton = BaseWidgetUtils.createButton( ldapLimitSectionComposite, 
+        sizeLimitEditButton = BaseWidgetUtils.createButton( ldapLimitSectionComposite,
             Messages.getString( "OpenLDAPSecurityPage.Edit" ), 1 ); //$NON-NLS-1$
         sizeLimitEditButton.setLayoutData( new GridData( SWT.RIGHT, SWT.CENTER, false, false ) );
         sizeLimitEditButton.addSelectionListener( sizeLimitEditSelectionListener );
         toolkit.createLabel( ldapLimitSectionComposite, "" );
 
         // The olcTimeLimit parameter.
-        toolkit.createLabel( ldapLimitSectionComposite, 
+        toolkit.createLabel( ldapLimitSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.TimeLimit" ) ); //$NON-NLS-1$
         timeLimitTableViewer = new TableWidget<>( new TimeLimitDecorator( ldapLimitSectionComposite.getShell() ) );
 
@@ -974,7 +977,12 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
         timeLimitTableViewer.addWidgetModifyListener( timeLimitTableListener );
     }
 
-    
+
+    // ── createIndexLimitsSection — The Index Depth Limits Panel ───────────────
+    // The index limits panel caps how deep the server's LDAP indexing goes,
+    // controlling integer index lengths and substring index parameters.
+    // This prevents runaway index growth on large directories.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * The Index Limits section. We support the configuration
      * of those parameters :
@@ -985,19 +993,19 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
      *   <li>olcIndexSubstrIfMaxLen</li>
      *   <li>olcIndexSubstrIfMinLen</li>
      * </ul>
-     * 
+     *
      * <pre>
      * .-------------------------------------.
-     * | Concurrency                         |
+     * | Concurrency                         |
      * +-------------------------------------+
-     * | Integer Indices Length   : [      ] |
-     * | Subany Indices Length    : [      ] |
-     * | Subany Indices Step      : [      ] |
-     * | Sub indices Max length   : [      ] |
-     * | Sub indices Min length   : [      ] |
+     * | Integer Indices Length   : [      ] |
+     * | Subany Indices Length    : [      ] |
+     * | Subany Indices Step      : [      ] |
+     * | Sub indices Max length   : [      ] |
+     * | Sub indices Min length   : [      ] |
      * +-------------------------------------+
      * </pre>
-     * 
+     *
      * @param toolkit the toolkit
      * @param parent the parent composite
      */
@@ -1010,32 +1018,37 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
         Composite indexLimitSectionComposite = createSectionComposite( toolkit, section, 2, false );
 
         // The olcIndexIntLen parameter.
-        indexIntLenText = CommonUIUtils.createText( toolkit, indexLimitSectionComposite, 
+        indexIntLenText = CommonUIUtils.createText( toolkit, indexLimitSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.IndexIntLen" ), "", 5, indexIntLenTextListener );
 
         // The olcIndexSubstrAnyLen parameter.
-        indexSubstrAnyLenText = CommonUIUtils.createText( toolkit, indexLimitSectionComposite, 
+        indexSubstrAnyLenText = CommonUIUtils.createText( toolkit, indexLimitSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.IndexSubstrAnyLen" ), "", 5, indexSubstrAnyLenTextListener );
 
         // The olcIndexSubstrAnyStep parameter.
-        indexSubstrAnyStepText = CommonUIUtils.createText( toolkit, indexLimitSectionComposite, 
+        indexSubstrAnyStepText = CommonUIUtils.createText( toolkit, indexLimitSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.IndexSubstrAnyStep" ), "", 5, indexSubstrAnyStepTextListener );
 
         // The olcIndexSubstrIfMaxLen parameter.
-        indexSubstrIfMaxLenText = CommonUIUtils.createText( toolkit, indexLimitSectionComposite, 
+        indexSubstrIfMaxLenText = CommonUIUtils.createText( toolkit, indexLimitSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.IndexSubstrIfMaxLen" ), "", 5, indexSubstrIfMaxLenTextListener );
 
         // The olcIndexSubstrIfMinLen parameter.
-        indexSubstrIfMinLenText = CommonUIUtils.createText( toolkit, indexLimitSectionComposite, 
+        indexSubstrIfMinLenText = CommonUIUtils.createText( toolkit, indexLimitSectionComposite,
             Messages.getString( "OpenLDAPTuningPage.IndexSubstrIfMinLen" ), "", 5, indexSubstrIfMinLenTextListener );
     }
-    
-    
+
+
+    // ── createTcpBufferList — Parse Raw TCP Buffer Strings into Wrappers ──────
+    // The raw TCP buffer strings from the LDAP server need to be parsed into
+    // TcpBufferWrapper objects before the table widget can display them.
+    // We iterate and wrap each non-null entry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Construct a list of TcpBufferWrapper list from the String we get from the LDAP server.
      * We have to parse this :
      * <pre>
-     * [listener=<URL>] [{read|write}=]<size>
+     * [listener=&lt;URL&gt;] [{read|write}=]&lt;size&gt;
      * </pre>
      * @param tcpBufferList
      * @return
@@ -1043,20 +1056,26 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
     private List<TcpBufferWrapper> createTcpBufferList( List<String> tcpBufferList )
     {
         List<TcpBufferWrapper> tcpBufferWrapperList = new ArrayList<>();
-        
+
         for ( String tcpBuffer : tcpBufferList )
         {
             if ( tcpBuffer != null )
             {
                 TcpBufferWrapper tcpBufferWrapper = new TcpBufferWrapper( tcpBuffer );
-                
+
                 tcpBufferWrapperList.add( tcpBufferWrapper );
             }
         }
-        
+
         return tcpBufferWrapperList;
     }
 
+
+    // ── refreshUI — The Engineering Bay Refreshes All Instrument Readouts ──────
+    // After new telemetry arrives from the LDAP server, the engineering crew
+    // refreshes every dial: TCP buffers, socket limits, concurrency settings,
+    // LDAP timeouts, size limit, time limit rules, and index depth parameters.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -1075,55 +1094,55 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
             // TCPBuffer Text
             List<TcpBufferWrapper> tcpBufferList = createTcpBufferList( global.getOlcTCPBuffer() );
             tcpBufferTableWidget.setElements( tcpBufferList );
-    
+
             // Socket Buffer Max Incoming Text
             BaseWidgetUtils.setValue( global.getOlcSockbufMaxIncoming(), sockbufMaxIncomingText );
-    
+
             // Socket Buffer Max Incoming Text
             BaseWidgetUtils.setValue( global.getOlcSockbufMaxIncomingAuth(), sockbufMaxIncomingAuthText );
-    
+
             // Concurrency Text
             BaseWidgetUtils.setValue( global.getOlcConcurrency(), concurrencyText );
-    
+
             // ConnMaxPending Text
             BaseWidgetUtils.setValue( global.getOlcConnMaxPending(), connMaxPendingText );
-    
+
             // ConnMaxPendingAuth Text
             BaseWidgetUtils.setValue( global.getOlcConnMaxPendingAuth(), connMaxPendingAuthText );
-    
+
             // ListenerThreads Text
             BaseWidgetUtils.setValue( global.getOlcListenerThreads(), listenerThreadsText );
-    
+
             // Threads Text
             BaseWidgetUtils.setValue( global.getOlcThreads(), threadsText );
-    
+
             // ToolThreads Text
             BaseWidgetUtils.setValue( global.getOlcToolThreads(), toolThreadsText );
-    
+
             // IndexIntLen Text
             BaseWidgetUtils.setValue( global.getOlcIndexIntLen(), indexIntLenText );
-    
+
             // IndexSubstrAnyLen Text
             BaseWidgetUtils.setValue( global.getOlcIndexSubstrAnyLen(), indexSubstrAnyLenText );
-    
+
             // IndexSubstrAnyStep Text
             BaseWidgetUtils.setValue( global.getOlcIndexSubstrAnyStep(), indexSubstrAnyStepText );
-    
+
             // IndexSubstrIfMaxLen Text
             BaseWidgetUtils.setValue( global.getOlcIndexSubstrIfMaxLen(), indexSubstrIfMaxLenText );
-    
+
             // IndexSubstrIfMinLen Text
             BaseWidgetUtils.setValue( global.getOlcIndexSubstrIfMinLen(), indexSubstrIfMinLenText );
-    
+
             // IndexSubstrIfMinLen Text
             BaseWidgetUtils.setValue( global.getOlcWriteTimeout(), writeTimeoutText );
-    
+
             // IdleTiemout Text
             BaseWidgetUtils.setValue( global.getOlcIdleTimeout(), idleTimeoutText );
-    
+
             // SizeLimit Text
             BaseWidgetUtils.setValue( global.getOlcSizeLimit(), sizeLimitText );
-    
+
             // TimeLimit Text Text
             List<String> timeLimitList = getConfiguration().getGlobal().getOlcTimeLimit();
             List<TimeLimitWrapper> limitWrappers = new ArrayList<>();
@@ -1134,15 +1153,19 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
                 {
                     limitWrappers.add( new TimeLimitWrapper( timeLimit ) );
                 }
-                
+
                 timeLimitTableViewer.setElements( limitWrappers );
             }
         }
-        
+
         addListeners();
     }
 
 
+    // ── addListeners — The Engineering Bay Arms All Dirty-State Monitors ───────
+    // After a data reload, the engineering crew reactivates all the dirty-state
+    // monitors so any subsequent user change is detected.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Adds the listeners.
      */
@@ -1169,6 +1192,11 @@ public class TuningPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── removeListeners — The Engineering Bay Silences All Dirty-State Monitors ─
+    // Before a programmatic data reload, the engineering crew silences all the
+    // dirty-state monitors so automatic field population doesn't trigger false
+    // change-detection.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Removes the listeners
      */

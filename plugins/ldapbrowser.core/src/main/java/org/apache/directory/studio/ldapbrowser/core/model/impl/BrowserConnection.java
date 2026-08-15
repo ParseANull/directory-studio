@@ -45,8 +45,25 @@ import org.apache.directory.studio.ldapbrowser.core.utils.Utils;
 import org.eclipse.search.ui.ISearchPageScoreComputer;
 
 
+// ── CLASS: BrowserConnection — HAN'S MILLENNIUM FALCON COCKPIT ───────────────
+// The Millennium Falcon isn't just a ship — it's Han's whole operational HQ.
+// It carries the hyperspace connection to the directory, the RootDSE (the main
+// control room), the schema (Jedi Archives), the search manager, the bookmark
+// manager, and four in-memory maps that store cached entry data off the entry
+// objects so each entry stays lean.  When the connection reinitialises, the
+// whole cockpit clears and rebuilds from scratch.
+// BrowserConnection is that cockpit: the main IBrowserConnection implementation
+// that wires together all the lower-level components.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The default implementation of {@link IBrowserConnection}.
+ * Default implementation of {@link IBrowserConnection}.
+ * Wraps a low-level {@link Connection} with the full browser-layer state:
+ * a {@link RootDSE}, a {@link Schema}, a {@link SearchManager}, a
+ * {@link BookmarkManager}, and four in-memory maps for entry/children/
+ * attribute/filter caches.
+ *
+ * <p>Think of this as Han's Millennium Falcon cockpit — the central hub that
+ * connects every sub-system and keeps the entry model alive in memory.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -86,10 +103,18 @@ public class BrowserConnection implements IBrowserConnection, Serializable
     private volatile Map<IEntry, ChildrenInfo> entryToChildrenInfoMap;
 
 
+    // ── Falcon Constructor: Wire Up All Sub-Systems From The Low-Level Connection ─
+    // "Connection received.  Initialising connection parameters if absent.
+    // Creating SearchManager, BookmarkManager, cache maps.  Loading default schema
+    // and creating the RootDSE entry.  Cockpit ready."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Creates a new instance of BrowserConnection.
+     * Initialises all connection parameters (count limit, aliases, referrals,
+     * paged search, modify mode) if not already set, creates the managers and
+     * cache maps, loads the default schema, and bootstraps the {@link RootDSE}.
      *
-     * @param connection the connection
+     * @param connection the low-level connection to wrap
      */
     public BrowserConnection( Connection connection )
     {
@@ -144,6 +169,7 @@ public class BrowserConnection implements IBrowserConnection, Serializable
     }
 
 
+    // ── Falcon Clears All Cargo Holds And Rebuilds The RootDSE ───────────────────
     /**
      * {@inheritDoc}
      */
@@ -165,6 +191,7 @@ public class BrowserConnection implements IBrowserConnection, Serializable
     }
 
 
+    // ── R2-D2 Looks Up An Entry In The DN-To-Entry Cache ─────────────────────────
     /**
      * {@inheritDoc}
      */

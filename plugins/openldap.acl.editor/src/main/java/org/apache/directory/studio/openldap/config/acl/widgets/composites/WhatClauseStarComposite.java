@@ -25,12 +25,32 @@ import org.apache.directory.studio.openldap.config.acl.OpenLdapAclValueWithConte
 import org.apache.directory.studio.openldap.config.acl.model.AclWhatClauseStar;
 
 
+// ── CLASS: WhatClauseStarComposite — TARKIN TARGETING EVERY ENTRY ─────────────
+// Grand Moff Tarkin points the targeting system at everything: "access to *".
+// The star what-clause requires no additional configuration, so this composite
+// is a leaf subclass that merely stores the context and clause reference.
+// No SWT controls are created; createComposite() returns the inherited no-op null.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * 
+ * A clause composite for the wildcard ({@code *}) what-clause. Requires no
+ * additional UI controls — this composite is a no-op leaf that stores the
+ * context and clause reference only.
+ *
+ * <p>Think of this class as Grand Moff Tarkin targeting every entry in the
+ * directory — "access to *" — with nothing further to configure.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class WhatClauseStarComposite extends AbstractClauseComposite
 {
+    // ── Constructing the Star Composite ───────────────────────────────────────
+    /**
+     * Creates a new star what-clause composite. No SWT controls are created.
+     *
+     * @param context               The ACL context.
+     * @param clause                The wildcard what-clause (for future use).
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhatClauseStarComposite( OpenLdapAclValueWithContext context, AclWhatClauseStar clause, Composite visualEditorComposite )
     {
         super( context, visualEditorComposite );

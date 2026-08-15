@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio;
@@ -46,11 +46,25 @@ import org.eclipse.ui.application.IActionBarConfigurer;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 
+// ── CLASS: ApplicationActionBarAdvisor — The Rebel Mission Briefing Room ──────
+// In the Yavin IV briefing room, Mon Mothma assigns every pilot their role:
+// General Dodonna points to the holographic Death Star and names each squadron's
+// target, each pilot is handed a specific weapon (X-wing, Y-wing, blaster).
+// ApplicationActionBarAdvisor does the same for Eclipse: it creates every menu
+// item and toolbar button, gives each one an ID and an icon, then arranges them
+// in the correct positions on the menu bar and cool bar.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An action bar advisor is responsible for creating, adding, and disposing of the
- * actions added to a workbench window. Each window will be populated with
- * new actions.
- * 
+ * Builds the menu bar, toolbar (cool bar), and keyboard-shortcut bindings for
+ * each workbench window.
+ * Eclipse calls {@link #makeActions} to create and register the actions, then
+ * calls {@link #fillMenuBar} and {@link #fillCoolBar} to arrange them on screen.
+ * Registering actions (rather than just creating them) ensures keyboard bindings
+ * defined in plugin.xml actually work, and also means Eclipse disposes the actions
+ * when the window closes.
+ * Think of this as General Dodonna assigning roles in the Yavin briefing room —
+ * every pilot gets their mission, every action gets its place in the UI.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ApplicationActionBarAdvisor extends ActionBarAdvisor
@@ -97,11 +111,20 @@ public class ApplicationActionBarAdvisor extends ActionBarAdvisor
     private IWorkbenchAction introAction;
 
 
+    // ── Dodonna Receives the Briefing Packet ──────────────────────────────────
+    // General Dodonna receives the mission configuration packet from Mon Mothma
+    // before the briefing begins — it tells him which window he's briefing and
+    // what facilities he has available to register actions with.
+    // Our constructor just passes the configurer to the parent ActionBarAdvisor
+    // so Eclipse can do its internal setup.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ApplicationActionBarAdvisor.
+     * Creates the action bar advisor with the given configuration handle.
+     * Eclipse passes us the {@code configurer} so we can call
+     * {@code register(action)} during {@link #makeActions} to wire up keyboard
+     * bindings and ensure automatic disposal.
      *
-     * @param configurer
-     *          the action bar configurer
+     * @param configurer  Eclipse's action bar configurer — passed to the parent.
      */
     public ApplicationActionBarAdvisor( IActionBarConfigurer configurer )
     {
@@ -109,12 +132,24 @@ public class ApplicationActionBarAdvisor extends ActionBarAdvisor
     }
 
 
+    // ── Dodonna Assigns Every Pilot a Role in the Attack ──────────────────────
+    // Dodonna points to the holographic Death Star and assigns each squadron:
+    // Red Leader takes the trench run, Gold Squadron goes for the surface
+    // cannons, and so on — every pilot registered and ready.
+    // makeActions() creates every menu action (File > Open, Edit > Copy, etc.),
+    // sets labels and icons, and registers them with Eclipse so keyboard bindings
+    // work and disposal is automatic when the window closes.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the actions and registers them.
-     * Registering is needed to ensure that key bindings work.
-     * The corresponding commands keybindings are defined in the plugin.xml file.
-     * Registering also provides automatic disposal of the actions when
-     * the window is closed.
+     * Creates all workbench actions and registers them for keyboard binding support.
+     * Registering is needed to ensure that key bindings work — the corresponding
+     * command keybindings are defined in plugin.xml.  Registering also provides
+     * automatic disposal of the actions when the window is closed.
+     * We create standard Eclipse actions (via {@link ActionFactory}) plus our own
+     * custom actions ({@link OpenFileAction}, {@link ReportABugAction}).
+     *
+     * @param window  the workbench window this advisor is serving — we pass it
+     *                to {@link ActionFactory} methods to create window-scoped actions.
      */
     protected void makeActions( final IWorkbenchWindow window )
     {
@@ -247,8 +282,22 @@ public class ApplicationActionBarAdvisor extends ActionBarAdvisor
     }
 
 
+    // ── Dodonna Arranges the Squadrons on the Holographic Map ─────────────────
+    // Dodonna projects the tactical display and places each squadron at its
+    // assigned position: Red Squadron to the north trench, Gold Squadron to the
+    // south surface — File menu here, Edit menu there, Help menu at the end.
+    // fillMenuBar() takes all the registered actions and arranges them into the
+    // correct menus in the correct order, with OS-specific special cases for macOS.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Populates the Menu Bar
+     * Populates the workbench window's menu bar with all our registered actions.
+     * We create the top-level menus (File, Edit, Navigate, Window, Help) and add
+     * each action to the appropriate menu in the conventional order.
+     * On macOS, the "Preferences" and "About" items are handled by the OS menu;
+     * we hide our copies in a hidden menu to avoid duplicates.
+     *
+     * @param menuBar  the JFace menu manager for the window's menu bar — we add
+     *                 our top-level menus and separators to it.
      */
     protected void fillMenuBar( IMenuManager menuBar )
     {
@@ -343,7 +392,7 @@ public class ApplicationActionBarAdvisor extends ActionBarAdvisor
         navigateMenu.add( backwardHistoryAction );
         navigateMenu.add( forwardHistoryAction );
 
-        // Window 
+        // Window
         MenuManager perspectiveMenu = new MenuManager( Messages
             .getString( "ApplicationActionBarAdvisor.openPerspective" ), "openPerspective" ); //$NON-NLS-1$ //$NON-NLS-2$
         perspectiveMenu.add( perspectivesList );
@@ -386,8 +435,21 @@ public class ApplicationActionBarAdvisor extends ActionBarAdvisor
     }
 
 
+    // ── Dodonna Stocks the Weapons Locker — Toolbar Actions Ready ─────────────
+    // After the verbal briefing, Dodonna's team loads the physical weapons into
+    // the ready racks: New-wizard launcher, Save, Print, Preferences, and the
+    // navigation history controls for flying back through previous positions.
+    // fillCoolBar() places the most-used actions into the Eclipse cool bar
+    // (the icon toolbar area) so they're one click away.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Populates the Cool Bar
+     * Populates the cool bar (the main toolbar area) with the most-used actions.
+     * We add a main toolbar with New, Save, Print, and Preferences, a group marker
+     * for other plugins to add their own toolbar items, and a navigation toolbar
+     * with back/forward history buttons.
+     *
+     * @param coolBar  the JFace cool bar manager — we add {@link ToolBarContributionItem}
+     *                 instances and group markers to it.
      */
     protected void fillCoolBar( ICoolBarManager coolBar )
     {

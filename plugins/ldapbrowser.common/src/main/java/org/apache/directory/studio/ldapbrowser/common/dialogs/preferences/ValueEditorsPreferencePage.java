@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.dialogs.preferences;
@@ -69,9 +69,22 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: ValueEditorsPreferencePage — LANDO ROUTING CLOUD CITY DEPARTMENTS ──
+// Lando Calrissian manages Cloud City like a conductor — he knows every
+// department (attribute type, syntax), and he knows which specialist team
+// (value editor) handles each one.  Tibanna gas extraction uses one crew,
+// the casino uses another, hospitality a third.  This preference page is
+// Lando's routing table: two editable lists that map attribute types to their
+// value editors and syntax OIDs to their value editors.  Add a new LDAP
+// attribute, pick the right editor plugin, and Lando routes it correctly from
+// that point on.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The ValueEditorsPreferencePage is used to specify
- * value editors for attributes and syntaxes.
+ * The Eclipse preference page for mapping LDAP attribute types and syntax OIDs
+ * to specific value editor plugins.  Two table sections: one for attribute-to-editor
+ * mappings, one for syntax-to-editor mappings.  Both support Add, Edit, and Remove.
+ * Think of this class as Lando's Cloud City routing table — every channel routed
+ * to the right specialist.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -132,8 +145,15 @@ public class ValueEditorsPreferencePage extends PreferencePage implements IWorkb
     private Map<ImageDescriptor, Image> imageMap;
 
 
+    // ── LANDO OPENS THE CLOUD CITY ROUTING REGISTRY ──────────────────────────────
+    // Lando opens his administrator's console, sets the page title ("Value Editors"),
+    // describes the scope ("Specify which editor handles which attribute/syntax"),
+    // and initialises the image cache he'll need to render editor icons in the table.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ValueEditorsPreferencePage.
+     * Constructs the page with its title and description, and initialises the
+     * image cache used to render value editor icons in the table viewers.
+     * The image cache must be disposed in {@link #dispose()} to avoid SWT leaks.
      */
     public ValueEditorsPreferencePage()
     {
@@ -143,16 +163,29 @@ public class ValueEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── LANDO ACKNOWLEDGES THE WORKBENCH ─────────────────────────────────────────
+    // Lando nods at the workbench framework and gets on with running Cloud City.
+    // Nothing actionable — interface contract only.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Required by {@link IWorkbenchPreferencePage} — not used here.
+     *
+     * @param workbench  The Eclipse workbench instance — not used.
      */
     public void init( IWorkbench workbench )
     {
     }
 
 
+    // ── LANDO CLOSES THE ADMINISTRATOR'S CONSOLE AND FREES RESOURCES ─────────────
+    // When Cloud City shuts down, Lando cleans up the image cache before powering
+    // off.  SWT Image objects hold native handles — letting them linger is a
+    // resource leak.  We dispose each image, then hand control to the superclass.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Disposes all cached SWT {@link Image} objects when the preference page is
+     * closed.  SWT images hold native OS resources; failing to dispose them leaks
+     * handles over the lifetime of the Eclipse session.
      */
     public void dispose()
     {
@@ -170,8 +203,27 @@ public class ValueEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── LANDO POPULATES THE ROUTING TABLE FROM ALL CONNECTED HUBS ────────────────
+    // Lando pulls the current routing tables from every connected browser connection
+    // (each ship docked at Cloud City), builds sorted indices of attribute types and
+    // syntax OIDs, then renders two table sections with Add/Edit/Remove controls.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the full page UI: scans all connected browser connections and the
+     * default schema to populate attribute and syntax lookup indices, then creates
+     * two table viewers (attribute-to-editor and syntax-to-editor) with full
+     * CRUD buttons.
+     *
+     * <p>For example — Lando's routing table layout:</p>
+     * <pre>
+     *   Value Editors by Attribute Type:
+     *     [Attribute] [Alias] [ValueEditor]  [Add] [Edit] [Remove]
+     *   Value Editors by Syntax:
+     *     [Syntax]    [Desc]  [ValueEditor]  [Add] [Edit] [Remove]
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse.
+     * @return        The composite containing both routing-table sections.
      */
     protected Control createContents( Composite parent )
     {
@@ -239,8 +291,11 @@ public class ValueEditorsPreferencePage extends PreferencePage implements IWorkb
 
     /**
      * Creates the attribute maps and array.
+     * Scans a schema's attribute types and populates the OID and name lookup
+     * maps, then rebuilds the sorted combo-box array from the results.
      *
-     * @param schema the schema
+     * @param schema  The schema to scan — either a connection schema or the
+     *                default built-in schema.
      */
     private void createAttributeMapsAndArray( Schema schema )
     {
@@ -273,9 +328,12 @@ public class ValueEditorsPreferencePage extends PreferencePage implements IWorkb
 
 
     /**
-     * Create the syntax maps and array.
+     * Creates the syntax maps and array.
+     * Scans a schema's syntax descriptions and populates the OID and description
+     * lookup maps, then rebuilds the sorted combo-box array from the results.
      *
-     * @param schema the schema
+     * @param schema  The schema to scan — either a connection schema or the
+     *                default built-in schema.
      */
     private void createSyntaxMapsAndArray( Schema schema )
     {
@@ -548,8 +606,18 @@ public class ValueEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── LANDO TRANSMITS THE UPDATED ROUTING TABLE TO ALL DEPARTMENTS ─────────────
+    // Lando signs off the updated routing table and transmits it to every department
+    // in Cloud City.  Both the attribute-to-editor list and the syntax-to-editor
+    // list are serialized and written to the value editors preferences so they
+    // survive the next time Eclipse restarts.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves both the attribute-to-editor relation list and the syntax-to-editor
+     * relation list to the value editors preferences object when the user clicks
+     * OK or Apply.
+     *
+     * @return  Always true — there's no blocking validation at save time.
      */
     public boolean performOk()
     {
@@ -564,8 +632,15 @@ public class ValueEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── LANDO RELOADS THE ORIGINAL CLOUD CITY ROUTING DEFAULTS ───────────────────
+    // Lando pulls out the original routing manifest from before any customization
+    // and restores every route to its factory default.  Both viewers refresh so
+    // the UI accurately reflects the incoming reset state.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Resets both relation lists to the plugin's factory defaults.  Called when
+     * the user clicks "Restore Defaults."  Both table viewers are refreshed after
+     * the reset.
      */
     protected void performDefaults()
     {

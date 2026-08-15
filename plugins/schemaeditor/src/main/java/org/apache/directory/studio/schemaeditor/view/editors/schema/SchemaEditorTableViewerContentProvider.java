@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.editors.schema;
 
@@ -31,16 +31,45 @@ import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 
 
+// ── CLASS: SchemaEditorTableViewerContentProvider — R2-D2 IN THE DEATH STAR NETWORK ──
+// R2-D2 plugs into the Death Star's main computer network and retrieves a
+// complete inventory: all systems, all decks, all droids — pulled as a raw list,
+// sorted alphabetically so the Rebels can scan the results quickly.
+// This class does the same for the Schema Editor: given a list of
+// {@link AttributeType} or {@link ObjectClass} objects from a schema, it copies
+// the list, sorts it case-insensitively by primary name, and returns the array
+// for the table viewer to display.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is the Content Provider for the Superiors Table of the Object
- * Class Editor.
- * 
+ * Content provider for the attribute types and object classes table viewers in the
+ * {@link SchemaEditorOverviewPage}.
+ * It accepts a {@code List<?>} of {@link AttributeType} or {@link ObjectClass} objects,
+ * sorts them alphabetically by their first name (case-insensitive), and returns a
+ * sorted {@code Object[]} for the JFace table viewer.
+ * Think of it as R2 pulling the full inventory from the Death Star mainframe —
+ * raw list in, sorted display array out.
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SchemaEditorTableViewerContentProvider implements IStructuredContentProvider
 {
+    // ── R2 Retrieves and Sorts the Inventory ──────────────────────────────────
+    // R2 pulls the full system inventory from the Death Star computer, copies
+    // it into his working memory, and sorts the entries by name so the Rebels
+    // can find what they need without scanning an unsorted mess.
+    // We do the same: copy the input list, sort by primary name, and return
+    // the array for the table viewer to render row by row.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Accepts a {@code List<?>} of {@link AttributeType} or {@link ObjectClass} objects,
+     * sorts them case-insensitively by their first available name, and returns the
+     * sorted array. Items without any name fall to an equal-comparison result of 0
+     * and maintain their relative order.
+     *
+     * @param inputElement  expected to be a {@code List<?>} of schema elements
+     * @return              a sorted {@code Object[]} of the same elements, or {@code null}
+     *                      if the input is not a {@code List}
      */
     public Object[] getElements( Object inputElement )
     {
@@ -91,16 +120,36 @@ public class SchemaEditorTableViewerContentProvider implements IStructuredConten
     }
 
 
+    // ── R2 Retracts His Interface Arm ─────────────────────────────────────────
+    // When R2 finishes the inventory pull, he retracts his interface arm from
+    // the network socket cleanly — no dangling connections, no lingering state.
+    // We have nothing to release here, but the method satisfies the contract.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Nothing to release — this provider holds no stateful resources.
+     * This method exists to satisfy the {@link IStructuredContentProvider} contract.
      */
     public void dispose()
     {
     }
 
 
+    // ── R2 Acknowledges the New Data Feed ─────────────────────────────────────
+    // When the Death Star swaps out the active data sector, R2 acknowledges
+    // the switch — but since we don't cache any input-specific state, there's
+    // nothing to invalidate or reinitialize here.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Called by the framework when the viewer's input changes.
+     * We cache no input-specific state, so there's nothing to do here.
+     *
+     * @param viewer    the table viewer whose input just changed
+     * @param oldInput  the previous input object
+     * @param newInput  the new input object
      */
     public void inputChanged( Viewer viewer, Object oldInput, Object newInput )
     {

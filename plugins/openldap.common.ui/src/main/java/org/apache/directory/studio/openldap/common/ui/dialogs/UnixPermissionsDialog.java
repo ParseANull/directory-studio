@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.common.ui.dialogs;
 
@@ -43,24 +43,33 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: UnixPermissionsDialog — IMPERIAL CHECKPOINT SETTING ACCESS LEVELS ─
+// Picture a Death Star checkpoint officer configuring who gets access to which
+// corridors: Owner, Group, and Others each get their own set of Read/Write/
+// Execute passes. The officer can either tick the checkboxes directly or type
+// an octal code directly into the scanner — both views stay synchronized at
+// all times so neither representation is ever stale.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The UnixPermissionsDialog is used to edit a Unix Permissions value. Unix
- * permissions are stored using 3 sets of permissions for 3 different entities :
- * 
+ * We present a dialog for editing Unix file-permission values. We show nine
+ * checkboxes (read/write/execute for owner, group, and others) alongside an
+ * octal text field; both representations stay in sync as the user edits either
+ * one. Unix permissions are stored as three octal digits, one per entity:
+ *
  * <ul>
  * <li>users</li>
  * <li>group</li>
  * <li>other</li>
- * </ul> 
- * 
- * with the following permissions :
+ * </ul>
+ *
+ * with the following permissions:
  *
  * <ul>
  * <li>read</li>
  * <li>write</li>
  * <li>execute</li>
- * </ul> 
- * 
+ * </ul>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class UnixPermissionsDialog extends Dialog
@@ -91,8 +100,8 @@ public class UnixPermissionsDialog extends Dialog
             }
         }
     };
-    
-    
+
+
     private ModifyListener octalNotationTextModifyListener = new ModifyListener()
     {
         public void modifyText( ModifyEvent e )
@@ -113,8 +122,8 @@ public class UnixPermissionsDialog extends Dialog
             }
         }
     };
-    
-    
+
+
     private SelectionListener checkboxSelectionListener = new SelectionAdapter()
     {
         public void widgetSelected( SelectionEvent e )
@@ -138,10 +147,16 @@ public class UnixPermissionsDialog extends Dialog
     };
 
 
+    // ── CONSTRUCTOR: UnixPermissionsDialog(Shell) — OPENING A BLANK CHECKPOINT ─
+    // The checkpoint starts with all access passes revoked (every bit is 0).
+    // The officer will configure permissions from scratch. The shell is resizable
+    // so the layout can be adjusted as needed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of UnixPermissionsDialog.
-     * 
-     * @param parentShell the parent shell
+     * We create an UnixPermissionsDialog with no initial value — all checkboxes
+     * start unchecked and the octal field defaults to "0000".
+     *
+     * @param parentShell  the parent shell
      */
     public UnixPermissionsDialog( Shell parentShell )
     {
@@ -150,11 +165,18 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── CONSTRUCTOR: UnixPermissionsDialog(Shell, String) — RESTORING A SAVED PASS
+    // The checkpoint officer reopens a previously saved configuration: the
+    // existing octal string is parsed and both the checkboxes and the text field
+    // are pre-populated to reflect the stored value.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of UnixPermissionsDialog.
-     * 
-     * @param parentShell the parent shell
-     * @param value the initial value
+     * We create an UnixPermissionsDialog pre-initialized with an existing
+     * permission value. The value may be in octal, decimal, or symbolic format;
+     * we parse it during {@link #initialize()}.
+     *
+     * @param parentShell  the parent shell
+     * @param value        the initial permission value string
      */
     public UnixPermissionsDialog( Shell parentShell, String value )
     {
@@ -164,6 +186,10 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: configureShell — POSTING THE CHECKPOINT SIGN ─────────────────
+    // We stamp the title on the dialog window so the officer knows which
+    // checkpoint station they are at before they start configuring access levels.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -174,6 +200,11 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: okPressed — ISSUING THE FINAL ACCESS PASS ────────────────────
+    // When the officer confirms, we parse the octal text field one last time to
+    // produce the canonical four-digit octal string. If the field contains
+    // garbage we default to "0000" (no access) rather than crashing.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -193,6 +224,12 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: createDialogArea — BUILDING THE CHECKPOINT STATION ────────────
+    // We assemble the full dialog interior: the permission checkbox grid,
+    // the octal notation field, initial values, and all the listeners that keep
+    // both views synchronized. The font is applied last so everything scales
+    // consistently.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -214,8 +251,15 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: initialize — LOADING THE SAVED PASS CONFIGURATION ────────────
+    // If a prior value was supplied we attempt to parse it and populate both
+    // views. A parse failure resets everything to zero — the "all access denied"
+    // default — rather than leaving the UI in an ambiguous state.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the dialog with the initial value
+     * We parse the initial {@code value} string and synchronize both the
+     * checkboxes and the octal text field. If parsing fails or the value is
+     * null we reset everything to the zero-permission default.
      */
     private void initialize()
     {
@@ -242,10 +286,16 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: setCheckboxesValue — UPDATING THE ACCESS PASS SWITCHES ────────
+    // Each checkbox is set to match the corresponding boolean flag in the
+    // UnixPermissions model. We call this both during initialization and
+    // whenever the officer types a new octal code.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the checkboxes value.
+     * We synchronize all nine permission checkboxes to the boolean flags in the
+     * supplied {@link UnixPermissions} object.
      *
-     * @param perm the Unix permissions
+     * @param perm  the Unix permissions model to read from
      */
     private void setCheckboxesValue( UnixPermissions perm )
     {
@@ -261,10 +311,15 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: setOctalValue — UPDATING THE SCANNER READOUT ─────────────────
+    // We push the four-digit octal string from the permissions model into the
+    // text field so the numeric display always matches the checkbox state.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the octal value.
+     * We update the octal notation text field to reflect the value computed by
+     * the supplied {@link UnixPermissions} object.
      *
-     * @param perm the Unix permissions
+     * @param perm  the Unix permissions model to read from
      */
     private void setOctalValue( UnixPermissions perm )
     {
@@ -272,8 +327,14 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: resetChecboxSelection — REVOKING ALL PASSES ──────────────────
+    // When the octal field contains an invalid value we clear every checkbox
+    // rather than leave the UI in a state that doesn't match any valid
+    // permission set.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Resets the checkbox selection
+     * We uncheck all nine permission checkboxes, effectively setting every
+     * permission bit to zero. We call this when an invalid octal value is entered.
      */
     private void resetChecboxSelection()
     {
@@ -289,10 +350,17 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: createPermissionsArea — INSTALLING THE ACCESS PASS PANEL ──────
+    // We lay out the nine checkboxes in three labeled rows (Owner, Group,
+    // Others) each containing three checkboxes (Read, Write, Execute). This
+    // gives the officer an intuitive visual map of who can do what.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the permissions area.
+     * We build the symbolic permission group with three labeled rows of three
+     * checkboxes each — Owner, Group, and Others — providing an intuitive
+     * interface for setting file permissions.
      *
-     * @param parent the parent composite
+     * @param parent  the parent composite to attach the group to
      */
     private void createPermissionsArea( Composite parent )
     {
@@ -319,10 +387,17 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: createOctalNotationArea — INSTALLING THE SCANNER ─────────────
+    // The numeric scanner field shows the four-digit octal code and allows
+    // direct entry. A verify listener refuses any character that isn't in the
+    // range 0-7 so the officer can't accidentally type an invalid code.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the octal notation area.
+     * We build the octal notation area: a labeled group containing a four-
+     * character text field pre-populated with "0000". A verify listener
+     * restricts input to digits 0-7 only.
      *
-     * @param parent the parent composite
+     * @param parent  the parent composite to attach the group to
      */
     private void createOctalNotationArea( Composite parent )
     {
@@ -332,8 +407,16 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: addListeners — CONNECTING ALL THE CHECKPOINT SENSORS ──────────
+    // Every checkbox and the octal text field get their listeners attached here.
+    // When a checkbox changes we recompute the octal value; when the text field
+    // changes we update the checkboxes. We suspend listeners during programmatic
+    // updates to avoid infinite loops.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds listeners.
+     * We attach the selection and modify listeners to all nine checkboxes and
+     * the octal text field. We also attach the verify listener to restrict
+     * octal input to valid characters.
      */
     private void addListeners()
     {
@@ -351,8 +434,15 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: removeListeners — SUSPENDING THE SENSORS ─────────────────────
+    // Before we programmatically update the UI we detach all listeners so our
+    // changes don't trigger cascading events. We call addListeners() again
+    // immediately after to restore normal operation.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Remove listeners.
+     * We detach all selection, modify, and verify listeners from the UI widgets.
+     * We call this before programmatic updates to prevent infinite event loops,
+     * always re-attaching with {@link #addListeners()} afterwards.
      */
     private void removeListeners()
     {
@@ -370,14 +460,22 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: getSymbolicValue — READING THE CHECKPOINT BADGE FORMAT ────────
+    // We convert the stored octal value into the traditional Unix symbolic
+    // string (e.g., "-rwxr-x---") so callers that need the symbolic form
+    // don't have to do the conversion themselves.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the symbolic value (no type included).
-     * 
-     * @return the symbolic value
+     * We return the symbolic representation of the stored permission value
+     * (e.g., "-rwxr-x---"), computed by the {@link UnixPermissions} model. If
+     * the stored value cannot be parsed we return the zero-permission symbolic
+     * form.
+     *
+     * @return the symbolic permission string, no file-type prefix
      */
     public String getSymbolicValue()
     {
-        
+
         UnixPermissions perm = null;
         try
         {
@@ -392,10 +490,16 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: getOctalValue — RETRIEVING THE BADGE CODE ────────────────────
+    // After OK is pressed the caller fetches the four-digit octal string here.
+    // This is the canonical storage format for Unix permissions in OpenLDAP
+    // configuration.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the octal value.
-     * 
-     * @return the octal value
+     * We return the four-digit octal string representation of the confirmed
+     * permission value (e.g., "0755"). This is set when OK is pressed.
+     *
+     * @return the octal permission value
      */
     public String getOctalValue()
     {
@@ -403,10 +507,16 @@ public class UnixPermissionsDialog extends Dialog
     }
 
 
+    // ── METHOD: getDecimalValue — TRANSLATING THE BADGE TO DECIMAL ───────────
+    // Some callers prefer to store permissions as a decimal integer. We parse
+    // the octal string and return the equivalent base-10 value as a String so
+    // the caller doesn't have to deal with Integer.parseInt themselves.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the decimal value.
+     * We convert the stored octal permission value to its decimal equivalent and
+     * return it as a String. For example, octal "0755" becomes "493".
      *
-     * @return the decimal value
+     * @return the decimal representation of the permission value
      */
     public String getDecimalValue()
     {

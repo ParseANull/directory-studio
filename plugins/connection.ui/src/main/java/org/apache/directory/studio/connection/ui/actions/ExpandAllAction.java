@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.ui.actions;
@@ -27,26 +27,35 @@ import org.eclipse.jface.action.Action;
 import org.eclipse.jface.viewers.TreeViewer;
 
 
+// ── CLASS: ExpandAllAction — HAN OPENS ALL CARGO BAY HATCHES ──────────────────────
+// When Han needs to do a full inventory check, he opens every cargo bay hatch at
+// once.  ExpandAllAction does the same for the Connections view tree: it expands
+// every collapsible node in one go so the user can see the full hierarchy.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This action expands all nodes of the viewer's tree, starting with the root.
+ * Toolbar action that expands all nodes in the Connections view tree.
+ *
+ * <p>Calls {@link TreeViewer#expandAll()} on the attached viewer.  Always enabled.
+ * The viewer reference is nulled on {@link #dispose()} to prevent memory leaks.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ExpandAllAction extends Action
 {
-    /** The Tree viewer */
+    /** The tree viewer to expand. */
     protected TreeViewer viewer;
 
 
+    // ── CONSTRUCTOR ───────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExpandAllAction.
+     * Creates a new {@link ExpandAllAction} bound to the given tree viewer.
      *
-     * @param viewer the attached Viewer
+     * @param viewer  The tree viewer whose nodes should be expanded.
      */
     public ExpandAllAction( TreeViewer viewer )
     {
         super(
-            Messages.getString( "ExpandAllAction.ExpandAll" ), 
+            Messages.getString( "ExpandAllAction.ExpandAll" ),
             ConnectionUIPlugin.getDefault().getImageDescriptor( ConnectionUIConstants.IMG_EXPANDALL ) ); //$NON-NLS-1$
         setToolTipText( getText() );
         setEnabled( true );
@@ -55,8 +64,10 @@ public class ExpandAllAction extends Action
     }
 
 
+    // ── RUN — EXPAND EVERYTHING ───────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Expands all nodes in the attached tree viewer.
      */
     @Override
     public void run()
@@ -65,8 +76,9 @@ public class ExpandAllAction extends Action
     }
 
 
+    // ── DISPOSE — RELEASE THE VIEWER REFERENCE ────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Releases the viewer reference to allow garbage collection.
      */
     public void dispose()
     {

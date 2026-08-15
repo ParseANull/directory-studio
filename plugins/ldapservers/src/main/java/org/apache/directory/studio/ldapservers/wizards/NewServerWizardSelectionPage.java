@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.ldapservers.wizards;
 
@@ -45,8 +45,18 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 
 
+// ── CLASS: NewServerWizardSelectionPage — THE PARTS CATALOGUE AND REQUISITION FORM ────────
+// Step 1 of the Imperial requisition process: the officer browses the parts catalogue tree
+// (filterable by keyword), picks a specific server type, and types in a name for the new
+// installation.  Validation blocks Finish if no type is selected or the name is blank or taken.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the wizard page for the new server wizard selection page.
+ * Page 1 of the New Server Wizard.
+ * Shows a filterable tree of available {@link LdapServerAdapterExtension}s grouped by vendor,
+ * and a text field for the new server's name.
+ * Auto-suggests a name when an adapter is selected; validates that the name is non-empty and
+ * unique before allowing Finish.
+ * Think of it as the Imperial parts catalogue and requisition form combined.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -68,8 +78,13 @@ public class NewServerWizardSelectionPage extends WizardPage
     private Text serverNameText;
 
 
+    // ── Opening The Requisition Form ──────────────────────────────────────────────────────────
+    // The officer opens the form and sees: "Create an LDAP Server — choose the type and name."
+    // The form starts incomplete until both a server type and a valid name are entered.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of NewServerWizardSelectionPage.
+     * Creates the page and sets its title, description, banner image, and initial incomplete state.
+     * Grabs a reference to {@link LdapServersManager} for name-uniqueness checking.
      */
     public NewServerWizardSelectionPage()
     {
@@ -83,8 +98,16 @@ public class NewServerWizardSelectionPage extends WizardPage
     }
 
 
+    // ── Building The Page's Widget Tree ──────────────────────────────────────────────────────
+    // The page has three sections: a filter text box (to narrow the catalogue), a tree viewer
+    // showing all available server types, and a server-name text field.
+    // A live filter re-applies on every keystroke using a regex pattern match.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the page's widgets: filter text, filterable adapter tree, and server name field.
+     * Registers all listeners via {@link #addListeners()} and sets the page's control.
+     *
+     * @param parent  the parent composite provided by the wizard container
      */
     public void createControl( Composite parent )
     {
@@ -174,8 +197,16 @@ public class NewServerWizardSelectionPage extends WizardPage
     }
 
 
+    // ── Wiring Up The Live-Validation Listeners ───────────────────────────────────────────────
+    // Three things trigger validation: typing in the filter box (re-applies the filter but
+    // doesn't change selection), selecting a server type (auto-fills the name), and typing
+    // in the server-name field (checks non-empty and uniqueness).
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adding listeners to UI elements.
+     * Registers modify and selection listeners on the filter text, adapter tree, and name field.
+     * The filter listener refreshes the tree on each keystroke.
+     * The selection listener auto-generates a unique name and re-validates.
+     * The name listener re-validates on each keystroke.
      */
     private void addListeners()
     {
@@ -259,8 +290,19 @@ public class NewServerWizardSelectionPage extends WizardPage
     }
 
 
+    // ── Validating The Form Before Finish Is Allowed ──────────────────────────────────────────
+    // The requisition can't be filed until: (a) a server type leaf is selected, and (b) the
+    // name is non-empty and not already taken by another server.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Validates the page.
+     * Validates the selection and name fields.
+     * Sets an error message and marks the page incomplete if:
+     * <ul>
+     *   <li>No adapter extension is selected (or only a vendor heading is selected).</li>
+     *   <li>The server name is empty.</li>
+     *   <li>The server name is already taken by another server.</li>
+     * </ul>
+     * Clears the error and marks the page complete when all checks pass.
      */
     private void validate()
     {
@@ -302,12 +344,15 @@ public class NewServerWizardSelectionPage extends WizardPage
     }
 
 
+    // ── Showing Or Clearing The Error Banner ─────────────────────────────────────────────────
+    // Any validation failure drives an error message into the banner and disables Finish.
+    // Passing null clears the banner and re-enables Finish.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Displays an error message and set the page status as incomplete
-     * if the message is not null.
+     * Displays an error message in the wizard page header banner and marks the page incomplete.
+     * Passing {@code null} clears the error and marks the page complete.
      *
-     * @param message
-     *      the message to display
+     * @param message  the error text, or {@code null} to clear
      */
     protected void displayErrorMessage( String message )
     {
@@ -316,11 +361,13 @@ public class NewServerWizardSelectionPage extends WizardPage
     }
 
 
+    // ── Reading Back The Entered Server Name ─────────────────────────────────────────────────
+    // Called by NewServerWizard.performFinish() to get the name to assign to the new server.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the name of the server.
+     * Returns the server name the user has typed into the name field.
      *
-     * @return
-     *      the name of the server
+     * @return the server name string (may be empty if the user hasn't typed one yet)
      */
     public String getServerName()
     {
@@ -328,11 +375,15 @@ public class NewServerWizardSelectionPage extends WizardPage
     }
 
 
+    // ── Reading Back The Selected Adapter Extension ────────────────────────────────────────────
+    // Called by NewServerWizard.performFinish() and getConfigurationPage() to get the adapter.
+    // Returns null if the selection is empty or if only a vendor heading is selected.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Ldap Server Adapter Extension.
+     * Returns the {@link LdapServerAdapterExtension} currently selected in the tree,
+     * or {@code null} if nothing is selected or only a vendor string is selected.
      *
-     * @return
-     *      the Ldap Server Adapter Extension
+     * @return the selected extension, or {@code null}
      */
     public LdapServerAdapterExtension getLdapServerAdapterExtension()
     {

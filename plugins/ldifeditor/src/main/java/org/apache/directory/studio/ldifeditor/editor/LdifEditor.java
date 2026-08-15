@@ -110,40 +110,78 @@ import org.eclipse.ui.texteditor.SourceViewerDecorationSupport;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 
 
+// ── CLASS: LdifEditor — REBEL TRANSMISSION CONSOLE ───────────────────────────
+// In the Rebel base on Yavin 4 the communications console is the beating heart
+// of the operation: it lets officers compose, edit, and transmit data bundles
+// to the fleet, view them in an indexed outline, and send them directly over
+// an authenticated connection.
+// LdifEditor is that console: a full Eclipse text editor for LDIF files that
+// adds a connection selector, execute action, syntax highlighting, content
+// assist, code folding, and an outline view — all wired to the LDAP directory
+// connection the officer picks from the toolbar.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the LDIF editor
+ * Eclipse {@link TextEditor} for LDIF files.
+ * Extends the standard text editor with a toolbar that hosts a
+ * {@link BrowserConnectionWidget} (for selecting the LDAP connection) and an
+ * execute button, syntax highlighting via {@link LdifSourceViewerConfiguration},
+ * code folding via {@link ProjectionSupport}, an outline page via
+ * {@link LdifOutlinePage}, and context-menu actions for editing attributes,
+ * records, and formatting.
+ * Think of this as the Rebel transmission console: compose, preview, and send
+ * LDIF operations to the directory in one place.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpdateListener, IPartListener2
 {
+    /** The ViewForm that contains the toolbar and the editor area. */
     private ViewForm control;
 
+    /** Toolbar widget for selecting the LDAP browser connection. */
     private BrowserConnectionWidget browserConnectionWidget;
 
+    /** The SWT toolbar that hosts execute and other action buttons. */
     private ToolBar actionToolBar;
 
+    /** JFace manager for the action toolbar. */
     private IToolBarManager actionToolBarManager;
 
+    /** The currently selected LDAP browser connection. */
     private IBrowserConnection browserConnection;
 
+    /** Eclipse folding infrastructure installed on the ProjectionViewer. */
     private ProjectionSupport projectionSupport;
 
+    /** The LDIF outline page, created lazily via getAdapter(). */
     protected LdifOutlinePage outlinePage;
 
+    /** Manages the full set of value-editor extensions for this editor. */
     private ValueEditorManager valueEditorManager;
 
+    /** The "open best matching value editor" action. */
     private OpenBestValueEditorAction openBestValueEditorAction;
 
+    /** One action per registered value-editor extension. */
     private OpenValueEditorAction[] openValueEditorActions;
 
+    /** Action that opens the value-editor preferences page. */
     private ValueEditorPreferencesAction valueEditorPreferencesAction;
 
+    /** Whether the connection + execute toolbar strip should be shown. */
     protected boolean showToolBar = true;
 
 
+    // ── CONSTRUCT AND CONFIGURE THE EDITOR ───────────────────────────────────
+    // The officer sits down at the console, loads the LDIF source-viewer
+    // configuration (syntax + content assist), chains together the LDIF and
+    // Eclipse preference stores, and sets the help context.
     /**
-     * Creates a new instance of LdifEditor.
+     * Creates a new LDIF editor instance.
+     * Installs {@link LdifSourceViewerConfiguration} and
+     * {@link LdifDocumentProvider}, then chains the LDIF plugin preference store
+     * in front of the Eclipse editors preference store so that LDIF-specific
+     * settings override the generic ones.
      */
     public LdifEditor()
     {
@@ -162,8 +200,14 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── REACT TO PREFERENCE CHANGES ───────────────────────────────────────────
+    // When the officer adjusts a syntax-colour setting the console re-renders
+    // the current document so the change is visible immediately.
     /**
-     * @see org.eclipse.ui.texteditor.AbstractDecoratedTextEditor#handlePreferenceStoreChanged(org.eclipse.jface.util.PropertyChangeEvent)
+     * {@inheritDoc}
+     *
+     * <p>Forces a full document re-render before delegating to the superclass so
+     * that syntax-colour preference changes take effect immediately.</p>
      */
     protected void handlePreferenceStoreChanged( PropertyChangeEvent event )
     {
@@ -188,8 +232,15 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── INJECT LDIF PREFERENCE PAGES INTO CONTEXT MENU ───────────────────────
+    // The officer adds LDIF-specific settings pages to the context menu so
+    // they can tweak the editor without leaving the console.
     /**
-     * @see org.eclipse.ui.texteditor.AbstractDecoratedTextEditor#collectContextMenuPreferencePages()
+     * {@inheritDoc}
+     *
+     * <p>Prepends the four LDIF preference page IDs (main, content assist, syntax
+     * colouring, templates) in front of the generic text-editor preference
+     * pages.</p>
      */
     protected String[] collectContextMenuPreferencePages()
     {
@@ -204,11 +255,12 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── RETURN THE STATIC EDITOR ID ───────────────────────────────────────────
     /**
-     * Gets the ID of the LDIF Editor
+     * Returns the Eclipse editor-part ID for the LDIF editor, as registered in
+     * the plugin.xml extension point.
      *
-     * @return
-     *      the ID of the LDIF Editor
+     * @return the LDIF editor ID string
      */
     public static String getId()
     {
@@ -216,8 +268,20 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── INITIALISE THE EDITOR PART ───────────────────────────────────────────
+    // The officer takes their seat, checks that the file is not too large to
+    // edit, subscribes to connection events, and sets up the value-editor
+    // manager.
     /**
-     * @see org.eclipse.ui.texteditor.AbstractTextEditor#init(org.eclipse.ui.IEditorSite, org.eclipse.ui.IEditorInput)
+     * {@inheritDoc}
+     *
+     * <p>Refuses to open files larger than 1 MB by substituting a
+     * {@link NonExistingLdifEditorInput}.  Registers as a
+     * {@link ConnectionUpdateListener} and an {@link IPartListener2}.</p>
+     *
+     * @param site   the editor site
+     * @param input  the editor input
+     * @throws PartInitException if the superclass init fails
      */
     public void init( IEditorSite site, IEditorInput input ) throws PartInitException
     {
@@ -258,8 +322,15 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── TEAR DOWN THE EDITOR ─────────────────────────────────────────────────
+    // The officer leaves the console, deregisters their action handlers and
+    // connection subscription, and releases the value-editor manager.
     /**
-     * @see org.eclipse.ui.editors.text.TextEditor#dispose()
+     * {@inheritDoc}
+     *
+     * <p>Disposes the value-editor manager, deactivates global action handlers,
+     * and unregisters the connection and part listeners before delegating to the
+     * superclass.</p>
      */
     public void dispose()
     {
@@ -274,8 +345,18 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── ADAPT TO REQUIRED INTERFACES ─────────────────────────────────────────
+    // The operator can ask the console for the outline page, source viewer,
+    // annotation hover, text hover, or content-assist processor without
+    // knowing the concrete class.
     /**
-     * @see org.eclipse.ui.editors.text.TextEditor#getAdapter(java.lang.Class)
+     * {@inheritDoc}
+     *
+     * <p>Handles {@link IShowInTargetList} (Navigator), {@link IContentOutlinePage}
+     * (lazily creates {@link LdifOutlinePage}), {@link ISourceViewer},
+     * {@link IAnnotationHover}, {@link ITextHover}, and
+     * {@link IContentAssistProcessor} adaptations before falling back to the
+     * projection support and the superclass.</p>
      */
     public Object getAdapter( Class required )
     {
@@ -328,8 +409,14 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── CUSTOMISE THE CONTEXT MENU ────────────────────────────────────────────
+    // The officer removes the shift-left/shift-right items (they don't apply to
+    // LDIF) and adds LDIF-specific edit, "edit value with", and format groups.
     /**
-     * @see org.eclipse.ui.editors.text.TextEditor#editorContextMenuAboutToShow(org.eclipse.jface.action.IMenuManager)
+     * {@inheritDoc}
+     *
+     * <p>Removes the text-indent shift actions, then adds LDIF attribute, value,
+     * "edit value with" sub-menu, record, and format sub-menu items.</p>
      */
     protected void editorContextMenuAboutToShow( IMenuManager menu )
     {
@@ -388,8 +475,17 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── REGISTER ALL EDITOR ACTIONS ───────────────────────────────────────────
+    // The officer plugs in every module: content assist, execute, attribute edit,
+    // value editors, record edit, format, and standard cut/copy/paste with icons.
     /**
-     * @see org.eclipse.ui.editors.text.TextEditor#createActions()
+     * {@inheritDoc}
+     *
+     * <p>Registers the content-assist action, execute action (on the toolbar),
+     * attribute-edit action, open-best-value-editor action, all per-extension
+     * value-editor actions, default value-editor action, record-edit action,
+     * format-document and format-record actions, and refreshes the cut/copy/paste
+     * icons.  Finally activates global action handlers.</p>
      */
     protected void createActions()
     {
@@ -460,8 +556,17 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── BUILD THE EDITOR WIDGET HIERARCHY ────────────────────────────────────
+    // The console is assembled: connection selector at the top, execute button
+    // on the right, and the full-screen text editor in the body.  Code folding
+    // is switched on immediately.
     /**
-     * @see org.eclipse.ui.texteditor.AbstractDecoratedTextEditor#createPartControl(org.eclipse.swt.widgets.Composite)
+     * {@inheritDoc}
+     *
+     * <p>If {@link #showToolBar} is {@code true}, wraps the editor in a
+     * {@link ViewForm} with a {@link BrowserConnectionWidget} and action toolbar.
+     * Regardless, installs a {@link ProjectionSupport} and toggles code folding
+     * on.</p>
      */
     public void createPartControl( Composite parent )
     {
@@ -469,7 +574,7 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
 
         if ( showToolBar )
         {
-            // create the toolbar (including connection widget and execute button) on top of the editor 
+            // create the toolbar (including connection widget and execute button) on top of the editor
             Composite composite = new Composite( parent, SWT.NONE );
             GridLayout layout = new GridLayout();
             layout.marginWidth = 0;
@@ -525,8 +630,13 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── CREATE THE SOURCE VIEWER ──────────────────────────────────────────────
+    // The console screen is a ProjectionViewer so code folding works natively.
     /**
-     * @see org.eclipse.ui.texteditor.AbstractDecoratedTextEditor#createSourceViewer(org.eclipse.swt.widgets.Composite, org.eclipse.jface.text.source.IVerticalRuler, int)
+     * {@inheritDoc}
+     *
+     * <p>Returns a {@link ProjectionViewer} so that
+     * {@link ProjectionSupport} can drive code folding.</p>
      */
     protected ISourceViewer createSourceViewer( Composite parent, IVerticalRuler ruler, int styles )
     {
@@ -539,8 +649,11 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── CONFIGURE DECORATION SUPPORT ─────────────────────────────────────────
     /**
-     * @see org.eclipse.ui.texteditor.AbstractDecoratedTextEditor#configureSourceViewerDecorationSupport(org.eclipse.ui.texteditor.SourceViewerDecorationSupport)
+     * {@inheritDoc}
+     *
+     * <p>Delegates entirely to the superclass — no additional decorations needed.</p>
      */
     protected void configureSourceViewerDecorationSupport( SourceViewerDecorationSupport support )
     {
@@ -548,8 +661,14 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── RETURN THE PARSED LDIF MODEL ─────────────────────────────────────────
+    // The operator reads the current parse result without touching the document
+    // directly.
     /**
-     * @see org.apache.directory.studio.ldifeditor.editor.ILdifEditor#getLdifModel()
+     * {@inheritDoc}
+     *
+     * <p>Retrieves the {@link LdifFile} from the {@link LdifDocumentProvider}.
+     * Returns {@code null} if the provider is not a {@link LdifDocumentProvider}.</p>
      */
     public LdifFile getLdifModel()
     {
@@ -565,8 +684,12 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── HANDLE OUTLINE PAGE CLOSURE ───────────────────────────────────────────
+    // When the archivist closes the index pad the editor releases the folding
+    // support.
     /**
-     * This method is used to notify the LDIF Editor that the Outline Page has been closed.
+     * Called by {@link LdifOutlinePage#dispose()} when the outline page is
+     * closed.  Disposes the projection support and nulls the reference.
      */
     public void outlinePageClosed()
     {
@@ -575,8 +698,11 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── RETURN THE CURRENT CONNECTION ─────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.ldifeditor.editor.ILdifEditor#getConnection()
+     * {@inheritDoc}
+     *
+     * <p>Returns the currently selected {@link IBrowserConnection}.</p>
      */
     public IBrowserConnection getConnection()
     {
@@ -584,11 +710,12 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── SET THE CONNECTION ────────────────────────────────────────────────────
+    // The officer selects a new connection from the toolbar dropdown.
     /**
-     * Sets the Connection
+     * Sets the browser connection without updating the toolbar widget.
      *
-     * @param browserConnection
-     *      the browser connection to set
+     * @param browserConnection  the new connection (may be {@code null})
      */
     protected void setConnection( IBrowserConnection browserConnection )
     {
@@ -596,12 +723,13 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── SET THE CONNECTION AND OPTIONALLY SYNC THE WIDGET ─────────────────────
     /**
-     * Sets the Connection
+     * Sets the browser connection, optionally updating the
+     * {@link BrowserConnectionWidget} to reflect the change.
      *
-     * @param browserConnection the browser connection to set
-     * @param updateBrowserConnectionWidget the flag indicating if the browser connection widget
-     *        should be updated
+     * @param browserConnection              the new connection (may be {@code null})
+     * @param updateBrowserConnectionWidget  {@code true} to sync the toolbar widget
      */
     protected void setConnection( IBrowserConnection browserConnection, boolean updateBrowserConnectionWidget )
     {
@@ -614,8 +742,14 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── REACT TO CONNECTION UPDATES ───────────────────────────────────────────
+    // The Rebel comm channel went up or down; the console refreshes its
+    // connection state.
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionUpdated(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     *
+     * <p>If the updated connection matches the one selected in the toolbar widget,
+     * re-applies it so the local reference stays consistent.</p>
      */
     public final void connectionUpdated( Connection connection )
     {
@@ -631,8 +765,11 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── CONNECTION ADDED ──────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionAdded(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     *
+     * <p>Delegates to {@link #connectionUpdated(Connection)}.</p>
      */
     public void connectionAdded( Connection connection )
     {
@@ -640,8 +777,11 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── CONNECTION REMOVED ────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionRemoved(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     *
+     * <p>Delegates to {@link #connectionUpdated(Connection)}.</p>
      */
     public void connectionRemoved( Connection connection )
     {
@@ -649,8 +789,11 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── CONNECTION OPENED ─────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionOpened(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     *
+     * <p>Delegates to {@link #connectionUpdated(Connection)}.</p>
      */
     public void connectionOpened( Connection connection )
     {
@@ -658,8 +801,11 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── CONNECTION CLOSED ─────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionClosed(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     *
+     * <p>Delegates to {@link #connectionUpdated(Connection)}.</p>
      */
     public void connectionClosed( Connection connection )
     {
@@ -667,36 +813,48 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── CONNECTION FOLDER MODIFIED ────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionFolderModified(org.apache.directory.studio.connection.core.ConnectionFolder)
+     * {@inheritDoc}
+     *
+     * <p>No-op — folder changes do not affect this editor.</p>
      */
     public void connectionFolderModified( ConnectionFolder connectionFolder )
     {
     }
 
 
+    // ── CONNECTION FOLDER ADDED ───────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionFolderAdded(org.apache.directory.studio.connection.core.ConnectionFolder)
+     * {@inheritDoc}
+     *
+     * <p>No-op — folder changes do not affect this editor.</p>
      */
     public void connectionFolderAdded( ConnectionFolder connectionFolder )
     {
     }
 
 
+    // ── CONNECTION FOLDER REMOVED ─────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#connectionFolderRemoved(org.apache.directory.studio.connection.core.ConnectionFolder)
+     * {@inheritDoc}
+     *
+     * <p>No-op — folder changes do not affect this editor.</p>
      */
     public void connectionFolderRemoved( ConnectionFolder connectionFolder )
     {
     }
 
 
+    // ── SAVE — REDIRECT NEW FILES TO SAVE-AS ─────────────────────────────────
+    // If the file has never been saved the officer is prompted for a location
+    // before saving.
     /**
-     * This implementation checks if the input is of type
-     * NonExistingLdifEditorInput. In that case doSaveAs() is
-     * called to prompt for a new file name and location.
-     * 
-     * @see org.eclipse.ui.texteditor.AbstractTextEditor#doSave(org.eclipse.core.runtime.IProgressMonitor)
+     * {@inheritDoc}
+     *
+     * <p>If the current input is a {@link NonExistingLdifEditorInput} (file not
+     * yet saved to disk), delegates to {@code doSaveAs()} to prompt for a name
+     * before saving.</p>
      */
     public void doSave( IProgressMonitor progressMonitor )
     {
@@ -711,18 +869,24 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── SAVE AS ───────────────────────────────────────────────────────────────
+    // In IDE mode the standard Eclipse save-as dialog appears; in RCP mode a
+    // plain SWT FileDialog is shown instead.
     /**
-     * The input could be one of the following types:
-     * - NonExistingLdifEditorInput: New file, not yet saved
-     * - PathEditorInput: file opened with our internal "Open File.." action
-     * - FileEditorInput: file is within workspace
-     * - JavaFileEditorInput: file opend with "Open File..." action from org.eclipse.ui.editor
+     * {@inheritDoc}
      *
-     * In RCP the FileDialog appears.
-     * In IDE the super implementation is called.
-     * To detect if this plugin runs in IDE the org.eclipse.ui.ide extension point is checked.
+     * <p>In IDE mode delegates to the superclass.  In RCP mode shows an SWT
+     * {@link FileDialog} and writes the document to the chosen path, prompting
+     * before overwriting an existing file.</p>
      *
-     * @see org.eclipse.ui.editors.text.TextEditor#performSaveAs(org.eclipse.core.runtime.IProgressMonitor)
+     * <p>Supported input types:
+     * <ul>
+     *   <li>{@link NonExistingLdifEditorInput} — new, unsaved file</li>
+     *   <li>{@code PathEditorInput} — opened via "Open File…" action</li>
+     *   <li>{@code FileEditorInput} — workspace file</li>
+     *   <li>{@code JavaFileEditorInput} / {@code FileStoreEditorInput} — Eclipse 3.2/3.3 file open</li>
+     * </ul>
+     * </p>
      */
     protected void performSaveAs( IProgressMonitor progressMonitor )
     {
@@ -815,11 +979,18 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
 
     }
 
+    /** The keyboard-context activation token (non-null while editor is active). */
     private IContextActivation contextActivation;
 
 
+    // ── PART DEACTIVATED ─────────────────────────────────────────────────────
+    // The officer leaves the console; global action handlers and keyboard
+    // context are released.
     /**
-     * @see org.eclipse.ui.IPartListener2#partDeactivated(org.eclipse.ui.IWorkbenchPartReference)
+     * {@inheritDoc}
+     *
+     * <p>Deactivates global action handlers and the LDIF keyboard context when
+     * this editor part loses focus.</p>
      */
     public void partDeactivated( IWorkbenchPartReference partRef )
     {
@@ -835,8 +1006,14 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── PART ACTIVATED ───────────────────────────────────────────────────────
+    // The officer sits back down; global action handlers and keyboard context
+    // are activated again.
     /**
-     * @see org.eclipse.ui.IPartListener2#partActivated(org.eclipse.ui.IWorkbenchPartReference)
+     * {@inheritDoc}
+     *
+     * <p>Activates the browser-windows keyboard context and the global action
+     * handlers when this editor gains focus.</p>
      */
     public void partActivated( IWorkbenchPartReference partRef )
     {
@@ -851,56 +1028,79 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── PART BROUGHT TO TOP ───────────────────────────────────────────────────
     /**
-     * @see org.eclipse.ui.IPartListener2#partBroughtToTop(org.eclipse.ui.IWorkbenchPartReference)
+     * {@inheritDoc}
+     *
+     * <p>No-op.</p>
      */
     public void partBroughtToTop( IWorkbenchPartReference partRef )
     {
     }
 
 
+    // ── PART CLOSED ──────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.ui.IPartListener2#partClosed(org.eclipse.ui.IWorkbenchPartReference)
+     * {@inheritDoc}
+     *
+     * <p>No-op.</p>
      */
     public void partClosed( IWorkbenchPartReference partRef )
     {
     }
 
 
+    // ── PART HIDDEN ──────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.ui.IPartListener2#partHidden(org.eclipse.ui.IWorkbenchPartReference)
+     * {@inheritDoc}
+     *
+     * <p>No-op.</p>
      */
     public void partHidden( IWorkbenchPartReference partRef )
     {
     }
 
 
+    // ── PART INPUT CHANGED ────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.ui.IPartListener2#partInputChanged(org.eclipse.ui.IWorkbenchPartReference)
+     * {@inheritDoc}
+     *
+     * <p>No-op.</p>
      */
     public void partInputChanged( IWorkbenchPartReference partRef )
     {
     }
 
 
+    // ── PART OPENED ──────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.ui.IPartListener2#partOpened(org.eclipse.ui.IWorkbenchPartReference)
+     * {@inheritDoc}
+     *
+     * <p>No-op.</p>
      */
     public void partOpened( IWorkbenchPartReference partRef )
     {
     }
 
 
+    // ── PART VISIBLE ─────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.ui.IPartListener2#partVisible(org.eclipse.ui.IWorkbenchPartReference)
+     * {@inheritDoc}
+     *
+     * <p>No-op.</p>
      */
     public void partVisible( IWorkbenchPartReference partRef )
     {
     }
 
 
+    // ── ACTIVATE GLOBAL ACTION HANDLERS ──────────────────────────────────────
+    // The officer plugs in the attribute-edit, value-edit, and record-edit
+    // shortcuts so they respond to keyboard triggers.
     /**
-     * Activates global action handlers
+     * Registers the edit-attribute, edit-value, and edit-record actions as
+     * global handlers so keyboard shortcuts work regardless of focus within the
+     * editor.
      */
     public void activateGlobalActionHandlers()
     {
@@ -913,8 +1113,11 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── DEACTIVATE GLOBAL ACTION HANDLERS ────────────────────────────────────
+    // The officer unplugs the shortcuts before leaving the console.
     /**
-     * Deactivates global action handlers
+     * Deregisters the edit-attribute, edit-value, and edit-record global action
+     * handlers.
      */
     public void deactivateGlobalActionHandlers()
     {
@@ -927,11 +1130,12 @@ public class LdifEditor extends TextEditor implements ILdifEditor, ConnectionUpd
     }
 
 
+    // ── RETURN THE VALUE EDITOR MANAGER ──────────────────────────────────────
     /**
-     * Gets the Value Editor Manager
+     * Returns the {@link ValueEditorManager} for this editor, which provides
+     * all registered value-editor extensions.
      *
-     * @return
-     *      the Value Editor Manager
+     * @return the value-editor manager
      */
     public ValueEditorManager getValueEditorManager()
     {

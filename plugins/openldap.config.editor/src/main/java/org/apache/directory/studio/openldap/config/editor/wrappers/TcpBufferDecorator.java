@@ -6,31 +6,40 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.wrappers;
 
-import org.apache.directory.studio.common.ui.TableDecorator;
-import org.apache.directory.studio.openldap.config.editor.dialogs.TcpBufferDialog;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.widgets.Shell;
-
+// ── CLASS: TcpBufferDecorator — The Star Destroyer's Comm Relay Buffer ────────
+// The Star Destroyer's communications officer monitors the receive and transmit
+// buffer sizes for every comm relay — each entry shows the listener URL, the
+// direction (read or write), and the buffer size.  TcpBufferDecorator does the
+// same for the TCPBuffer table: it wires the table to the TcpBufferDialog and
+// renders each TcpBufferWrapper as its full configuration string.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A decorator for the TcpBuffer table.
- *  
+ * A {@link TableDecorator} for the TCPBuffer table in the Tuning page.
+ * It connects the table to {@link TcpBufferDialog} and renders each
+ * {@link TcpBufferWrapper} as its string representation
+ * (optional listener URL, optional direction, and buffer size).
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class TcpBufferDecorator extends TableDecorator<TcpBufferWrapper>
 {
+    // ── Constructor — Connecting the Comm Relay Monitor ───────────────────────
+    // The communications officer connects the buffer monitor to the editing
+    // dialog.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Create a new instance of TcpBufferDecorator
      * @param parentShell The parent Shell
@@ -40,9 +49,16 @@ public class TcpBufferDecorator extends TableDecorator<TcpBufferWrapper>
         setDialog( new TcpBufferDialog( parentShell ) );
     }
 
+
+    // ── getText — Read the Buffer Configuration String ────────────────────────
+    // The communications officer reads the buffer entry off the monitor — we
+    // delegate to the wrapper's toString.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Construct the label for a TCPBuffer.
-     * 
+     *
+     * @return the TCP buffer configuration string, or the default label if the
+     *         element is not a {@link TcpBufferWrapper}
      */
     @Override
     public String getText( Object element )
@@ -56,8 +72,13 @@ public class TcpBufferDecorator extends TableDecorator<TcpBufferWrapper>
     }
 
 
+    // ── getImage — No Icon on the Buffer Monitor ───────────────────────────────
+    // The monitor shows numbers only — no images.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Get the image. We have none (may be we could add one for URLs ?)
+     *
+     * @return always {@code null}
      */
     @Override
     public Image getImage( Object element )
@@ -65,7 +86,10 @@ public class TcpBufferDecorator extends TableDecorator<TcpBufferWrapper>
         return null;
     }
 
-    
+
+    // ── compare — Sort Buffer Entries by Size Then Listener ───────────────────
+    // The communications officer sorts by buffer size first; null entries trail.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */

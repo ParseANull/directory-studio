@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.schemabrowser;
@@ -43,9 +43,21 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: MatchingRuleDescriptionDetailsPage — Death Star Blueprint: MR Spec ──
+// A technician selects "caseIgnoreMatch" from the matching rule index; R2-D2
+// projects the full specification: OID, human names, description, whether it is
+// obsolete, which syntax it operates over (a hyperlink), and all the attribute
+// types that use it (a collapsible cross-reference list).  This class is that
+// detail panel for a matching rule description.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The MatchingRuleDescriptionDetailsPage displays the details of an
- * matching rule description.
+ * The detail page that displays the full specification of a selected matching
+ * rule description on the right-hand side of the schema browser.
+ * It shows OID, names, and description in a fixed "Details" section, an
+ * "Obsolete" flag in a "Flags" section, the associated syntax in a "Syntax"
+ * section, and all attribute types that use this rule in a collapsible
+ * "Used From" section.
+ * Think of this class as R2 projecting a single matching-rule blueprint page.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -83,11 +95,15 @@ public class MatchingRuleDescriptionDetailsPage extends SchemaDetailsPage
     private Section usedFromSection;
 
 
+    // ── R2 Loads The Matching-Rule Blueprint Module ────────────────────────────────
+    // R2 slots the matching-rule detail module into his projection system, linking
+    // it to the master page and toolkit.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of MatchingRuleDescriptionDetailsPage.
+     * Creates the matching rule details page linked to the given master schema page.
      *
-     * @param schemaPage the master schema page
-     * @param toolkit the toolkit used to create controls
+     * @param scheamPage  the master schema page (note: original param name preserved)
+     * @param toolkit     the JFace forms toolkit
      */
     public MatchingRuleDescriptionDetailsPage( SchemaPage scheamPage, FormToolkit toolkit )
     {
@@ -95,9 +111,19 @@ public class MatchingRuleDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Builds The Matching-Rule Detail Panel ───────────────────────────────────
+    // R2 assembles the holographic display for a matching rule: a fixed Details
+    // section, a Flags section with an Obsolete indicator, a Syntax section with a
+    // hyperlink, and a collapsible "Used From" cross-reference.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the SWT layout for this detail page.
+     * Creates the "Details," "Flags," "Syntax," and "Used From" sections
+     * along with the standard "Raw Schema Definition" section.
+     *
+     * @param detailForm  the scrolled form that parents all sections
      */
+    @Override
     public void createContents( final ScrolledForm detailForm )
     {
         this.detailForm = detailForm;
@@ -182,9 +208,25 @@ public class MatchingRuleDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Projects The Full Matching-Rule Specification ──────────────────────────
+    // The officer calls out "Show caseIgnoreMatch" and R2 fills in all the fields:
+    // OID, names, description, obsolete flag, syntax link, and attribute cross-refs.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Updates all sections to display the given matching rule.
+     * Rebuilds dynamic sections and reflowing the form so layout adjusts to
+     * multi-line descriptions.
+     *
+     * <p>For example — R2 projects the caseIgnoreMatch spec:</p>
+     * <pre>
+     *   setInput(matchingRule);
+     *   // OID, names, syntax OID and description all populated
+     *   // Used From section shows attribute types that use this rule
+     * </pre>
+     *
+     * @param input  the {@link MatchingRule} to display; null clears the pane
      */
+    @Override
     public void setInput( Object input )
     {
         MatchingRule mrd = null;
@@ -226,12 +268,17 @@ public class MatchingRuleDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Fills The Main Identification Fields ────────────────────────────────────
+    // R2 populates the OID, name, and description fields in the Details section,
+    // rebuilding fresh so multi-line descriptions get proper layout space.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the main section. It is newly created
-     * on every input change to ensure a proper layout of 
-     * multilined descriptions. 
+     * Recreates the "Details" section content with OID, name, and description
+     * fields for the given matching rule.
+     * Disposing and recreating on every call ensures multi-line descriptions
+     * properly resize the section.
      *
-     * @param mrd the matching rule description
+     * @param mrd  the matching rule to display; null leaves the section empty
      */
     private void createMainContent( MatchingRule mrd )
     {
@@ -275,12 +322,17 @@ public class MatchingRuleDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists Which Attribute Types Use This Matching Rule ─────────────────────
+    // R2 scans the cross-references and produces clickable hyperlinks to every
+    // attribute type that declares this matching rule as its equality, ordering,
+    // or substring algorithm.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the used from section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Used From" section with hyperlinks to every attribute type
+     * that uses this matching rule.
+     * Rebuilt on every input change because the list is dynamic.
      *
-     * @param mrd the matching rule description
+     * @param mrd  the matching rule whose attribute-type references to display; null clears
      */
     private void createUsedFromContents( MatchingRule mrd )
     {

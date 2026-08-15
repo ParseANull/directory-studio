@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.editors.attributetype;
 
@@ -34,15 +34,52 @@ import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 
 
+// ── CLASS: ATEUsedByOptionalTableContentProvider — R2-D2 PLUGGING INTO DEATH STAR ────
+// R2-D2 runs a second query against the Death Star's computer: "Which areas allow
+// optional access with her ID — not required, but permitted?"  He's querying the MAY
+// list this time, not the MUST list.  Same scan, same sorting, different filter predicate.
+// This content provider does the same: given an attribute type, it scans every object
+// class and returns those that list this attribute type in their MAY (optional) list —
+// classes that allow but don't require this attribute on their entries.
+// ─────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class is the Content Provider for the Optional Table of the Attribute Type Editor (Used By Page).
+ * JFace IStructuredContentProvider that populates the "Used As Optional Attribute" table
+ * on the Attribute Type Editor's "Used By" page.
+ * Given an {@link AttributeType} as the input element, we scan every {@link ObjectClass}
+ * in the schema and collect those whose MAY list contains this attribute type's name
+ * (case-insensitive, just like LDAP itself).  Results are sorted alphabetically.
+ * Think of R2-D2: same database query as the mandatory provider, but this time we're
+ * looking at the optional-access lists instead of the mandatory ones.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ATEUsedByOptionalTableContentProvider implements IStructuredContentProvider
 {
+    // ── R2 Runs the Optional-Access Query ────────────────────────────────────────────
+    // R2 plugs in and asks: "Which object classes permit this attribute type as an
+    // optional field?"  He checks the MAY lists, collects matches, sorts them, returns
+    // the array — same pattern as the mandatory query, different list to check.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns an alphabetically sorted array of object classes that permit the given
+     * attribute type as an optional attribute (i.e. the attribute type appears in their
+     * MAY list).
+     * We normalise names to lowercase for case-insensitive comparison before checking
+     * membership in the MAY list.  Returns null if the input element is not an
+     * {@link AttributeType}.
+     *
+     * <p>For example — R2's optional-access scan:</p>
+     * <pre>
+     *   // Attribute type: "description"
+     *   // Scans all OCs → finds "person" has MAY: [description, ...]
+     *   //              → finds "organizationalUnit" also has "description" in MAY
+     *   // Returns sorted: [organizationalUnit, person]
+     * </pre>
+     *
+     * @param inputElement  the {@link AttributeType} to search for in MAY lists; any
+     *                      other type yields null
+     * @return              a sorted Object[] of {@link ObjectClass} instances whose MAY
+     *                      list includes this attribute type, or null if input is wrong type
      */
     public Object[] getElements( Object inputElement )
     {
@@ -108,16 +145,27 @@ public class ATEUsedByOptionalTableContentProvider implements IStructuredContent
     }
 
 
+    // ── R2 Disconnects from the Terminal ─────────────────────────────────────────────
+    // R2 unplugs when the query session is over — nothing to clean up.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the viewer is disposed; nothing to release here.
      */
     public void dispose()
     {
     }
 
 
+    // ── R2 Notes That the Query Target Changed ───────────────────────────────────────
+    // New attribute type input? R2 notes it but waits for the next explicit query call.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the viewer's input changes; no action needed here — the
+     * next {@link #getElements} call will run against the new input.
+     *
+     * @param viewer    the TableViewer whose input changed
+     * @param oldInput  the previous AttributeType
+     * @param newInput  the new AttributeType to query on the next getElements call
      */
     public void inputChanged( Viewer viewer, Object oldInput, Object newInput )
     {

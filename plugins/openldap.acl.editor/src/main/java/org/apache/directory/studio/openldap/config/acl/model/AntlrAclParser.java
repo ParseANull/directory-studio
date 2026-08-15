@@ -25,8 +25,26 @@ import antlr.SemanticException;
 import antlr.ParserSharedInputState;
 import antlr.collections.impl.BitSet;
 
+// ── CLASS: AntlrAclParser — C-3PO TRANSLATING THE ACL GRAMMAR ────────────────
+// C-3PO translates the raw token stream produced by AntlrAclLexer into a fully
+// structured AclItem model. This class is that translation engine: an ANTLR
+// 2.7.7 auto-generated LL(2) parser built from Acl.g. It processes the grammar
+// rules (parse → whatClause → whoClause → accessLevel → control) and constructs
+// the corresponding model objects, storing the final AclItem in the aclItem
+// field. THIS FILE IS AUTO-GENERATED from Acl.g — do not modify the method
+// bodies directly.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The ANTLR generated OpenLDAP ACL parser.
+ * ANTLR 2.7.7 auto-generated LL(2) parser for OpenLDAP ACL text.
+ * Consumes the token stream from {@link AntlrAclLexer} and builds an
+ * {@link AclItem} model accessible via {@link #getAclItem()}.
+ *
+ * <p><b>Auto-generated</b> from {@code Acl.g} — do not edit method bodies.</p>
+ * <p>Think of this class as C-3PO translating the Jawa ACL dialect into a
+ * structured model the rest of the application can understand.</p>
+ *
+ * @see AntlrAclLexer
+ * @see AclItem
  */
 public class AntlrAclParser extends antlr.LLkParser       implements AntlrAclLexerTokenTypes
  {

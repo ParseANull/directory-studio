@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.ui.preferences;
@@ -41,50 +41,89 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: CertificateValidationPreferencePage — MON MOTHMA'S TRUSTED-AGENT DOSSIER
+// Mon Mothma keeps two lists: agents she trusts permanently, and agents she trusts
+// only for the duration of the current mission.  She can also flip a master switch
+// to stop verifying credentials altogether — useful if the Rebellion is in a hurry,
+// but risky.
+// This preference page is exactly that: a "Validate certificates" master checkbox, and
+// two tabbed CertificateListComposites — one for permanently-trusted certs, one for
+// session-trusted certs.  When the master checkbox is unchecked the tabs are disabled
+// (greyed out) because they would be irrelevant.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * The certificate validation preference page is used to manage trusted certificates.
+ * Preference page for managing TLS certificate validation settings.
+ *
+ * <p>Contains:</p>
+ * <ul>
+ *   <li>A "Validate certificates" master checkbox.  When unchecked, all server
+ *       certificates are accepted without inspection and the tab folder below is
+ *       disabled.</li>
+ *   <li>A {@link TabFolder} with two {@link CertificateListComposite} tabs:
+ *       <ol>
+ *         <li>"Permanent Trusted" — backed by the permanent trust-store manager.</li>
+ *         <li>"Temporary Trusted" — backed by the session trust-store manager.</li>
+ *       </ol>
+ *   </li>
+ * </ul>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class CertificateValidationPreferencePage extends PreferencePage implements IWorkbenchPreferencePage
 {
+    // ── UI WIDGETS ────────────────────────────────────────────────────────────────
 
-    /** The verify certificates button. */
+    /** Master "Validate certificates" checkbox. */
     private Button verifyCertificatesButton;
 
-    /** The tab folder. */
+    /** Tab folder containing the permanent and session trusted-certificate lists. */
     private TabFolder tabFolder;
 
 
+    // ── CONSTRUCTOR ───────────────────────────────────────────────────────────────
     /**
-     * 
-     * Creates a new instance of MainPreferencePage.
+     * Creates a new {@link CertificateValidationPreferencePage}.
+     *
+     * <p>Sets the page title from the message bundle and wires up the preference
+     * store from the connection UI plugin.</p>
      */
     public CertificateValidationPreferencePage()
     {
         super( Messages.getString( "CertificateValidationPreferencePage.CertificateValidation" ) ); //$NON-NLS-1$
         super.setPreferenceStore( ConnectionUIPlugin.getDefault().getPreferenceStore() );
-        //super.setDescription( Messages.getString( "SecurityPreferencePage.GeneralSettings" ) ); //$NON-NLS-1$
     }
 
 
+    // ── INIT ──────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Nothing to initialise here — the workbench is not needed.
      */
     public void init( IWorkbench workbench )
     {
-        // Nothing to do
+        // Nothing to do.
     }
 
 
+    // ── CREATE CONTENTS ───────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the page body:
+     * <ol>
+     *   <li>A "Validate certificates" checkbox wired to enable/disable the tab folder.</li>
+     *   <li>A tab folder with "Permanent Trusted" and "Temporary Trusted" tabs, each
+     *       backed by a {@link CertificateListComposite}.</li>
+     * </ol>
      */
     protected Control createContents( Composite parent )
     {
         Composite composite = BaseWidgetUtils.createColumnContainer( parent, 1, 1 );
 
-        // enable/disable certificate validation
+        // ── MASTER CHECKBOX ───────────────────────────────────────────────────────
+        // Read the stored preference and initialise the checkbox accordingly.
+        // ──────────────────────────────────────────────────────────────────────────
         Preferences preferences = ConnectionCorePlugin.getDefault().getPluginPreferences();
         boolean validateCertificates = preferences
             .getBoolean( ConnectionCoreConstants.PREFERENCE_VALIDATE_CERTIFICATES );
@@ -96,20 +135,26 @@ public class CertificateValidationPreferencePage extends PreferencePage implemen
             @Override
             public void widgetSelected( SelectionEvent event )
             {
+                // ── SYNC TAB FOLDER WITH CHECKBOX ─────────────────────────────────
+                // When validation is disabled the cert lists are irrelevant, so grey
+                // them out.
+                // ──────────────────────────────────────────────────────────────────
                 tabFolder.setEnabled( verifyCertificatesButton.getSelection() );
             }
         } );
 
-        // certificate list widget
+        // ── TAB FOLDER: PERMANENT + SESSION TRUSTED CERTIFICATES ─────────────────
         tabFolder = new TabFolder( composite, SWT.TOP );
         tabFolder.setLayoutData( new GridData( GridData.FILL, GridData.FILL, true, true ) );
 
+        // "Permanent Trusted" tab
         CertificateListComposite permanentCLComposite = new CertificateListComposite( tabFolder, SWT.NONE );
         permanentCLComposite.setInput( ConnectionCorePlugin.getDefault().getPermanentTrustStoreManager() );
         TabItem permanentTab = new TabItem( tabFolder, SWT.NONE, 0 );
         permanentTab.setText( Messages.getString( "CertificateValidationPreferencePage.PermanentTrusted" ) ); //$NON-NLS-1$
         permanentTab.setControl( permanentCLComposite );
 
+        // "Temporary Trusted" (session) tab
         CertificateListComposite sessionCLComposite = new CertificateListComposite( tabFolder, SWT.NONE );
         sessionCLComposite.setInput( ConnectionCorePlugin.getDefault().getSessionTrustStoreManager() );
         TabItem sessionTab = new TabItem( tabFolder, SWT.NONE, 1 );
@@ -121,8 +166,12 @@ public class CertificateValidationPreferencePage extends PreferencePage implemen
     }
 
 
+    // ── PERFORM DEFAULTS ──────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Resets the "validate certificates" checkbox to the platform default and
+     * persists the change.
      */
     @Override
     protected void performDefaults()
@@ -134,8 +183,14 @@ public class CertificateValidationPreferencePage extends PreferencePage implemen
     }
 
 
+    // ── PERFORM OK ────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Persists the current checkbox state to the connection core plugin
+     * preferences and saves them to disk.
+     *
+     * @return Always {@code true}.
      */
     public boolean performOk()
     {
@@ -144,5 +199,4 @@ public class CertificateValidationPreferencePage extends PreferencePage implemen
         ConnectionCorePlugin.getDefault().savePluginPreferences();
         return true;
     }
-
 }

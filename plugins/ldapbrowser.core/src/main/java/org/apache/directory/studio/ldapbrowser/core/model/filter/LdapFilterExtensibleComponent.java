@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core.model.filter;
@@ -28,8 +28,26 @@ import java.util.List;
 import org.apache.directory.studio.ldapbrowser.core.model.filter.parser.LdapFilterToken;
 
 
+// ── CLASS: LdapFilterExtensibleComponent — C-3PO PARSING A JAWA EXTENDED MATCH ─
+// The most complex Jawa comparison C-3PO encounters is the "extensible match":
+// "cn:dn:2.5.13.5:=Luke".  It has up to eight parts: attribute name, an
+// optional ":dn" DN-attribute flag, an optional ":ruleOid" matching-rule OID,
+// a ":=" separator, and a value.  C-3PO must accept them in any valid
+// combination — attribute-only, matching-rule-only, or both together.
+// LdapFilterExtensibleComponent holds all eight token slots for RFC 4515
+// extensible match filters and validates that the required combination is
+// present.  Like an item component it is a leaf node — no child filters.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The LdapFilterExtensibleComponent represents an extensible filter.
+ * Represents an LDAP extensible match filter in the filter AST — e.g.
+ * {@code cn:dn:2.5.13.5:=Luke} or {@code :1.2.3.4:=value}.
+ * Contains slots for the attribute token, optional dn-attr colon and flag,
+ * optional matching-rule colon and OID, the {@code :=} separator, and the value.
+ * No child filters are accepted.
+ *
+ * <p>Think of this as C-3PO parsing a complex Jawa extended-match phrase —
+ * up to eight positional tokens with several optional parts that must fit
+ * together in a valid combination.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -49,9 +67,10 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     private LdapFilterToken valueToken;
 
 
+    // ── C-3PO Opens A New Extensible Match Phrase Slot ───────────────────────────
     /**
      * Creates a new instance of LdapFilterExtensibleComponent.
-     * 
+     *
      * @param parent the parent filter
      */
     public LdapFilterExtensibleComponent( LdapFilter parent )
@@ -60,12 +79,14 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Records The Attribute Name Token ────────────────────────────────────
+    // "Optional attribute name — if present, it identifies the attribute to match."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Sets the attribute token.
-     * 
+     *
      * @param attributeToken the attribute token
-     * 
-     * @return true, if setting the attribute token was successful,false otherwise.
+     * @return {@code true} if setting the attribute token was successful, {@code false} otherwise.
      */
     public boolean setAttributeToken( LdapFilterToken attributeToken )
     {
@@ -86,10 +107,11 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Reads The Attribute Token ──────────────────────────────────────────
     /**
      * Gets the attribute token.
-     * 
-     * @return the attribute token, or null if not set
+     *
+     * @return the attribute token, or {@code null} if not set
      */
     public LdapFilterToken getAttributeToken()
     {
@@ -97,12 +119,12 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Records The ":dn" Colon Separator ──────────────────────────────────
     /**
      * Sets the dn attr colon token.
-     * 
+     *
      * @param dnAttrColonToken the dn attr colon token
-     * 
-     * @return true, if setting the dn attr colon token was sucessful, false otherwise
+     * @return {@code true} if setting the dn attr colon token was successful, {@code false} otherwise
      */
     public boolean setDnAttrColonToken( LdapFilterToken dnAttrColonToken )
     {
@@ -123,10 +145,11 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Reads The ":dn" Colon Token ────────────────────────────────────────
     /**
      * Gets the dn attr colon token.
-     * 
-     * @return the dn attr colon token, or null if not set
+     *
+     * @return the dn attr colon token, or {@code null} if not set
      */
     public LdapFilterToken getDnAttrColonToken()
     {
@@ -134,12 +157,12 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Records The "dn" Flag Token ────────────────────────────────────────
     /**
      * Sets the dn attr token.
-     * 
+     *
      * @param dnAttrToken the dn attr token
-     * 
-     * @return true, if setting the dn attr token was successful, false otherwise
+     * @return {@code true} if setting the dn attr token was successful, {@code false} otherwise
      */
     public boolean setDnAttrToken( LdapFilterToken dnAttrToken )
     {
@@ -156,10 +179,11 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Reads The "dn" Flag Token ──────────────────────────────────────────
     /**
      * Gets the dn attr token.
-     * 
-     * @return the dn attr token, or null if not set
+     *
+     * @return the dn attr token, or {@code null} if not set
      */
     public LdapFilterToken getDnAttrToken()
     {
@@ -167,12 +191,12 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Records The Matching-Rule Colon Separator ──────────────────────────
     /**
      * Sets the matching rule colon token.
-     * 
+     *
      * @param matchingRuleColonToken the matching rule colon token
-     * 
-     * @return true, if setting the matching rule colon token was successful, false otherwise
+     * @return {@code true} if setting the matching rule colon token was successful, {@code false} otherwise
      */
     public boolean setMatchingRuleColonToken( LdapFilterToken matchingRuleColonToken )
     {
@@ -193,10 +217,11 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Reads The Matching-Rule Colon Token ────────────────────────────────
     /**
      * Gets the matching rule colon token.
-     * 
-     * @return the matching rule colon token, or null if not set
+     *
+     * @return the matching rule colon token, or {@code null} if not set
      */
     public LdapFilterToken getMatchingRuleColonToken()
     {
@@ -204,12 +229,12 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Records The Matching-Rule OID Token ────────────────────────────────
     /**
      * Sets the matching rule token.
-     * 
+     *
      * @param matchingRuleToken the matching rule token
-     * 
-     * @return true, if setting the matching rule token was successful, false otherwise
+     * @return {@code true} if setting the matching rule token was successful, {@code false} otherwise
      */
     public boolean setMatchingRuleToken( LdapFilterToken matchingRuleToken )
     {
@@ -226,10 +251,11 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Reads The Matching-Rule OID Token ──────────────────────────────────
     /**
      * Gets the matching rule token.
-     * 
-     * @return the matching rule token, or null if not set
+     *
+     * @return the matching rule token, or {@code null} if not set
      */
     public LdapFilterToken getMatchingRuleToken()
     {
@@ -237,12 +263,12 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Records The ":=" Colon Token ───────────────────────────────────────
     /**
      * Sets the equals colon token.
-     * 
+     *
      * @param equalsColonToken the equals colon token
-     * 
-     * @return true, if setting the equals colon token was sucessful, false otherwise
+     * @return {@code true} if setting the equals colon token was successful, {@code false} otherwise
      */
     public boolean setEqualsColonToken( LdapFilterToken equalsColonToken )
     {
@@ -259,10 +285,11 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Reads The ":=" Colon Token ─────────────────────────────────────────
     /**
      * Gets the equals colon token.
-     * 
-     * @return the equals colon token, or null if not set
+     *
+     * @return the equals colon token, or {@code null} if not set
      */
     public LdapFilterToken getEqualsColonToken()
     {
@@ -270,12 +297,12 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Records The "=" Equals Token ───────────────────────────────────────
     /**
      * Sets the equals token.
-     * 
+     *
      * @param equalsToken the equals token
-     * 
-     * @return true, if setting the equals token was successful, false otherwise
+     * @return {@code true} if setting the equals token was successful, {@code false} otherwise
      */
     public boolean setEqualsToken( LdapFilterToken equalsToken )
     {
@@ -291,10 +318,11 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Reads The "=" Equals Token ─────────────────────────────────────────
     /**
      * Gets the equals token.
-     * 
-     * @return the equals token, or null if not set
+     *
+     * @return the equals token, or {@code null} if not set
      */
     public LdapFilterToken getEqualsToken()
     {
@@ -302,12 +330,12 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Records The Value Token ────────────────────────────────────────────
     /**
      * Sets the value token.
-     * 
+     *
      * @param valueToken the value token
-     * 
-     * @return true, if setting the value token was successful, false otherwise
+     * @return {@code true} if setting the value token was successful, {@code false} otherwise
      */
     public boolean setValueToken( LdapFilterToken valueToken )
     {
@@ -323,10 +351,11 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Reads The Value Token ───────────────────────────────────────────────
     /**
      * Gets the value token.
-     * 
-     * @return the value token, or null if not set
+     *
+     * @return the value token, or {@code null} if not set
      */
     public LdapFilterToken getValueToken()
     {
@@ -334,6 +363,11 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Validates The Extended Match Phrase ────────────────────────────────
+    // "Required: start token + `:=` separator + `=` sign + value.
+    // Optional: attribute name and/or matching-rule OID — but if a colon is
+    // present for one, the actual token must follow."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.filter.LdapFilterComponent#isValid()
      */
@@ -352,6 +386,7 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Collects All Tokens Of The Extended Match Phrase ───────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.filter.LdapFilterComponent#getTokens()
      */
@@ -401,6 +436,9 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Renders The Extended Match Phrase As A String ──────────────────────
+    // "cn:dn:2.5.13.5:=Luke"
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * @see java.lang.Object#toString()
      */
@@ -417,6 +455,7 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Refuses Child Sub-Sentences For A Leaf Clause ──────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.filter.LdapFilterComponent#addFilter(org.apache.directory.studio.ldapbrowser.core.model.filter.LdapFilter)
      */
@@ -426,6 +465,7 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Returns The Broken Phrase If It Is Invalid ────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.filter.LdapFilterComponent#getInvalidFilters()
      */
@@ -443,6 +483,7 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Finds Which Token Is At A Given Cursor Position ────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.filter.LdapFilterComponent#getFilter(int)
      */
@@ -460,6 +501,7 @@ public class LdapFilterExtensibleComponent extends LdapFilterComponent
     }
 
 
+    // ── C-3PO Explains Why The Extended Match Phrase Is Invalid ──────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.filter.LdapFilterComponent#getInvalidCause()
      */

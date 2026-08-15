@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.dialogs.preferences;
@@ -63,9 +63,19 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: BinaryAttributesAndSyntaxesPreferencePage — R2-D2 CONFIGURES BINARY SENSOR PROTOCOLS ──
+// In the Rebel briefing room on Yavin 4, R2-D2 wheels up to the holotable and begins
+// reprogramming which sensor channels should be treated as raw binary data blobs versus
+// human-readable text streams.  He queries every connected ship's schema, builds an index
+// of known signal types, and presents two editable lists — one for attribute-level overrides,
+// one for syntax-level overrides — so the Alliance can add, tweak, or remove entries as
+// new Imperial technology is captured and analysed.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The BinaryAttributesAndSyntaxesPreferencePage is used to specify
- * binary attributes and syntaxes.
+ * An Eclipse preference page for specifying which LDAP attribute types and syntaxes
+ * should be treated as binary data (rendered as hex or base64 rather than plain text).
+ * Think of this class as R2-D2 managing the binary-sensor protocol list — two tables,
+ * full CRUD, backed by the core preference store.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -121,8 +131,15 @@ public class BinaryAttributesAndSyntaxesPreferencePage extends PreferencePage im
     private Button syntaxRemoveButton;
 
 
+    // ── R2-D2 POWERS UP AND ANNOUNCES HIS MISSION ────────────────────────────────
+    // R2-D2 chirps and whirs as he boots up, announcing to the briefing room that
+    // he's here to manage Binary Attributes configuration.  No preference store
+    // needed at this level — the core plugin manages the actual storage.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BinaryAttributesAndSyntaxesPreferencePage.
+     * Constructs the page with its title and description text.  The binary-attributes
+     * preference store lives in the core plugin, not the common one, so we don't
+     * call {@code setPreferenceStore()} here — the core plugin handles persistence.
      */
     public BinaryAttributesAndSyntaxesPreferencePage()
     {
@@ -132,16 +149,41 @@ public class BinaryAttributesAndSyntaxesPreferencePage extends PreferencePage im
     }
 
 
+    // ── R2-D2 ACKNOWLEDGES THE BRIEFING ROOM ─────────────────────────────────────
+    // R2-D2 rotates his dome toward the holoprojector and beeps acknowledgement.
+    // Nothing actionable here — just satisfying the interface contract.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Required by {@link IWorkbenchPreferencePage} but unused here — we don't
+     * need anything from the workbench at construction time.
+     *
+     * @param workbench  The Eclipse workbench instance — not used.
      */
     public void init( IWorkbench workbench )
     {
     }
 
 
+    // ── R2-D2 SCANS EVERY CONNECTED SHIP AND BUILDS HIS SENSOR INDEX ─────────────
+    // R2-D2 queries each docked ship's schema database, pulling every known attribute
+    // type and syntax into two sorted indices.  Then he renders those indices into
+    // two editable tables on the holotable so the Alliance team can review and adjust
+    // which signals get the binary treatment.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the full page UI: scans all connected browser connections (plus the
+     * default schema) to populate the attribute and syntax lookup maps, then creates
+     * the two table viewers with Add/Edit/Remove buttons.
+     * This is the main setup method — everything the user sees is created here.
+     *
+     * <p>For example — R2-D2's holotable layout:</p>
+     * <pre>
+     *   Binary Attributes:  [OID / Name]  [Alias]  [Add] [Edit] [Remove]
+     *   Binary Syntaxes:    [OID]         [Desc]   [Add] [Edit] [Remove]
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse.
+     * @return        The top-level composite holding both table sections.
      */
     protected Control createContents( Composite parent )
     {
@@ -479,8 +521,18 @@ public class BinaryAttributesAndSyntaxesPreferencePage extends PreferencePage im
     }
 
 
+    // ── R2-D2 WRITES THE UPDATED PROTOCOLS TO PERSISTENT STORAGE ─────────────────
+    // R2-D2 finishes reviewing the edits and transmits the updated sensor protocol
+    // lists to the ship's persistent memory banks.  Both the attribute list and the
+    // syntax list are serialized and stored so they survive a reboot — or in our
+    // case, an Eclipse restart.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Persists the current attribute and syntax lists to the core preference store
+     * when the user clicks OK or Apply.  We convert both lists to arrays and hand
+     * them to the core preferences object, which handles serialization.
+     *
+     * @return  Always true — there's no blocking validation at save time.
      */
     public boolean performOk()
     {
@@ -494,8 +546,15 @@ public class BinaryAttributesAndSyntaxesPreferencePage extends PreferencePage im
     }
 
 
+    // ── R2-D2 RELOADS THE FACTORY-ISSUE SENSOR PROTOCOLS ─────────────────────────
+    // R2-D2 dumps his current working list and reloads the original factory-default
+    // sensor protocol tables — the ones that shipped with the droid.  All custom
+    // entries the Alliance added are discarded, and both viewers are refreshed.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Resets both the attribute list and the syntax list back to the plugin's
+     * factory defaults.  Called when the user clicks "Restore Defaults."
+     * Both table viewers are refreshed after the reset so the UI is consistent.
      */
     protected void performDefaults()
     {

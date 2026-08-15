@@ -50,55 +50,110 @@ import org.apache.directory.studio.connection.core.ReferralsInfo;
 import org.apache.directory.studio.connection.core.io.ConnectionWrapperUtils;
 
 
+// ── CLASS: StudioSearchResultEnumeration — R2'S FULL SENSOR SWEEP RESULT QUEUE ─
+// After R2 fires the sensor array, he gets back a stream of hits from the
+// server.  He doesn't get them all at once — he pulls them one by one from
+// the SearchCursor as he iterates.
+// On top of the raw cursor, he handles referrals: if the server sends a
+// referral back during the sweep, he either queues it for manual follow-up,
+// or opens a connection to the referral URL and recurses into a sub-sweep.
+// This class wraps the Apache Directory API SearchCursor and implements that
+// lazy iteration + referral-handling logic.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A naming enumeration that handles referrals itself. 
+ * Lazy iterator over LDAP search results, with built-in referral handling.
+ * Wraps an Apache Directory API {@link SearchCursor} and returns
+ * {@link StudioSearchResult} instances one at a time via {@link #hasMore()} /
+ * {@link #next()}.
+ *
+ * <p>Referral handling depends on the {@link ReferralHandlingMethod}:</p>
+ * <ul>
+ *   <li>{@code IGNORE} — referrals from the server are discarded.</li>
+ *   <li>{@code FOLLOW_MANUALLY} — referral URLs are surfaced as placeholder
+ *       {@link StudioSearchResult} entries with a {@code searchContinuationUrl}.</li>
+ *   <li>{@code FOLLOW} — we automatically open the referral connection and recursively
+ *       search it, returning results from both the original and the referral server.</li>
+ * </ul>
+ * Logging is performed after each result entry and after the search-done message
+ * via the registered {@link ILdapLogger} instances.
+ * Think of this as R2's sensor sweep return queue: he pulls hits from the
+ * cursor, handles any referral redirects he encounters, and delivers each
+ * result to the caller one at a time.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class StudioSearchResultEnumeration
 {
+    /** The connection that originally issued this search. */
     private Connection connection;
 
+    /** Search parameters — stored for referral recursion. */
     private String searchBase;
     private String filter;
     private SearchControls searchControls;
     private AliasDereferencingMethod aliasesDereferencingMethod;
     private ReferralHandlingMethod referralsHandlingMethod;
     private Control[] controls;
+
+    /** The LDAP request number used for correlation in the search log. */
     private long requestNum;
+
+    /** Progress monitor for cancellation support. */
     private StudioProgressMonitor monitor;
+
+    /** Tracks referral URLs collected during this search (to avoid infinite loops). */
     private ReferralsInfo referralsInfo;
+
+    /** Running count of result entries returned so far. */
     private long resultEntryCounter;
 
+    /** The underlying Apache Directory API search cursor. */
     private SearchCursor cursor;
+
+    /** The current search result entry pulled from the cursor; null between entries. */
     private SearchResultEntry currentSearchResultEntry;
+
+    /**
+     * Current referral URL list being consumed when referral handling is FOLLOW_MANUALLY.
+     * We pick one URL at a time from this list and surface it to the caller.
+     */
     private List<String> currentReferralUrlsList;
+
+    /**
+     * A nested enumeration wrapping a recursive search on a referral target.
+     * Non-null when referral handling is FOLLOW and we are mid-way through a
+     * referral sub-sweep.
+     */
     private StudioSearchResultEnumeration referralEnumeration;
+
+    /** The SearchResultDone response from the cursor (null until the cursor is exhausted). */
     private SearchResultDone searchResultDone;
 
 
+    // ── CONSTRUCTOR — SET UP THE SENSOR SWEEP ─────────────────────────────────────
+    // We store all the parameters we might need if we encounter a referral and
+    // need to fire a recursive sub-sweep with slightly adjusted parameters.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of StudioSearchResultEnumeration.
-     * 
-     * @param connection the connection
-     * @param cursor the search cursor
-     * @param searchBase the search base
-     * @param filter the filter
-     * @param searchControls the search controls
-     * @param aliasesDereferencingMethod the aliases dereferencing method
-     * @param referralsHandlingMethod the referrals handling method
-     * @param controls the LDAP controls
-     * @param monitor the progress monitor
-     * @param referralsInfo the referrals info
+     * Creates a new {@link StudioSearchResultEnumeration}.
+     *
+     * @param connection                  The connection that issued the search.
+     * @param cursor                      The raw Apache Directory API search cursor.
+     * @param searchBase                  The original search base DN string.
+     * @param filter                      The original LDAP filter string.
+     * @param searchControls              The original search controls (scope, limits, attributes).
+     * @param aliasesDereferencingMethod  How aliases should be dereferenced.
+     * @param referralsHandlingMethod     How referrals should be handled.
+     * @param controls                    LDAP controls attached to the search request.
+     * @param requestNum                  The request number for log correlation.
+     * @param monitor                     Progress monitor for cancellation.
+     * @param referralsInfo               Referral tracking context; a fresh one is created if {@code null}.
      */
     public StudioSearchResultEnumeration( Connection connection, SearchCursor cursor, String searchBase, String filter,
         SearchControls searchControls, AliasDereferencingMethod aliasesDereferencingMethod,
         ReferralHandlingMethod referralsHandlingMethod, Control[] controls, long requestNum,
         StudioProgressMonitor monitor, ReferralsInfo referralsInfo )
     {
-        //        super( connection, searchBase, filter, searchControls, aliasesDereferencingMethod, referralsHandlingMethod,
-        //            controls, requestNum, monitor, referralsInfo );
-
         this.connection = connection;
         this.searchBase = searchBase;
         this.filter = filter;
@@ -120,6 +175,14 @@ public class StudioSearchResultEnumeration
     }
 
 
+    // ── CLOSE — SHUT DOWN THE SENSOR ARRAY ────────────────────────────────────────
+    // We close the underlying cursor and release server-side resources.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Closes the underlying {@link SearchCursor} and releases server-side resources.
+     *
+     * @throws LdapException  If closing the cursor fails.
+     */
     public void close() throws LdapException
     {
         try
@@ -133,6 +196,21 @@ public class StudioSearchResultEnumeration
     }
 
 
+    // ── HAS MORE — ADVANCE THE CURSOR AND CHECK FOR THE NEXT ENTRY ────────────────
+    // We pull from the cursor until we find a SearchResultEntry to deliver.
+    // If we hit a referral, we queue it according to the handling method.
+    // If we exhaust the cursor, we process any queued referrals.
+    // Returns true if there's something for next() to return.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Advances the iteration and returns {@code true} if there is another result
+     * to deliver via {@link #next()}.
+     * This method advances the cursor, collects referrals from the response stream,
+     * and recursively opens referral connections when needed.
+     *
+     * @return  {@code true} if {@link #next()} will return a result.
+     * @throws LdapException  If the cursor encounters a protocol error.
+     */
     public boolean hasMore() throws LdapException
     {
         try
@@ -258,6 +336,20 @@ public class StudioSearchResultEnumeration
     }
 
 
+    // ── NEXT — DELIVER THE CURRENT ENTRY ──────────────────────────────────────────
+    // If we have an entry from the cursor, we log it and wrap it in a
+    // StudioSearchResult.  If we're in manual-referral mode, we build a placeholder
+    // result from the next referral URL.  If we're in auto-follow mode, we delegate
+    // to the sub-sweep.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the current {@link StudioSearchResult} and advances internal state.
+     * Must only be called after {@link #hasMore()} returned {@code true}.
+     * Logs the entry via {@link ILdapLogger} instances.
+     *
+     * @return  The current {@link StudioSearchResult}.
+     * @throws LdapException  If an error occurs building the result.
+     */
     public StudioSearchResult next() throws LdapException
     {
         try
@@ -310,10 +402,13 @@ public class StudioSearchResultEnumeration
     }
 
 
+    // ── GET CONNECTION — WHICH SHIP IS RUNNING THIS SWEEP? ────────────────────────
+    // Returns the connection that originally issued this search.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the connection.
-     * 
-     * @return the connection
+     * Returns the {@link Connection} that issued the original search request.
+     *
+     * @return  The source connection.
      */
     public Connection getConnection()
     {
@@ -321,10 +416,16 @@ public class StudioSearchResultEnumeration
     }
 
 
+    // ── GET RESPONSE CONTROLS — WHAT DID THE SERVER SEND BACK IN THE DONE? ────────
+    // Some servers attach response controls (e.g. a paged-results cookie) to the
+    // SearchResultDone message.  We expose those here so callers can extract them.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the response controls.
-     * 
-     * @return the response controls, may be null
+     * Returns the LDAP controls sent by the server in the {@link SearchResultDone} message.
+     * These often include the paged-results response control carrying the next-page cookie.
+     * Returns an empty collection if no controls were sent.
+     *
+     * @return  A {@link Collection} of response {@link Control}s; never {@code null}.
      */
     public Collection<Control> getResponseControls()
     {

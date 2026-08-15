@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor;
@@ -61,24 +61,45 @@ import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.AbstractDocumentProvider;
 
 
+// ── CLASS: LdifDocumentProvider — REBEL TRANSMISSION RELAY ───────────────────
+// The Alliance communications centre keeps a single live copy of each
+// intercepted transmission.  When a character is typed the relay station
+// re-parses only the portion of the message that changed, updates the
+// structured model, and propagates the change to all listeners.
+// LdifDocumentProvider is that relay station: it owns the IDocument, wires
+// the LDIF partition scanner onto it, drives incremental re-parsing on every
+// DocumentEvent, and writes the file back to disk on save.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the LDIF Document Provider.
- * This class is used to share a LDIF Document and listen on document modifications.
+ * Eclipse {@link AbstractDocumentProvider} for LDIF files.
+ * Owns the {@link IDocument}, sets up LDIF partitioning via
+ * {@link LdifDocumentSetupParticipant}, performs initial full parsing, and
+ * then drives incremental re-parsing on every {@link DocumentEvent} by
+ * implementing {@link IDocumentListener}.
+ * Think of this as the Alliance relay station: keeps one live copy of the
+ * transmission and updates only the changed portion of the model on each
+ * keystroke.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LdifDocumentProvider extends AbstractDocumentProvider implements IDocumentListener
 {
 
+    /** The LDIF parser used for both full and incremental parsing. */
     private final LdifParser ldifParser;
 
+    /** Sets up LDIF partitioning on a document. */
     private final LdifDocumentSetupParticipant ldifDocumentSetupParticipant;
 
+    /** The current parsed model of the document. */
     private LdifFile ldifModel;
 
 
+    // ── CONSTRUCT THE DOCUMENT PROVIDER ───────────────────────────────────────
+    // The relay station comes online: the parser and partitioner are ready.
     /**
-     * Creates a new instance of LdifDocumentProvider.
+     * Creates a new {@code LdifDocumentProvider} with fresh
+     * {@link LdifParser} and {@link LdifDocumentSetupParticipant} instances.
      */
     public LdifDocumentProvider()
     {
@@ -88,8 +109,11 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── GET THE DOCUMENT ──────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Delegates to the superclass document cache.</p>
      */
     public IDocument getDocument( Object element )
     {
@@ -98,11 +122,12 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── GET THE PARSED MODEL ──────────────────────────────────────────────────
+    // Hand back the structured LDIF model so actions and outline pages can use it.
     /**
-     * Gets the LDIF Model
+     * Returns the current parsed {@link LdifFile} model.
      *
-     * @return
-     *      the LDIF Model
+     * @return the LDIF model
      */
     public LdifFile getLdifModel()
     {
@@ -110,16 +135,27 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── PRE-CHANGE HOOK ───────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>No-op — we do not need to act before the change.</p>
      */
     public void documentAboutToBeChanged( DocumentEvent event )
     {
     }
 
 
+    // ── INCREMENTAL RE-PARSE ON DOCUMENT CHANGE ───────────────────────────────
+    // C-3PO intercepts the updated fragment of the transmission, re-parses
+    // only the affected region, and splices the new containers into the model.
     /**
-     * Update the LDIF Model.
+     * {@inheritDoc}
+     *
+     * <p>Computes the set of {@link LdifContainer} objects that overlap the
+     * change region (expanded by one line separator on each side to capture
+     * partial record boundaries), re-parses the corresponding document text,
+     * and calls {@link LdifFile#replace} to update the model in-place.</p>
      */
     public void documentChanged( DocumentEvent event )
     {
@@ -138,7 +174,7 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
             // changeOffset+replacedTextLength, check end of record)
             List<LdifContainer> oldContainerList = new ArrayList<LdifContainer>();
             List<LdifContainer> containers = ldifModel.getContainers();
-            
+
             for ( int i = 0; i < containers.size(); i++ )
             {
                 LdifContainer ldifContainer = containers.get( i );
@@ -158,7 +194,7 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
                     for ( ; i >= 0; i-- )
                     {
                         ldifContainer = containers.get( i );
-                        
+
                         if ( !ldifContainer.isValid() || !( ldifContainer instanceof LdifRecord ) )
                         {
                             oldContainerList.add( 0, ldifContainer );
@@ -175,7 +211,7 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
                     {
                         ldifContainer = containers.get( i );
                         containerRegion = new Region( ldifContainer.getOffset(), ldifContainer.getLength() );
-                        
+
                         if ( TextUtilities.overlaps( containerRegion, changeRegion ) || changeOffsetAtEOF )
                         {
                             oldContainerList.add( ldifContainer );
@@ -203,7 +239,7 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
                     }
                 }
             }
-            
+
             LdifContainer[] oldContainers = ( LdifContainer[] ) oldContainerList
                 .toArray( new LdifContainer[oldContainerList.size()] );
             int oldCount = oldContainers.length;
@@ -233,8 +269,11 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── CREATE THE ANNOTATION MODEL ───────────────────────────────────────────
     /**
-     * Creates an LDIF annotation model.
+     * {@inheritDoc}
+     *
+     * <p>Returns a new {@link LdifExternalAnnotationModel}.</p>
      */
     protected IAnnotationModel createAnnotationModel( Object element ) throws CoreException
     {
@@ -242,15 +281,22 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── LOAD FILE CONTENT INTO DOCUMENT ───────────────────────────────────────
+    // The relay operator loads the file from disk into the document buffer,
+    // handling different editor input types (IPathEditorInput, JavaFileEditorInput,
+    // FileStoreEditorInput).
     /**
-     * Tries to read the file pointed at by <code>input</code> if it is an
-     * <code>IPathEditorInput</code>. If the file does not exist, <code>true</code>
-     * is returned.
-     *  
-     * @param document the document to fill with the contents of <code>input</code>
-     * @param input the editor input
-     * @return <code>true</code> if setting the content was successful or no file exists, <code>false</code> otherwise
-     * @throws CoreException if reading the file fails
+     * Reads the file pointed to by {@code input} (if it is an
+     * {@link IPathEditorInput} or a known file-editor input type) into
+     * {@code document}.
+     * Returns {@code true} on success or if the file does not yet exist
+     * (a new file), {@code false} if the input type is unsupported.
+     *
+     * @param document  the document to fill
+     * @param input     the editor input
+     * @return          {@code true} if the document was set successfully or the
+     *                  file does not exist yet
+     * @throws CoreException  if reading fails
      */
     private boolean setDocumentContent( IDocument document, IEditorInput input ) throws CoreException
     {
@@ -296,12 +342,13 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── READ FROM A READER INTO THE DOCUMENT ──────────────────────────────────
     /**
-     * Reads in document content from a reader and fills <code>document</code>
-     * 
-     * @param document the document to fill
-     * @param reader the source
-     * @throws IOException if reading fails
+     * Reads all characters from {@code reader} into {@code document}.
+     *
+     * @param document  the document to fill
+     * @param reader    the source reader
+     * @throws IOException  if reading fails
      */
     private void setDocumentContent( IDocument document, Reader reader ) throws IOException
     {
@@ -327,10 +374,14 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── SETUP PARTITIONING AND INITIAL PARSING ────────────────────────────────
+    // Before the relay station accepts live traffic the operator installs
+    // the partitioner, runs a full initial parse, and registers the change listener.
     /**
-     * Set up the document: partitioning and incremental parser
-     * 
-     * @param document the new document
+     * Sets up LDIF partitioning, performs the initial full parse, and
+     * registers this provider as a document listener for incremental updates.
+     *
+     * @param document  the new document
      */
     protected void setupDocument( IDocument document )
     {
@@ -347,8 +398,13 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── TEAR DOWN THE ELEMENT ─────────────────────────────────────────────────
+    // When the relay station goes offline the document listener is removed.
     /**
-     * Remove document listener.
+     * {@inheritDoc}
+     *
+     * <p>Removes this provider from the document's listener list before
+     * delegating to the superclass.</p>
      */
     protected void disposeElementInfo( Object element, ElementInfo info )
     {
@@ -359,8 +415,12 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── CREATE THE DOCUMENT ───────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Creates a new {@link Document}, loads content from the editor input,
+     * and calls {@link #setupDocument} to wire partitioning and parsing.</p>
      */
     protected IDocument createDocument( Object element ) throws CoreException
     {
@@ -378,8 +438,15 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── SAVE THE DOCUMENT ─────────────────────────────────────────────────────
+    // The relay operator transmits the current document content to the file
+    // on disk, handling workspace resources and external files differently.
     /**
      * {@inheritDoc}
+     *
+     * <p>Saves the document to the file identified by {@code element}.
+     * Supports {@link FileEditorInput} (workspace resources),
+     * {@link IPathEditorInput}, and the Eclipse 3.2/3.3 file-editor inputs.</p>
      */
     protected void doSaveDocument( IProgressMonitor monitor, Object element, IDocument document, boolean overwrite )
         throws CoreException
@@ -444,14 +511,14 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── WRITE DOCUMENT TO A WORKSPACE FILE ───────────────────────────────────
     /**
-     * Saves the document contents to a stream.
-     * 
-     * @param document the document to save
-     * @param file the file to save it to
-     * @param monitor a progress monitor to report progress
-     * @throws CoreException 
-     * @throws IOException if writing fails
+     * Writes the document content to an {@link IFile} (workspace resource).
+     *
+     * @param document  the document to save
+     * @param file      the workspace file
+     * @param monitor   a progress monitor
+     * @throws CoreException  if writing fails
      */
     private void writeDocumentContent( IDocument document, IFile file, IProgressMonitor monitor ) throws CoreException
     {
@@ -462,13 +529,14 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── WRITE DOCUMENT TO A WRITER ────────────────────────────────────────────
     /**
-     * Saves the document contents to a stream.
-     * 
-     * @param document the document to save
-     * @param writer the stream to save it to
-     * @param monitor a progress monitor to report progress
-     * @throws IOException if writing fails
+     * Writes the document content to a {@link Writer} (external file).
+     *
+     * @param document  the document to save
+     * @param writer    the destination writer
+     * @param monitor   a progress monitor (unused)
+     * @throws IOException  if writing fails
      */
     private void writeDocumentContent( IDocument document, Writer writer, IProgressMonitor monitor ) throws IOException
     {
@@ -484,8 +552,11 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── GET THE OPERATION RUNNER ──────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns {@code null} — no runnable context is needed.</p>
      */
     protected IRunnableContext getOperationRunner( IProgressMonitor monitor )
     {
@@ -493,8 +564,12 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── CHECK MODIFIABILITY ───────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns {@code true} if the file can be written, or if it does not
+     * yet exist (to allow editing new files before they are saved).</p>
      */
     public boolean isModifiable( Object element )
     {
@@ -520,8 +595,11 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── CHECK READ-ONLY ───────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns {@code !isModifiable(element)}.</p>
      */
     public boolean isReadOnly( Object element )
     {
@@ -529,8 +607,11 @@ public class LdifDocumentProvider extends AbstractDocumentProvider implements ID
     }
 
 
+    // ── CHECK STATE VALIDATION ────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Always returns {@code true} — no external state validation needed.</p>
      */
     public boolean isStateValidated( Object element )
     {

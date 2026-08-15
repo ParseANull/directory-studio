@@ -20,9 +20,25 @@
 package org.apache.directory.studio.openldap.config.acl.model;
 
 
+// ── CLASS: AclWhatClauseDn — DEATH STAR MANIFEST: DN PATTERN RESOURCE SELECTOR ──
+// Tarkin writes a security order for a specific corridor on the Death Star —
+// "protect entries under ou=Rebels,dc=galaxy,dc=far using subtree scope."
+// The DN what-clause does the same: it names a Distinguished Name pattern
+// (a hierarchical directory path) and a scope type that determines how broadly
+// that pattern matches. This class stores the type and pattern and serialises
+// them to OpenLDAP's wire format: dn[.type]="pattern".
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The  Acl what-dn clause. It has a type and a pattern.
- * The type is one of :
+ * A concrete what-clause targeting entries by their Distinguished Name (DN).
+ * The type qualifier (base, subtree, one, children, exact, regex) controls
+ * how broadly the pattern matches the directory tree. Without a type the
+ * OpenLDAP default is base (exact DN match). With a regex type the pattern
+ * can use regular-expression syntax.
+ * Think of this class as Tarkin's corridor designation on the clearance order
+ * — a DN pattern with a scope qualifier that defines which part of the
+ * directory tree this rule covers.
+ *
+ * <p>The type can be one of:</p>
  * <ul>
  *   <li>base : AclWhatClauseDnTypeEnum.BASE</li>
  *   <li>baseObject : AclWhatClauseDnTypeEnum.BASE_OBJECT</li>
@@ -34,9 +50,7 @@ package org.apache.directory.studio.openldap.config.acl.model;
  *   <li>exact : AclWhatClauseDnTypeEnum.EXACT</li>
  *   <li>regex : AclWhatClauseDnTypeEnum.REGEX</li>
  * </ul>
- * 
- * The pattern can be a DN or a regexp, depending on the type.
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class AclWhatClauseDn extends AclWhatClause
@@ -48,10 +62,21 @@ public class AclWhatClauseDn extends AclWhatClause
     private String pattern;
 
 
+    // ── Reading the Scope Type ─────────────────────────────────────────────────
+    // Tarkin's adjutant reads the corridor scope code from the order to know
+    // whether the rule applies to one room, a floor, or an entire wing.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the type.
-     * 
-     * @return the type
+     * Returns the DN scope type that qualifies the pattern match. Determines
+     * which entries in the directory hierarchy are selected.
+     *
+     * <p>For example — reading the scope code from Tarkin's order:</p>
+     * <pre>
+     *   clause.getType() == AclWhatClauseDnTypeEnum.SUBTREE
+     *   // → selects all entries below the given DN
+     * </pre>
+     *
+     * @return  The {@link AclWhatClauseDnTypeEnum}; may be {@code null} if no type was specified.
      */
     public AclWhatClauseDnTypeEnum getType()
     {
@@ -59,10 +84,21 @@ public class AclWhatClauseDn extends AclWhatClause
     }
 
 
+    // ── Stamping the Scope Type ───────────────────────────────────────────────
+    // Tarkin stamps "subtree" or "children" onto the corridor designation
+    // in his security order.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the type.
-     * 
-     * @param type the type to set
+     * Sets the DN scope type for this what-clause. Called by the ANTLR parser
+     * when it recognises a type qualifier after the "dn" keyword, or by the UI
+     * when the user picks a scope from the drop-down.
+     *
+     * <p>For example — the parser stamping SUBTREE after reading "dn.subtree=":</p>
+     * <pre>
+     *   clause.setType(AclWhatClauseDnTypeEnum.SUBTREE);
+     * </pre>
+     *
+     * @param type  The {@link AclWhatClauseDnTypeEnum} to apply.
      */
     public void setType( AclWhatClauseDnTypeEnum type )
     {
@@ -70,10 +106,21 @@ public class AclWhatClauseDn extends AclWhatClause
     }
 
 
+    // ── Reading the DN Pattern ────────────────────────────────────────────────
+    // Tarkin reads the specific corridor address (DN or regex) from the order.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the pattern.
-     * 
-     * @return the pattern
+     * Returns the DN pattern or regular expression stored in this clause.
+     * For exact/base/subtree/etc. types this is a full DN string; for regex
+     * types it is a regular expression that OpenLDAP evaluates against each
+     * candidate DN.
+     *
+     * <p>For example — reading the target DN pattern:</p>
+     * <pre>
+     *   clause.getPattern() // → "ou=Rebels,dc=galaxy,dc=far"
+     * </pre>
+     *
+     * @return  The pattern string; may be {@code null} if not yet set.
      */
     public String getPattern()
     {
@@ -81,10 +128,21 @@ public class AclWhatClauseDn extends AclWhatClause
     }
 
 
+    // ── Stamping the DN Pattern ───────────────────────────────────────────────
+    // The parser stamps the corridor address onto the order after reading it
+    // from the quoted string in the ACL text.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the pattern
-     * 
-     * @param pattern the pattern to set
+     * Sets the DN pattern or regular expression for this clause. Called by the
+     * ANTLR parser after extracting the quoted string following the {@code dn=}
+     * token, or by the UI after the user picks an entry with the DN browser.
+     *
+     * <p>For example — the parser storing the DN after "dn.exact=\"ou=Rebels\"":</p>
+     * <pre>
+     *   clause.setPattern("ou=Rebels,dc=galaxy,dc=far");
+     * </pre>
+     *
+     * @param pattern  The DN or regex pattern string.
      */
     public void setPattern( String pattern )
     {
@@ -92,8 +150,23 @@ public class AclWhatClauseDn extends AclWhatClause
     }
 
 
+    // ── Serialising the DN Clause to ACL Text ─────────────────────────────────
+    // Tarkin's adjutant writes the full corridor designation: "dn.subtree="
+    // followed by the quoted DN. If no type was specified we just write "dn=".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Serialises this clause to OpenLDAP wire format: {@code dn[.type]="pattern"}.
+     * If no type is set, the {@code .type} part is omitted.
+     *
+     * <p>For example — serialising a subtree DN clause:</p>
+     * <pre>
+     *   clause.setType(AclWhatClauseDnTypeEnum.SUBTREE);
+     *   clause.setPattern("ou=Rebels,dc=galaxy,dc=far");
+     *   clause.toString()
+     *   // → "dn.subtree=\"ou=Rebels,dc=galaxy,dc=far\""
+     * </pre>
+     *
+     * @return  The ACL text fragment for this DN what-clause.
      */
     public String toString()
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.dialogs.preferences;
@@ -51,9 +51,22 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: TextFormatsPreferencePage — IMPERIAL CODE FORMATTING STANDARDS ────
+// Aboard the Death Star, Grand Moff Tarkin's code officers enforce Imperial
+// Standard Formatting across every transmission: delimiter choice, line length,
+// character encoding, binary representation.  Deviations from the standard cause
+// data corruption in the Imperial datanet — a chaos Tarkin will not tolerate.
+// This preference page enforces the same discipline for LDAP export formats:
+// LDIF, CSV copy, CSV export, Excel, and ODF each have their own tab, their own
+// delimiter rules, their own line-separator choice — and every field must be
+// non-empty before we allow a save.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The BinaryAttributesAndSyntaxesPreferencePage is used to specify
- * binary attributes and syntaxes.
+ * The Eclipse preference page for controlling text format settings: how LDIF,
+ * CSV, Excel, and ODF exports are encoded when the user copies or exports entries.
+ * Each format gets its own tab.  Think of this class as the Imperial formatting
+ * standards manual — every export channel has its own protocol, and we validate
+ * that none of them are left blank.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -129,8 +142,16 @@ public class TextFormatsPreferencePage extends PreferencePage implements IWorkbe
     private OptionsInput odfBinaryEncodingWidget;
 
 
+    // ── TARKIN OPENS THE FORMATTING STANDARDS BRIEFING ───────────────────────────
+    // Grand Moff Tarkin calls the code officers to attention, announces the topic
+    // ("Text Formats"), reads out the scope ("Settings for text formats"), and
+    // points the secretariat to the right data stores — one for common UI
+    // preferences, one for core export settings.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of TextFormatsPreferencePage.
+     * Constructs the page with its title and description, wired to the common
+     * preference store.  Core export settings (CSV, LDIF, XLS, ODF) are stored
+     * in the core plugin store, which we access directly via {@code coreStore}.
      */
     public TextFormatsPreferencePage()
     {
@@ -140,16 +161,41 @@ public class TextFormatsPreferencePage extends PreferencePage implements IWorkbe
     }
 
 
+    // ── TARKIN ACKNOWLEDGES THE PLATFORM FRAMEWORK ────────────────────────────────
+    // Tarkin glances at the workbench and returns his gaze to the agenda.
+    // Nothing actionable — interface contract only.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Required by {@link IWorkbenchPreferencePage} — not used here.
+     *
+     * @param workbench  The Eclipse workbench instance — not used.
      */
     public void init( IWorkbench workbench )
     {
     }
 
 
+    // ── TARKIN ROUTES THE REQUEST TO THE CORRECT FORMAT SECTION ──────────────────
+    // A code officer arrives with a report tagged "CSV" — Tarkin routes him
+    // straight to the CSV section without reading every other tab.  applyData()
+    // does the same: when called with a tab-name constant, we switch the tab
+    // folder to the matching tab so the user lands in the right place.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Programmatically selects the tab matching the supplied tag string.
+     * Callers pass one of the {@code *_TAB} constants to jump directly to a
+     * specific format tab — useful when an action elsewhere in the UI needs
+     * to open this page at a particular format.
+     *
+     * <p>For example — Tarkin routing the LDIF report:</p>
+     * <pre>
+     *   applyData("LDIF");  // tabFolder.setSelection(0)
+     *   applyData("CSV");   // tabFolder.setSelection(2)
+     * </pre>
+     *
+     * @param data  One of {@link #LDIF_TAB}, {@link #TABLE_TAB}, {@link #CSV_TAB},
+     *              {@link #XLS_TAB}, or {@link #ODF_TAB}.  Ignored if null or
+     *              unrecognised.
      */
     public void applyData( Object data )
     {
@@ -179,8 +225,19 @@ public class TextFormatsPreferencePage extends PreferencePage implements IWorkbe
     }
 
 
+    // ── TARKIN ASSEMBLES THE FIVE-SECTION STANDARDS MANUAL ───────────────────────
+    // Tarkin lays out the Imperial Formatting Manual: five tabs, one per protocol
+    // (LDIF, CSV Copy, CSV Export, Excel, ODF).  Each tab contains the formatting
+    // rules for that channel.  After assembly, validate() is called to ensure no
+    // section was left blank before the manual is published.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the tab folder containing all five format tabs, pre-filled from the
+     * current preference values.  Calls {@link #validate()} at the end so the
+     * save button starts in the correct state.
+     *
+     * @param parent  The parent composite provided by Eclipse.
+     * @return        The tab folder containing all format tabs.
      */
     protected Control createContents( Composite parent )
     {
@@ -440,8 +497,19 @@ public class TextFormatsPreferencePage extends PreferencePage implements IWorkbe
     }
 
 
+    // ── TARKIN COUNTERSIGNS ALL FIVE SECTIONS OF THE MANUAL ──────────────────────
+    // Tarkin works through the manual page by page: LDIF settings (line width,
+    // separator, space-after-colon, version line), CSV export, CSV copy (table),
+    // Excel, and ODF.  Each section is written to the appropriate store — common
+    // for table/copy, core for the rest.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves all format preferences to the appropriate stores when the user clicks
+     * OK or Apply.  LDIF, CSV export, XLS, and ODF go to the core plugin store;
+     * CSV copy (table) goes to the common preference store.
+     *
+     * @return  Always true if all fields were valid (validate() would have blocked
+     *          the Apply button otherwise).
      */
     public boolean performOk()
     {
@@ -486,8 +554,15 @@ public class TextFormatsPreferencePage extends PreferencePage implements IWorkbe
     }
 
 
+    // ── TARKIN REINSTATES THE ORIGINAL IMPERIAL FORMAT STANDARDS ─────────────────
+    // A code officer hands Tarkin the original Imperial Formatting Directive —
+    // the document that predates any customization.  Tarkin restores every field
+    // on every tab to the factory values from that directive.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Resets all format preferences to their plugin-defined defaults.  Called when
+     * the user clicks "Restore Defaults."  We update every widget from the default
+     * values so the UI reflects what will be saved.
      */
     protected void performDefaults()
     {

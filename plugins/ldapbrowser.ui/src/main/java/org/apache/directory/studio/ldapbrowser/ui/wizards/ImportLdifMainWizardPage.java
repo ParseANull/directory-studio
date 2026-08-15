@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -38,8 +38,26 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Group;
 
 
+// ── CLASS: ImportLdifMainWizardPage — C-3PO LAYS OUT THE LDIF BRIEF ──────────
+// C-3PO's LDIF briefing covers four areas: which LDIF scroll to read from,
+// which server to read it to, whether to write a log of what happened
+// (with default or custom log file), and two policy options — update existing
+// entries instead of failing, and continue past individual operation errors.
+// The "Logging" and "Options" groups hold persistent dialog settings so the
+// user's last choices are pre-populated on subsequent runs.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Main Page of the LDIF Import Wizard
+ * The single page of the LDIF import wizard. Provides:
+ * <ul>
+ *   <li>A {@link FileBrowserWidget} for selecting the source LDIF file.</li>
+ *   <li>A {@link BrowserConnectionWidget} for selecting the target connection.</li>
+ *   <li>A "Logging" group with enable/disable checkbox, default/custom radio buttons,
+ *       log FileBrowserWidget (save mode, *.ldif.log), and overwrite checkbox.</li>
+ *   <li>An "Options" group with "update if entry exists" and "continue on error"
+ *       checkboxes (both persist via BrowserUIPlugin dialog settings).</li>
+ * </ul>
+ * Validation checks source file existence and readability, log file writability,
+ * and that a connection is selected.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -96,11 +114,17 @@ public class ImportLdifMainWizardPage extends WizardPage
     private Button continueOnErrorButton;
 
 
+    // ── C-3PO Accepts the LDIF Assignment ────────────────────────────────────────
+    // Title and description from the localisation bundle; starts incomplete
+    // because no LDIF file or connection is set yet.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ImportLdifMainWizardPage.
-     * 
-     * @param pageName the page name
-     * @param wizard the wizard
+     * Creates a new ImportLdifMainWizardPage with the LDIF import icon.
+     * Starts incomplete — the user must choose a source file and a connection
+     * before the Finish button enables.
+     *
+     * @param pageName  the wizard page name.
+     * @param wizard    the parent LDIF import wizard.
      */
     public ImportLdifMainWizardPage( String pageName, ImportLdifWizard wizard )
     {
@@ -115,7 +139,7 @@ public class ImportLdifMainWizardPage extends WizardPage
 
 
     /**
-     * Validates the page. This method is responsible for displaying errors, 
+     * Validates the page. This method is responsible for displaying errors,
      * as well as enabling/disabling the "Finish" button
      */
     private void validate()
@@ -193,8 +217,24 @@ public class ImportLdifMainWizardPage extends WizardPage
     }
 
 
+    // ── C-3PO Lays Out the LDIF Briefing ─────────────────────────────────────────
+    // Four UI areas stacked vertically: source file, connection, logging group,
+    // options group. Both persistent checkboxes are loaded from dialog settings.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the page UI in a three-column grid:
+     * <ul>
+     *   <li>LDIF source file selector (*.ldif, *.*).</li>
+     *   <li>Connection selector widget.</li>
+     *   <li>"Logging" group: enable checkbox, default/custom log file radios,
+     *       log FileBrowserWidget (*.ldif.log), overwrite checkbox.</li>
+     *   <li>"Options" group: "update if entry exists" and "continue on error"
+     *       checkboxes, both persisted via BrowserUIPlugin dialog settings.</li>
+     * </ul>
+     *
+     * @param parent  the parent composite.
      */
     public void createControl( Composite parent )
     {
@@ -360,8 +400,14 @@ public class ImportLdifMainWizardPage extends WizardPage
     }
 
 
+    // ── C-3PO Logs the Settings for Next Time ────────────────────────────────────
+    // Three things are persisted: the source file browser directory, the
+    // "update if entry exists" checkbox, and the "continue on error" checkbox.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the dialog settings.
+     * Saves dialog settings so the next run pre-populates the same choices:
+     * the source file browser directory, the "update if entry exists" flag,
+     * and the "continue on error" flag.
      */
     public void saveDialogSettings()
     {

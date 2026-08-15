@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -39,20 +39,17 @@ import org.eclipse.swt.widgets.Shell;
 import org.apache.directory.studio.openldap.common.ui.model.RequireConditionEnum;
 
 
+// Like Princess Leia transmitting the Rebellion's list of required
+// conditions that must be satisfied before operations proceed,
+// we present a focused set of checkboxes and let the operator
+// pick exactly one requirement condition to add to the server config.
 /**
- * The RestrictOperationDialog is used to select one required condition. The possible
- * conditions are :
- * <ul>
- * <li>authc</li>
- * <li>bind</li>
- * <li>LDAPv3</li>
- * <li>none</li>
- * <li>sasl</li>
- * <li>strong</li>
- * </ul>
- * 
- * The dialog overlay is like :
- * 
+ * A dialog for selecting a single required condition in the OpenLDAP
+ * configuration editor. We present checkboxes for each available condition
+ * (authc, bind, LDAPv3, none, sasl, strong) and let the operator choose
+ * the one to add.
+ *
+ * <p>The dialog layout looks like this:
  * <pre>
  * +-----------------------------+
  * | Required condition          |
@@ -65,31 +62,42 @@ import org.apache.directory.studio.openldap.common.ui.model.RequireConditionEnum
  * |  (Cancel)            (OK)   |
  * +-----------------------------+
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
 {
     /** The array of buttons */
     private Button[] requireConditionCheckboxes = new Button[6];
-    
+
     /** The already selected Required Conditions */
     List<RequireConditionEnum> conditions = new ArrayList<>();
-    
+
+    // Like Leia setting up the hologram projector with the RESIZE style
+    // so the briefing window can be expanded if needed, we create the
+    // dialog with resizable shell style for comfortable reading.
     /**
-     * Create a new instance of the RequireConditionDialog
-     * 
-     * @param parentShell The parent Shell
+     * Creates a new RequireConditionDialog attached to the given parent shell.
+     * We apply the RESIZE style so the operator can expand the window
+     * to read all the condition names clearly.
+     *
+     * @param parentShell the parent shell this dialog belongs to
      */
     public RequireConditionDialog( Shell parentShell )
     {
         super( parentShell );
         super.setShellStyle( super.getShellStyle() | SWT.RESIZE );
     }
-    
-    
+
+
+    // Like labeling the hologram broadcast so everyone knows this is
+    // the "RequireCondition" briefing, we stamp the dialog shell with
+    // the localized title before it appears.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to the localized
+     * "RequireCondition" label.
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -97,7 +105,7 @@ public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
         super.configureShell( shell );
         shell.setText( Messages.getString( "RequireCondition.Title" ) );
     }
-    
+
 
     /**
      * The listener in charge of exposing the changes when some checkbox is selected
@@ -108,11 +116,11 @@ public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
         public void widgetSelected( SelectionEvent e )
         {
             Object object = e.getSource();
-            
+
             if ( object instanceof Button )
             {
                 Button selectedCheckbox = (Button)object;
-                
+
                 for ( int i = 1; i < requireConditionCheckboxes.length; i++ )
                 {
                     if ( selectedCheckbox == requireConditionCheckboxes[i] )
@@ -129,8 +137,15 @@ public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
     };
 
 
+    // Like Leia's hologram materializing with the requirement conditions
+    // laid out in a grid so the operator can see the full menu at once,
+    // we build the dialog content area with the condition group and
+    // initialize selection states before handing control over.
     /**
-     * Create the Dialog for RequireCondition :
+     * Builds the main dialog content area, creating the require-condition
+     * checkbox group and initializing the selection state based on
+     * what's already been configured.
+     *
      * <pre>
      * +-----------------------------+
      * | Required condition          |
@@ -143,7 +158,9 @@ public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
      * |  (Cancel)            (OK)   |
      * +-----------------------------+
      * </pre>
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -151,19 +168,25 @@ public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
         Composite composite = ( Composite ) super.createDialogArea( parent );
         GridData gd = new GridData( GridData.FILL_BOTH );
         composite.setLayoutData( gd );
-        
+
         createRequireConditionEditGroup( composite );
         initDialog();
-        
+
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // Like the briefing crew arranging each condition name in a two-column
+    // grid and attaching the selection listener to each one so the operator's
+    // choice gets captured the moment they click, we build the require
+    // condition checkbox group here.
     /**
-     * Creates the RequireCondition input group.
-     * 
+     * Builds the require-condition checkbox group, creating one checkbox
+     * per available condition in a two-column layout and attaching the
+     * selection listener to each.
+     *
      * <pre>
      * Required condition
      * .-------------------------.
@@ -172,7 +195,8 @@ public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
      * | strong : [ ]  none : [] |
      * '-------------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent the parent composite to attach the condition group to
      */
     private void createRequireConditionEditGroup( Composite parent )
     {
@@ -190,8 +214,17 @@ public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
             requireConditionCheckboxes[i].addSelectionListener( checkboxSelectionListener );
         }
     }
-    
-    
+
+
+    // Like reviewing the Rebellion's current requirement list before
+    // the briefing goes live so only genuinely new conditions are
+    // available for selection, we disable any conditions already
+    // configured and kill the OK button if all of them are taken.
+    /**
+     * Initializes the dialog by examining which conditions are already
+     * configured and disabling those checkboxes. If every condition is
+     * already in use, the OK button is disabled to prevent duplicates.
+     */
     protected void initDialog()
     {
         List<RequireConditionEnum> elements = getElements();
@@ -201,7 +234,7 @@ public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
         for ( int i = 1; i < requireConditionCheckboxes.length; i++ )
         {
             RequireConditionEnum value = RequireConditionEnum.getCondition( requireConditionCheckboxes[i].getText() );
-            
+
             // Disable the Conditions already selected
             if ( elements.contains( value ) )
             {
@@ -213,7 +246,7 @@ public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
                 allSelected = false;
             }
         }
-        
+
         if ( allSelected )
         {
             // Disable the OK button
@@ -222,8 +255,12 @@ public class RequireConditionDialog extends AddEditDialog<RequireConditionEnum>
     }
 
 
+    // Like Leia's hologram defaulting to a blank placeholder before the
+    // operator makes their selection, we seed the edited element with
+    // UNKNOWN as the safe starting point for a brand-new condition entry.
     /**
-     * {@inheritDoc}
+     * Seeds the dialog with an UNKNOWN placeholder when the operator
+     * is adding a brand-new require-condition entry.
      */
     @Override
     public void addNewElement()

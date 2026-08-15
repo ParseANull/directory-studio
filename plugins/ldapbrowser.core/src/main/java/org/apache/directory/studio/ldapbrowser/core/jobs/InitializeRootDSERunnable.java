@@ -54,23 +54,49 @@ import org.apache.directory.studio.ldapbrowser.core.model.impl.DirectoryMetadata
 import org.apache.directory.studio.ldapbrowser.core.model.impl.Search;
 
 
+// ── CLASS: InitializeRootDSERunnable — R2-D2 READS THE DEATH STAR'S MANIFEST ─
+// R2-D2 plugs into the Death Star's central computer and downloads the main
+// system manifest: reactor location, hangar bays, shield generators, and the
+// list of all connected sub-systems.  That manifest is the Root DSE — the
+// zero-level entry every LDAP server exposes at an empty DN ("").  It lists
+// the naming contexts (base DNs), the schema sub-entry, and what capabilities
+// the server supports.  Once R2-D2 has the manifest he relays it back to the
+// Rebel fleet so they know exactly what they're dealing with.
+// This runnable loads the Root DSE attributes and uses them to populate the
+// top of the browser tree — base DN entries, the schema sub-entry, and other
+// server metadata entries.  It also runs {@link ServerTypeDetector} to figure
+// out what brand of LDAP server we're talking to.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to initialize the Root DSE.
+ * A background runnable that loads (or reloads) the Root DSE of the LDAP server.
+ * The Root DSE (Distinguished Service Entry) is a special entry at the empty DN
+ * that every LDAP server must expose.  It tells us which naming contexts
+ * (base DNs) exist, where the schema sub-entry lives, what LDAP protocol
+ * versions and controls the server supports, and vendor information.
+ * We use all of that to build the top level of the browser tree, detect server
+ * type, and update the connection's {@link DetectedConnectionProperties}.
+ * Think of it as R2-D2 reading the Death Star's main system manifest.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWithProgress
 {
-    /** The requested attributes when reading the Root DSE. */
+    // ── R2-D2's Requested Data Points ─────────────────────────────────────────
+    /**
+     * The set of Root DSE attribute names we always request.  This covers
+     * naming contexts, schema sub-entry, LDAP version, SASL mechanisms,
+     * supported extensions, controls, features, vendor name/version, and
+     * all operational attributes.
+     */
     public static final String[] ROOT_DSE_ATTRIBUTES =
-        { 
-            SchemaConstants.NAMING_CONTEXTS_AT, 
+        {
+            SchemaConstants.NAMING_CONTEXTS_AT,
             SchemaConstants.SUBSCHEMA_SUBENTRY_AT,
-            SchemaConstants.SUPPORTED_LDAP_VERSION_AT, 
+            SchemaConstants.SUPPORTED_LDAP_VERSION_AT,
             SchemaConstants.SUPPORTED_SASL_MECHANISMS_AT,
-            SchemaConstants.SUPPORTED_EXTENSION_AT, 
+            SchemaConstants.SUPPORTED_EXTENSION_AT,
             SchemaConstants.SUPPORTED_CONTROL_AT,
-            SchemaConstants.SUPPORTED_FEATURES_AT, 
+            SchemaConstants.SUPPORTED_FEATURES_AT,
             SchemaConstants.VENDOR_NAME_AT,
             SchemaConstants.VENDOR_VERSION_AT,
             SchemaConstants.ALL_OPERATIONAL_ATTRIBUTES };
@@ -78,10 +104,14 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
     private IRootDSE rootDSE;
 
 
+    // ── R2-D2 Picks Up His Data Probe ─────────────────────────────────────────
+    // Private — callers use {@link StudioBrowserJob} with the public
+    // {@link #loadRootDSE} static method; the runnable form is internal.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of InitializeRootDSERunnable.
-     * 
-     * @param rootDSE the root DSE
+     * Creates a new instance that will load the given Root DSE.
+     *
+     * @param rootDSE the Root DSE entry to populate.
      */
     private InitializeRootDSERunnable( IRootDSE rootDSE )
     {
@@ -89,8 +119,13 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
     }
 
 
+    // ── R2-D2 Plugs Into The Right Terminal ───────────────────────────────────
+    // One connection per Root DSE — the connection it belongs to.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the underlying LDAP connection for the Root DSE's browser connection.
+     *
+     * @return single-element array with the raw {@link Connection}.
      */
     public Connection[] getConnections()
     {
@@ -99,8 +134,13 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
     }
 
 
+    // ── The Mission Name For The Progress Indicator ────────────────────────────
+    // "Initializing attributes..." shown in the progress view.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the display name for this background job.
+     *
+     * @return a localised "initialise entry attributes" label.
      */
     public String getName()
     {
@@ -108,8 +148,13 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
     }
 
 
+    // ── R2-D2 Locks The Root DSE While He Reads It ────────────────────────────
+    // Two jobs loading the Root DSE simultaneously would produce a mess.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the Root DSE entry as the only locked object.
+     *
+     * @return the Root DSE.
      */
     public Object[] getLockedObjects()
     {
@@ -118,8 +163,13 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
     }
 
 
+    // ── If R2-D2 Can't Read The Manifest ──────────────────────────────────────
+    // "Could not initialise entry." error displayed to the user.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the error message shown when Root DSE loading fails.
+     *
+     * @return a localised error string.
      */
     public String getErrorMessage()
     {
@@ -127,8 +177,14 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
     }
 
 
+    // ── R2-D2 Scans The Entire Manifest ───────────────────────────────────────
+    // Sets the progress task name and delegates to {@link #loadRootDSE}, which
+    // does the actual work of searching, parsing, and populating.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Loads the Root DSE by delegating to {@link #loadRootDSE}.
+     *
+     * @param monitor the Eclipse progress monitor.
      */
     public void run( StudioProgressMonitor monitor )
     {
@@ -147,8 +203,14 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
     }
 
 
+    // ── R2-D2 Sends The All-Clear Signal ──────────────────────────────────────
+    // "Root DSE loaded — fire the AttributesInitializedEvent."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Fires an {@link AttributesInitializedEvent} so the browser tree knows
+     * the Root DSE has been freshly populated.
+     *
+     * @param monitor ignored.
      */
     public void runNotification( StudioProgressMonitor monitor )
     {
@@ -156,13 +218,41 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
     }
 
 
+    // ── R2-D2 Does The Full Download ──────────────────────────────────────────
+    // 1. Clear old children and attributes.
+    // 2. Two searches: one for operational + well-known attrs, one for user attrs
+    //    (some dumb servers refuse combined "*" and "+" requests).
+    // 3. Build the base DN entry list from namingContexts or via ONELEVEL search.
+    // 4. Add schema sub-entry and other metadata entries.
+    // 5. Try to initialise each base DN entry (check it actually exists).
+    // 6. Set Root DSE flags (hasChildren=true, initialized=true, etc.).
+    // 7. Populate DetectedConnectionProperties (vendorName/Version, server type).
+    // Synchronized because multiple tree refreshes could race here.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Loads the Root DSE.
-     * 
-     * @param browserConnection the browser connection
-     * @param monitor the progress monitor
-     * 
-     * @throws Exception the exception
+     * Loads the Root DSE of the given browser connection.  This is the main
+     * workhorse that populates the root of the browser tree.  It is
+     * {@code synchronized} to prevent two concurrent callers from corrupting
+     * the Root DSE model.
+     *
+     * <p>Sequence:</p>
+     * <ol>
+     *   <li>Clear existing children and attributes from the Root DSE.</li>
+     *   <li>Execute two LDAP OBJECT-scope searches at "" — one for operational
+     *       attributes ({@code +}) and one for user attributes ({@code *}).</li>
+     *   <li>Build a list of base DN entries either from the explicit configured
+     *       base DN, the {@code namingContexts} attribute, or a fallback
+     *       ONELEVEL search (for servers like Novell eDirectory that publish an
+     *       empty namingContext).</li>
+     *   <li>Add the schema sub-entry and other directory metadata entries.</li>
+     *   <li>Try to confirm each base DN entry exists via a separate search;
+     *       uncache it if not found.</li>
+     *   <li>Mark the Root DSE as fully initialized.</li>
+     *   <li>Update the connection's {@link DetectedConnectionProperties}.</li>
+     * </ol>
+     *
+     * @param browserConnection the connection whose Root DSE to load.
+     * @param monitor           the progress monitor.
      */
     public static synchronized void loadRootDSE( IBrowserConnection browserConnection, StudioProgressMonitor monitor )
     {
@@ -171,7 +261,7 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
 
         // delete old attributes
         IAttribute[] oldAttributes = browserConnection.getRootDSE().getAttributes();
-        
+
         if ( oldAttributes != null )
         {
             for ( IAttribute oldAttribute : oldAttributes )
@@ -204,7 +294,7 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
             // only add the specified base Dn
             Dn dn = browserConnection.getBaseDN();
             IEntry entry = browserConnection.getEntryFromCache( dn );
-            
+
             if ( entry == null )
             {
                 entry = new BaseDNEntry( dn, browserConnection );
@@ -217,11 +307,11 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
             // get base DNs from namingContexts attribute
             Set<String> namingContextSet = new HashSet<String>();
             IAttribute attribute = browserConnection.getRootDSE().getAttribute( SchemaConstants.NAMING_CONTEXTS_AT );
-            
+
             if ( attribute != null )
             {
                 String[] values = attribute.getStringValues();
-                
+
                 for ( int i = 0; i < values.length; i++ )
                 {
                     namingContextSet.add( values[i] );
@@ -232,7 +322,7 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
             {
                 for ( String namingContext : namingContextSet )
                 {
-                    if ( namingContext.length() > 0 && namingContext.charAt( namingContext.length() - 1 ) == '\u0000' )
+                    if ( namingContext.length() > 0 && namingContext.charAt( namingContext.length() - 1 ) == ' ' )
                     {
                         namingContext = namingContext.substring( 0, namingContext.length() - 1 );
                     }
@@ -243,13 +333,13 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
                         {
                             Dn dn = new Dn( namingContext );
                             IEntry entry = browserConnection.getEntryFromCache( dn );
-                            
+
                             if ( entry == null )
                             {
                                 entry = new BaseDNEntry( dn, browserConnection );
                                 browserConnection.cacheEntry( entry );
                             }
-                            
+
                             rootDseEntries.put( dn, entry );
                         }
                         catch ( LdapInvalidDnException e )
@@ -259,7 +349,7 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
                     }
                     else
                     {
-                        // special handling of empty namingContext (Novell eDirectory): 
+                        // special handling of empty namingContext (Novell eDirectory):
                         // perform a one-level search and add all result DNs to the set
                         searchRootDseEntries( browserConnection, rootDseEntries, monitor );
                     }
@@ -275,26 +365,26 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
 
         // 2nd: add schema sub-entry
         IEntry[] schemaEntries = getDirectoryMetadataEntries( browserConnection, SchemaConstants.SUBSCHEMA_SUBENTRY_AT );
-        
+
         for ( IEntry entry : schemaEntries )
         {
             if ( entry instanceof DirectoryMetadataEntry )
             {
                 ( ( DirectoryMetadataEntry ) entry ).setSchemaEntry( true );
             }
-            
+
             rootDseEntries.put( entry.getDn(), entry );
         }
 
         // get other meta data entries
         IAttribute[] rootDseAttributes = browserConnection.getRootDSE().getAttributes();
-        
+
         if ( rootDseAttributes != null )
         {
             for ( IAttribute attribute : rootDseAttributes )
             {
                 IEntry[] metadataEntries = getDirectoryMetadataEntries( browserConnection, attribute.getDescription() );
-                
+
                 for ( IEntry entry : metadataEntries )
                 {
                     rootDseEntries.put( entry.getDn(), entry );
@@ -304,7 +394,7 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
 
         // try to init entries
         StudioProgressMonitor dummyMonitor = new StudioProgressMonitor( monitor );
-        
+
         for ( IEntry entry : rootDseEntries.values() )
         {
             initBaseEntry( entry, dummyMonitor );
@@ -322,43 +412,43 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
         DetectedConnectionProperties detectedConnectionProperties = browserConnection.getConnection()
             .getDetectedConnectionProperties();
         IAttribute vendorNameAttribute = browserConnection.getRootDSE().getAttribute( "vendorName" ); //$NON-NLS-1$
-        
+
         if ( ( vendorNameAttribute != null ) && ( vendorNameAttribute.getValueSize() > 0 ) )
         {
             detectedConnectionProperties.setVendorName( vendorNameAttribute.getStringValue() );
         }
-        
+
         IAttribute vendorVersionAttribute = browserConnection.getRootDSE().getAttribute( "vendorVersion" ); //$NON-NLS-1$
-        
+
         if ( ( vendorVersionAttribute != null ) && ( vendorVersionAttribute.getValueSize() > 0 ) )
         {
             detectedConnectionProperties.setVendorVersion( vendorVersionAttribute.getStringValue() );
         }
-        
+
         IAttribute supportedControlAttribute = browserConnection.getRootDSE().getAttribute( "supportedControl" ); //$NON-NLS-1$
-        
+
         if ( ( supportedControlAttribute != null ) && ( supportedControlAttribute.getValueSize() > 0 ) )
         {
             detectedConnectionProperties.setSupportedControls( Arrays.asList( supportedControlAttribute
                 .getStringValues() ) );
         }
-        
+
         IAttribute supportedExtensionAttribute = browserConnection.getRootDSE().getAttribute( "supportedExtension" ); //$NON-NLS-1$
-        
+
         if ( ( supportedExtensionAttribute != null ) && ( supportedExtensionAttribute.getValueSize() > 0 ) )
         {
             detectedConnectionProperties.setSupportedExtensions( Arrays.asList( supportedExtensionAttribute
                 .getStringValues() ) );
         }
-        
+
         IAttribute supportedFeaturesAttribute = browserConnection.getRootDSE().getAttribute( "supportedFeatures" ); //$NON-NLS-1$
-        
+
         if ( ( supportedFeaturesAttribute != null ) && ( supportedFeaturesAttribute.getValueSize() > 0 ) )
         {
             detectedConnectionProperties.setSupportedFeatures( Arrays.asList( supportedFeaturesAttribute
                 .getStringValues() ) );
         }
-        
+
         detectedConnectionProperties
             .setServerType( ServerTypeDetector.detectServerType( browserConnection.getRootDSE() ) );
 
@@ -367,6 +457,21 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
     }
 
 
+    // ── R2-D2 Confirms Each Sub-System Is Reachable ───────────────────────────
+    // After building the list of base DNs, we do an OBJECT search for each one
+    // to make sure it actually exists on this server.  If the server returns no
+    // results for a DN (it might be on a different replica), we remove it from
+    // the cache so a phantom branch doesn't appear in the tree.
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * Validates that the given entry actually exists on the server and adds it
+     * to the Root DSE's children.  If the server returns no result (e.g. the
+     * naming context is on a different server), we remove the entry from cache
+     * rather than showing a phantom node.
+     *
+     * @param entry   the candidate Root DSE child entry to validate.
+     * @param monitor the progress monitor (dummy — errors are silently ignored).
+     */
     private static void initBaseEntry( IEntry entry, StudioProgressMonitor monitor )
     {
         IBrowserConnection browserConnection = entry.getBrowserConnection();
@@ -380,7 +485,7 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
         SearchRunnable.searchAndUpdateModel( browserConnection, search, monitor );
 
         ISearchResult[] results = search.getSearchResults();
-        
+
         if ( results != null && results.length == 1 )
         {
             // add entry to Root DSE
@@ -396,16 +501,31 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
     }
 
 
+    // ── R2-D2 Reads The Metadata Sub-System Registry ─────────────────────────
+    // Given an attribute name from the Root DSE (e.g. "subschemaSubentry"),
+    // reads its DN values, looks them up in the browser cache, and creates
+    // DirectoryMetadataEntry stubs for any not already cached.
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * Reads DN values from the specified Root DSE attribute and returns them
+     * as {@link DirectoryMetadataEntry} objects.  Uses the browser connection's
+     * entry cache to avoid creating duplicates.
+     *
+     * @param browserConnection   the connection whose Root DSE to inspect.
+     * @param metadataAttributeName the attribute name whose values are DNs
+     *                            (e.g. {@code subschemaSubentry}).
+     * @return array of {@link IEntry} stubs for those DNs, possibly empty.
+     */
     private static IEntry[] getDirectoryMetadataEntries( IBrowserConnection browserConnection,
         String metadataAttributeName )
     {
         List<Dn> metadataEntryDnList = new ArrayList<Dn>();
         IAttribute attribute = browserConnection.getRootDSE().getAttribute( metadataAttributeName );
-        
+
         if ( attribute != null )
         {
             String[] values = attribute.getStringValues();
-            
+
             for ( String dn : values )
             {
                 if ( dn != null && !"".equals( dn ) ) //$NON-NLS-1$
@@ -422,12 +542,12 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
         }
 
         IEntry[] metadataEntries = new IEntry[metadataEntryDnList.size()];
-        
+
         for ( int i = 0; i < metadataEntryDnList.size(); i++ )
         {
             Dn dn = metadataEntryDnList.get( i );
             metadataEntries[i] = browserConnection.getEntryFromCache( dn );
-            
+
             if ( metadataEntries[i] == null )
             {
                 metadataEntries[i] = new DirectoryMetadataEntry( dn, browserConnection );
@@ -435,11 +555,25 @@ public class InitializeRootDSERunnable implements StudioConnectionBulkRunnableWi
                 browserConnection.cacheEntry( metadataEntries[i] );
             }
         }
-        
+
         return metadataEntries;
     }
 
 
+    // ── R2-D2 Falls Back To A One-Level Scan ──────────────────────────────────
+    // Some servers (Novell eDirectory, Oracle Internet Directory) don't expose
+    // namingContexts properly.  We do a ONELEVEL search at the Root DSE to
+    // discover top-level entries instead.
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * Fallback method used when {@code namingContexts} is absent or empty.
+     * Performs an LDAP ONELEVEL search at the Root DSE and adds the result DNs
+     * to the {@code rootDseEntries} map.
+     *
+     * @param browserConnection the connection.
+     * @param rootDseEntries    the map to populate with discovered entries.
+     * @param monitor           the progress monitor.
+     */
     private static void searchRootDseEntries( IBrowserConnection browserConnection, Map<Dn, IEntry> rootDseEntries,
         StudioProgressMonitor monitor )
     {

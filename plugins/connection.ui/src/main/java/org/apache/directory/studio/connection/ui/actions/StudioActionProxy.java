@@ -35,32 +35,59 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 
 
+// ── CLASS: StudioActionProxy — THE REBEL PILOT'S WINGMAN ──────────────────────────
+// Han Solo never flies alone: he has R2-D2 on standby, Chewie in the co-pilot
+// seat, and the rest of the squadron monitoring comms.  StudioActionProxy is the
+// wingman for every concrete StudioAction:
+//   - It wraps the "real" action (the pilot) and presents the JFace Action interface
+//     (text, icon, enabled state, command ID) to the Eclipse toolbar/menu system.
+//   - It listens to the JFace selection provider so it can push new selection data
+//     into the real action and refresh its enabled/text state.
+//   - It listens to ConnectionEventRegistry so it refreshes when connections open,
+//     close, are added, removed, or updated — keeping the UI always consistent.
+//   - When run(), it deactivates global handlers (weapons-safety-on), runs the
+//     real action, then reactivates global handlers (weapons-safety-off).
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * Proxy class for actions. The proxy class registers for modification events and 
- * updates the real actions on every modificaton. 
+ * Abstract JFace {@link Action} wrapper for a {@link StudioAction}.
+ *
+ * <p>The proxy subscribes to two event sources:</p>
+ * <ul>
+ *   <li>The JFace {@link ISelectionProvider} — to push selection changes into the
+ *       real action and refresh its enabled/text state.</li>
+ *   <li>{@link ConnectionEventRegistry} — to refresh the action state on any
+ *       connection lifecycle event (open, close, add, remove, update, folder changes).</li>
+ * </ul>
+ *
+ * <p>During {@link #run()}, the proxy calls
+ * {@link ActionHandlerManager#deactivateGlobalActionHandlers()} before and
+ * {@link ActionHandlerManager#activateGlobalActionHandlers()} after the real
+ * action, preventing Eclipse global handler conflicts.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public abstract class StudioActionProxy extends Action implements ISelectionChangedListener, ConnectionUpdateListener
 {
 
-    /** The action handler manager, used to deactivate and activate the action handlers and key bindings. */
+    /** The action handler manager used to toggle global action key bindings around run(). */
     private ActionHandlerManager actionHandlerManager;
 
-    /** The real action. */
+    /** The real action whose logic we are proxying. */
     protected StudioAction action;
 
-    /** The selection provider. */
+    /** The selection provider this proxy listens to for selection changes. */
     protected ISelectionProvider selectionProvider;
 
 
+    // ── CONSTRUCTORS ──────────────────────────────────────────────────────────────
+
     /**
-     * Creates a new instance of StudioActionProxy.
-     * 
-     * @param selectionProvider the selection provider
-     * @param actionHandlerManager the action handler manager
-     * @param action the action
-     * @param style the style
+     * Creates a new {@link StudioActionProxy} with an explicit action style.
+     *
+     * @param selectionProvider   The viewer to listen to for selection changes.
+     * @param actionHandlerManager The manager for global action handler activation/deactivation.
+     * @param action              The real action to proxy.
+     * @param style               The JFace action style (e.g., {@link Action#AS_PUSH_BUTTON}).
      */
     protected StudioActionProxy( ISelectionProvider selectionProvider, ActionHandlerManager actionHandlerManager,
         StudioAction action, int style )
@@ -82,11 +109,11 @@ public abstract class StudioActionProxy extends Action implements ISelectionChan
 
 
     /**
-     * Creates a new instance of StudioActionProxy.
-     * 
-     * @param selectionProvider the selection provider
-     * @param actionHandlerManager the action handler manager
-     * @param action the action
+     * Creates a new {@link StudioActionProxy} with the default push-button style.
+     *
+     * @param selectionProvider   The viewer to listen to for selection changes.
+     * @param actionHandlerManager The manager for global action handler activation/deactivation.
+     * @param action              The real action to proxy.
      */
     protected StudioActionProxy( ISelectionProvider selectionProvider, ActionHandlerManager actionHandlerManager,
         StudioAction action )
@@ -95,8 +122,10 @@ public abstract class StudioActionProxy extends Action implements ISelectionChan
     }
 
 
+    // ── DISPOSE — UNSUBSCRIBE FROM EVENTS ─────────────────────────────────────────
     /**
-     * Disposes this action proxy.
+     * Unsubscribes from the connection event registry and the selection provider,
+     * disposes the real action, and nulls the reference to mark this proxy as disposed.
      */
     public void dispose()
     {
@@ -108,10 +137,11 @@ public abstract class StudioActionProxy extends Action implements ISelectionChan
     }
 
 
+    // ── IS DISPOSED ───────────────────────────────────────────────────────────────
     /**
-     * Checks if is disposed.
-     * 
-     * @return true, if is disposed
+     * Returns {@code true} if this proxy has been disposed (i.e., the real action is null).
+     *
+     * @return  {@code true} if disposed.
      */
     public boolean isDisposed()
     {
@@ -119,9 +149,14 @@ public abstract class StudioActionProxy extends Action implements ISelectionChan
     }
 
 
+    // ── CONNECTION UPDATE LISTENER — REFRESH ON ANY CONNECTION EVENT ───────────────
+    // When any connection changes (open/close/add/remove/update), we refresh the
+    // proxy's enabled state and text so the toolbar always reflects reality.
+    // ─────────────────────────────────────────────────────────────────────────────
+
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionUpdated(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     * Refreshes the proxy's enabled state and text when a connection is updated.
      */
     public final void connectionUpdated( Connection connection )
     {
@@ -132,80 +167,61 @@ public abstract class StudioActionProxy extends Action implements ISelectionChan
     }
 
 
-    /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionAdded(org.apache.directory.studio.connection.core.Connection)
-     */
+    /** {@inheritDoc} */
     public void connectionAdded( Connection connection )
     {
         connectionUpdated( connection );
     }
 
 
-    /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionRemoved(org.apache.directory.studio.connection.core.Connection)
-     */
+    /** {@inheritDoc} */
     public void connectionRemoved( Connection connection )
     {
         connectionUpdated( connection );
     }
 
 
-    /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionOpened(org.apache.directory.studio.connection.core.Connection)
-     */
+    /** {@inheritDoc} */
     public void connectionOpened( Connection connection )
     {
         connectionUpdated( connection );
     }
 
 
-    /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionClosed(org.apache.directory.studio.connection.core.Connection)
-     */
+    /** {@inheritDoc} */
     public void connectionClosed( Connection connection )
     {
         connectionUpdated( connection );
     }
 
 
-    /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionFolderModified(org.apache.directory.studio.connection.core.ConnectionFolder)
-     */
+    /** {@inheritDoc} */
     public void connectionFolderModified( ConnectionFolder connectionFolder )
     {
         connectionUpdated( null );
     }
 
 
-    /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionFolderAdded(org.apache.directory.studio.connection.core.ConnectionFolder)
-     */
+    /** {@inheritDoc} */
     public void connectionFolderAdded( ConnectionFolder connectionFolder )
     {
         connectionUpdated( null );
     }
 
 
-    /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionFolderRemoved(org.apache.directory.studio.connection.core.ConnectionFolder)
-     */
+    /** {@inheritDoc} */
     public void connectionFolderRemoved( ConnectionFolder connectionFolder )
     {
         connectionUpdated( null );
     }
 
 
+    // ── INPUT CHANGED — UPDATE REAL ACTION'S INPUT AND RESET SELECTION ────────────
     /**
-     * Input changed.
-     * 
-     * @param input the input
+     * Notifies this proxy that the viewer's input has changed.
+     * Updates the real action's input and resets the selection state.
+     *
+     * @param input  The new viewer input object.
      */
     public void inputChanged( Object input )
     {
@@ -217,8 +233,11 @@ public abstract class StudioActionProxy extends Action implements ISelectionChan
     }
 
 
+    // ── SELECTION CHANGED — PUSH NEW SELECTION INTO THE REAL ACTION ───────────────
     /**
-     * @see org.eclipse.jface.viewers.ISelectionChangedListener#selectionChanged(org.eclipse.jface.viewers.SelectionChangedEvent)
+     * {@inheritDoc}
+     * Extracts connections and folders from the new selection and passes them
+     * to the real action, then refreshes the proxy state.
      */
     public void selectionChanged( SelectionChangedEvent event )
     {
@@ -232,8 +251,10 @@ public abstract class StudioActionProxy extends Action implements ISelectionChan
     }
 
 
+    // ── UPDATE ACTION — SYNC PROXY STATE FROM REAL ACTION ─────────────────────────
     /**
-     * Updates the action.
+     * Reads the current state from the real action (enabled, text, image, checked)
+     * and pushes it into this proxy so the toolbar/menu shows the correct values.
      */
     public void updateAction()
     {
@@ -248,15 +269,17 @@ public abstract class StudioActionProxy extends Action implements ISelectionChan
     }
 
 
+    // ── RUN — DEACTIVATE HANDLERS, RUN REAL ACTION, REACTIVATE HANDLERS ───────────
     /**
-     * @see org.eclipse.jface.action.Action#run()
+     * {@inheritDoc}
+     * Temporarily deactivates global action handlers (to avoid command conflicts),
+     * runs the real action, then reactivates them.
      */
     @Override
     public void run()
     {
         if ( !isDisposed() )
         {
-            // deactivate global actions
             if ( actionHandlerManager != null )
             {
                 actionHandlerManager.deactivateGlobalActionHandlers();
@@ -264,7 +287,6 @@ public abstract class StudioActionProxy extends Action implements ISelectionChan
 
             action.run();
 
-            // activate global actions
             if ( actionHandlerManager != null )
             {
                 actionHandlerManager.activateGlobalActionHandlers();
@@ -273,10 +295,11 @@ public abstract class StudioActionProxy extends Action implements ISelectionChan
     }
 
 
+    // ── GET ACTION — ACCESS THE REAL ACTION ───────────────────────────────────────
     /**
-     * Gets the real action.
-     * 
-     * @return the real action
+     * Returns the real {@link StudioAction} that this proxy wraps.
+     *
+     * @return  The wrapped action.
      */
     public StudioAction getAction()
     {

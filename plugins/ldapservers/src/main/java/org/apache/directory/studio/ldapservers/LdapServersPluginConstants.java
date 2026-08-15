@@ -6,33 +6,54 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapservers;
 
 
+// ── CLASS: LdapServersPluginConstants — THE DEATH STAR TECHNICAL BLUEPRINT REFERENCE ───────
+// Every engineer working on the Death Star reads from the same master blueprint — the same
+// section numbers, the same system IDs, the same icon references — so nothing gets confused
+// between departments.
+// This class is that blueprint: all the string constants (plugin ID, extension point ID,
+// image paths, command IDs, view IDs) used consistently across the ldapservers plugin.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 /**
- * Constants used in the LDAP Servers plugin.
- * Final reference -> class shouldn't be extended
+ * Central repository of compile-time constants for the {@code ldapservers} plugin.
+ * Putting all IDs and paths here means there's one place to update if a value changes,
+ * and the compiler catches typos (rather than a silent mismatch at runtime).
+ * Think of it as the master blueprint reference sheet — every engineer uses the same section numbers.
+ * Final reference → class shouldn't be extended
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public final class LdapServersPluginConstants
 {
+    // ── Sealed Blueprint — No Outside Construction ───────────────────────────────────────────
+    // The Death Star's master reference is a sealed document — no one can create a personal
+    // copy or modify it directly; they can only look up values from the official reference.
+    // We prevent instantiation because this class is purely a namespace for constants.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     *  Ensures no construction of this class, also ensures there is no need for final keyword above
-     *  (Implicit super constructor is not visible for default constructor),
-     *  but is still self documenting.
+     * Prevents instantiation — this is a pure constants class, not meant to be constructed.
+     * Accessing any constant via the class name (e.g., {@code LdapServersPluginConstants.PLUGIN_ID})
+     * is the correct usage.
+     *
+     * <p>For example — the blueprint is sealed:</p>
+     * <pre>
+     *   Galen Erso: "This document cannot be copied. Read it on-site."
+     *   new LdapServersPluginConstants() → compile error (constructor is private).
+     * </pre>
      */
     private LdapServersPluginConstants()
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.editor.widgets;
 
@@ -34,8 +34,20 @@ import org.apache.directory.studio.templateeditor.model.widgets.TemplateLabel;
 import org.apache.directory.studio.templateeditor.model.widgets.WidgetAlignment;
 
 
+// ── CLASS: EditorLabel — THE TANTIVE IV STATUS READOUT DISPLAY ───────────────────
+// On the Tantive IV's bridge, the status readout displays current values — shield
+// strength, fuel level, whatever the crew needs to see — but the operator can't
+// type into it. It's read-only. This class is that readout: it displays the current
+// value of an LDAP attribute (or a static string) as a non-editable Text widget.
+// Multi-line readouts are sized by font metrics so they show the right number of
+// rows. '$' characters can be interpreted as newlines if the template says so.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an editor label.
+ * A read-only display widget that shows an LDAP attribute's value (or a static
+ * string from the template) as a non-editable SWT {@link Text} control. The label
+ * can display single or multiple rows, and can convert {@code $} characters to
+ * newlines. It doesn't allow editing — it's purely informational.
+ * Think of this as the status readout panel on the Tantive IV.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -45,15 +57,17 @@ public class EditorLabel extends EditorWidget<TemplateLabel>
     private Text label;
 
 
+    // ── CONSTRUCTOR: MOUNT THE READOUT DISPLAY ────────────────────────────────────
+    // The technician installs the status readout panel. It reads from a specific
+    // LDAP attribute type (or uses a static value) as declared in the template model.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EditorLabel.
-     * 
-     * @param editor
-     *      the associated editor
-     * @param templateLabel
-     *      the associated template label
-     * @param toolkit
-     *      the associated toolkit
+     * Creates a new {@code EditorLabel} that displays the bound LDAP attribute's
+     * value (or a static string) in a non-editable text widget.
+     *
+     * @param editor         the owning entry editor
+     * @param templateLabel  the template model specifying attribute type, value, rows, etc.
+     * @param toolkit        the form toolkit
      */
     public EditorLabel( IEntryEditor editor, TemplateLabel templateLabel, FormToolkit toolkit )
     {
@@ -61,8 +75,16 @@ public class EditorLabel extends EditorWidget<TemplateLabel>
     }
 
 
+    // ── CREATE WIDGET: BUILD THE READOUT ─────────────────────────────────────────
+    // We create the non-editable Text widget with the correct style and size, then
+    // fill it with the current attribute value.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the read-only {@link Text} control, sizes it for the declared number
+     * of rows, fills it with the current LDAP attribute value, and returns the parent.
+     *
+     * @param parent  the parent composite
+     * @return the parent composite (label is placed directly in it)
      */
     public Composite createWidget( Composite parent )
     {
@@ -76,13 +98,17 @@ public class EditorLabel extends EditorWidget<TemplateLabel>
     }
 
 
+    // ── INIT WIDGET: CONFIGURE THE READOUT DISPLAY ───────────────────────────────
+    // We create the Text widget in read-only mode, set its background to match the
+    // parent's so it looks like a label not an editable field, and compute the height
+    // hint if multiple rows are requested.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and initializes the widget UI.
+     * Creates a non-editable, background-matched {@link Text} widget. Computes the
+     * height hint from font metrics if the template requests more than one row.
      *
-     * @param parent
-     *      the parent composite
-     * @return
-     *      the associated composite
+     * @param parent  the parent composite
+     * @return the parent composite
      */
     private Composite initWidget( Composite parent )
     {
@@ -100,7 +126,7 @@ public class EditorLabel extends EditorWidget<TemplateLabel>
         if ( numberOfRows != 1 )
         {
             GC gc = new GC( parent );
-            
+
             try
             {
                 gc.setFont( label.getFont() );
@@ -117,11 +143,12 @@ public class EditorLabel extends EditorWidget<TemplateLabel>
     }
 
 
+    // ── GET STYLE: CALCULATE THE TEXT WIDGET STYLE ───────────────────────────────
     /**
-     * Gets the style of the widget.
+     * Returns the SWT style flags for the Text widget based on the template's row
+     * count and horizontal alignment settings.
      *
-     * @return
-     *      the style of the widget
+     * @return combined SWT style constant
      */
     private int getStyle()
     {
@@ -152,8 +179,15 @@ public class EditorLabel extends EditorWidget<TemplateLabel>
     }
 
 
+    // ── UPDATE WIDGET: REFRESH THE READOUT VALUE ─────────────────────────────────
+    // The status readout refreshes: we look up the current LDAP attribute value (or
+    // static value), apply the dollar-sign-to-newline conversion if needed, and
+    // set it on the text widget.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the widget's content.
+     * Re-reads the LDAP attribute value (or static template value) and updates the
+     * text display. Converts '$' to newline if the template's dollarSignIsNewLine
+     * flag is set.
      */
     private void updateWidget()
     {
@@ -193,13 +227,14 @@ public class EditorLabel extends EditorWidget<TemplateLabel>
             label.setText( text );
         }
 
-        // Forcing the re-layout of the label from its parent 
+        // Forcing the re-layout of the label from its parent
         label.getParent().layout();
     }
 
 
+    // ── UPDATE: REFRESH THE DISPLAY ──────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Refreshes the label's display value from the current LDAP working copy.
      */
     public void update()
     {
@@ -207,8 +242,9 @@ public class EditorLabel extends EditorWidget<TemplateLabel>
     }
 
 
+    // ── DISPOSE: SHUT DOWN THE READOUT ───────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Disposes the underlying SWT Text widget.
      */
     public void dispose()
     {

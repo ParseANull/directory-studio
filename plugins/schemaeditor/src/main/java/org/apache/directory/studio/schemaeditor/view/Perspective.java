@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view;
 
@@ -35,10 +35,25 @@ import org.eclipse.ui.IPageLayout;
 import org.eclipse.ui.IPerspectiveFactory;
 
 
+// ── CLASS: Perspective — THE TANTIVE IV BRIDGE ───────────────────────────────
+// When the Tantive IV powers up at the start of A New Hope, every crew member
+// moves to their designated console — helm at the front, communications to the
+// side, engineering below — each station positioned exactly where it needs to
+// be before the Star Destroyer appears on sensors.
+// This class does the same for the Schema Editor workspace: it places the
+// Schema View, Hierarchy View, Projects View, Problems View, and Search View
+// into their assigned positions the moment the perspective first opens.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Schema Editor Perspective.
- * <p>
- * It is composed of two views, the Schema View and the Problems View, and the editor part.
+ * Defines the initial arrangement of views and editors for the Schema Editor
+ * perspective — the overall "window layout" that Eclipse shows when a user
+ * switches into Schema Editor mode.
+ * It hooks into Eclipse's perspective extension point and is invoked once by
+ * the workbench when the perspective opens for the first time; after that,
+ * Eclipse restores the layout from its workspace memento automatically.
+ * Think of it as the Tantive IV bridge: every station is positioned before
+ * the captain arrives, so the crew can work together without reorganising on
+ * the fly.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -54,8 +69,33 @@ public class Perspective implements IPerspectiveFactory
     public static final String bottomFolderId = PluginConstants.PERSPECTIVE_BOTTOM_FOLDER_ID;
 
 
+    // ── CREW TAKES THEIR STATIONS ─────────────────────────────────────────────
+    // The Tantive IV bridge comes to life: the helm officer slides into position
+    // at the left panel, the engineering team fans out below, and the comms
+    // officer heads to the bottom-right station — all without a word.
+    // We place the Schema View and Hierarchy View in the top-left folder (30%
+    // of the window width), pin the Projects View below them as a standalone
+    // panel, and dock Problems and Search at the bottom — each crew member at
+    // their console, ready for the Star Destroyer.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Lays out all the Schema Editor views and registers perspective shortcuts
+     * the first time Eclipse builds this perspective for a workbench window.
+     * Without this method, the user would land in a blank perspective and have
+     * to drag every view into place by hand — not a great first impression.
+     * Eclipse calls this exactly once per fresh perspective; after that the
+     * workspace memento handles restoring whatever layout the user has settled on.
+     *
+     * <p>For example — the Tantive IV bridge crew taking their stations:</p>
+     * <pre>
+     *   Helm station   → SchemaView + HierarchyView, top-left, 30% width
+     *   Captain's seat → ProjectsView, standalone below helm, non-closeable
+     *   Engineering    → ProblemsView, bottom panel, 30% height
+     *   Comms          → SearchView, also in the bottom panel
+     * </pre>
+     *
+     * @param layout  the page-layout object Eclipse provides for us to arrange
+     *                views and folders into; think of it as the bridge blueprint
      */
     public void createInitialLayout( IPageLayout layout )
     {
@@ -63,10 +103,10 @@ public class Perspective implements IPerspectiveFactory
         layout.setEditorAreaVisible( true );
         String editorAreaId = layout.getEditorArea();
 
-        // Creating top left folder 
+        // Creating top left folder
         IFolderLayout topLeftFolder = layout.createFolder( topLeftFolderId, IPageLayout.LEFT, 0.3f, editorAreaId );
 
-        // Creating bottom folder 
+        // Creating bottom folder
         IFolderLayout bottomFolder = layout.createFolder( bottomFolderId, IPageLayout.BOTTOM, 0.7f, editorAreaId );
 
         // Adding Views

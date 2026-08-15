@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.model.difference;
 
@@ -34,23 +34,51 @@ import org.apache.directory.api.util.Strings;
 import org.apache.directory.studio.schemaeditor.model.Schema;
 
 
+// ── CLASS: DifferenceEngine — Yoda Lifts The X-Wing From The Swamp ───────────
+// On Dagobah, Luke stands before his half-sunken X-wing and says it's too big,
+// too heavy, too impossible to lift.  Yoda closes his eyes, reaches out with the
+// Force, and the entire fighter rises from the swamp — every component accounted
+// for, placed precisely on solid ground.  DifferenceEngine is that moment: given
+// two lists of Schema objects (any size), it lifts every attribute type and object
+// class out of the swamp of raw data and surfaces exactly what changed between
+// them, no matter how deeply nested the difference is.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the difference engine.
- * It is used to generate the difference between two Objects.
+ * The core comparison engine: given two lists of {@link Schema} objects, it
+ * computes a structured list of {@link SchemaDifference} records — one per
+ * schema — each containing the exact attribute types and object classes that
+ * were added, removed, or modified, plus the specific property-level changes
+ * within each element.
+ * Think of it as Yoda lifting Luke's X-wing: no matter how large or tangled
+ * the schema, every change surfaces precisely and in the right place.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DifferenceEngine
 {
+    // ── Yoda Lifts Two Full Schema Lists Out Of The Swamp ─────────────────────
+    // Luke hands Yoda two muddy swamp snapshots (the "before" list and the
+    // "after" list).  Yoda index-maps every schema by lowercase name, walks
+    // both lists systematically — schemas only in L1 are REMOVED, schemas only
+    // in L2 are ADDED, schemas in both get a deep-dive comparison.
+    // "Do, or do not.  There is no try."  Every schema gets a verdict.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the differences between two Lists of Schemas.
+     * Compares two lists of schemas and returns one {@link SchemaDifference} per
+     * schema encountered across both lists.
+     * Schemas only in {@code l1} are REMOVED; schemas only in {@code l2} are
+     * ADDED; schemas in both get a full property-by-property deep comparison.
      *
-     * @param l1
-     *      the first list
-     * @param l2
-     *      the second list
-     * @return
-     *      the differences between the two schema Lists
+     * <p>For example — Yoda compares the before and after swamp contents:</p>
+     * <pre>
+     *   List&lt;SchemaDifference&gt; diffs = DifferenceEngine.getDifferences( before, after );
+     *   // Each entry says "schema X was ADDED / REMOVED / MODIFIED / IDENTICAL"
+     *   // plus nested AT and OC differences for anything that changed.
+     * </pre>
+     *
+     * @param l1  the "before" list of schemas (may be empty, not null)
+     * @param l2  the "after" list of schemas (may be empty, not null)
+     * @return    a list of {@link SchemaDifference} objects covering every schema in both lists
      */
     public static List<SchemaDifference> getDifferences( List<Schema> l1, List<Schema> l2 )
     {
@@ -147,7 +175,7 @@ public class DifferenceEngine
                         schemaDifference.addAttributeTypeDifference( attributeTypeDifference );
                         schemaDifference.setType( DifferenceType.MODIFIED );
                     }
-                    // If atFromL1 exists, then it has already been processed when looping on the first list. 
+                    // If atFromL1 exists, then it has already been processed when looping on the first list.
                 }
 
                 // Building Maps for object classes
@@ -200,7 +228,7 @@ public class DifferenceEngine
                         schemaDifference.addObjectClassDifference( objectClassDifference );
                         schemaDifference.setType( DifferenceType.MODIFIED );
                     }
-                    // If ocFromL1 exists, then it has already been processed when looping on the first list. 
+                    // If ocFromL1 exists, then it has already been processed when looping on the first list.
                 }
             }
         }
@@ -234,15 +262,29 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Compares Two Object Classes Property By Property ─────────────────
+    // With two object classes hovering in front of him, Yoda checks every
+    // property in turn: aliases, description, obsolete flag, class type, superior
+    // classes, mandatory attribute types, optional attribute types.  For each one
+    // that differs, he produces a PropertyDifference and adds it to the list.
+    // "Judge me by my size, do you?"  No — he judges by every field.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the differences between two ObjectClassImpl Objects.
+     * Compares two {@link ObjectClass} objects property by property and returns a
+     * list of {@link PropertyDifference} objects for every field that changed.
+     * Returns an empty list if the two object classes are functionally identical.
+     * The result is added to the containing {@link ObjectClassDifference} by the
+     * calling code.
      *
-     * @param oc1
-     *      the source ObjectClassImpl Object
-     * @param oc2
-     *      the destination ObjectClassImpl Object
-     * @return
-     *      the differences between two ObjectClassImpl Objects.
+     * <p>For example — Yoda's object-class inspection:</p>
+     * <pre>
+     *   List&lt;PropertyDifference&gt; diffs = DifferenceEngine.getDifferences( oc1, oc2 );
+     *   // diffs might contain: [AliasDifference(ADDED,"sn"), DescriptionDifference(MODIFIED)]
+     * </pre>
+     *
+     * @param oc1  the source ObjectClass ("before")
+     * @param oc2  the destination ObjectClass ("after")
+     * @return     a list of property-level differences; empty if unchanged
      */
     public static List<PropertyDifference> getDifferences( ObjectClass oc1, ObjectClass oc2 )
     {
@@ -285,15 +327,29 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Compares Two Attribute Types Property By Property ────────────────
+    // Yoda hovers two attribute types side-by-side and runs a thorough property
+    // scan: aliases, description, obsolete, usage, superior AT, syntax, syntax
+    // length, single-value, collective, no-user-modification, equality, ordering,
+    // and substring matching rules.  Any property that differs generates a
+    // PropertyDifference in the result list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the differences between two AttributeType Objects.
+     * Compares two {@link AttributeType} objects property by property and returns
+     * a list of {@link PropertyDifference} objects for every field that changed.
+     * Returns an empty list if the two attribute types are functionally identical.
+     * This is the most detailed comparison in the engine — attribute types have
+     * more properties than any other schema element type.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the differences between two AttributeType Objects.
+     * <p>For example — Yoda's attribute-type inspection:</p>
+     * <pre>
+     *   List&lt;PropertyDifference&gt; diffs = DifferenceEngine.getDifferences( at1, at2 );
+     *   // might return [SyntaxDifference(MODIFIED), EqualityDifference(ADDED)]
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     a list of property-level differences; empty if unchanged
      */
     public static List<PropertyDifference> getDifferences( AttributeType at1, AttributeType at2 )
     {
@@ -390,15 +446,25 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Scans The Name Lists ─────────────────────────────────────────────
+    // Yoda checks every name in the first object's alias list against the second's.
+    // Names that appear in so1 but not so2 are REMOVED; names in so2 but not so1
+    // are ADDED.  One AliasDifference per name change.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Aliases' differences between the two SchemaObject Objects.
+     * Compares the alias (name) lists of two schema objects and returns one
+     * {@link AliasDifference} for each alias that was added or removed.
+     * Returns an empty list if both name lists are identical.
      *
-     * @param so1
-     *      the source SchemaObject Object
-     * @param so2
-     *      the destination SchemaObject Object
-     * @return
-     *      the 'Aliases' differences between the two SchemaObject Objects
+     * <p>For example — Yoda scans the name plates:</p>
+     * <pre>
+     *   // so1 has ["cn"], so2 has ["cn","commonName"]
+     *   // result: one AliasDifference(ADDED, newValue="commonName")
+     * </pre>
+     *
+     * @param so1  the source SchemaObject ("before")
+     * @param so2  the destination SchemaObject ("after")
+     * @return     a list of alias-level differences; empty if name lists match
      */
     private static List<PropertyDifference> getAliasesDifferences( SchemaObject so1, SchemaObject so2 )
     {
@@ -431,15 +497,24 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Reads The Description Plaque ─────────────────────────────────────
+    // Yoda checks the description field — null vs. non-null cases generate ADDED
+    // or REMOVED; both non-null but different generate MODIFIED.  If both are null
+    // or identical, null is returned (no difference).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Description' difference between the two SchemaObject Objects.
+     * Compares the {@code DESCRIPTION} fields of two schema objects and returns a
+     * {@link DescriptionDifference} if they differ, or {@code null} if they match.
      *
-     * @param so1
-     *      the source SchemaObject Object
-     * @param so2
-     *      the destination SchemaObject Object
-     * @return
-     *      the 'Description' difference between the two SchemaObject Objects
+     * <p>For example — Yoda reads the description plaque:</p>
+     * <pre>
+     *   // so1.description = null, so2.description = "Common name"
+     *   // result: DescriptionDifference(ADDED, newValue="Common name")
+     * </pre>
+     *
+     * @param so1  the source SchemaObject ("before")
+     * @param so2  the destination SchemaObject ("after")
+     * @return     a {@link DescriptionDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getDescriptionDifference( SchemaObject so1, SchemaObject so2 )
     {
@@ -473,15 +548,24 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Obsolete Flag ─────────────────────────────────────────
+    // The obsolete flag is a boolean; Yoda simply compares them.  If they differ,
+    // he notes a MODIFIED ObsoleteDifference with old and new boolean values.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Obsolete' difference between the two SchemaObject Objects.
+     * Compares the {@code OBSOLETE} flags of two schema objects and returns an
+     * {@link ObsoleteDifference} if the flag was toggled, or {@code null} if
+     * both are the same.
      *
-     * @param so1
-     *      the source SchemaObject Object
-     * @param so2
-     *      the destination SchemaObject Object
-     * @return
-     *      the 'Obsolete' difference between the two SchemaObject Objects
+     * <p>For example — Yoda checks the obsolete label:</p>
+     * <pre>
+     *   // so1.obsolete = false, so2.obsolete = true
+     *   // result: ObsoleteDifference(oldValue=false, newValue=true)
+     * </pre>
+     *
+     * @param so1  the source SchemaObject ("before")
+     * @param so2  the destination SchemaObject ("after")
+     * @return     an {@link ObsoleteDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getObsoleteDifference( SchemaObject so1, SchemaObject so2 )
     {
@@ -500,15 +584,24 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Class Type Badge ─────────────────────────────────────
+    // The class type badge says STRUCTURAL, AUXILIARY, or ABSTRACT.  If the two
+    // object classes carry different badges, Yoda produces a ClassTypeDifference.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Class type' difference between the two ObjectClassImpl Objects.
+     * Compares the {@code objectClass} types of two ObjectClass objects and
+     * returns a {@link ClassTypeDifference} if they differ, or {@code null} if
+     * they are the same.
      *
-     * @param oc1
-     *      the source ObjectClassImpl Object
-     * @param oc2
-     *      the destination ObjectClassImpl Object
-     * @return
-     *      the 'Class type' difference between the two ObjectClassImpl Objects
+     * <p>For example — Yoda checks the class badge:</p>
+     * <pre>
+     *   // oc1.type = STRUCTURAL, oc2.type = AUXILIARY
+     *   // result: ClassTypeDifference(oldValue=STRUCTURAL, newValue=AUXILIARY)
+     * </pre>
+     *
+     * @param oc1  the source ObjectClass ("before")
+     * @param oc2  the destination ObjectClass ("after")
+     * @return     a {@link ClassTypeDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getClassTypeDifference( ObjectClass oc1, ObjectClass oc2 )
     {
@@ -527,15 +620,24 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Scans The Superior Class Roster ─────────────────────────────────
+    // Yoda checks which object classes each OC inherits from.  Any superior OID
+    // in oc1 but not oc2 is REMOVED; any in oc2 but not oc1 is ADDED.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Superior Classes' differences between the two ObjectClassImpl Objects.
+     * Compares the list of superior object class OIDs between two ObjectClass
+     * objects and returns one {@link SuperiorOCDifference} per OID that was added
+     * or removed.
      *
-     * @param oc1
-     *      the source ObjectClassImpl Object
-     * @param oc2
-     *      the destination ObjectClassImpl Object
-     * @return
-     *      the 'Superior Classes' differences between the two ObjectClassImpl Objects
+     * <p>For example — Yoda scans the inheritance roster:</p>
+     * <pre>
+     *   // oc1 inherits from ["top"], oc2 from ["top","person"]
+     *   // result: one SuperiorOCDifference(ADDED, newValue="person")
+     * </pre>
+     *
+     * @param oc1  the source ObjectClass ("before")
+     * @param oc2  the destination ObjectClass ("after")
+     * @return     a list of {@link SuperiorOCDifference} objects; empty if unchanged
      */
     private static List<PropertyDifference> getSuperiorClassesDifferences( ObjectClass oc1, ObjectClass oc2 )
     {
@@ -568,15 +670,23 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Scans The Mandatory Attribute Type Roster ────────────────────────
+    // Yoda checks the MUST list — attribute types that every entry of this OC
+    // must have.  Each OID that appeared or disappeared gets a MandatoryATDifference.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Mandatory attribute types' differences between the two ObjectClassImpl Objects.
+     * Compares the MUST attribute type lists of two ObjectClass objects and
+     * returns one {@link MandatoryATDifference} per OID that was added or removed.
      *
-     * @param oc1
-     *      the source ObjectClassImpl Object
-     * @param oc2
-     *      the destination ObjectClassImpl Object
-     * @return
-     *      the 'Mandatory attribute types' differences between the two ObjectClassImpl Objects
+     * <p>For example — Yoda checks the required-fields list:</p>
+     * <pre>
+     *   // oc1.must = ["cn","sn"], oc2.must = ["cn"]
+     *   // result: one MandatoryATDifference(REMOVED, oldValue="sn")
+     * </pre>
+     *
+     * @param oc1  the source ObjectClass ("before")
+     * @param oc2  the destination ObjectClass ("after")
+     * @return     a list of {@link MandatoryATDifference} objects; empty if unchanged
      */
     private static List<PropertyDifference> getMandatoryAttributeTypesDifferences( ObjectClass oc1,
         ObjectClass oc2 )
@@ -610,15 +720,22 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Scans The Optional Attribute Type Roster ─────────────────────────
+    // Same pattern as mandatory, but for the MAY list — optional attribute types.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Optional attribute types' differences between the two ObjectClassImpl Objects.
+     * Compares the MAY attribute type lists of two ObjectClass objects and
+     * returns one {@link OptionalATDifference} per OID that was added or removed.
      *
-     * @param oc1
-     *      the source ObjectClassImpl Object
-     * @param oc2
-     *      the destination ObjectClassImpl Object
-     * @return
-     *      the 'Optional attribute types' differences between the two ObjectClassImpl Objects
+     * <p>For example — Yoda checks the optional-fields list:</p>
+     * <pre>
+     *   // oc1.may = ["mail"], oc2.may = ["mail","telephoneNumber"]
+     *   // result: one OptionalATDifference(ADDED, newValue="telephoneNumber")
+     * </pre>
+     *
+     * @param oc1  the source ObjectClass ("before")
+     * @param oc2  the destination ObjectClass ("after")
+     * @return     a list of {@link OptionalATDifference} objects; empty if unchanged
      */
     private static List<PropertyDifference> getOptionalAttributeTypesDifferences( ObjectClass oc1,
         ObjectClass oc2 )
@@ -652,15 +769,24 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Usage Label ───────────────────────────────────────────
+    // The USAGE field on an attribute type says who it's for: userApplications,
+    // directoryOperation, distributedOperation, or dSAOperation.  A change here
+    // means the attribute's purpose was reclassified — Yoda notes it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Usage' difference between the two AttributeType Objects.
+     * Compares the {@code USAGE} values of two AttributeType objects and returns
+     * a {@link UsageDifference} if they differ, or {@code null} if they match.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the 'Usage' difference between the two AttributeType Objects
+     * <p>For example — Yoda checks the usage label:</p>
+     * <pre>
+     *   // at1.usage = userApplications, at2.usage = directoryOperation
+     *   // result: UsageDifference(oldValue=userApplications, newValue=directoryOperation)
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     a {@link UsageDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getUsageDifference( AttributeType at1, AttributeType at2 )
     {
@@ -679,15 +805,24 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Superior Attribute Type ────────────────────────────────
+    // The SUPERIOR field for an attribute type can be absent (null), set, or
+    // changed — Yoda handles all three cases and returns null if unchanged.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Superior' difference between the two AttributeType Objects.
+     * Compares the {@code SUP} (superior attribute type OID) of two AttributeType
+     * objects and returns a {@link SuperiorATDifference} if it changed, or
+     * {@code null} if it's the same.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the 'Superior' difference between the two AttributeType Objects
+     * <p>For example — Yoda checks the inheritance link:</p>
+     * <pre>
+     *   // at1.sup = null, at2.sup = "name"
+     *   // result: SuperiorATDifference(ADDED, newValue="name")
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     a {@link SuperiorATDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getSuperiorDifference( AttributeType at1, AttributeType at2 )
     {
@@ -721,15 +856,24 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Syntax OID ────────────────────────────────────────────
+    // The SYNTAX field defines the data format an attribute value must conform to
+    // (e.g. Integer, DirectoryString).  Yoda checks if the OID changed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Syntax' difference between the two AttributeType Objects.
+     * Compares the {@code SYNTAX} OIDs of two AttributeType objects and returns a
+     * {@link SyntaxDifference} if they differ, or {@code null} if they match.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the 'Syntax' difference between the two AttributeType Objects
+     * <p>For example — Yoda inspects the syntax OID:</p>
+     * <pre>
+     *   // at1.syntax = "1.3.6.1.4.1.1466.115.121.1.26" (IA5String)
+     *   // at2.syntax = "1.3.6.1.4.1.1466.115.121.1.15" (DirectoryString)
+     *   // result: SyntaxDifference(MODIFIED, old=..26, new=..15)
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     a {@link SyntaxDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getSyntaxDifference( AttributeType at1, AttributeType at2 )
     {
@@ -763,15 +907,26 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Syntax Length Cap ─────────────────────────────────────
+    // The syntax length constrains the maximum value length (e.g. max 256 chars).
+    // A zero means "unconstrained"; Yoda treats 0↔non-zero as ADDED/REMOVED.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Syntax length' difference between the two AttributeType Objects.
+     * Compares the {@code SYNTAX} length constraints of two AttributeType objects
+     * and returns a {@link SyntaxLengthDifference} if they differ, or {@code null}
+     * if they match.
+     * A length of 0 means "not specified" — going from 0 to non-zero is ADDED;
+     * non-zero to 0 is REMOVED; non-zero to a different non-zero is MODIFIED.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the 'Syntax length' difference between the two AttributeType Objects
+     * <p>For example — Yoda checks the length cap:</p>
+     * <pre>
+     *   // at1.syntaxLength = 0 (unconstrained), at2.syntaxLength = 256
+     *   // result: SyntaxLengthDifference(ADDED, newValue=256L)
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     a {@link SyntaxLengthDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getSyntaxLengthDifference( AttributeType at1, AttributeType at2 )
     {
@@ -805,15 +960,24 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Single-Value Flag ─────────────────────────────────────
+    // The SINGLE-VALUE flag says whether an attribute can hold only one value.
+    // If the flag was toggled, Yoda records a SingleValueDifference.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Single value' difference between the two AttributeType Objects.
+     * Compares the {@code SINGLE-VALUE} flags of two AttributeType objects and
+     * returns a {@link SingleValueDifference} if the flag was toggled, or
+     * {@code null} if they match.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the 'Single value' difference between the two AttributeType Objects
+     * <p>For example — Yoda checks the single-value flag:</p>
+     * <pre>
+     *   // at1.singleValued = false, at2.singleValued = true
+     *   // result: SingleValueDifference(oldValue=false, newValue=true)
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     a {@link SingleValueDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getSingleValueDifference( AttributeType at1, AttributeType at2 )
     {
@@ -832,15 +996,24 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Collective Flag ───────────────────────────────────────
+    // The COLLECTIVE flag marks subtree-wide shared attributes.  If toggled, Yoda
+    // records a CollectiveDifference.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Collective' difference between the two AttributeType Objects.
+     * Compares the {@code COLLECTIVE} flags of two AttributeType objects and
+     * returns a {@link CollectiveDifference} if the flag was toggled, or
+     * {@code null} if they match.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the 'Collective' difference between the two AttributeType Objects
+     * <p>For example — Yoda checks the collective flag:</p>
+     * <pre>
+     *   // at1.collective = false, at2.collective = true
+     *   // result: CollectiveDifference(oldValue=false, newValue=true)
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     a {@link CollectiveDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getCollectiveDifference( AttributeType at1, AttributeType at2 )
     {
@@ -859,15 +1032,26 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The User-Modification Lock ────────────────────────────────
+    // The NO-USER-MODIFICATION flag locks an attribute against user writes.  If
+    // the lock state changed, Yoda records a NoUserModificationDifference.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'No user modification' difference between the two AttributeType Objects.
+     * Compares the {@code NO-USER-MODIFICATION} flags of two AttributeType objects
+     * and returns a {@link NoUserModificationDifference} if the flag was toggled,
+     * or {@code null} if they match.
+     * Note: the getter is {@code isUserModifiable()} — the sense is inverted
+     * relative to the schema keyword, so we compare the modifiable flags directly.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the 'No user modification' difference between the two AttributeType Objects
+     * <p>For example — Yoda checks the user-modification lock:</p>
+     * <pre>
+     *   // at1.userModifiable = true, at2.userModifiable = false
+     *   // result: NoUserModificationDifference(oldValue=true, newValue=false)
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     a {@link NoUserModificationDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getNoUserModificationDifference( AttributeType at1, AttributeType at2 )
     {
@@ -886,15 +1070,25 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Equality Matching Rule ────────────────────────────────
+    // The EQUALITY OID defines how values of this attribute type are compared for
+    // equality.  Null → non-null is ADDED; non-null → null is REMOVED; different
+    // OIDs is MODIFIED.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Equality' difference between the two AttributeType Objects.
+     * Compares the {@code EQUALITY} matching rule OIDs of two AttributeType objects
+     * and returns an {@link EqualityDifference} if they differ, or {@code null} if
+     * they match.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the 'Equality' difference between the two AttributeType Objects
+     * <p>For example — Yoda checks the equality rule:</p>
+     * <pre>
+     *   // at1.equalityOid = null, at2.equalityOid = "caseIgnoreMatch"
+     *   // result: EqualityDifference(ADDED, newValue="caseIgnoreMatch")
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     an {@link EqualityDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getEqualityDifference( AttributeType at1, AttributeType at2 )
     {
@@ -928,15 +1122,24 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Ordering Matching Rule ────────────────────────────────
+    // The ORDERING OID defines how values are sorted.  Same null/non-null/changed
+    // logic as equality.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Ordering' difference between the two AttributeType Objects.
+     * Compares the {@code ORDERING} matching rule OIDs of two AttributeType objects
+     * and returns an {@link OrderingDifference} if they differ, or {@code null} if
+     * they match.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the 'Ordering' difference between the two AttributeType Objects
+     * <p>For example — Yoda checks the ordering rule:</p>
+     * <pre>
+     *   // at1.orderingOid = "integerOrderingMatch", at2.orderingOid = null
+     *   // result: OrderingDifference(REMOVED, oldValue="integerOrderingMatch")
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     an {@link OrderingDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getOrderingDifference( AttributeType at1, AttributeType at2 )
     {
@@ -970,15 +1173,25 @@ public class DifferenceEngine
     }
 
 
+    // ── Yoda Checks The Substring Matching Rule ────────────────────────────────
+    // The SUBSTR OID defines how wildcard searches are matched.  Same null/non-null
+    // logic as equality and ordering.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Substring' difference between the two AttributeType Objects.
+     * Compares the {@code SUBSTR} matching rule OIDs of two AttributeType objects
+     * and returns a {@link SubstringDifference} if they differ, or {@code null} if
+     * they match.
      *
-     * @param at1
-     *      the source AttributeType Object
-     * @param at2
-     *      the destination AttributeType Object
-     * @return
-     *      the 'Substring' difference between the two AttributeType Objects
+     * <p>For example — Yoda checks the substring rule:</p>
+     * <pre>
+     *   // at1.substringOid = "caseIgnoreSubstringsMatch"
+     *   // at2.substringOid = "caseExactSubstringsMatch"
+     *   // result: SubstringDifference(MODIFIED, old=..Ignore.., new=..Exact..)
+     * </pre>
+     *
+     * @param at1  the source AttributeType ("before")
+     * @param at2  the destination AttributeType ("after")
+     * @return     a {@link SubstringDifference} if changed, or {@code null} if identical
      */
     private static PropertyDifference getSubstringDifference( AttributeType at1, AttributeType at2 )
     {

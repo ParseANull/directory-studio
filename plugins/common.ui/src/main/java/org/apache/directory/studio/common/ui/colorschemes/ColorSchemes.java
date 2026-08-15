@@ -25,8 +25,18 @@ import java.util.Collections;
 import java.util.List;
 
 
+// ── CLASS: ColorSchemes — IMPERIAL DESIGN ARCHIVES CATALOG ───────────────────
+// The Imperial Death Star's design archives contain every approved color scheme
+// ever commissioned for its control terminals.  This class is that catalog: an
+// immutable list of all available Base16 palettes, ready for the configuration
+// terminal to browse and apply.  Nobody can instantiate the catalog itself —
+// it is a sealed reference document.
+// ────────────────────────────────────────────────────────────────────────────
 /**
- * Catalog of Base16 color schemes for the Studio LDAP browser.
+ * We are the central catalog of all available Base16 color schemes.  The
+ * {@link #ALL} list is immutable and covers fifteen popular schemes.  Use
+ * {@link #findById} to look up a specific scheme by its id string, such as
+ * when restoring the user's last chosen scheme from the preference store.
  *
  * Source: https://github.com/tinted-theming/schemes
  *
@@ -35,12 +45,33 @@ import java.util.List;
  */
 public final class ColorSchemes
 {
+    // ── CONSTRUCTOR ColorSchemes — SEALING THE IMPERIAL ARCHIVES ─────────────
+    // The archives are sealed: nobody can construct an instance of this catalog
+    // class.  All content is accessed statically through ALL and findById.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * We keep this constructor private because this is a constants/catalog
+     * class.  All data is accessed through its static fields and methods.
+     */
     private ColorSchemes()
     {
     }
 
 
-    /** Converts a 6-char hex string (no #) to the "R,G,B" string used by IPreferenceStore. */
+    // ── METHOD h — DECODING A HEX COLOR FROM THE ARCHIVE ─────────────────────
+    // The archive records colors in compact six-character hex notation.  We
+    // decode them into the "R,G,B" format that the Eclipse preference store
+    // understands, so every scheme can be applied directly without further
+    // conversion.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * We convert a six-character sRGB hex string (no leading {@code #}) into
+     * the {@code "R,G,B"} comma-separated format that {@link IPreferenceStore}
+     * uses for color values.
+     *
+     * @param hex a six-character hex color string such as {@code "dc322f"}
+     * @return the color as a {@code "R,G,B"} string, e.g. {@code "220,50,47"}
+     */
     static String h( String hex )
     {
         int r = Integer.parseInt( hex.substring( 0, 2 ), 16 );
@@ -50,6 +81,29 @@ public final class ColorSchemes
     }
 
 
+    // ── METHOD s — ASSEMBLING A SCHEME RECORD FROM THE ARCHIVE ───────────────
+    // The archive assembler takes the raw hex values and the scheme metadata,
+    // converts all the hex strings to "R,G,B" format via h(), and hands the
+    // finished ColorScheme record back to be added to the ALL catalog list.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * We build a {@link ColorScheme} by converting all eight hex color strings
+     * to "R,G,B" format and delegating to the {@link ColorScheme} constructor.
+     * This is a private factory shorthand used only inside the {@link #ALL}
+     * initializer.
+     *
+     * @param id  the unique scheme identifier
+     * @param label the display name
+     * @param b03 base03 hex (muted)
+     * @param b05 base05 hex (foreground)
+     * @param b08 base08 hex (red)
+     * @param b09 base09 hex (orange)
+     * @param b0A base0A hex (yellow)
+     * @param b0B base0B hex (green)
+     * @param b0D base0D hex (blue)
+     * @param b0E base0E hex (purple)
+     * @return the constructed ColorScheme
+     */
     private static ColorScheme s( String id, String label,
         String b03, String b05,
         String b08, String b09, String b0A, String b0B,
@@ -84,7 +138,20 @@ public final class ColorSchemes
     ) );
 
 
-    /** Finds a scheme by id, or returns null if not found. */
+    // ── METHOD findById — LOCATING A SCHEME IN THE IMPERIAL ARCHIVES ──────────
+    // The archivist scans the catalog for the scheme matching the given ID
+    // badge.  If the badge is blank or does not match any known scheme, the
+    // archivist returns null — no impersonators are admitted to the archive.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * We search {@link #ALL} for a scheme whose {@code id} matches the given
+     * string and return it.  Returns {@code null} if the id is null, empty, or
+     * does not match any known scheme.  Use this to restore a previously
+     * selected scheme from the preference store.
+     *
+     * @param id the scheme id to look up
+     * @return the matching {@link ColorScheme}, or {@code null} if not found
+     */
     public static ColorScheme findById( String id )
     {
         if ( id == null || id.isEmpty() )

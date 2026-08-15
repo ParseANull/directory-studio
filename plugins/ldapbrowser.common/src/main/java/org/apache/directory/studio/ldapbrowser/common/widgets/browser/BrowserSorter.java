@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.widgets.browser;
@@ -38,8 +38,21 @@ import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerSorter;
 
 
+// ── CLASS: BrowserSorter — Lando Organises Cloud City Operations ──────────────
+// In The Empire Strikes Back, Lando Calrissian runs Cloud City with meticulous
+// order: VIP guests go to the best suites, workers stay in their quarters,
+// and troublemakers (like Han) go last. He has a priority system for everything.
+// BrowserSorter is exactly that administrator: it decides which LDAP entries,
+// searches, bookmarks and in-progress jobs appear in what order in the tree,
+// respecting user-configured preferences (ascending/descending, leaf-first, etc.).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The BrowserSorter implements the sorter for the browser widget. 
+ * Determines the display order of every node in the browser tree.
+ * It sorts LDAP entries, search results, searches, bookmarks and background
+ * job runnables according to the user's sort preferences stored in
+ * {@link BrowserPreferences}.
+ * Think of this class as Lando managing Cloud City: everything has its place,
+ * and the rules for who goes where come from the administrator's preferences.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -49,10 +62,22 @@ public class BrowserSorter extends ViewerSorter
     private BrowserPreferences preferences;
 
 
+    // ── LANDO ACCEPTS THE ADMINISTRATOR'S ROLE ────────────────────────────────
+    // When Lando took over Cloud City he was handed a rulebook — who gets priority,
+    // which areas are restricted, how guests are ranked. That rulebook is
+    // preferences. Without it, Lando can't make a single scheduling decision.
+    // We store it so every comparison we make can consult the current settings.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BrowserSorter.
+     * Constructs a new sorter that reads its ordering rules from the given
+     * preferences object.
+     * All sort decisions — ascending vs. descending, leaf-first vs.
+     * container-first, sort limit — come from {@code preferences}, so we
+     * keep a reference to it for every future comparison.
      *
-     * @param preferences the browser preferences, used to get the sort settings
+     * @param preferences  The browser preferences that control how entries,
+     *                     searches and bookmarks should be ordered. Must not
+     *                     be {@code null}.
      */
     public BrowserSorter( BrowserPreferences preferences )
     {
@@ -60,10 +85,19 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO WIRES HIMSELF INTO THE CITY'S CONTROL SYSTEMS ──────────────────
+    // Lando doesn't just have the rulebook — he plugs it into every terminal
+    // in the city so that all scheduling decisions flow through him automatically.
+    // Here we do the same: we attach this sorter to the JFace TreeViewer so
+    // every refresh automatically uses our ordering logic.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Connects the tree viewer to this sorter.
+     * Attaches this sorter to the given tree viewer so it controls how the
+     * viewer orders its elements on every refresh.
+     * After this call, the viewer will call our {@link #compare} and
+     * {@link #category} methods whenever it needs to sort its children.
      *
-     * @param viewer the tree viewer
+     * @param viewer  The JFace TreeViewer to plug this sorter into.
      */
     public void connect( TreeViewer viewer )
     {
@@ -71,11 +105,30 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO GIVES THE SORTING ORDER — BUT ONLY IF THE CROWD IS MANAGEABLE ──
+    // Lando is efficient: if ten thousand guests show up at once he stops trying
+    // to sort the queue — it would take forever and the city would grind to a
+    // halt. He only sorts when the crowd is within reason (sortLimit). We do the
+    // same: skip sorting when elements exceed the configured limit, for performance.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
-     * 
-     * For performance reasons this implementation first checks if sorting is enabled 
-     * and if the number of elements is less than the sort limit.
+     * Sorts the given array of tree elements in place, but only when sorting
+     * is feasible — i.e. either no sort limit is configured (limit &lt;= 0)
+     * or the number of elements is below the limit.
+     * This guards us from freezing the UI when an LDAP entry has tens of
+     * thousands of children.
+     *
+     * <p>For example — Lando at the Cloud City guest queue:</p>
+     * <pre>
+     *   if (guestCount &lt; cityCapacity)
+     *       super.sort(viewer, guests);   // sort normally
+     *   // else: too many guests — leave them in arrival order
+     * </pre>
+     *
+     * @param viewer    The viewer requesting the sort (may be {@code null}
+     *                  when called programmatically, e.g. from
+     *                  {@link BrowserSearchResultPage#getChildren()}).
+     * @param elements  The array to sort in place.
      */
     public void sort( final Viewer viewer, final Object[] elements )
     {
@@ -86,10 +139,32 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO CATEGORISES EACH GUEST ─────────────────────────────────────────
+    // Lando assigns every arrival to a category: subentry VIPs (category 0),
+    // leaf-first or container-first guests (category 1), regular citizens
+    // (category 2), meta/system guests like droids or bounty hunters last
+    // (category 3), and anything else (category 4). Categories are compared
+    // before individual names, so all VIPs always appear before all citizens.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
-     * 
-     * This method is used to categorize leaf entries, meta entries and normal entries.
+     * Assigns a numeric bucket to a tree element so that items in a lower
+     * bucket always sort before items in a higher bucket, regardless of name.
+     * This is how we keep subentries at the top, meta/alias entries at the
+     * bottom, and leaf-first or container-first in between — all without
+     * mixing categories in a single alphabetical pass.
+     *
+     * <p>For example — Lando at the reception desk:</p>
+     * <pre>
+     *   subentry  → 0  (highest priority, always first)
+     *   leaf-first or container-first entries → 1
+     *   normal entries → 2
+     *   meta/alias/referral entries → 3  (lowest priority, always last)
+     *   anything else (searches, etc.) → 4
+     * </pre>
+     *
+     * @param element  The tree element to categorise (typically an
+     *                 {@link IEntry}).
+     * @return  An integer category; lower values sort earlier.
      */
     public int category( Object element )
     {
@@ -126,12 +201,34 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO DECIDES WHO GOES FIRST IN THE QUEUE ─────────────────────────────
+    // Two guests arrive at the same time. Lando checks: are either of them
+    // background-job droids (runnables)? Are they null? Searches? Bookmarks?
+    // Entries? He works through his rulebook systematically until he has a
+    // verdict: negative means o1 goes first, positive means o2 goes first.
+    // Each type of thing has its own comparison sub-rule.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
-     * 
-     * This implementation compares IEntry or ISearchResult objects. Depending on
-     * the sort settings it delegates comparation to {@link #compareRdns(IEntry, IEntry)}
-     * or {@link #compareRdnValues(IEntry, IEntry)}.
+     * Compares two tree elements and returns a negative integer, zero, or
+     * positive integer to establish their relative order.
+     * We handle many element types: background job runnables (which pin
+     * "load more" nodes to the top or bottom), entries, search results,
+     * searches, and bookmarks. Each type gets compared by its own rule,
+     * and type categories are compared before individual names.
+     *
+     * <p>For example — Lando at the Cloud City queue booth:</p>
+     * <pre>
+     *   if (o1 is a LoadMoreJob runnable) → pin it to top or bottom
+     *   if (o1 and o2 are IEntry)         → compare by category, then RDN
+     *   if (o1 and o2 are ISearch)        → compare by search name
+     *   if (o1 and o2 are IBookmark)      → compare by bookmark name
+     * </pre>
+     *
+     * @param viewer  The viewer asking for the comparison (may be {@code null}).
+     * @param o1      The first element.
+     * @param o2      The second element.
+     * @return  Negative if o1 sorts before o2, zero if equal, positive if o1
+     *          sorts after o2.
      */
     public int compare( Viewer viewer, Object o1, Object o2 )
     {
@@ -406,12 +503,21 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO CHECKS THE FULL NAME PLATE ──────────────────────────────────────
+    // Two guests arrive: their name plates read "cn=Leia Organa" and
+    // "cn=Luke Skywalker." Lando reads the full RDN string — type and value
+    // together — and compares alphabetically to decide who's listed first in
+    // the city register. Null RDNs get bumped to the end.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Compares the string representation of the RDNs of two IEntry objects.
-     *  
-     * @param entry1 the first entry
-     * @param entry2 the second entry
-     * @return a negative integer, zero, or a positive integer
+     * Compares two entries by their full RDN string representation (e.g.
+     * {@code "cn=Leia"} vs {@code "cn=Luke"}), case-insensitively.
+     * Null RDNs are treated as greater than non-null ones so they sink to
+     * the bottom of the list.
+     *
+     * @param entry1  The first entry to compare.
+     * @param entry2  The second entry to compare.
+     * @return  Negative, zero, or positive as defined by the current sort order.
      */
     private int compareRdns( IEntry entry1, IEntry entry2 )
     {
@@ -437,13 +543,23 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO COMPARES JUST THE GUEST'S NAME VALUE ────────────────────────────
+    // Lando's priority system sometimes ignores the attribute type and only
+    // looks at the value part of the name plate — "Leia" vs "Luke."  And if
+    // both names are pure numbers (room numbers, maybe), he compares them
+    // numerically so that "9" doesn't sort after "10" the way strings would.
+    // That's this method: compare RDN values, with numeric-aware handling.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Compares the Rdn values of two IEntry objects.
-     * Numeric values are compared as numeric.
-     *  
-     * @param entry1 the first entry
-     * @param entry2 the second entry
-     * @return a negative integer, zero, or a positive integer
+     * Compares two entries by the value portion of their RDN only (e.g.
+     * {@code "Leia"} vs {@code "Luke"}), case-insensitively.
+     * When both values are pure digit strings (like {@code "007"} and
+     * {@code "42"}) we parse and compare them as {@link BigInteger} so the
+     * numeric order is correct.
+     *
+     * @param entry1  The first entry to compare.
+     * @param entry2  The second entry to compare.
+     * @return  Negative, zero, or positive as defined by the current sort order.
      */
     private int compareRdnValues( IEntry entry1, IEntry entry2 )
     {
@@ -508,10 +624,19 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO SIGNALS "THIS ONE GOES FIRST" FOR ENTRIES ──────────────────────
+    // Lando checks his rulebook: if we're in ascending order, the "less than"
+    // verdict is -1 (go earlier). If descending, it flips to +1 (go later).
+    // This helper just hands back the right signed value so all the comparison
+    // methods can stay clean and readable.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns +1 or -1, depending on the sort entries order.
+     * Returns the "first" signal ({@code -1} for ascending order,
+     * {@code +1} for descending) for entry comparisons.
+     * We flip the sign for descending so the rest of the code can just call
+     * {@code lessThanEntries()} without worrying which direction we're sorting.
      *
-     * @return +1 or -1, depending on the sort entries order
+     * @return  {@code -1} if entries sort ascending, {@code +1} if descending.
      */
     private int lessThanEntries()
     {
@@ -519,10 +644,16 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO SIGNALS "THIS ONE GOES FIRST" FOR SEARCHES ─────────────────────
+    // Same idea as lessThanEntries, but for the Searches section of the tree.
+    // Searches have their own independent sort-order preference, so we read it
+    // from the right preference key instead of the entries one.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns +1 or -1, depending on the sort searches order.
+     * Returns the "first" signal for search comparisons, respecting the
+     * searches-specific sort order preference.
      *
-     * @return +1 or -1, depending on the sort searches order
+     * @return  {@code -1} if searches sort ascending, {@code +1} if descending.
      */
     private int lessThanSearches()
     {
@@ -530,10 +661,15 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO SIGNALS "THIS ONE GOES FIRST" FOR BOOKMARKS ────────────────────
+    // Same pattern again, this time for the Bookmarks section. Bookmarks have
+    // their own sort order, so we consult the bookmarks preference specifically.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns +1 or -1, depending on the sort entries order.
+     * Returns the "first" signal for bookmark comparisons, respecting the
+     * bookmarks-specific sort order preference.
      *
-     * @return +1 or -1, depending on the sort entries order
+     * @return  {@code -1} if bookmarks sort ascending, {@code +1} if descending.
      */
     private int lessThanBookmarks()
     {
@@ -541,10 +677,15 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO CALLS A TIE ─────────────────────────────────────────────────────
+    // Both guests have the exact same priority. Lando shrugs and lets them
+    // stay in whatever order they arrived. Zero means equal — don't move them.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns 0.
+     * Returns {@code 0} to signal that two elements are considered equal in
+     * sort order and should remain in their current relative order.
      *
-     * @return 0
+     * @return  Always {@code 0}.
      */
     private int equal()
     {
@@ -552,10 +693,15 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO SIGNALS "THIS ONE GOES LATER" FOR ENTRIES ──────────────────────
+    // The mirror of lessThanEntries: +1 means "push this one down the list"
+    // in ascending order, -1 in descending order (because down = earlier then).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns +1 or -1, depending on the sort entries order.
+     * Returns the "last" signal ({@code +1} for ascending order,
+     * {@code -1} for descending) for entry comparisons.
      *
-     * @return +1 or -1, depending on the sort entries order
+     * @return  {@code +1} if entries sort ascending, {@code -1} if descending.
      */
     private int greaterThanEntries()
     {
@@ -563,10 +709,15 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO SIGNALS "THIS ONE GOES LATER" FOR SEARCHES ─────────────────────
+    // Same as greaterThanEntries but for the Searches section of the tree,
+    // using the searches sort-order preference.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns +1 or -1, depending on the sort searches order.
+     * Returns the "last" signal for search comparisons, respecting the
+     * searches-specific sort order preference.
      *
-     * @return +1 or -1, depending on the sort searches order
+     * @return  {@code +1} if searches sort ascending, {@code -1} if descending.
      */
     private int greaterThanSearches()
     {
@@ -574,10 +725,15 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO SIGNALS "THIS ONE GOES LATER" FOR BOOKMARKS ────────────────────
+    // Same as greaterThanEntries but for the Bookmarks section, using the
+    // bookmarks sort-order preference.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns +1 or -1, depending on the sort bookmarks order.
+     * Returns the "last" signal for bookmark comparisons, respecting the
+     * bookmarks-specific sort order preference.
      *
-     * @return +1 or -1, depending on the sort bookmarks order
+     * @return  {@code +1} if bookmarks sort ascending, {@code -1} if descending.
      */
     private int greaterThanBookmarks()
     {
@@ -585,13 +741,19 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO CHECKS THE GUEST NAME BOARD — ENTRIES ───────────────────────────
+    // Lando reads two name tags and decides alphabetical order. He ignores case
+    // (Leia == leia), and if we're in descending mode he swaps s1 and s2 so the
+    // same compareToIgnoreCase call gives us the reversed result. Clean trick.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Compares the two strings using the Strings's compareToIgnoreCase method, 
-     * pays attention for the sort entries order.
+     * Compares two entry name strings case-insensitively, reversing the
+     * operands when the sort order is descending so we don't need separate
+     * ascending and descending code paths.
      *
-     * @param s1 the first string to compare
-     * @param s2 the second string to compare
-     * @return a negative integer, zero, or a positive integer
+     * @param s1  First entry name string.
+     * @param s2  Second entry name string.
+     * @return  Negative, zero, or positive depending on order and sort direction.
      * @see java.lang.String#compareToIgnoreCase(String)
      */
     private int compareEntries( String s1, String s2 )
@@ -601,13 +763,17 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO CHECKS THE SEARCH NAME BOARD ────────────────────────────────────
+    // Same technique as compareEntries but applied to search names.
+    // Searches have their own sort-order setting, so we read that one instead.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Compares the two strings using the Strings's compareToIgnoreCase method, 
-     * pays attention for the sort searches order.
+     * Compares two search name strings case-insensitively, respecting the
+     * searches sort order preference.
      *
-     * @param s1 the first string to compare
-     * @param s2 the second string to compare
-     * @return a negative integer, zero, or a positive integer
+     * @param s1  First search name.
+     * @param s2  Second search name.
+     * @return  Negative, zero, or positive depending on order and sort direction.
      * @see java.lang.String#compareToIgnoreCase(String)
      */
     private int compareSearches( String s1, String s2 )
@@ -617,13 +783,17 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO CHECKS THE BOOKMARK NAME BOARD ──────────────────────────────────
+    // Same technique again for bookmark names. Bookmarks have their own
+    // sort-order preference, so we use that one.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Compares the two strings using the Strings's compareToIgnoreCase method, 
-     * pays attention for the sort bookmarks order.
+     * Compares two bookmark name strings case-insensitively, respecting the
+     * bookmarks sort order preference.
      *
-     * @param s1 the first string to compare
-     * @param s2 the second string to compare
-     * @return a negative integer, zero, or a positive integer
+     * @param s1  First bookmark name.
+     * @param s2  Second bookmark name.
+     * @return  Negative, zero, or positive depending on order and sort direction.
      * @see java.lang.String#compareToIgnoreCase(String)
      */
     private int compareBookmarks( String s1, String s2 )
@@ -633,14 +803,22 @@ public class BrowserSorter extends ViewerSorter
     }
 
 
+    // ── LANDO READS ROOM NUMBERS ON THE LEDGER ────────────────────────────────
+    // Two rooms: 9 and 10. String comparison says "10" < "9" which is wrong.
+    // Lando, ever meticulous, consults the actual numeric ledger: BigInteger
+    // compareTo gives the right answer. And again we swap for descending order.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Compares the two numbers using the BigInteger compareTo method, 
-     * pays attention for the sort order.
+     * Compares two {@link BigInteger} values numerically, respecting the
+     * entries sort order preference.
+     * We use BigInteger instead of int/long because LDAP attribute values can
+     * be arbitrarily large — you could have an entry with
+     * {@code uidNumber=99999999999999999}.
      *
-     * @param bi1 the first number to compare
-     * @param bi1 the second number to compare
-     * @return -1, 0 or 1 as this BigInteger is numerically less than, equal
-     *         to, or greater than
+     * @param bi1  First big-integer value.
+     * @param bi2  Second big-integer value.
+     * @return  {@code -1}, {@code 0}, or {@code 1} as defined by
+     *          {@link BigInteger#compareTo(BigInteger)}, adjusted for sort order.
      * @see java.math.BigInteger#compareTo(BigInteger)
      */
     private int compare( BigInteger bi1, BigInteger bi2 )

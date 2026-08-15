@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.searchresult;
@@ -66,9 +66,33 @@ import org.eclipse.ui.part.IShowInTargetList;
 import org.eclipse.ui.part.ShowInContext;
 
 
+// ── CLASS: SearchResultEditor — The Imperial Census Terminal ─────────────────
+// The Empire keeps census records for every sector, and a data terminal is the
+// front-end: it shows the records on screen (the table), lets operators update
+// individual fields (inline cell editing), and when a field changes it immediately
+// dispatches a write-back to the central Imperial database (the LDAP server).
+// This class is that terminal.  It wires together all the sub-systems:
+//   • SearchResultEditorWidget — the SWT table and quick-filter bar
+//   • SearchResultEditorConfiguration — lazy factory for all component singletons
+//   • SearchResultEditorActionGroup — toolbar / menus / context menu
+//   • SearchResultEditorUniversalListener — all event wiring
+// The inner entryUpdateListener is the write-back path: when the cell modifier
+// commits a change to the in-memory model, we compute an LDIF diff and dispatch
+// UpdateEntryRunnable to push it to the directory.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The SearchResultEditor is an {@link IEditorPart} is used to display and edit 
- * the attributes of the results of a search.
+ * The main editor part for the search result editor.
+ * Implements {@link IReusableEditor} so Eclipse reuses one tab for all searches
+ * (via {@link SingleTabSearchResultEditorMatchingStrategy}),
+ * {@link INavigationLocationProvider} so searches appear in Eclipse's back/forward
+ * history, and {@link IShowEditorInput} so the tab content can be swapped without
+ * reopening.
+ * The inner {@link #entryUpdateListener} is the critical write-back path: it fires
+ * whenever the in-memory LDAP model changes, computes an LDIF diff between the
+ * reference copy and the modified entry, and runs {@link UpdateEntryRunnable} to
+ * save the change to the directory.
+ * Think of this as the Imperial census terminal: display, inline editing, and
+ * immediate write-back to the central database.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -88,6 +112,13 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     /** The universal listener. */
     private SearchResultEditorUniversalListener universalListener;
 
+    // ── The Terminal's Write-Back Mechanism ────────────────────────────────────
+    // When the user edits a cell and the cell modifier commits to the model,
+    // this listener fires.  We check that the event is a real value modification
+    // (not a transient empty-value placeholder), verify no empty values remain,
+    // compute the LDIF diff between the reference copy and the modified entry,
+    // and dispatch UpdateEntryRunnable to push the change to the directory.
+    // ─────────────────────────────────────────────────────────────────────────────
     protected EntryUpdateListener entryUpdateListener = new EntryUpdateListener()
     {
         public void entryUpdated( EntryModificationEvent event )
@@ -137,10 +168,14 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     };
 
 
+    // ── Terminal Returns Its Own ID ───────────────────────────────────────────
+    // Eclipse uses the editor ID string to look up the right editor for a given input.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the ID of the SearchResultEditor.
-     * 
-     * @return the id of the SearchResultEditor
+     * Returns the Eclipse editor ID for the search result editor.
+     * Used by the workbench to route {@link SearchResultEditorInput} to this editor.
+     *
+     * @return the editor ID constant from {@link BrowserUIConstants#EDITOR_SEARCH_RESULT}
      */
     public static String getId()
     {
@@ -148,8 +183,17 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Loads a New Search ────────────────────────────────────────────
+    // Called by the universal listener when the browser view selection changes
+    // or the back/forward navigation restores a location.  We update the tab name
+    // and ask the universal listener to load the new search.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Sets the editor input and updates the tab label.
+     * If the listener is already wired up (i.e. we're fully initialised), we also
+     * push the new search through the universal listener.
+     *
+     * @param input the new editor input; should be a {@link SearchResultEditorInput}
      */
     public void setInput( IEditorInput input )
     {
@@ -165,6 +209,19 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Swaps Content Without Reopening ───────────────────────────────
+    // IShowEditorInput allows the workbench to swap our content when the same
+    // editor is reused.  We skip the update if the input is already active
+    // (no-op optimisation) and otherwise set the input and mark a navigation point.
+    // ─────────────────────────────────────────────────────────────────────────────
+    /**
+     * Called by the workbench when reusing this editor tab for a different input.
+     * Skips the update if the input is already set (optimisation).
+     * Otherwise sets the input, marks a navigation history location, and fires
+     * an {@code INPUT_CHANGED} property change so interested parties can react.
+     *
+     * @param input the new input to show; should be a {@link SearchResultEditorInput}
+     */
     public void showEditorInput( IEditorInput input )
     {
         if ( input instanceof SearchResultEditorInput )
@@ -185,6 +242,10 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Extracts the Search and Pushes It to the Listener ────────────
+    // Private helper: unwrap the SearchResultEditorInput and give the ISearch
+    // to the universal listener.
+    // ─────────────────────────────────────────────────────────────────────────────
     private void setSearchResultEditorWidgetInput( SearchResultEditorInput srei )
     {
         ISearch search = srei.getSearch();
@@ -192,8 +253,14 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Refreshes Its Display ────────────────────────────────────────
+    // Called by the property-change listener when a relevant preference changes.
+    // We just ask the universal listener to re-run refreshInput().
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes this search result editor.
+     * Refreshes the search result table.
+     * Delegates to {@link SearchResultEditorUniversalListener#refreshInput()} if
+     * the listener is initialised.  Called e.g. when the "show DN" preference changes.
      */
     public void refresh()
     {
@@ -204,8 +271,19 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Powers Up ────────────────────────────────────────────────────
+    // Eclipse calls init() to set the site and initial input.  We also register
+    // the entryUpdateListener here so the write-back path is in place before
+    // createPartControl() wires everything else.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Initialises the editor with its site and initial input.
+     * Also registers the {@link #entryUpdateListener} on the global event bus so
+     * the write-back path is active from the moment the editor exists.
+     *
+     * @param site  the editor site
+     * @param input the initial editor input
+     * @throws PartInitException if initialisation fails
      */
     public void init( IEditorSite site, IEditorInput input ) throws PartInitException
     {
@@ -217,8 +295,24 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Builds Its UI ────────────────────────────────────────────────
+    // Eclipse calls createPartControl() when it's time to build the SWT widgets.
+    // We create everything in order: configuration → widget → action group →
+    // universal listener → selection provider → push initial input.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the SWT widgets and wires all sub-systems together.
+     * Order matters:
+     * <ol>
+     *   <li>Create {@link SearchResultEditorConfiguration} (lazy factory)</li>
+     *   <li>Create {@link SearchResultEditorWidget} (the SWT table)</li>
+     *   <li>Create {@link SearchResultEditorActionGroup} (toolbar / menus)</li>
+     *   <li>Create {@link SearchResultEditorUniversalListener} (event wiring)</li>
+     *   <li>Set the selection provider on the site (cursor broadcasts selections)</li>
+     *   <li>Push the initial editor input through setInput()</li>
+     * </ol>
+     *
+     * @param parent the parent composite provided by Eclipse
      */
     public void createPartControl( Composite parent )
     {
@@ -256,8 +350,13 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Hands Focus to the Table ─────────────────────────────────────
+    // Eclipse calls this to move keyboard focus into the editor.  We delegate to
+    // the widget which delegates to the cursor.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Moves keyboard focus to the search result table.
+     * Delegates to {@link SearchResultEditorWidget#setFocus()}.
      */
     public void setFocus()
     {
@@ -265,8 +364,15 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Shuts Down ────────────────────────────────────────────────────
+    // Release everything in the correct order: event listener → action group →
+    // universal listener → widget → configuration → selection provider →
+    // preference change listener.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Disposes all resources held by this editor.
+     * Deregisters all listeners and nulls all fields to prevent memory leaks.
+     * Called by Eclipse when the editor tab is closed.
      */
     public void dispose()
     {
@@ -289,24 +395,37 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Doesn't Save to Disk ─────────────────────────────────────────
+    // Saves go directly to the LDAP directory via UpdateEntryRunnable.
+    // Eclipse's "save" concept doesn't apply here.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — changes are saved directly to the LDAP directory, not to a file.
+     *
+     * @param monitor not used
      */
     public void doSave( IProgressMonitor monitor )
     {
     }
 
 
+    // ── Terminal Has No "Save As" ─────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — "Save As" is not applicable to the search result editor.
      */
     public void doSaveAs()
     {
     }
 
 
+    // ── Terminal Is Never "Dirty" ─────────────────────────────────────────────
+    // Changes are committed immediately to the directory; there's no unsaved state.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code false} — changes are committed to the directory immediately,
+     * so there is no "unsaved" dirty state.
+     *
+     * @return {@code false}
      */
     public boolean isDirty()
     {
@@ -314,8 +433,11 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Can't Save As ────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code false} — "Save As" is not supported.
+     *
+     * @return {@code false}
      */
     public boolean isSaveAsAllowed()
     {
@@ -323,8 +445,14 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Navigation History: Empty Placeholder ─────────────────────────────────
+    // Eclipse calls this when creating a placeholder entry in the history.
+    // We return null — we never create empty placeholder locations.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code null} — we do not create empty navigation history placeholders.
+     *
+     * @return {@code null}
      */
     public INavigationLocation createEmptyNavigationLocation()
     {
@@ -332,8 +460,16 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Navigation History: Real Location ─────────────────────────────────────
+    // Eclipse calls this when marking a real navigation point (e.g. after showEditorInput).
+    // We wrap the current editor in a SearchResultEditorNavigationLocation.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates a navigation history entry for the current search.
+     * The returned {@link SearchResultEditorNavigationLocation} records the current
+     * search name and connection ID so the user can navigate back to it.
+     *
+     * @return a new navigation location for the current editor state
      */
     public INavigationLocation createNavigationLocation()
     {
@@ -341,8 +477,17 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Adapts to IShowIn Protocol ───────────────────────────────────
+    // When the user triggers "Show In → Browser", Eclipse asks us for
+    // IShowInSource (what to show) and IShowInTargetList (which views to offer).
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Adapts to {@link IShowInTargetList} (which views appear in the "Show In" menu)
+     * and {@link IShowInSource} (what selection to pass to those views).
+     * For all other adapter types we delegate to the superclass.
+     *
+     * @param required the requested adapter type
+     * @return the adapter object, or the superclass result for unrecognised types
      */
     public Object getAdapter( Class required )
     {
@@ -375,10 +520,13 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Exposes Its Sub-Systems ──────────────────────────────────────
+    // Getters for the sub-systems used by the universal listener and action group.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the action group.
-     * 
-     * @return the action group
+     * Returns the action group managing toolbar, menus, and context menu actions.
+     *
+     * @return the action group; never null after {@link #createPartControl}
      */
     public SearchResultEditorActionGroup getActionGroup()
     {
@@ -387,9 +535,9 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
 
 
     /**
-     * Gets the configuration.
-     * 
-     * @return the configuration
+     * Returns the configuration (lazy factory for all editor sub-systems).
+     *
+     * @return the configuration; never null after {@link #createPartControl}
      */
     public SearchResultEditorConfiguration getConfiguration()
     {
@@ -398,9 +546,9 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
 
 
     /**
-     * Gets the main widget.
-     * 
-     * @return the main widget
+     * Returns the main widget holding the SWT table and quick-filter bar.
+     *
+     * @return the main widget; never null after {@link #createPartControl}
      */
     public SearchResultEditorWidget getMainWidget()
     {
@@ -409,9 +557,9 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
 
 
     /**
-     * Gets the universal listener.
-     * 
-     * @return the universal listener
+     * Returns the universal listener that manages all events for this editor.
+     *
+     * @return the universal listener; never null after {@link #createPartControl}
      */
     public SearchResultEditorUniversalListener getUniversalListener()
     {
@@ -419,8 +567,15 @@ public class SearchResultEditor extends EditorPart implements INavigationLocatio
     }
 
 
+    // ── Terminal Responds to Preference Changes ────────────────────────────────
+    // When a relevant preference (e.g. show DN, show links) changes, Eclipse
+    // fires this callback.  We simply call refresh() to rebuild the column layout.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called when a preference in the BrowserUIPlugin preference store changes.
+     * We call {@link #refresh()} unconditionally — it's cheap to refresh.
+     *
+     * @param event the property change event; not inspected
      */
     public void propertyChange( PropertyChangeEvent event )
     {

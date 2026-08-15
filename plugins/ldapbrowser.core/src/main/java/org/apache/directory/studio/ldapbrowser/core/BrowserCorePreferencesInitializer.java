@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core;
@@ -27,16 +27,60 @@ import org.eclipse.core.runtime.Preferences;
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 
 
+// ── CLASS: BrowserCorePreferencesInitializer — FOUNDING MASTER WRITES THE JEDI CODEX ──
+// When the Jedi Order is founded, the very first Grand Master writes the
+// canonical rules into the Jedi Codex before any apprentice has been trained
+// or any mission flown.  These are the defaults that the rest of the Order
+// falls back to if no one has explicitly overridden them.
+// This class does exactly that for the browser-core plugin: Eclipse calls it
+// once at startup (via the {@code org.eclipse.core.runtime.preferences}
+// extension point) so we can register all the default preference values
+// before any UI page or model code tries to read them.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to set default preference values.
+ * Sets up the default preference values for the browser-core plugin.
+ * Eclipse's preference framework calls {@link #initializeDefaultPreferences()}
+ * exactly once, before any user code reads the preferences.  We use it to
+ * register sensible defaults for CSV/XLS/ODF/LDIF export settings and the
+ * canonical lists of binary attributes and binary syntaxes that ships with
+ * Apache Directory Studio out of the box.
+ * Think of this class as the founding Jedi Grand Master writing the defaults
+ * into the Codex before the Order opens for business.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class BrowserCorePreferencesInitializer extends AbstractPreferenceInitializer
 {
+    // ── The Founding Grand Master Writes The Codex ───────────────────────────────
+    // The first Grand Master sits at the writing desk in the Jedi Temple and
+    // inscribes every foundational rule: which syntaxes are physical, which
+    // artefacts must be handled as binary cargo, what the standard line separator
+    // is for transmitted scrolls, and so on.
+    // Eclipse calls this method once at startup — we write every default into
+    // the Eclipse preference store so any later read that hasn't been explicitly
+    // overridden by the user gets the right built-in value.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Registers all default preference values for the browser-core plugin.
+     * Eclipse calls this exactly once, before the first preference read.
+     * We cover:
+     * <ul>
+     *   <li>Whether to check for children when expanding a tree node.</li>
+     *   <li>CSV, XLS, ODF, and LDIF export formatting defaults.</li>
+     *   <li>The canonical list of binary LDAP attribute types (like
+     *       {@code jpegPhoto}, {@code userCertificate}).</li>
+     *   <li>The canonical list of binary LDAP syntaxes (like Certificate,
+     *       Octet String).</li>
+     * </ul>
+     *
+     * <p>For example — the Grand Master's inscription:</p>
+     * <pre>
+     *   store.setDefault(PREFERENCE_FORMAT_CSV_ATTRIBUTEDELIMITER, ",");
+     *   prefs.setDefaultBinaryAttributes(new BinaryAttribute[]{ ... });
+     *   prefs.setDefaultBinarySyntaxes(new BinarySyntax[]{ ... });
+     * </pre>
      */
+    @Override
     public void initializeDefaultPreferences()
     {
         Preferences store = BrowserCorePlugin.getDefault().getPluginPreferences();

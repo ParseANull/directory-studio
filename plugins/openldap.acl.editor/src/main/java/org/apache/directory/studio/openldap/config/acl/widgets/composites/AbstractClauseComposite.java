@@ -25,9 +25,24 @@ import org.apache.directory.studio.openldap.config.acl.OpenLdapAclValueWithConte
 import org.eclipse.swt.widgets.Composite;
 
 
+// ── CLASS: AbstractClauseComposite — BASE IMPERIAL DIRECTIVE FORM ────────────
+// Grand Moff Tarkin issues a standard base form to all directive panels in the
+// visual editor: every panel shares the same three fields (visualEditorComposite,
+// connection, context). This abstract class holds those fields and provides the
+// default (no-op) implementations of createComposite() and saveWidgetSettings()
+// so concrete subclasses only need to override what they actually implement.
+// Concrete subclasses (WhatClauseDnComposite, WhoClauseDnComposite, etc.) extend
+// this and override createComposite() to build their SWT widgets.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A basic common abstract class implementing {@link ClauseComposite}.
- * 
+ * Abstract base implementing {@link ClauseComposite}. Stores the visual editor
+ * composite, the LDAP browser connection, and the ACL context. Provides
+ * default no-op implementations of {@link #createComposite(Composite)} and
+ * {@link #saveWidgetSettings()}.
+ *
+ * <p>Think of this class as Grand Moff Tarkin's standard directive form —
+ * all concrete clause panels extend this base and fill in their own SWT widgets.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public abstract class AbstractClauseComposite implements ClauseComposite
@@ -37,23 +52,31 @@ public abstract class AbstractClauseComposite implements ClauseComposite
 
     /** The connection */
     protected IBrowserConnection connection;
-    
+
     /** The ACL context in use */
     protected OpenLdapAclValueWithContext context;
 
 
+    // ── Default Constructor ────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AbstractClauseComposite.
+     * Creates a new instance of AbstractClauseComposite with no-arg (for
+     * subclasses that set fields directly).
      */
     public AbstractClauseComposite()
     {
     }
 
 
+    // ── Context + Visual Editor Constructor ───────────────────────────────────
+    // Tarkin hands the form its context and visual editor reference on creation.
+    // The connection is extracted from the context at construction time.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AbstractClauseComposite.
+     * Creates a new instance with the given ACL context and visual editor composite.
+     * Extracts the LDAP connection from the context.
      *
-     * @param clause the clause
+     * @param context               The ACL context.
+     * @param visualEditorComposite The visual editor composite (for layout refresh).
      */
     public AbstractClauseComposite( OpenLdapAclValueWithContext context, Composite visualEditorComposite )
     {
@@ -63,8 +86,15 @@ public abstract class AbstractClauseComposite implements ClauseComposite
     }
 
 
+    // ── Default createComposite (no-op) ──────────────────────────────────────
     /**
+     * Default implementation — returns {@code null}. Concrete subclasses
+     * override this to build their SWT widgets.
+     *
      * {@inheritDoc}
+     *
+     * @param parent  The parent composite.
+     * @return        {@code null} by default.
      */
     public Composite createComposite( Composite parent )
     {
@@ -72,8 +102,11 @@ public abstract class AbstractClauseComposite implements ClauseComposite
     }
 
 
+    // ── Visual Editor Composite Accessor ──────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * @return  The visual editor composite.
      */
     public Composite getVisualEditorComposite()
     {
@@ -81,8 +114,11 @@ public abstract class AbstractClauseComposite implements ClauseComposite
     }
 
 
+    // ── Visual Editor Composite Mutator ───────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * @param visualEditorComposite  The new visual editor composite.
      */
     public void setVisualEditorComposite( Composite visualEditorComposite )
     {
@@ -90,8 +126,11 @@ public abstract class AbstractClauseComposite implements ClauseComposite
     }
 
 
+    // ── Connection Accessor ───────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * @return  The current LDAP browser connection; may be {@code null}.
      */
     public IBrowserConnection getConnection()
     {
@@ -99,8 +138,11 @@ public abstract class AbstractClauseComposite implements ClauseComposite
     }
 
 
+    // ── Connection Mutator ────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * @param connection  The new LDAP browser connection.
      */
     public void setConnection( IBrowserConnection connection )
     {
@@ -108,25 +150,35 @@ public abstract class AbstractClauseComposite implements ClauseComposite
     }
 
 
+    // ── Default saveWidgetSettings (no-op) ───────────────────────────────────
     /**
+     * Default implementation — no-op. Concrete subclasses override to persist
+     * widget state (e.g. expandable section expand/collapse).
+     *
      * {@inheritDoc}
      */
     public void saveWidgetSettings()
     {
     }
-    
-    
+
+
+    // ── Context Accessor ──────────────────────────────────────────────────────
     /**
-     * @return The ACL context in use
+     * Returns the ACL context in use.
+     *
+     * @return  The ACL context.
      */
     public OpenLdapAclValueWithContext getContext()
     {
         return context;
     }
-    
-    
+
+
+    // ── Context Mutator ───────────────────────────────────────────────────────
     /**
-     * @param context The ACL context in use
+     * Sets the ACL context in use.
+     *
+     * @param context  The new ACL context.
      */
     public void setContext( OpenLdapAclValueWithContext context )
     {

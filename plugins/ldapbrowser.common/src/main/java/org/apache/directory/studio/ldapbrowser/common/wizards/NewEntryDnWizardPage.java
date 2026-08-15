@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.wizards;
@@ -61,9 +61,28 @@ import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 
 
+// ── CLASS: NewEntryDnWizardPage — YODA TEACHES LUKE TO NAME HIS PLACE IN THE FORCE
+// Deep in the Dagobah swamp, Yoda sits Luke down for a deceptively simple lesson:
+// "Know your position in the Force, you must.  Not just what you are — but where
+// you stand, relative to those who came before."  Luke has to name his RDN (who
+// he is: cn=Luke) and locate his parent DN (where he is: ou=Jedi,dc=galaxy).
+// Before moving on, Yoda checks the Force — does the parent really exist?
+// Does Luke's chosen position conflict with someone already there?
+// This wizard page encodes exactly that lesson: compose the DN by picking an
+// RDN attribute/value and a parent entry, then verify both on the server before
+// letting the user advance.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The NewEntryDnWizardPage is used to compose the new entry's 
- * distinguished name.
+ * The third page of {@link NewEntryWizard} — lets the user compose the
+ * Distinguished Name (DN) for the new entry.
+ * For regular entries, a {@link DnBuilderWidget} lets the user pick an RDN
+ * attribute and value, then select a parent DN.
+ * For context entries, a simple combo pre-populated with naming contexts lets
+ * the user type or select the full root DN.
+ * Before advancing, we verify on the server that the parent exists and that
+ * the full DN does not already exist.
+ * Think of this page as Yoda's naming lesson — Luke must say who he is and
+ * where in the directory tree he belongs before the training continues.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -83,11 +102,28 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     private ContentProposalAdapter contextEntryDnComboCPA;
 
 
+    // ── Yoda Prepares the Naming Lesson Clearing ──────────────────────────────
+    // Yoda clears a flat spot in the swamp undergrowth and sets up two possible
+    // lesson layouts: one for a regular entry (RDN + parent picker) and one for
+    // a context entry (just type the full root DN).  The title and description
+    // differ between the two modes, so Yoda chooses the right words up front.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of NewEntryDnWizardPage.
-     * 
-     * @param pageName the page name
-     * @param wizard the wizard
+     * Creates a new {@code NewEntryDnWizardPage} and sets the title and
+     * description appropriate for the wizard mode (context entry or regular entry).
+     * The page starts incomplete — the user must enter a valid DN before Next
+     * becomes available.
+     *
+     * <p>For example — Yoda picks the right lesson plan based on Luke's task:</p>
+     * <pre>
+     *   if ( wizard.isNewContextEntry() )
+     *     setDescription( "Enter the DN of the new context entry" );
+     *   else
+     *     setDescription( "Select a parent DN and enter an RDN" );
+     * </pre>
+     *
+     * @param pageName  Internal wizard page identifier.
+     * @param wizard    The parent {@link NewEntryWizard} coordinating all pages.
      */
     public NewEntryDnWizardPage( String pageName, NewEntryWizard wizard )
     {
@@ -109,8 +145,20 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     }
 
 
+    // ── The Naming Lesson Ends — Yoda Cleans Up the Clearing ─────────────────
+    // As Luke leaves Dagobah, Yoda sweeps the clearing: the DN builder widget's
+    // listener is removed and all its resources are freed so nothing leaks.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Releases the resources held by the {@link DnBuilderWidget}, if one was
+     * created.  Removes the widget-modify listener before disposing so we don't
+     * get stray events after the page is gone.
+     *
+     * <p>For example — Yoda clears the lesson clearing after Luke heads to Bespin:</p>
+     * <pre>
+     *   dnBuilderWidget.removeWidgetModifyListener( this );
+     *   dnBuilderWidget.dispose();
+     * </pre>
      */
     public void dispose()
     {
@@ -124,8 +172,21 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     }
 
 
+    // ── Yoda Checks Whether Luke Named and Located Himself Correctly ──────────
+    // Yoda listens to Luke's answer: for a context entry, the full DN must be
+    // non-empty and syntactically valid; for a regular entry, both the RDN and
+    // the parent DN must be set.  If either is missing, Yoda waits; otherwise
+    // the lesson is saved to the prototype and Next lights up.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Validates the input fields.
+     * Validates the current DN input and enables or disables the Next button.
+     * Also calls {@link #saveState()} to persist a valid DN to the prototype.
+     *
+     * <p>For example — Yoda accepts Luke's answer only when it is complete:</p>
+     * <pre>
+     *   // context entry mode: DN must be non-empty and syntactically valid
+     *   // regular entry mode: RDN and parentDn must both be non-null
+     * </pre>
      */
     private void validate()
     {
@@ -148,9 +209,24 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     }
 
 
+    // ── Yoda Recalls Luke's Previous Answer to Pre-Fill the Lesson ───────────
+    // When Luke returns to this clearing, Yoda reminds him what he last said —
+    // the prototype entry's current DN is used to pre-fill the DN builder or
+    // the context-entry combo so Luke doesn't have to start from scratch.
+    // For a context entry, Yoda also lists all known naming contexts as hints.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Dn builder widget with the Dn of
-     * the prototype entry. Called when this page becomes visible.
+     * Populates the DN input controls from the prototype entry's current DN.
+     * For context entries: loads naming contexts from the root DSE into the
+     * combo and pre-selects the prototype's DN if it matches one.
+     * For regular entries: passes the parent DN and RDN from the prototype
+     * to the {@link DnBuilderWidget}.
+     *
+     * <p>For example — Yoda reads Luke's notebook and pre-fills the exercise:</p>
+     * <pre>
+     *   // context entry: contextEntryDnCombo.setItems( namingContextValues )
+     *   // regular entry: dnBuilderWidget.setInput( connection, attrNames, rdn, parentDn )
+     * </pre>
      */
     private void loadState()
     {
@@ -167,7 +243,7 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
                 // content proposals
                 contextEntryDnComboCPA.setContentProposalProvider( new ListContentProposalProvider( values ) );
 
-                // fill namingContext values into combo 
+                // fill namingContext values into combo
                 contextEntryDnCombo.setItems( values );
 
                 // preset combo text
@@ -212,8 +288,25 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     }
 
 
+    // ── Yoda Records Luke's Chosen Position in the Galaxy ─────────────────────
+    // Yoda writes Luke's answer into the training scroll — old RDN values are
+    // erased first, then the new DN is set, and the RDN attribute values are
+    // added back to the prototype entry so the attributes page sees them.
+    // Event firing is suspended during the write to avoid feedback loops.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the Dn of the Dn builder widget to the prototype entry.
+     * Writes the DN from the input controls into the prototype entry.
+     * First removes the old RDN attributes from the prototype, then sets the
+     * new DN, then adds the new RDN's attribute values back to the prototype
+     * so the attributes page can display them.
+     * All changes are made with event firing suspended to avoid spurious updates.
+     *
+     * <p>For example — Yoda erases Luke's old coordinates and writes the new ones:</p>
+     * <pre>
+     *   // remove old RDN attr values from prototype
+     *   newEntry.setDn( newDn );
+     *   // add new RDN attr values to prototype
+     * </pre>
      */
     private void saveState()
     {
@@ -312,11 +405,23 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     }
 
 
+    // ── Luke Arrives at Yoda's Training Spot — Load the Current State ─────────
+    // Luke jogs over to the clearing — Yoda immediately reads back the last
+    // known DN from the training scroll and pre-fills the inputs, then checks
+    // whether what's there is already valid.  The focus goes to the input
+    // control so Luke can type right away.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
-     * 
-     * This implementation initializes Dn builder widghet with the
-     * Dn of the protoype entry.
+     * Called when this page becomes visible.
+     * Pre-populates the DN inputs from the prototype entry via {@link #loadState()},
+     * then validates to update the Next button, and focuses the input control.
+     *
+     * <p>For example — Luke jogs up; Yoda hands him the pre-filled exercise sheet:</p>
+     * <pre>
+     *   if ( visible ) { loadState(); validate(); inputControl.setFocus(); }
+     * </pre>
+     *
+     * @param visible  {@code true} when this page is being shown, {@code false} when hidden.
      */
     public void setVisible( boolean visible )
     {
@@ -335,12 +440,23 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     }
 
 
+    // ── Yoda Checks Whether Luke Is Ready for the Next Trial ──────────────────
+    // Yoda doesn't run to the next cave just to see whether the path is clear —
+    // he simply checks whether Luke's current answer is complete.  This fast
+    // check avoids triggering a server read just to decide whether Next is enabled.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
-     * 
-     * This implementation just checks if this page is complete. It 
-     * doesn't call {@link #getNextPage()} to avoid unneeded 
-     * invokings of {@link ReadEntryRunnable}s.
+     * Returns {@code true} only when the page is complete, without triggering
+     * the {@link #getNextPage()} server-validation logic.
+     * We override this to avoid unnecessary {@link ReadEntryRunnable} executions
+     * while the user is still composing the DN.
+     *
+     * <p>For example — Yoda confirms Luke is ready before sending him to the cave:</p>
+     * <pre>
+     *   return isPageComplete(); // no server call — just a state check
+     * </pre>
+     *
+     * @return  {@code true} if the page is complete and Next can be pressed.
      */
     @Override
     public boolean canFlipToNextPage()
@@ -349,11 +465,28 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     }
 
 
+    // ── Yoda Verifies the Path Before Leading Luke Onward ─────────────────────
+    // Before Yoda leads Luke to the next training site, he stretches out with
+    // the Force to verify the path: does the parent location actually exist?
+    // Is the spot Luke chose already occupied by someone else?  Only when both
+    // checks pass does Yoda step aside and wave Luke forward.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
-     * 
-     * This implementation invokes a {@link ReadEntryRunnable} to check if an
-     * entry with the composed Dn already exists.
+     * Validates the composed DN against the server before advancing.
+     * For regular entries: verifies that the parent DN exists and that the
+     * full DN does not already exist.
+     * For context entries: verifies that the chosen DN does not already exist.
+     * Shows an error dialog and returns {@code null} if any check fails.
+     *
+     * <p>For example — Yoda checks two things with the Force before moving on:</p>
+     * <pre>
+     *   ReadEntryRunnable check1 = new ReadEntryRunnable( conn, parentDn );
+     *   // → error if parent does not exist
+     *   ReadEntryRunnable check2 = new ReadEntryRunnable( conn, fullDn );
+     *   // → error if entry already exists
+     * </pre>
+     *
+     * @return  The next {@link IWizardPage}, or {@code null} if a server check fails.
      */
     @Override
     public IWizardPage getNextPage()
@@ -376,7 +509,7 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
 
                 if ( parentEntry == null )
                 {
-                    getShell().getDisplay().syncExec( () -> 
+                    getShell().getDisplay().syncExec( () ->
                         {
                             MessageDialog
                                 .openError( getShell(),
@@ -390,7 +523,7 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
                     return null;
                 }
 
-                // check that new entry does not exists yet 
+                // check that new entry does not exists yet
                 ReadEntryRunnable readEntryRunnable2 = new ReadEntryRunnable( wizard.getSelectedConnection(), dn );
                 RunnableContextRunner.execute( readEntryRunnable2, getContainer(), false );
                 IEntry entry = readEntryRunnable2.getReadEntry();
@@ -420,7 +553,7 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
             {
                 final Dn dn = new Dn( contextEntryDnCombo.getText() );
 
-                // check that new entry does not exists yet 
+                // check that new entry does not exists yet
                 ReadEntryRunnable readEntryRunnable2 = new ReadEntryRunnable( wizard.getSelectedConnection(), dn );
                 RunnableContextRunner.execute( readEntryRunnable2, getContainer(), false );
                 IEntry entry = readEntryRunnable2.getReadEntry();
@@ -434,7 +567,7 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
                                     Messages.getString( "NewEntryDnWizardPage.Error" ), NLS.bind( Messages.getString( "NewEntryDnWizardPage.EntryAlreadyExists" ), dn.toString() ) ); //$NON-NLS-1$ //$NON-NLS-2$
                         }
                     );
-                    
+
                     return null;
                 }
             }
@@ -448,8 +581,25 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     }
 
 
+    // ── Yoda Sets Up the Naming Lesson Layout ─────────────────────────────────
+    // Yoda arranges two possible lesson formats: for a context entry, a single
+    // combo drop-down shows the known naming contexts; for a regular entry,
+    // the full DnBuilderWidget appears with its RDN and parent-DN sections.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the SWT controls for this page.
+     * For context entries: creates a combo pre-wired with content proposals for
+     * known naming contexts from the root DSE.
+     * For regular entries: creates a {@link DnBuilderWidget} that lets the user
+     * pick an RDN attribute/value and browse for the parent DN.
+     *
+     * <p>For example — Yoda draws two possible lesson formats on the ground:</p>
+     * <pre>
+     *   // context entry: [ Full DN combo ▼ ]
+     *   // regular entry: [ RDN picker ] + [ Parent DN browser ]
+     * </pre>
+     *
+     * @param parent  The parent composite supplied by the wizard dialog.
      */
     public void createControl( Composite parent )
     {
@@ -478,8 +628,20 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     }
 
 
+    // ── Luke Adjusts His Answer — Yoda Re-Evaluates ───────────────────────────
+    // Luke changes the RDN or parent DN in the DN builder — Yoda immediately
+    // re-reads the answer and decides whether Next should light up.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Fired when the {@link DnBuilderWidget} content changes.
+     * Re-validates the page so the Next button reflects the current DN state.
+     *
+     * <p>For example — Luke writes a new RDN; Yoda checks the updated answer:</p>
+     * <pre>
+     *   public void widgetModified( WidgetModifyEvent event ) { validate(); }
+     * </pre>
+     *
+     * @param event  The widget-modify event from the DN builder; not used directly.
      */
     public void widgetModified( WidgetModifyEvent event )
     {
@@ -487,8 +649,20 @@ public class NewEntryDnWizardPage extends WizardPage implements WidgetModifyList
     }
 
 
+    // ── Yoda Notes Luke's Last Preferred DN Layout ────────────────────────────
+    // At the end of the session, Yoda jots down which parent DN Luke used most
+    // recently so next time the same spot is pre-filled as the default.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the dialogs settings.
+     * Persists the current DN builder widget's dialog settings (e.g. last-used
+     * parent DN) so they survive across wizard invocations.
+     * Called by {@link NewEntryWizard#performFinish()} for regular (non-context)
+     * entries only.
+     *
+     * <p>For example — Yoda records Luke's last-used parent location:</p>
+     * <pre>
+     *   dnBuilderWidget.saveDialogSettings();
+     * </pre>
      */
     public void saveDialogSettings()
     {

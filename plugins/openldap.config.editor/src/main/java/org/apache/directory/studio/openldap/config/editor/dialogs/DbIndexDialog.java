@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -51,8 +51,18 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.DbIndexWrappe
 import org.apache.directory.studio.openldap.config.editor.wrappers.StringValueDecorator;
 
 
+// Like Princess Leia transmitting the complete technical briefing
+// on how to configure database indexing, we present an interactive
+// dialog that lets the operator pick attributes and index types
+// in one focused session before confirming their choices.
 /**
- * The IndexDialog is used to edit an index configuration.
+ * A dialog for editing a database index configuration in the OpenLDAP
+ * config editor. We let the operator choose one or more attributes to
+ * index (or the default) and then tick off which index types (pres, eq,
+ * approx, sub, subinitial, subany, subfinal, nolang, nosubtypes, notags)
+ * they want enabled.
+ *
+ * <p>The dialog layout looks like this:
  * <pre>
  * +--------------------------------------------------+
  * |  Attributes                                      |
@@ -74,7 +84,7 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.StringValueDe
  * | '----------------------------------------------' |
  * +--------------------------------------------------+
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
@@ -87,7 +97,7 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
     private Button attributesCheckbox;
     private TableWidget<StringValueWrapper> attributeTable;
     private Button defaultCheckbox;
-    
+
     // The index type section
     private Button presCheckbox;
     private Button eqCheckbox;
@@ -99,13 +109,13 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
     private Button subInitialCheckbox;
     private Button subAnyCheckbox;
     private Button subFinalCheckbox;
-    
+
     // The list of all the type buttons
     private Button[] typeButtons = new Button[10];
-    
+
     /**
      * Listeners for the Attributes radioButton. It will enable the Attributes table.
-     * */ 
+     */
     private SelectionListener attributesCheckboxSelectionListener = new SelectionAdapter()
     {
         @Override
@@ -116,15 +126,15 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
             checkAndUpdateOkButtonEnableState();
         }
     };
-    
-    
+
+
     /**
      * The attribute table listener
      */
     private WidgetModifyListener attributeTableListener = event ->
         {
             getEditedElement().getAttributes().clear();
-            
+
             for ( StringValueWrapper attribute : attributeTable.getElements() )
             {
                 getEditedElement().getAttributes().add( attribute.getValue() );
@@ -133,7 +143,7 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
             checkAndUpdateOkButtonEnableState();
         };
 
-    
+
     /**
      * A listener on the Default radio button. It will disable the Attributes table
      * and the associated buttons.
@@ -149,7 +159,7 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
         }
     };
 
-    
+
     /**
      * A listener on one of the indexType checkboxes (but SUB and SUBxxx)
      */
@@ -160,16 +170,16 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
         {
             checkAndUpdateOkButtonEnableState();
             DbIndexWrapper indexWrapper = getEditedElement();
-            
+
             // Update the edited element
             Button selectedCheckbox = (Button)e.getSource();
-            
+
             for ( int i = 0; i < typeButtons.length; i++ )
             {
                 if ( typeButtons[i] == selectedCheckbox )
                 {
                     DbIndexTypeEnum indexType = DbIndexTypeEnum.getIndexType( i );
-                    
+
                     if ( selectedCheckbox.getSelection() )
                     {
                         indexWrapper.getTypes().add( indexType );
@@ -183,7 +193,7 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
         }
     };
 
-    
+
     /**
      * A listener on the SUB indice check box. If it's selected, we will grey all the sub-sub indexes.
      * If it's delected, we will remove all the sub-sub indexes
@@ -194,14 +204,14 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
         public void widgetSelected( SelectionEvent e )
         {
             DbIndexWrapper indexWrapper = getEditedElement();
-            
+
             if ( subCheckbox.getSelection() )
             {
                 indexWrapper.getIndexTypes().add( DbIndexTypeEnum.SUB );
                 indexWrapper.getIndexTypes().remove( DbIndexTypeEnum.SUBINITIAL );
                 indexWrapper.getIndexTypes().remove( DbIndexTypeEnum.SUBANY );
                 indexWrapper.getIndexTypes().remove( DbIndexTypeEnum.SUBFINAL );
-                
+
                 subInitialCheckbox.setSelection( true );
                 subAnyCheckbox.setSelection( true );
                 subFinalCheckbox.setSelection( true );
@@ -212,17 +222,17 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
                 indexWrapper.getIndexTypes().remove( DbIndexTypeEnum.SUBINITIAL );
                 indexWrapper.getIndexTypes().remove( DbIndexTypeEnum.SUBANY );
                 indexWrapper.getIndexTypes().remove( DbIndexTypeEnum.SUBFINAL );
-                
+
                 subInitialCheckbox.setSelection( false );
                 subAnyCheckbox.setSelection( false );
                 subFinalCheckbox.setSelection( false );
             }
-            
+
             checkAndUpdateOkButtonEnableState();
         }
     };
 
-    
+
     /**
      * A listener on the SUB related indices check boxes. We will disable the SUB checkbox, no matter what
      */
@@ -233,9 +243,9 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
         {
             // Check that we aren't coming from a modification of the SUB button
             DbIndexWrapper indexWrapper = getEditedElement();
-            
+
             Button button = (Button)e.getSource();
-            
+
             // First, update the indexTypes set
             if ( button == subAnyCheckbox )
             {
@@ -385,11 +395,17 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
     };
 
 
+    // Like Leia initializing the hologram projector before the briefing
+    // begins, we set up the dialog with a browser connection reference
+    // and prepare the attribute schema loader so it's ready to populate
+    // the attribute table when the dialog opens.
     /**
-     * Creates a new instance of OverlayDialog.
-     * 
-     * @param parentShell the parent shell
-     * @param browserConnection the connection
+     * Creates a new DbIndexDialog attached to the given parent shell.
+     * We initialize the schema object loader here so the attribute table
+     * can be populated with known attribute names.
+     *
+     * @param parentShell the parent shell this dialog belongs to
+     * @param browserConnection the LDAP browser connection (reserved for future use)
      */
     public DbIndexDialog( Shell parentShell, IBrowserConnection browserConnection )
     {
@@ -399,8 +415,13 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
     }
 
 
+    // Like labeling the hologram frame so the Rebellion knows they're
+    // watching the "Index" briefing, we stamp the shell title so the
+    // operator can immediately see what this dialog is all about.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to "Index".
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -410,8 +431,15 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
     }
 
 
+    // Like Leia's hologram materializing the full technical layout —
+    // attributes section on top, index types below — we build both
+    // groups in sequence, then seed the UI with whatever data is
+    // already in the index wrapper before handing control to the operator.
     /**
-     * Creates the IndexDialog, which has two groups : attributes and indices.
+     * Builds the full dialog content area with an attributes group and
+     * an indices group, then initializes the controls from the current
+     * index wrapper so existing values are pre-selected.
+     *
      * <pre>
      * +--------------------------------------------------+
      * |  Attributes                                      |
@@ -433,7 +461,9 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
      * | '----------------------------------------------' |
      * +--------------------------------------------------+
      * </pre>
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -444,7 +474,7 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
 
         // The attributes group
         createAttributesGroup( composite );
-        
+
         // The indices grouo
         createIndicesGroup( composite );
 
@@ -453,13 +483,20 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
         //addListeners();
 
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // Like Leia's hologram laying out the attributes section of the
+    // briefing — a radio for specific attributes plus a table to list
+    // them, and a radio for the "Default" catch-all — we build the
+    // attributes group panel and wire up all its listeners.
     /**
-     * Creates the attributes group.
+     * Builds the attributes group UI, creating the attribute list radio
+     * button, the scrollable attribute table with add/delete controls,
+     * and the Default radio button below it.
+     *
      * <pre>
      *   Attributes
      *  .----------------------------------------------.
@@ -469,8 +506,9 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
      *  |     +----------------------------+           |
      *  | (o) Default                                  |
      *  '----------------------------------------------'
+     * </pre>
      *
-     * @param parent the parent composite
+     * @param parent the parent composite to attach the attributes group to
      */
     private void createAttributesGroup( Composite parent )
     {
@@ -505,8 +543,15 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
     }
 
 
+    // Like Leia's hologram switching to the index type section of the
+    // briefing and laying out all the index checkboxes in a neat grid,
+    // we create the indices panel with pres, eq, approx, nolang,
+    // nosubtypes, notags, sub, and the sub-sub checkboxes below it.
     /**
-     * Creates the indices group.
+     * Builds the indices group UI, creating checkboxes for each index
+     * type and nesting the subinitial/subany/subfinal options beneath
+     * the parent sub checkbox.
+     *
      * <pre>
      *  Indices
      * .----------------------------------------------.
@@ -518,7 +563,8 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
      * |    [] subfinal                               |
      * '----------------------------------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent the parent composite to attach the indices group to
      */
     private void createIndicesGroup( Composite parent )
     {
@@ -591,10 +637,16 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
     }
 
 
+    // Like flipping all three sub-index toggles in one coordinated
+    // move — the way the Rebellion would coordinate a simultaneous
+    // strike — we set subinitial, subany, and subfinal all at once
+    // and clear any grayed state on the parent sub checkbox.
     /**
-     * Sets the selection for sub checkboxes.
+     * Sets the selection state for all three sub-index checkboxes
+     * (subinitial, subany, subfinal) simultaneously, and clears
+     * any grayed state on the parent sub checkbox.
      *
-     * @param selection the selection
+     * @param selection {@code true} to select all three, {@code false} to deselect
      */
     private void setSelectionForSubCheckboxes( boolean selection )
     {
@@ -605,8 +657,14 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
     }
 
 
+    // Like checking whether the Rebellion's sub-attack is fully
+    // coordinated or only partially underway, we look at the three
+    // sub-index checkboxes and update the parent sub checkbox to
+    // reflect whether all, some, or none of them are selected.
     /**
-     * Verifies and updates the selection state for the 'sub' checkbox.
+     * Examines the selection state of the three sub-index checkboxes
+     * and updates the parent sub checkbox accordingly — grayed when
+     * partially selected, checked when all selected, unchecked when none.
      */
     private void checkAndUpdateSubCheckboxSelectionState()
     {
@@ -618,7 +676,18 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
         subCheckbox.setSelection( atLeastOneSelected );
     }
 
-    
+
+    // Like loading the Rebellion's known attribute list into the
+    // briefing display before the hologram goes live, we convert
+    // the raw attribute strings into wrapper objects and push them
+    // into the table widget so the operator can see what's indexed.
+    /**
+     * Populates the attribute table widget from the given set of
+     * attribute name strings, wrapping each in a {@link StringValueWrapper}
+     * before loading them into the table.
+     *
+     * @param attributes the set of attribute names to display in the table
+     */
     private void initAttributeTable( Set<String> attributes )
     {
         List<StringValueWrapper> attributeWrappers = new ArrayList<>();
@@ -635,13 +704,19 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
     }
 
 
+    // Like the hologram operator loading the pre-existing mission data
+    // before the briefing starts so everyone sees the current state,
+    // we pull values out of the index wrapper and pre-populate every
+    // checkbox and table entry so edits start from the right baseline.
     /**
-     * Inits the UI from the DbIndexWrapper
+     * Initializes the dialog controls from the current {@link DbIndexWrapper},
+     * pre-selecting the attribute table entries and all the index type
+     * checkboxes that match the wrapper's stored configuration.
      */
     protected void initDialog()
     {
         DbIndexWrapper editedElement = getEditedElement();
-        
+
         if ( editedElement != null )
         {
             // Attributes
@@ -663,7 +738,7 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
                 presCheckbox.setSelection( indexTypes.contains( DbIndexTypeEnum.PRES ) );
                 eqCheckbox.setSelection( indexTypes.contains( DbIndexTypeEnum.EQ ) );
                 approxCheckbox.setSelection( indexTypes.contains( DbIndexTypeEnum.APPROX ) );
-                
+
                 if ( indexTypes.contains( DbIndexTypeEnum.SUB ) )
                 {
                     subCheckbox.setSelection( true );
@@ -676,7 +751,7 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
                     subFinalCheckbox.setSelection( indexTypes.contains( DbIndexTypeEnum.SUBFINAL ) );
                     checkAndUpdateSubCheckboxSelectionState();
                 }
-                
+
                 noLangCheckbox.setSelection( indexTypes.contains( DbIndexTypeEnum.NOLANG ) );
                 noSubtypesCheckbox.setSelection( indexTypes.contains( DbIndexTypeEnum.NOSUBTYPES ) );
                 noTagsCheckbox.setSelection( indexTypes.contains( DbIndexTypeEnum.NOTAGS ) );
@@ -684,9 +759,17 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
         }
     }
 
-    
+
+    // Like the Rebellion cloning an existing mission briefing to use
+    // as the starting point for a new operation, we clone the given
+    // index wrapper and set it as the element being edited so the
+    // operator starts from a known-good baseline.
     /**
-     * Add a new Element that will be edited
+     * Prepares the dialog for editing a new element by cloning the
+     * given {@link DbIndexWrapper} and setting the clone as the
+     * edited element.
+     *
+     * @param editedElement the index wrapper to clone as the starting point
      */
     protected void addNewElement( DbIndexWrapper editedElement )
     {
@@ -695,26 +778,39 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
     }
 
 
+    // Like the Rebellion starting a fresh mission plan from a blank
+    // slate, we create a new empty index wrapper and set it as the
+    // element being edited when the operator adds a brand-new index.
     /**
-     * Add a new Element that will be edited
+     * Prepares the dialog for adding a brand-new index entry by
+     * setting a fresh empty {@link DbIndexWrapper} as the edited element.
      */
     public void addNewElement()
     {
         setEditedElement( new DbIndexWrapper( "" ) );
     }
 
-    
+
+    // Like making sure the transmit button on the hologram projector
+    // starts out locked until there's actually something worth sending,
+    // we create the OK button but disable it if the index wrapper is
+    // empty or has no attributes yet.
     /**
-     * Overriding the createButton method. The OK button is not enabled until 
-     * 
-     * {@inheritDoc}
+     * Creates the dialog buttons, disabling the OK button at startup
+     * when the current index wrapper has no attributes configured yet.
+     *
+     * @param parent the button bar composite to add buttons to
+     * @param id the button's ID constant
+     * @param label the text label for the button
+     * @param defaultButton whether this is the default button
+     * @return the newly created button widget
      */
     @Override
-    protected Button createButton(Composite parent, int id, String label, boolean defaultButton) 
+    protected Button createButton(Composite parent, int id, String label, boolean defaultButton)
     {
         Button button = super.createButton(parent, id, label, defaultButton);
 
-        if ( id == IDialogConstants.OK_ID ) 
+        if ( id == IDialogConstants.OK_ID )
         {
             DbIndexWrapper dbIndexWrapper = getEditedElement();
 
@@ -723,15 +819,20 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
                 button.setEnabled( false );
             }
         }
-        
+
         return button;
     }
 
 
+    // Like the Rebellion's mission controller checking whether the plan
+    // is complete enough to authorize the strike, we evaluate the current
+    // dialog state and enable or disable the OK button based on whether
+    // the operator has made a valid and complete index configuration.
     /**
-     * Checks and updates the OK button 'enable' state. For the OK button to be enabled, either
-     * the default checkbox has to be selected, and one selection has to be made on the indices,
-     * or the attributes table should not be empty.
+     * Evaluates the current selection state and enables the OK button
+     * only when the configuration is complete — either the default checkbox
+     * is selected with at least one index type chosen, or the attributes
+     * table contains at least one attribute.
      */
     private void checkAndUpdateOkButtonEnableState()
     {
@@ -740,15 +841,15 @@ public class DbIndexDialog extends AddEditDialog<DbIndexWrapper>
         if ( defaultCheckbox.getSelection() )
         {
             okButton.setEnabled(
-                presCheckbox.getSelection() || 
-                eqCheckbox.getSelection() || 
+                presCheckbox.getSelection() ||
+                eqCheckbox.getSelection() ||
                 approxCheckbox.getSelection() ||
-                subCheckbox.getSelection() || 
-                subInitialCheckbox.getSelection() || 
+                subCheckbox.getSelection() ||
+                subInitialCheckbox.getSelection() ||
                 subAnyCheckbox.getSelection() ||
-                subFinalCheckbox.getSelection() || 
-                noLangCheckbox.getSelection() || 
-                noTagsCheckbox.getSelection() || 
+                subFinalCheckbox.getSelection() ||
+                noLangCheckbox.getSelection() ||
+                noTagsCheckbox.getSelection() ||
                 noSubtypesCheckbox.getSelection() );
         }
         else

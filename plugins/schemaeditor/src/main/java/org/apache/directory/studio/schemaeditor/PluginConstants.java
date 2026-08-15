@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor;
 
@@ -25,18 +25,36 @@ import org.apache.directory.studio.schemaeditor.view.preferences.SchemaViewPrefe
 import org.apache.directory.studio.schemaeditor.view.preferences.SearchViewPreferencePage;
 
 
+// ── CLASS: PluginConstants — Palpatine Transmits Order 66 Galaxy-Wide ────────
+// Palpatine sits in his chamber on Coruscant and issues a single transmission
+// that instantly configures the behavior of every clone trooper across the galaxy:
+// each soldier knows exactly what to do without needing individual instructions.
+// PluginConstants is that transmission — one class, every constant the plugin
+// needs, broadcast to all the classes that import it.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class contains all the Constants used in the Plugin.
- * Final reference -> class shouldn't be extended
+ * Central registry of every constant used across the Schema Editor plugin.
+ * IDs for views, editors, perspectives, preference pages, image paths, command
+ * names, and preference keys all live here so they never get duplicated or
+ * drift out of sync. Think of this class as Palpatine's Order 66 transmission:
+ * one authoritative source that tells every part of the plugin exactly how to
+ * behave — without it, everyone would be guessing their own IDs and stepping
+ * on each other's toes.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public final class PluginConstants
 {
+    // ── The Emperor Seals The Vault — No Instances Allowed ───────────────────────
+    // Palpatine's order is a broadcast, not an object you hand to someone — you
+    // don't create a copy of Order 66, you just receive it. The private constructor
+    // enforces the same rule here: PluginConstants is a namespace of static values,
+    // never an instance you hold onto.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     *  Ensures no construction of this class, also ensures there is no need for final keyword above
-     *  (Implicit super constructor is not visible for default constructor),
-     *  but is still self documenting.
+     * Private constructor — this class is a pure constants holder and should never
+     * be instantiated. All values are static fields; grabbing a reference to an
+     * instance of PluginConstants would be meaningless.
      */
     private PluginConstants()
     {
@@ -50,15 +68,15 @@ public final class PluginConstants
         .getString( "Perspective_SchemaEditor_id" ); //$NON-NLS-1$
 
     /** The LDAP Browser perspective ID */
-    public static final String PERSPECTIVE_LDAP_BROWSER_ID = 
+    public static final String PERSPECTIVE_LDAP_BROWSER_ID =
         "org.apache.directory.studio.ldapbrowser.ui.perspective.BrowserPerspective"; //$NON-NLS-1$
 
     /** The top left folder ID */
-    public static final String PERSPECTIVE_TOP_LEFT_FOLDER_ID = 
+    public static final String PERSPECTIVE_TOP_LEFT_FOLDER_ID =
         "org.apache.directory.studio.schemaeditor.topleftfolder"; //$NON-NLS-1$
 
     /** The bottom folder ID */
-    public static final String PERSPECTIVE_BOTTOM_FOLDER_ID = 
+    public static final String PERSPECTIVE_BOTTOM_FOLDER_ID =
         "org.apache.directory.studio.schemaeditor.bottomfolder"; //$NON-NLS-1$
 
     /** The Attribute Type Editor ID */

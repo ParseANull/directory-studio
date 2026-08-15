@@ -38,8 +38,26 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.dialogs.PropertyPage;
 
 
+// ── CLASS: SearchPropertyPage — R2-D2 PLUGGING INTO THE DEATH STAR COMPUTER ──
+// R2-D2 rolls up to the Death Star computer terminal, jacks in his interface arm,
+// and immediately starts reading configuration data — base DN, filter, scope,
+// size limit.  He can't change which Death Star he's connected to (CONNECTION_READONLY),
+// but he can tweak every other search parameter and re-run the query.
+// When Artoo validates a data port and confirms the signal is clean, the OK
+// button lights up.  When he hits commit, the updated search parameters are
+// persisted and the search is re-executed to fetch fresh results.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The SearchPropertyPage implements the property page for an {@link ISearch}.
+ * Eclipse property page for viewing and editing an {@link ISearch} configuration.
+ * Wraps a {@link SearchPageWrapper} in read-only-connection mode, meaning the
+ * target LDAP connection cannot be changed from this page — all other search
+ * parameters (base DN, filter, scope, size/time limits, return attributes) are
+ * editable.
+ * On OK, any changes are saved back to the {@link ISearch} object, a
+ * {@link SearchUpdateEvent} fires to persist the new parameters, and the search
+ * re-executes.
+ * Think of this page as R2-D2 plugging into the Death Star terminal — reading
+ * and patching the mission parameters before extracting the data.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -53,8 +71,19 @@ public class SearchPropertyPage extends PropertyPage implements IWorkbenchProper
     private SearchPageWrapper spw;
 
 
+    // ── R2-D2 POWERS UP HIS INTERFACE ARM ─────────────────────────────────────
+    // Artoo initialises before approaching the terminal — no Apply button needed
+    // here because changes are saved all-at-once when the user hits OK.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SearchPropertyPage.
+     * Creates the property page and suppresses the Default and Apply buttons.
+     * Search parameter edits are committed together when the user clicks OK,
+     * so we don't need incremental Apply semantics here.
+     *
+     * <p>For example — Artoo powers up, ready to plug in:</p>
+     * <pre>
+     *   noDefaultAndApplyButton() → one-shot commit on OK, no incremental Apply
+     * </pre>
      */
     public SearchPropertyPage()
     {
@@ -63,8 +92,20 @@ public class SearchPropertyPage extends PropertyPage implements IWorkbenchProper
     }
 
 
+    // ── R2-D2 DISCONNECTS CLEANLY FROM THE TERMINAL ───────────────────────────
+    // When the property dialog closes we need to remove Artoo's modify listener
+    // from the search page wrapper, otherwise events fired after the dialog is
+    // gone could try to update disposed widgets and crash.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Removes this page from the {@link SearchPageWrapper}'s widget-modify listener
+     * list before delegating to the superclass {@code dispose()}.
+     * This prevents stale event callbacks from reaching the disposed widgets.
+     *
+     * <p>For example — Artoo retracts his interface arm and rolls away:</p>
+     * <pre>
+     *   dialog closed → spw.removeWidgetModifyListener(this) → super.dispose()
+     * </pre>
      */
     public void dispose()
     {
@@ -73,8 +114,27 @@ public class SearchPropertyPage extends PropertyPage implements IWorkbenchProper
     }
 
 
+    // ── R2-D2 JACKS IN AND READS THE MISSION PARAMETERS ──────────────────────
+    // Artoo plugs into the terminal, identifies the target search, loads all of
+    // its current parameters (base DN, filter, scope, etc.) into the display,
+    // then wires himself up to get notified whenever a parameter changes so he
+    // can update the valid/invalid signal immediately.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the property page UI using a {@link SearchPageWrapper} in
+     * {@link SearchPageWrapper#CONNECTION_READONLY} mode (the connection field
+     * is shown but not editable), populates it from the current {@link ISearch},
+     * registers this page as a {@link WidgetModifyListener}, and fires an initial
+     * validation pass.
+     *
+     * <p>For example — Artoo plugs in and reads the mission parameters:</p>
+     * <pre>
+     *   ISearch element → spw.loadFromSearch(search) populates all fields
+     *   any field change → widgetModified fires → OK button enabled/disabled
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse's property dialog.
+     * @return        The top-level composite we built.
      */
     protected Control createContents( Composite parent )
     {
@@ -107,8 +167,30 @@ public class SearchPropertyPage extends PropertyPage implements IWorkbenchProper
     }
 
 
+    // ── R2-D2 TRANSMITS THE UPDATED MISSION PARAMETERS ────────────────────────
+    // Artoo has finished editing; now he saves everything to the search object,
+    // fires a SearchUpdateEvent so the rest of the application knows the search
+    // parameters changed, and then re-runs the search to pull fresh results.
+    // If nothing changed, he simply returns true and lets the dialog close quietly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves any modified search parameters back to the {@link ISearch} via
+     * {@link SearchPageWrapper#saveToSearch(ISearch)}.
+     * If any parameter changed and the search has a live connection, fires a
+     * {@link SearchUpdateEvent} and re-runs the search via
+     * {@link SearchPageWrapper#performSearch(ISearch)}.
+     * Returns {@code true} if the dialog may close, {@code false} if the
+     * re-run fails validation (which is unlikely given the prior {@code isValid()} check).
+     *
+     * <p>For example — Artoo transmits the updated mission parameters:</p>
+     * <pre>
+     *   filter changed → spw.saveToSearch(search) → SearchUpdateEvent fired →
+     *   spw.performSearch(search) → fresh results loaded → dialog closes
+     *   nothing changed → returns true immediately
+     * </pre>
+     *
+     * @return  {@code true} if the dialog can close; result of
+     *          {@link SearchPageWrapper#performSearch(ISearch)} when a re-run occurs.
      */
     public boolean performOk()
     {
@@ -126,8 +208,25 @@ public class SearchPropertyPage extends PropertyPage implements IWorkbenchProper
     }
 
 
+    // ── R2-D2 CHECKS THE DATA PORT SIGNAL ─────────────────────────────────────
+    // Every time a parameter changes, Artoo checks whether the current settings
+    // constitute a valid, executable search query.  If the signal is clean he
+    // illuminates the OK button; if there's an error he relays the error message
+    // and dims the button.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Delegates valid/invalid state and the current error message from the
+     * {@link SearchPageWrapper} to the property page framework.
+     * Called by the wrapper whenever any search parameter widget changes value.
+     *
+     * <p>For example — Artoo checks the data port signal:</p>
+     * <pre>
+     *   field change → widgetModified fires →
+     *   setValid(spw.isValid()) → setErrorMessage(spw.getErrorMessage())
+     * </pre>
+     *
+     * @param event  The widget-modify event from the {@link SearchPageWrapper};
+     *               its source is the specific widget that changed.
      */
     public void widgetModified( WidgetModifyEvent event )
     {

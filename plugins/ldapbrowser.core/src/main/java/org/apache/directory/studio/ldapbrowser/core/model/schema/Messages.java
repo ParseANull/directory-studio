@@ -24,22 +24,39 @@ import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 
+// ── CLASS: Messages — C-3PO'S PHRASE BOOK FOR THE MODEL.SCHEMA PACKAGE ──────
+// C-3PO is fluent in over six million forms of communication — the schema
+// package needs him to translate message keys into human-readable strings.
+// Messages wraps the resource bundle for the model.schema package,
+// returning the localised string for any key or a !key! sentinel on miss.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class get messages from the resources file.
- *  
+ * Loads localised strings from the {@code messages.properties} resource bundle
+ * for the {@code model.schema} package.  Returns a {@code !key!} sentinel
+ * string when a key is missing rather than propagating an exception.
+ *
+ * <p>Think of this as C-3PO's phrase book for the schema layer — any key that
+ * isn't in the book gets a polite "I don't have that one" marker.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class Messages
 {
     /** The resource name */
-    private static final ResourceBundle RESOURCE_BUNDLE = 
+    private static final ResourceBundle RESOURCE_BUNDLE =
         ResourceBundle.getBundle( Messages.class.getPackage().getName() + ".messages" );
-    
+
+    // ── C-3PO Translates A Message Key Into A Localised String ──────────────────
+    // C-3PO consults his phrase book: if the key exists, he speaks the translation.
+    // If the page is missing — MissingResourceException — he returns "!key!" so
+    // the UI still shows something recognisable instead of crashing.
+    // Han would shoot the exception; C-3PO politely wraps it in punctuation.
+    // All callers in the schema package route through this single lookup point.
     /**
-     * Get back a message from the resource file given a key
-     * 
+     * Get back a message from the resource file given a key.
+     *
      * @param key The key associated with the message
-     * @return The found message
+     * @return The found message, or {@code !key!} if the key is missing
      */
     public static String getString( String key )
     {

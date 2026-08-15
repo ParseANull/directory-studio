@@ -66,79 +66,106 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.dialogs.PreferencesUtil;
 
 
+// ── CLASS: NetworkParameterPage — REBEL SHIP HANGAR ADDRESS FORM ─────────────────
+// When a new X-Wing joins the Rebel fleet the ground crew need to know its hangar
+// bay (hostname), docking port (port number), how to dial in (encryption method),
+// and how long to wait before giving up (timeout).  They also need to mark it as
+// read-only if it's a borrowed ship and not to be modified.
+// NetworkParameterPage is that intake form.  It is the "Network Parameter" tab in
+// the New Connection Wizard and the Connection Properties dialog.  It collects:
+//   - Connection name (the callsign)
+//   - Hostname + port
+//   - Timeout in seconds
+//   - Encryption method (none / LDAPS / StartTLS)
+//   - A link to the certificate validation preference page (or a warning if
+//     certificate validation is disabled)
+//   - A "View Certificate" button that connects, grabs the server cert, and opens
+//     CertificateInfoDialog
+//   - A "Check Network Parameter" button that verifies connectivity
+//   - A "Read-only" checkbox
+// validate() drives the enabled/disabled state of the two buttons and produces the
+// "please enter X" messages shown in the wizard chrome.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * The NetworkParameterPage is used the edit the network parameters of a
- * connection. This is a tab in the connection property widget :
+ * {@link AbstractConnectionParameterPage} for the network-level connection settings.
  *
- * <pre>
- * .---------------------------------------------------------------------------.
- * | Connection                                                                |
- * +---------------------------------------------------------------------------+
- * | .---[Network Parameter]|Authentication||Browser Options||Edit Options|--. |
- * | |                                                                       | |
- * | | Connection name : [-------------------------------------]             | |
- * | |                                                                       | |
- * | | Network Parameter                                                     | |
- * | | .-------------------------------------------------------------------. | |
- * | | |                                                                   | | |
- * | | |  Hostname :          [----------------------------------------|v] | | |
- * | | |  Port :              [----------------------------------------|v] | | |
- * | | |  Timeout :                  [                                   ] | | |
- * | | |  Encryption method : [-No encryption--------------------------|v] | | |
- * | | |                      Server certificates for LDAP connections can | | |
- * | | |                      managed in the '<certificate validation>'    | | |
- * | | |                      preference page.                             | | |
- * | | |                                                                   | | |
- * | | |                                         (Check Network Parameter) | | |
- * | | +-------------------------------------------------------------------+ | |
- * | |                                                                       | |
- * | | [] Read-Only (prevents any add, delete, modify or rename operation)   | |
- * | |                                                                       | |
- * | +-----------------------------------------------------------------------+ |
- * +---------------------------------------------------------------------------+
- * </pre>
+ * <p>This is the first tab in the New Connection Wizard and the Connection
+ * Properties dialog.  It collects:</p>
+ * <ul>
+ *   <li>Connection name</li>
+ *   <li>Hostname and port (with combo history)</li>
+ *   <li>Timeout in seconds</li>
+ *   <li>Encryption method (none / LDAPS / StartTLS)</li>
+ *   <li>Read-only flag</li>
+ * </ul>
+ *
+ * <p>Two action buttons are provided:</p>
+ * <ul>
+ *   <li><strong>Check Network Parameter</strong> — runs
+ *       {@link CheckNetworkParameterRunnable} in a modal context and reports
+ *       success/failure plus TLS protocol and cipher suite if applicable.</li>
+ *   <li><strong>View Certificate</strong> — same runnable, then opens
+ *       {@link CertificateInfoDialog} with the server's certificate chain.</li>
+ * </ul>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class NetworkParameterPage extends AbstractConnectionParameterPage
 {
+    // ── X-LDAP-URL EXTENSION CONSTANTS ────────────────────────────────────────────
+
+    /** X-LDAP-URL extension key for the connection name. */
     private static final String X_CONNECTION_NAME = "X-CONNECTION-NAME"; //$NON-NLS-1$
 
+    /** X-LDAP-URL extension key for the encryption method. */
     private static final String X_ENCRYPTION = "X-ENCRYPTION"; //$NON-NLS-1$
 
+    /** X-ENCRYPTION value for LDAPS. */
     private static final String X_ENCRYPTION_LDAPS = "ldaps"; //$NON-NLS-1$
 
+    /** X-ENCRYPTION value for StartTLS. */
     private static final String X_ENCRYPTION_START_TLS = "StartTLS"; //$NON-NLS-1$
 
-    /** The connection name text widget */
+
+    // ── UI FIELDS ─────────────────────────────────────────────────────────────────
+
+    /** Text field for the connection name. */
     private Text nameText;
 
-    /** The host name combo with the history of recently used host names */
+    /** Combo with hostname history. */
     private Combo hostCombo;
 
-    /** The host combo with the history of recently used ports */
+    /** Combo with port history; digits-only. */
     private Combo portCombo;
 
-    /** The combo to select the encryption method */
+    /** Read-only combo for encryption method (None / LDAPS / StartTLS). */
     private Combo encryptionMethodCombo;
 
-    /** The button to fetch and show the server's certificate */
+    /** Button that connects and shows the server's TLS certificate. */
     private Button viewServerCertificateButton;
 
-    /** The button to check the connection parameters */
+    /** Button that verifies basic connectivity. */
     private Button checkConnectionButton;
 
-    /** The checkbox to make the connection read-only */
+    /** Checkbox: prevent add/delete/modify/rename on this connection. */
     private Button readOnlyConnectionCheckbox;
 
-    /** A timeout for the connection. Default to 30s */
+    /** Digits-only text field for the connection timeout (seconds). */
     private Text timeoutSecondsText;
 
+
+    // ── LISTENERS ─────────────────────────────────────────────────────────────────
+
     /**
-     * A listener for the Link data widget. It will open the CertificateValidationPreference dialog.
+     * Listener for the SWT {@link Link} widget that points to the certificate
+     * validation preference page.  Clicking the link opens the preference dialog
+     * pre-focused on {@code CertificateValidationPreferencePage}.
      */
     private SelectionAdapter linkDataWidgetListener = new SelectionAdapter()
     {
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void widgetSelected( SelectionEvent event )
         {
@@ -153,10 +180,12 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
     };
 
 
+    // ── PRIVATE GETTERS ───────────────────────────────────────────────────────────
+
     /**
-     * Gets the connection name.
+     * Returns the connection name from the name text field.
      *
-     * @return the connectio name
+     * @return The connection name string.
      */
     private String getName()
     {
@@ -165,9 +194,9 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
 
 
     /**
-     * Gets the host name.
+     * Returns the hostname from the host combo.
      *
-     * @return the host name
+     * @return The hostname string.
      */
     private String getHostName()
     {
@@ -176,9 +205,9 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
 
 
     /**
-     * Gets the port.
+     * Returns the port number parsed from the port combo text.
      *
-     * @return the port
+     * @return The port number.
      */
     private int getPort()
     {
@@ -187,9 +216,11 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
 
 
     /**
-     * Gets the timeout in seconds.
+     * Returns the timeout in seconds from the timeout text field.
      *
-     * @return The timeout in seconds
+     * <p>Defaults to {@code 30} seconds if the field is empty.</p>
+     *
+     * @return The timeout in seconds.
      */
     private int getTimeoutSeconds()
     {
@@ -207,9 +238,11 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
 
 
     /**
-     * Gets the encyrption method.
+     * Returns the encryption method from the encryption combo selection.
      *
-     * @return the encyrption method
+     * <p>Index 0 = NONE, index 1 = LDAPS, index 2 = START_TLS.</p>
+     *
+     * @return The selected {@link ConnectionParameter.EncryptionMethod}.
      */
     private ConnectionParameter.EncryptionMethod getEncyrptionMethod()
     {
@@ -228,10 +261,13 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
 
 
     /**
-     * Gets a temporary connection with all connection parameter
-     * entered in this page.
+     * Builds a temporary {@link Connection} with the current field values for
+     * use by the "Check" and "View Certificate" buttons.
      *
-     * @return a test connection
+     * <p>The auth method is set to NONE — we only want to verify network
+     * connectivity, not perform a bind.</p>
+     *
+     * @return A disposable {@link Connection} for testing.
      */
     private Connection getTestConnection()
     {
@@ -244,9 +280,9 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
 
 
     /**
-     * Gets read only flag.
+     * Returns whether the read-only checkbox is checked.
      *
-     * @return the read only flag
+     * @return {@code true} if the connection should be read-only.
      */
     private boolean isReadOnly()
     {
@@ -254,33 +290,49 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
     }
 
 
+    // ── CREATE COMPOSITE ──────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Builds the page UI:</p>
+     * <ol>
+     *   <li>Connection name text field.</li>
+     *   <li>A "Network Parameter" group containing hostname combo, port combo,
+     *       timeout field, encryption combo, a certificate-validation link (or
+     *       warning), and the View Certificate / Check Network Parameter
+     *       buttons.</li>
+     *   <li>A Read-only checkbox below the group.</li>
+     * </ol>
+     *
+     * @param parent The parent composite to create the page content inside.
      */
     @Override
-	protected void createComposite( Composite parent )
+    protected void createComposite( Composite parent )
     {
         Composite composite = BaseWidgetUtils.createColumnContainer( parent, 1, 1 );
 
+        // ── CONNECTION NAME ───────────────────────────────────────────────────────
         Composite nameComposite = BaseWidgetUtils.createColumnContainer( composite, 2, 1 );
         BaseWidgetUtils.createLabel( nameComposite, Messages.getString( "NetworkParameterPage.ConnectionName" ), 1 ); //$NON-NLS-1$
         nameText = BaseWidgetUtils.createText( nameComposite, StringUtils.EMPTY, 1 ); //$NON-NLS-1$
 
         BaseWidgetUtils.createSpacer( composite, 1 );
 
+        // ── NETWORK PARAMETER GROUP ───────────────────────────────────────────────
         Group group = BaseWidgetUtils.createGroup( composite, Messages
             .getString( "NetworkParameterPage.NetworkParameter" ), 1 ); //$NON-NLS-1$
 
         IDialogSettings dialogSettings = ConnectionUIPlugin.getDefault().getDialogSettings();
 
-        // The network hostname
         Composite groupComposite = BaseWidgetUtils.createColumnContainer( group, 3, 1 );
+
+        // Hostname
         BaseWidgetUtils.createLabel( groupComposite, Messages.getString( "NetworkParameterPage.HostName" ), 1 ); //$NON-NLS-1$
         String[] hostHistory = HistoryUtils.load( dialogSettings,
             ConnectionUIConstants.DIALOGSETTING_KEY_HOST_HISTORY );
         hostCombo = BaseWidgetUtils.createCombo( groupComposite, hostHistory, -1, 2 );
 
-        // The network port
+        // Port
         BaseWidgetUtils.createLabel( groupComposite, Messages.getString( "NetworkParameterPage.Port" ), 1 ); //$NON-NLS-1$
         String[] portHistory = HistoryUtils.load( dialogSettings,
             ConnectionUIConstants.DIALOGSETTING_KEY_PORT_HISTORY );
@@ -288,11 +340,12 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
         portCombo.setTextLimit( 5 );
         portCombo.setText( "389" ); //$NON-NLS-1$
 
-        // The timeout
+        // Timeout
         BaseWidgetUtils.createLabel( groupComposite, Messages.getString( "NetworkParameterPage.Timeout" ), 2 ); //$NON-NLS-1$
         timeoutSecondsText = BaseWidgetUtils.createText( groupComposite, "30", 1 ); //$NON-NLS-1$
         timeoutSecondsText.setTextLimit( 7 );
 
+        // Encryption method
         String[] encMethods = new String[]
             {
                 Messages.getString( "NetworkParameterPage.NoEncryption" ), //$NON-NLS-1$
@@ -303,6 +356,10 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
         BaseWidgetUtils.createLabel( groupComposite, Messages.getString( "NetworkParameterPage.EncryptionMethod" ), 1 ); //$NON-NLS-1$
         encryptionMethodCombo = BaseWidgetUtils.createReadonlyCombo( groupComposite, encMethods, 0, 2 );
 
+        // ── CERT VALIDATION LINK OR WARNING ───────────────────────────────────────
+        // Show a clickable link to the preferences page if validation is on, or a
+        // plain warning label if validation is disabled.
+        // ──────────────────────────────────────────────────────────────────────────
         boolean validateCertificates = ConnectionCorePlugin.getDefault().getPluginPreferences().getBoolean(
             ConnectionCoreConstants.PREFERENCE_VALIDATE_CERTIFICATES );
 
@@ -325,6 +382,7 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
                 .getString( "NetworkParameterPage.WarningCertificateValidation" ), 2 ); //$NON-NLS-1$
         }
 
+        // ── ACTION BUTTONS ────────────────────────────────────────────────────────
         BaseWidgetUtils.createSpacer( groupComposite, 1 );
         GridData gridData = new GridData();
         gridData.horizontalAlignment = SWT.RIGHT;
@@ -336,6 +394,7 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
         checkConnectionButton.setLayoutData( gridData );
         checkConnectionButton.setText( Messages.getString( "NetworkParameterPage.CheckNetworkParameter" ) ); //$NON-NLS-1$
 
+        // ── READ-ONLY CHECKBOX ────────────────────────────────────────────────────
         readOnlyConnectionCheckbox = BaseWidgetUtils.createCheckbox( composite,
             Messages.getString( "NetworkParameterPage.ReadOnly" ), 1 ); //$NON-NLS-1$
 
@@ -344,21 +403,30 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
     }
 
 
+    // ── VALIDATE ──────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Enables/disables the action buttons based on whether host and port are
+     * filled in, then validates all required fields in order of priority:</p>
+     * <ol>
+     *   <li>Empty connection name → sets {@code message}.</li>
+     *   <li>Empty hostname → sets {@code message}.</li>
+     *   <li>Empty port → sets {@code message}.</li>
+     *   <li>Duplicate connection name → sets {@code errorMessage}.</li>
+     * </ol>
      */
     @Override
-	protected void validate()
+    protected void validate()
     {
-        // set enabled/disabled state of check connection button
+        // ── BUTTON ENABLE STATE ───────────────────────────────────────────────────
         checkConnectionButton.setEnabled( !hostCombo.getText().equals( StringUtils.EMPTY ) &&
             !portCombo.getText().equals( StringUtils.EMPTY ) );
 
-        // set enabled/disabled state of show server certificate button
         viewServerCertificateButton.setEnabled( checkConnectionButton.isEnabled()
             && getEncyrptionMethod() != EncryptionMethod.NONE );
 
-        // validate input fields
+        // ── VALIDATION MESSAGES ───────────────────────────────────────────────────
         message = null;
         infoMessage = null;
         errorMessage = null;
@@ -378,11 +446,18 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
             message = Messages.getString( "NetworkParameterPage.PleaseEnterConnectionName" ); //$NON-NLS-1$
         }
 
+        // ── DEFAULT TIMEOUT ───────────────────────────────────────────────────────
+        // If the timeout field is cleared, silently restore the default (30 s).
+        // ──────────────────────────────────────────────────────────────────────────
         if ( Strings.isEmpty( timeoutSecondsText.getText() ) ) //$NON-NLS-1$
         {
             timeoutSecondsText.setText( "30" );
         }
 
+        // ── DUPLICATE NAME ────────────────────────────────────────────────────────
+        // If another connection already uses this name (and it's not the connection
+        // we're currently editing), report it as an error.
+        // ──────────────────────────────────────────────────────────────────────────
         if ( ConnectionCorePlugin.getDefault().getConnectionManager().getConnectionByName( nameText.getText() ) != null
             && ( ( connectionParameter == null ) || !nameText.getText().equals( connectionParameter.getName() ) ) )
         {
@@ -393,11 +468,18 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
     }
 
 
+    // ── LOAD PARAMETERS ───────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Populates all fields from the given {@link ConnectionParameter}.  Selects
+     * the correct encryption method combo index and converts the stored
+     * timeout-millis to seconds.</p>
+     *
+     * @param parameter The existing connection parameters to load.
      */
     @Override
-	protected void loadParameters( ConnectionParameter parameter )
+    protected void loadParameters( ConnectionParameter parameter )
     {
         connectionParameter = parameter;
 
@@ -422,16 +504,22 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
     }
 
 
+    // ── INIT LISTENERS ────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Wires modify/selection/verify listeners on all fields so the wizard
+     * chrome updates on every keystroke or selection change.  The port and timeout
+     * fields only accept digit characters (verified via verify listeners).</p>
      */
     @Override
-	protected void initListeners()
+    protected void initListeners()
     {
         nameText.addModifyListener( event -> connectionPageModified() );
 
         hostCombo.addModifyListener( event -> connectionPageModified() );
 
+        // ── PORT: DIGITS ONLY ─────────────────────────────────────────────────────
         portCombo.addVerifyListener( event -> {
             if ( !event.text.matches( "[0-9]*" ) ) //$NON-NLS-1$
             {
@@ -453,10 +541,15 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
             }
         } );
 
+        // ── CHECK NETWORK PARAMETER BUTTON ────────────────────────────────────────
         checkConnectionButton.addSelectionListener( new SelectionAdapter()
         {
             /**
              * {@inheritDoc}
+             *
+             * Runs {@link CheckNetworkParameterRunnable} in a modal progress context.
+             * On success, shows a dialog with the result and, if TLS is active, the
+             * negotiated protocol and cipher suite.
              */
             @Override
             public void widgetSelected( SelectionEvent event )
@@ -481,8 +574,15 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
             }
         } );
 
+        // ── VIEW SERVER CERTIFICATE BUTTON ────────────────────────────────────────
         viewServerCertificateButton.addSelectionListener( new SelectionAdapter()
         {
+            /**
+             * {@inheritDoc}
+             *
+             * Runs {@link CheckNetworkParameterRunnable}, then opens
+             * {@link CertificateInfoDialog} with the server's certificate chain.
+             */
             @Override
             public void widgetSelected( SelectionEvent event )
             {
@@ -523,7 +623,7 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
             }
         } );
 
-        // The timeout events
+        // ── TIMEOUT: DIGITS ONLY ──────────────────────────────────────────────────
         timeoutSecondsText.addModifyListener( event -> connectionPageModified() );
 
         timeoutSecondsText.addVerifyListener( event -> {
@@ -535,11 +635,17 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
     }
 
 
+    // ── SAVE PARAMETERS ───────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Writes name, host, port, encryption method, read-only flag, and
+     * timeout (converted to millis) into the given {@link ConnectionParameter}.</p>
+     *
+     * @param parameter The parameter bean to populate.
      */
     @Override
-	public void saveParameters( ConnectionParameter parameter )
+    public void saveParameters( ConnectionParameter parameter )
     {
         parameter.setName( getName() );
         parameter.setHost( getHostName() );
@@ -550,11 +656,15 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
     }
 
 
+    // ── SAVE DIALOG SETTINGS ──────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Persists the current hostname and port to the dialog settings history so
+     * they appear in the combos next time.</p>
      */
     @Override
-	public void saveDialogSettings()
+    public void saveDialogSettings()
     {
         IDialogSettings dialogSettings = ConnectionUIPlugin.getDefault().getDialogSettings();
         HistoryUtils.save( dialogSettings, ConnectionUIConstants.DIALOGSETTING_KEY_HOST_HISTORY, hostCombo.getText() );
@@ -562,31 +672,49 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
     }
 
 
+    // ── SET FOCUS ─────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Gives keyboard focus to the connection name field, which is the first
+     * thing a user needs to fill in.</p>
      */
     @Override
-	public void setFocus()
+    public void setFocus()
     {
         nameText.setFocus();
     }
 
 
+    // ── ARE PARAMETERS MODIFIED ───────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns {@code true} if any reconnection-required field changed, or if
+     * the connection name changed (name changes don't require reconnection but they
+     * are still a modification).</p>
+     *
+     * @return {@code true} if any field was modified.
      */
     @Override
-	public boolean areParametersModifed()
+    public boolean areParametersModifed()
     {
         return isReconnectionRequired() || !StringUtils.equals( connectionParameter.getName(), getName() );
     }
 
 
+    // ── IS RECONNECTION REQUIRED ──────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns {@code true} if host, port, encryption method, read-only flag,
+     * or timeout changed — all of which require closing and re-opening the
+     * connection.  A name-only change does not require reconnection.</p>
+     *
+     * @return {@code true} if the connection must be closed and reopened.
      */
     @Override
-	public boolean isReconnectionRequired()
+    public boolean isReconnectionRequired()
     {
         return ( connectionParameter == null )
             || ( !StringUtils.equals( connectionParameter.getHost(), getHostName() ) )
@@ -597,11 +725,24 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
     }
 
 
+    // ── MERGE PARAMETERS TO LDAP URL ──────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Serialises the network parameters into an LDAP URL using non-standard
+     * X-LDAP-URL extensions:
+     * <ul>
+     *   <li>{@code X-CONNECTION-NAME} — the connection name.</li>
+     *   <li>host and port are set directly on the URL.</li>
+     *   <li>{@code X-ENCRYPTION=ldaps} or {@code X-ENCRYPTION=StartTLS} when
+     *       applicable.</li>
+     * </ul></p>
+     *
+     * @param parameter The connection parameters to serialise.
+     * @param ldapUrl   The LDAP URL to write extensions into.
      */
     @Override
-	public void mergeParametersToLdapURL( ConnectionParameter parameter, LdapUrl ldapUrl )
+    public void mergeParametersToLdapURL( ConnectionParameter parameter, LdapUrl ldapUrl )
     {
         ldapUrl.getExtensions().add( new Extension( false, X_CONNECTION_NAME, parameter.getName() ) );
         ldapUrl.setHost( parameter.getHost() );
@@ -610,7 +751,7 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
         switch ( parameter.getEncryptionMethod() )
         {
             case NONE:
-                // default
+                // default — no extension needed
                 break;
 
             case LDAPS:
@@ -624,13 +765,23 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
     }
 
 
+    // ── MERGE LDAP URL TO PARAMETERS ─────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Reads back the network parameters from an LDAP URL.  If the
+     * {@code X-CONNECTION-NAME} extension is absent, defaults to the current
+     * date/time as the connection name.  The encryption method defaults to
+     * {@link EncryptionMethod#NONE} if the {@code X-ENCRYPTION} extension is
+     * absent or unrecognised.</p>
+     *
+     * @param ldapUrl   The LDAP URL to read extensions from.
+     * @param parameter The connection parameter bean to populate.
      */
     @Override
-	public void mergeLdapUrlToParameters( LdapUrl ldapUrl, ConnectionParameter parameter )
+    public void mergeLdapUrlToParameters( LdapUrl ldapUrl, ConnectionParameter parameter )
     {
-        // connection name, current date if absent
+        // ── CONNECTION NAME ───────────────────────────────────────────────────────
         String name = ldapUrl.getExtensionValue( X_CONNECTION_NAME );
 
         if ( StringUtils.isEmpty( name ) )
@@ -640,13 +791,11 @@ public class NetworkParameterPage extends AbstractConnectionParameterPage
 
         parameter.setName( name );
 
-        // host
+        // ── HOST AND PORT ─────────────────────────────────────────────────────────
         parameter.setHost( ldapUrl.getHost() );
-
-        // port
         parameter.setPort( ldapUrl.getPort() );
 
-        // encryption method, none if unknown or absent
+        // ── ENCRYPTION METHOD ─────────────────────────────────────────────────────
         String encryption = ldapUrl.getExtensionValue( X_ENCRYPTION );
 
         if ( StringUtils.isNotEmpty( encryption ) && X_ENCRYPTION_LDAPS.equalsIgnoreCase( encryption ) )

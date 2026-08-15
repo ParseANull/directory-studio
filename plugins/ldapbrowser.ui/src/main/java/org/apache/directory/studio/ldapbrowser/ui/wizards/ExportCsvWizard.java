@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -28,8 +28,21 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: ExportCsvWizard — YODA LIFTS THE X-WING: CSV EDITION ──────────────
+// Yoda closes his eyes, reaches out with the Force, and lifts a complex LDAP
+// tree — transforming it into a flat CSV spreadsheet that anyone can open in
+// Excel. The magic is that what seems complex (an LDAP DIT) becomes something
+// simple (rows and columns). This wizard directs that transformation: from
+// a search result set to a CSV file on disk.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Wizard for Exporting to CSV
+ * Two-page wizard that exports LDAP search results to a CSV file.
+ * The From page defines the search (connection, base DN, filter, scope,
+ * attributes, and whether to include the DN column). The To page picks the
+ * destination file. {@code performFinish()} launches an {@code ExportCsvRunnable}
+ * as an async background job.
+ * Think of Yoda transforming the X-wing: the Force converts the LDAP tree
+ * into something flat and portable without losing the essential data.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -43,8 +56,11 @@ public class ExportCsvWizard extends ExportBaseWizard
     private ExportCsvToWizardPage toPage;
 
 
+    // ── Yoda Prepares for the Lift ────────────────────────────────────────────────
+    // The wizard title announces the transformation before it starts.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExportCsvWizard.
+     * Creates a new ExportCsvWizard with the localised "CSV Export" window title.
      */
     public ExportCsvWizard()
     {
@@ -52,10 +68,14 @@ public class ExportCsvWizard extends ExportBaseWizard
     }
 
 
+    // ── Yoda Has a Known ID ───────────────────────────────────────────────────────
+    // The wizard registry knows this wizard by a constant ID so other parts
+    // of the UI can open it programmatically.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the ID of the Export CSV Wizard
-     * 
-     * @return The ID of the Export CSV Wizard
+     * Returns the Eclipse wizard ID for the export CSV wizard.
+     *
+     * @return  the wizard ID string from {@link BrowserUIConstants}.
      */
     public static String getId()
     {
@@ -63,8 +83,14 @@ public class ExportCsvWizard extends ExportBaseWizard
     }
 
 
+    // ── Yoda Lays Out the Two Steps ───────────────────────────────────────────────
+    // Step 1: choose what to lift (the search). Step 2: choose where to set it
+    // down (the file path).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Adds the From page (search configuration) and the To page (destination file).
      */
     public void addPages()
     {
@@ -75,8 +101,15 @@ public class ExportCsvWizard extends ExportBaseWizard
     }
 
 
+    // ── Yoda Wires the Help Context ───────────────────────────────────────────────
+    // F1 on either page should open the CSV export help article.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Registers the CSV export help context ID on both wizard pages.
+     *
+     * @param pageContainer  the wizard page container.
      */
     public void createPageControls( Composite pageContainer )
     {
@@ -90,8 +123,18 @@ public class ExportCsvWizard extends ExportBaseWizard
     }
 
 
+    // ── Yoda Lifts the X-Wing ─────────────────────────────────────────────────────
+    // Eyes closed, the Force flows, and the X-wing rises. The export job is
+    // queued and runs asynchronously while the wizard closes.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Saves dialog settings from both pages and launches an async
+     * {@link ExportCsvRunnable} background job with the configured search
+     * parameters and destination file path.
+     *
+     * @return  {@code true} always — the job runs asynchronously after the wizard closes.
      */
     public boolean performFinish()
     {

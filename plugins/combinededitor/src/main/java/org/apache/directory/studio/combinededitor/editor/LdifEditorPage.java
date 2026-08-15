@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.combinededitor.editor;
 
@@ -56,8 +56,25 @@ import org.apache.directory.studio.templateeditor.actions.RefreshAction;
 import org.apache.directory.studio.templateeditor.actions.SimpleActionProxy;
 
 
+// ── CLASS: LdifEditorPage — The Tantive IV's Raw Communications Screen ────────
+// On the Tantive IV bridge, the comms officer monitors the raw signal stream —
+// every byte that comes in or goes out is visible in its unprocessed form on
+// the comms screen.  Leia can read it, Antilles can edit it directly, and any
+// change to the raw signal immediately flows back to the nav and tactical displays.
+// LdifEditorPage is that comms screen: it shows the LDAP entry as raw LDIF text
+// (the wire format for LDAP changes), lets the user type directly in that text,
+// and pushes every valid edit back into the shared working copy so the other two
+// tabs (Template, Table) stay in sync.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an editor page for the LDIF Editor.
+ * The "LDIF" tab page in the combined entry editor.
+ * Displays the current LDAP entry as a formatted LDIF text record and allows
+ * direct text editing.  Valid edits are written back to the shared working copy
+ * so they appear in the Template and Table pages as well.
+ * LDIF (LDAP Data Interchange Format) is the standard text representation of
+ * LDAP entries — think of it as the raw wire protocol made human-readable.
+ * Think of this page as the Tantive IV's raw comms screen — full fidelity,
+ * no abstractions, every attribute visible.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -82,11 +99,19 @@ public class LdifEditorPage extends AbstractCombinedEntryEditorPage
     private Menu contextMenu;
 
 
+    // ── The Comms Officer Reports for Duty on the Tantive IV ──────────────────
+    // The comms officer takes her seat at the raw signal console, attaches her
+    // headset, and labels her station so Antilles can identify it in the tab rack.
+    // Our constructor creates the CTabItem with the right label and icon, then
+    // calls setTabItem() to wire up the tab-selection listener.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of LdifEditorPage.
+     * Creates the LDIF editor page and its tab item in the editor's tab folder.
+     * We create the tab now (so it appears immediately in the tab strip) but
+     * defer creating the heavy LDIF widget until {@link #init()} is called the
+     * first time the user selects this tab.
      *
-     * @param editor
-     *      the associated editor
+     * @param editor  the combined editor that owns this page.
      */
     public LdifEditorPage( CombinedEntryEditor editor )
     {
@@ -100,8 +125,18 @@ public class LdifEditorPage extends AbstractCombinedEntryEditorPage
     }
 
 
+    // ── The Comms Screen Powers Up — Full LDIF Display Ready ──────────────────
+    // The comms officer flips the power switch and the full signal display comes
+    // to life: the LDIF widget is created, the context menu is wired up, and
+    // the current entry's LDIF text is loaded into the source viewer.
+    // init() does all that setup on first use (lazy init — only when needed).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the LDIF editor widget and loads the current entry's LDIF content.
+     * Called lazily the first time the user selects this tab.  We create the
+     * {@link LdifEditorWidget}, wire up cut/copy/paste action handlers, add a
+     * context menu with Refresh and FetchOperationalAttributes, and load the
+     * entry's current data into the source viewer.
      */
     public void init()
     {
@@ -165,8 +200,13 @@ public class LdifEditorPage extends AbstractCombinedEntryEditorPage
     }
 
 
+    // ── The Comms Officer Tunes In — Start Listening to the Signal ────────────
+    // The comms officer puts on her headset and starts processing the incoming
+    // signal — from now on any change in the source viewer triggers an update.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the listener.
+     * Attaches the widget modify listener so LDIF text changes propagate to the
+     * shared working copy.
      */
     private void addListener()
     {
@@ -174,8 +214,16 @@ public class LdifEditorPage extends AbstractCombinedEntryEditorPage
     }
 
 
+    // ── The Comms Officer Removes Her Headset — Stop Listening Temporarily ────
+    // While the comms officer is updating the display herself she removes the
+    // headset to avoid an echo — the listener is re-attached once the update
+    // is complete.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the listener.
+     * Detaches the widget modify listener to prevent recursive update loops.
+     * We remove the listener before programmatically setting the source viewer
+     * content (in {@link #setInput()}) so that our own edits don't trigger
+     * another working-copy update cycle.
      */
     private void removeListener()
     {
@@ -183,8 +231,20 @@ public class LdifEditorPage extends AbstractCombinedEntryEditorPage
     }
 
 
+    // ── The Comms Officer Parses the Signal and Updates the Nav Database ───────
+    // When the comms officer sees a valid signal she extracts the coordinates
+    // and feeds them into the nav database so the whole bridge has the latest data.
+    // updateSharedWorkingCopy() parses the LDIF text, validates it, and — if it's
+    // a single valid content record — pushes the changes back into the shared
+    // working copy so the Template and Table tabs refresh automatically.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the shared working copy entry.
+     * Parses the LDIF text in the source viewer and updates the shared working copy.
+     * We only update if the LDIF is syntactically valid and contains exactly one
+     * content record — partial or invalid LDIF is silently ignored so the user
+     * can finish typing before we try to parse.
+     * Increments {@link #hasUpdatedSharedWorkingCopyCount} so the next
+     * {@link #update()} call knows to skip re-loading (we were the source).
      */
     private void updateSharedWorkingCopy()
     {
@@ -227,8 +287,17 @@ public class LdifEditorPage extends AbstractCombinedEntryEditorPage
     }
 
 
+    // ── The Comms Officer Loads the Current Signal into the Display ────────────
+    // The comms officer retrieves the latest data from the working copy, converts
+    // it to LDIF text, and loads it into the source viewer — making the display
+    // read-only if there's no editable entry, or editable if there is one.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the input to the LDIF Editor widget.
+     * Loads the current shared working copy entry into the LDIF source viewer.
+     * If the entry is available we format it as LDIF and make the viewer editable.
+     * If there's nothing to show (e.g. the input was cleared) we blank the viewer
+     * and make it read-only.  Removes and re-attaches the modify listener around
+     * the load so we don't trigger a spurious working-copy update.
      */
     private void setInput()
     {
@@ -268,8 +337,16 @@ public class LdifEditorPage extends AbstractCombinedEntryEditorPage
     }
 
 
+    // ── The Bridge Calls for a Status Update — Comms Screen Refreshes ─────────
+    // When the nav database changes (because the Template or Table tab was edited)
+    // the comms officer refreshes the raw signal display to match — but only if
+    // the change didn't come from her own edits (she uses a counter to track that).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Refreshes the LDIF display from the shared working copy.
+     * If we triggered this update ourselves (by editing the LDIF text), we decrement
+     * the counter and skip the reload to avoid overwriting the user's in-progress
+     * edit.  If the update came from another page, we reload the LDIF text.
      */
     public void update()
     {
@@ -287,8 +364,12 @@ public class LdifEditorPage extends AbstractCombinedEntryEditorPage
     }
 
 
+    // ── The Comms Officer Steps Back — No Focus Needed ───────────────────────
+    // The LDIF source viewer handles its own focus through Eclipse text framework
+    // mechanisms; we don't need to do anything extra here.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — the LDIF source viewer manages its own focus.
      */
     public void setFocus()
     {
@@ -296,8 +377,14 @@ public class LdifEditorPage extends AbstractCombinedEntryEditorPage
     }
 
 
+    // ── New Mission Coordinates — Reload the Comms Display ───────────────────
+    // When Antilles locks onto a new target the comms display needs to reload the
+    // signal for the new destination — but only if it's already been powered up.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called when the editor's input switches to a different LDAP entry.
+     * If this page has already been initialised we reload the LDIF content
+     * from the new entry; if not, we wait until the user selects this tab.
      */
     public void editorInputChanged()
     {

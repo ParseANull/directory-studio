@@ -44,8 +44,24 @@ import org.apache.directory.studio.ldapbrowser.core.utils.Utils;
 import org.eclipse.search.ui.ISearchPageScoreComputer;
 
 
+// ── CLASS: Search — HAN'S SEARCH MISSION BRIEFING ────────────────────────────
+// Before Han takes off on a mission, he has a briefing sheet: where to search
+// (base DN), what to look for (filter), what to bring back (attributes),
+// how deep to go (scope), time and count limits, how to handle aliases and
+// referrals, and which controls to attach.  When the mission completes, the
+// sheet also holds the results, the continuation referrals, and the paged-
+// search runnables for follow-up pages.
+// Search is that briefing sheet: the full search lifecycle holder.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Default implementation of ISearch.
+ * Default implementation of {@link ISearch}.
+ * Holds a {@link SearchParameter} (all search configuration), an
+ * {@link IBrowserConnection}, the result set, continuation referrals, and
+ * paged-search runnables.  Every property change fires a
+ * {@link SearchUpdateEvent} through {@link EventRegistry}.
+ *
+ * <p>Think of this as Han's search mission briefing — configuration in, results
+ * out, with event firing on every change so the UI stays current.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -77,6 +93,7 @@ public class Search implements ISearch
     protected SearchContinuation[] searchContinuations;
 
 
+    // ── Han Creates A Default Search Mission With Sensible Defaults ──────────────
     /**
      * Creates a new search with the following parameters:
      * <ul>
@@ -104,11 +121,12 @@ public class Search implements ISearch
     }
 
 
+    // ── Han Creates A Search From An Existing Parameter Bean ─────────────────────
     /**
      * Creates a new Search with the given connection and search parameters.
      *
-     * @param conn the connection
-     * @param searchParameter the search parameters
+     * @param conn the browser connection to run this search against
+     * @param searchParameter the pre-built search parameter bean
      */
     public Search( IBrowserConnection conn, SearchParameter searchParameter )
     {
@@ -121,6 +139,7 @@ public class Search implements ISearch
     }
 
 
+    // ── Han Builds A Fully Specified Search Mission From Individual Parameters ───
     /**
      * Creates a new search with the given search parameters
      *
@@ -190,10 +209,11 @@ public class Search implements ISearch
     }
 
 
+    // ── Obi-Wan Senses A Search Change And Notifies The Force ────────────────────
     /**
      * Fires a search update event if the search name is set.
      *
-     * @param detail the SearchUpdateEvent detail
+     * @param detail the SearchUpdateEvent detail describing what changed
      */
     protected void fireSearchUpdated( SearchUpdateEvent.EventDetail detail )
     {

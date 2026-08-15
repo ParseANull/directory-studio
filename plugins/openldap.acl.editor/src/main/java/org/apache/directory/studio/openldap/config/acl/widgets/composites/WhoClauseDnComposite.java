@@ -38,8 +38,22 @@ import org.apache.directory.studio.openldap.config.acl.model.AclWhatClauseDnType
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseDn;
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseDnTypeEnum;
 
+
+// ── CLASS: WhoClauseDnComposite — TARKIN IDENTIFYING REQUESTOR BY DN ─────────
+// Grand Moff Tarkin points a who-clause at a specific requesting principal (DN).
+// This composite renders a DN picker (EntryWidget) and a Type combo (base/exact/
+// one/subtree/children/regex). The modify listener writes the picked DN back into
+// the model's AclWhoClauseDn pattern field. setClause() and setConnection() call
+// setInput() to keep the EntryWidget in sync.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * 
+ * A clause composite for the {@code dn} who-clause. Renders a DN picker
+ * ({@link EntryWidget}) and a Type combo ({@link AclWhoClauseDnTypeEnum} values).
+ * The EntryWidget modify listener writes the picked DN pattern back into the model.
+ *
+ * <p>Think of this class as Grand Moff Tarkin identifying the requesting principal
+ * by their Distinguished Name and scope type.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class WhoClauseDnComposite extends AbstractWhoClauseComposite<AclWhoClauseDn>
@@ -58,7 +72,10 @@ public class WhoClauseDnComposite extends AbstractWhoClauseComposite<AclWhoClaus
     /** The entry widget */
     private EntryWidget entryWidget;
 
-    /** The modify listener */
+    // ── Listener: Entry Widget Changed ─────────────────────────────────────────
+    // When Tarkin picks a DN the listener writes it back as the clause pattern.
+    // ─────────────────────────────────────────────────────────────────────────
+    /** Modify listener — writes the picked DN into the who-clause model. */
     private WidgetModifyListener modifyListener = new WidgetModifyListener()
     {
         public void widgetModified( WidgetModifyEvent event )
@@ -68,18 +85,44 @@ public class WhoClauseDnComposite extends AbstractWhoClauseComposite<AclWhoClaus
     };
 
 
+    // ── Constructor With Explicit Clause ──────────────────────────────────────
+    /**
+     * Creates a new DN who-clause composite with an explicit clause.
+     *
+     * @param context               The ACL context.
+     * @param clause                The DN clause to edit.
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhoClauseDnComposite( OpenLdapAclValueWithContext context, AclWhoClauseDn clause, Composite visualEditorComposite )
     {
         super( context, clause, visualEditorComposite );
     }
 
 
+    // ── Constructor Without Explicit Clause ───────────────────────────────────
+    /**
+     * Creates a new DN who-clause composite with a default {@link AclWhoClauseDn} instance.
+     *
+     * @param context               The ACL context.
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhoClauseDnComposite( OpenLdapAclValueWithContext context, Composite visualEditorComposite )
     {
         super( context, new AclWhoClauseDn(), visualEditorComposite );
     }
 
 
+    // ── Building the DN Form ──────────────────────────────────────────────────
+    // Creates a three-column composite: "DN:" label + EntryWidget + "Type:" label
+    // + Type combo spanning the remaining columns.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Creates the DN who-clause form: a "DN:" label, an {@link EntryWidget}, a
+     * "Type:" label, and a {@link AclWhoClauseDnTypeEnum} combo viewer.
+     *
+     * @param parent  The parent composite.
+     * @return        The created composite.
+     */
     public Composite createComposite( Composite parent )
     {
         Composite composite = BaseWidgetUtils.createColumnContainer( parent, 3, 1 );
@@ -129,8 +172,14 @@ public class WhoClauseDnComposite extends AbstractWhoClauseComposite<AclWhoClaus
     }
 
 
+    // ── Setting the Clause and Refreshing the Entry Widget ────────────────────
     /**
+     * Sets the DN who-clause and refreshes the {@link EntryWidget} with the
+     * clause's current pattern.
+     *
      * {@inheritDoc}
+     *
+     * @param clause  The new DN clause.
      */
     public void setClause( AclWhoClauseDn clause )
     {
@@ -139,8 +188,13 @@ public class WhoClauseDnComposite extends AbstractWhoClauseComposite<AclWhoClaus
     }
 
 
+    // ── Setting the Connection and Refreshing the Entry Widget ────────────────
     /**
+     * Sets the LDAP browser connection and refreshes the {@link EntryWidget}.
+     *
      * {@inheritDoc}
+     *
+     * @param connection  The new LDAP browser connection.
      */
     public void setConnection( IBrowserConnection connection )
     {
@@ -149,6 +203,11 @@ public class WhoClauseDnComposite extends AbstractWhoClauseComposite<AclWhoClaus
     }
 
 
+    // ── Populating the Entry Widget From the Model ────────────────────────────
+    /**
+     * Passes the current connection and DN pattern to the {@link EntryWidget}.
+     * Called after a clause or connection change.
+     */
     private void setInput()
     {
         if ( entryWidget != null )

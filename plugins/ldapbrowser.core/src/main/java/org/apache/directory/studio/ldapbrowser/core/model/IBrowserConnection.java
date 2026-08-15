@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core.model;
@@ -35,30 +35,57 @@ import org.apache.directory.studio.ldapbrowser.core.model.schema.Schema;
 import org.eclipse.core.runtime.IAdaptable;
 
 
+// ── CLASS: IBrowserConnection — HAN SOLO COMMITTING TO THE KESSEL RUN ────────
+// Han Solo punches the hyperdrive and commits the Millennium Falcon to the
+// Kessel Run: he has a destination (the LDAP server URL), a route strategy
+// (alias/referral handling, paging), fuel limits (count/time limits), and a
+// full cargo manifest of entries cached in memory.  Once he's committed, the
+// whole browser model hangs off this connection — the entry cache, the schema,
+// the saved searches, the bookmarks.
+// IBrowserConnection is that hyperdrive commit: the root object in the browser
+// model that combines a raw {@link Connection} with all the LDAP-browser-specific
+// parameters and the in-memory cache of fetched entries and schema.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An IBrowserConnection represents a connection for the LDAP browser.
- * It holds an instance to the underlying connection of the connection plugin,
- * additional it includes advanced connection parameters for the LDAP browser. 
- * It also provides an entry cache.
+ * The browser-level representation of an LDAP server connection.
+ * Wraps a raw {@link Connection} (which handles the network socket and
+ * authentication) and adds:
+ * <ul>
+ *   <li>LDAP browser parameters — base DN, count/time limits, alias and
+ *       referral handling, paging, modify mode, etc.</li>
+ *   <li>An in-memory entry cache keyed by {@link Dn}.</li>
+ *   <li>The server's {@link Schema}.</li>
+ *   <li>A {@link SearchManager} and {@link BookmarkManager}.</li>
+ *   <li>The root DSE ({@link IRootDSE}) — the top of the directory tree.</li>
+ * </ul>
+ * Think of this as Han committing to the Kessel Run: once this connection is
+ * open, the whole browser world hangs off it.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public interface IBrowserConnection extends Serializable, IAdaptable, ConnectionPropertyPageProvider
 {
+    // ── ENUM: ModifyMode — HAN'S NAVIGATION STRATEGY CHOICE ─────────────────────
+    // "Do we swap out the navicomp route in one atomic replace, or do we delete
+    // the old route and add the new one separately?"  Han picks his strategy
+    // based on the server's LDAP dialect.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Enum for the modify mode of attributes
+     * Controls how attribute modifications are sent to the server.
+     * Different LDAP servers behave differently, so we let the user choose
+     * whether to use a REPLACE modify operation or a pair of ADD + DELETE.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
     enum ModifyMode
     {
-        /** Default mode */
+        /** Use the server's default behaviour (usually replace for single-valued, add/delete for multi-valued). */
         DEFAULT(0),
 
-        /** Always use replace operation */
+        /** Always send a REPLACE modify operation, regardless of attribute type. */
         REPLACE(1),
 
-        /** Always use add/delete operation */
+        /** Always send an ADD followed by a DELETE modify operation. */
         ADD_DELETE(2);
 
         private final int ordinal;
@@ -71,9 +98,9 @@ public interface IBrowserConnection extends Serializable, IAdaptable, Connection
 
 
         /**
-         * Gets the ordinal.
-         * 
-         * @return the ordinal
+         * Returns the integer ordinal for serialisation.
+         *
+         * @return the ordinal value (0 = DEFAULT, 1 = REPLACE, 2 = ADD_DELETE).
          */
         public int getOrdinal()
         {
@@ -82,11 +109,11 @@ public interface IBrowserConnection extends Serializable, IAdaptable, Connection
 
 
         /**
-         * Gets the ModifyMode by ordinal.
-         * 
-         * @param ordinal the ordinal
-         * 
-         * @return the ModifyMode
+         * Looks up a {@link ModifyMode} by its integer ordinal.
+         * Returns {@code null} for unknown values.
+         *
+         * @param ordinal the ordinal to look up.
+         * @return the matching {@link ModifyMode}, or {@code null}.
          */
         public static ModifyMode getByOrdinal( int ordinal )
         {
@@ -104,17 +131,25 @@ public interface IBrowserConnection extends Serializable, IAdaptable, Connection
         }
     }
 
+    // ── ENUM: ModifyOrder — DELETE FIRST OR ADD FIRST? ────────────────────────────
+    // When Han has to swap a cargo bay module — does he offload the old module
+    // first (DELETE_FIRST) or load the new one in first (ADD_FIRST)?  Some
+    // servers require a specific order when both operations happen together.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Enum for modify order when using add/delete operations
+     * Controls the order of ADD and DELETE operations when modifying a multi-valued
+     * attribute using the ADD_DELETE {@link ModifyMode}.
+     * Some LDAP servers reject a DELETE of a value that isn't yet present if the
+     * ADD of the new value happens first — {@code DELETE_FIRST} avoids that.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
     enum ModifyOrder
     {
-        /** Delete first */
+        /** Send the DELETE before the ADD. */
         DELETE_FIRST(0),
 
-        /** Add first */
+        /** Send the ADD before the DELETE. */
         ADD_FIRST(1);
 
         private final int ordinal;
@@ -127,9 +162,9 @@ public interface IBrowserConnection extends Serializable, IAdaptable, Connection
 
 
         /**
-         * Gets the ordinal.
-         * 
-         * @return the ordinal
+         * Returns the integer ordinal for serialisation.
+         *
+         * @return the ordinal value (0 = DELETE_FIRST, 1 = ADD_FIRST).
          */
         public int getOrdinal()
         {
@@ -138,11 +173,10 @@ public interface IBrowserConnection extends Serializable, IAdaptable, Connection
 
 
         /**
-         * Gets the ModifyOrder by ordinal.
-         * 
-         * @param ordinal the ordinal
-         * 
-         * @return the ModifyOrder
+         * Looks up a {@link ModifyOrder} by its integer ordinal.
+         *
+         * @param ordinal the ordinal to look up.
+         * @return the matching {@link ModifyOrder}, or {@code null}.
          */
         public static ModifyOrder getByOrdinal( int ordinal )
         {
@@ -158,395 +192,525 @@ public interface IBrowserConnection extends Serializable, IAdaptable, Connection
         }
     }
 
-    /** The key for the connection parameter "Get Base DNs from Root DSE". */
+    /** Connection-parameter key: whether to auto-fetch base DNs from the Root DSE. */
     String CONNECTION_PARAMETER_FETCH_BASE_DNS = "ldapbrowser.fetchBaseDns"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Base Dn". */
+    /** Connection-parameter key: manually defined base DN. */
     String CONNECTION_PARAMETER_BASE_DN = "ldapbrowser.baseDn"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Count Limit". */
+    /** Connection-parameter key: maximum number of entries to return per search. */
     String CONNECTION_PARAMETER_COUNT_LIMIT = "ldapbrowser.countLimit"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Time Limit". */
+    /** Connection-parameter key: maximum time (seconds) to wait for a search. */
     String CONNECTION_PARAMETER_TIME_LIMIT = "ldapbrowser.timeLimit"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Alias Dereferencing". */
+    /** Connection-parameter key: how to handle LDAP alias entries during browsing. */
     String CONNECTION_PARAMETER_ALIASES_DEREFERENCING_METHOD = "ldapbrowser.aliasesDereferencingMethod"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Referrals Handling". */
+    /** Connection-parameter key: how to handle LDAP referral entries during browsing. */
     String CONNECTION_PARAMETER_REFERRALS_HANDLING_METHOD = "ldapbrowser.referralsHandlingMethod"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Fetch Operational Attributes. */
+    /** Connection-parameter key: whether to fetch operational attributes alongside regular ones. */
     String CONNECTION_PARAMETER_FETCH_OPERATIONAL_ATTRIBUTES = "ldapbrowser.fetchOperationalAttributes"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Fetch Sub-entries". */
+    /** Connection-parameter key: whether to show subentry children in the tree. */
     String CONNECTION_PARAMETER_FETCH_SUBENTRIES = "ldapbrowser.fetchSubentries"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Paged Search". */
+    /** Connection-parameter key: whether to use the LDAP Paged Results control. */
     String CONNECTION_PARAMETER_PAGED_SEARCH = "ldapbrowser.pagedSearch"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Paged Search Size". */
+    /** Connection-parameter key: number of entries per page when paging is enabled. */
     String CONNECTION_PARAMETER_PAGED_SEARCH_SIZE = "ldapbrowser.pagedSearchSize"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Paged Search Scroll Mode". */
+    /** Connection-parameter key: whether paged results should be shown in scroll (vs. page-at-a-time) mode. */
     String CONNECTION_PARAMETER_PAGED_SEARCH_SCROLL_MODE = "ldapbrowser.pagedSearchScrollMode"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Modify Mode for attributes with equality matching rule". */
+    /** Connection-parameter key: modify mode for attributes that have an equality matching rule. */
     String CONNECTION_PARAMETER_MODIFY_MODE = "ldapbrowser.modifyMode"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Modify Mode for attributes without equality matching rule". */
+    /** Connection-parameter key: modify mode for attributes that lack an equality matching rule. */
     String CONNECTION_PARAMETER_MODIFY_MODE_NO_EMR = "ldapbrowser.modifyModeNoEMR"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Modify add delete order". */
+    /** Connection-parameter key: whether to send DELETE before ADD or vice-versa in add/delete mode. */
     String CONNECTION_PARAMETER_MODIFY_ORDER = "ldapbrowser.modifyOrder"; //$NON-NLS-1$
 
-    /** The key for the connection parameter "Use ManageDsaIT Control" */
+    /** Connection-parameter key: whether to attach the ManageDsaIT control to operations. */
     String CONNECTION_PARAMETER_MANAGE_DSA_IT = "ldapbrowser.manageDsaIT"; //$NON-NLS-1$
 
+
+    // ── Han Reads The Destination Coordinates ────────────────────────────────────
+    // "Where are we going?" — the LDAP URL encodes host, port, and optionally
+    // a base DN into a single string.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the URL of this connection.
-     * 
-     * @return the URL of this connection
+     * Returns the LDAP URL for this connection, encoding host, port, and
+     * (if applicable) the base DN.
+     *
+     * @return the {@link LdapUrl}; never {@code null}.
      */
     LdapUrl getUrl();
 
 
+    // ── Han Checks Whether To Auto-Detect The Base DN ────────────────────────────
+    // "Do we let the server tell us where the cargo bays are, or did we specify
+    // a manual destination?"  Auto-fetch = ask Root DSE; manual = we know already.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the flag whether the base DNs is retrieved
-     * from Root DSE or whether the base Dn is defined manually.
-     * 
-     * @return true, if the base DNs are fetched from Root DSE, 
-     *         false, if the base Dn is defined manually
+     * Returns {@code true} if the browser should automatically fetch base DNs
+     * from the server's Root DSE, rather than using a manually defined base DN.
+     *
+     * @return {@code true} to fetch from Root DSE; {@code false} to use a manual DN.
      */
     boolean isFetchBaseDNs();
 
 
+    // ── Han Toggles The Auto-Detect Switch ───────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the flag whether the base DNs should be retrieved
-     * from Root DSE or whether the base Dn is defined manually.
-     * 
-     * @param fetchBaseDNs true to get the base DNs from Root DSE,
-     *                     false to define one manually
+     * Sets whether base DNs should be fetched automatically from the Root DSE.
+     *
+     * @param fetchBaseDNs {@code true} to auto-fetch; {@code false} to use a manual DN.
      */
     void setFetchBaseDNs( boolean fetchBaseDNs );
 
 
+    // ── Han Reads The Manually Set Destination ───────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the manually defined base Dn.
-     * 
-     * @return the manually defined base ND
+     * Returns the manually defined base DN.
+     * Only used when {@link #isFetchBaseDNs()} is {@code false}.
+     *
+     * @return the manually configured base {@link Dn}.
      */
     Dn getBaseDN();
 
 
+    // ── Han Sets The Manual Destination ──────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the manually defined base Dn.
-     * 
-     * @param baseDn the new base Dn
+     * Sets the manually defined base DN.
+     *
+     * @param baseDn the new base {@link Dn}.
      */
     void setBaseDN( Dn baseDn );
 
 
+    // ── Han Sets The Cargo Manifest Limit ────────────────────────────────────────
+    // "We can't carry more than 500 crates — tell the server to stop at 500."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the count limit.
-     * 
-     * @return the count limit
+     * Returns the maximum number of entries to return per search.
+     * A value of 0 means no limit (use the server's default).
+     *
+     * @return the count limit.
      */
     int getCountLimit();
 
 
+    // ── Han Sets The Cargo Manifest Limit ────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the count limit.
-     * 
-     * @param countLimit the new count limit
+     * Sets the count limit for searches on this connection.
+     *
+     * @param countLimit the maximum number of entries; 0 means no limit.
      */
     void setCountLimit( int countLimit );
 
 
+    // ── Han Reads The Alias Policy ────────────────────────────────────────────────
+    // "Do we follow the docking-bay alias signs or navigate directly?"
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the aliases dereferencing method.
-     * 
-     * @return the aliases dereferencing method
+     * Returns the alias dereferencing method for searches on this connection.
+     *
+     * @return the {@link AliasDereferencingMethod}; never {@code null}.
      */
     AliasDereferencingMethod getAliasesDereferencingMethod();
 
 
+    // ── Han Sets The Alias Policy ─────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the aliases dereferencing method.
-     * 
-     * @param aliasesDereferencingMethod the new aliases dereferencing method
+     * Sets the alias dereferencing method for searches on this connection.
+     *
+     * @param aliasesDereferencingMethod the new method; must not be {@code null}.
      */
     void setAliasesDereferencingMethod( AliasDereferencingMethod aliasesDereferencingMethod );
 
 
+    // ── Han Reads The Referral Policy ────────────────────────────────────────────
+    // "If a docking bay refers us to another bay on another moon, do we follow?"
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the referrals handling method.
-     * 
-     * @return the referrals handling method
+     * Returns the referral handling method for searches on this connection.
+     *
+     * @return the {@link ReferralHandlingMethod}; never {@code null}.
      */
     ReferralHandlingMethod getReferralsHandlingMethod();
 
 
+    // ── Han Sets The Referral Policy ─────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the referrals handling method.
-     * 
-     * @param referralsHandlingMethod the new referrals handling method
+     * Sets the referral handling method for searches on this connection.
+     *
+     * @param referralsHandlingMethod the new method; must not be {@code null}.
      */
     void setReferralsHandlingMethod( ReferralHandlingMethod referralsHandlingMethod );
 
 
+    // ── Han Sets The Jump Timer ───────────────────────────────────────────────────
+    // "If the server doesn't respond in N seconds, abort and try something else."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the time limit.
-     * 
-     * @return the time limit
+     * Returns the maximum time (in seconds) to wait for a search to complete.
+     * A value of 0 means no limit.
+     *
+     * @return the time limit in seconds.
      */
     int getTimeLimit();
 
 
+    // ── Han Sets The Jump Timer ───────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the time limit.
-     * 
-     * @param timeLimit the new time limit
+     * Sets the time limit for searches on this connection.
+     *
+     * @param timeLimit the maximum wait in seconds; 0 means no limit.
      */
     void setTimeLimit( int timeLimit );
 
 
+    // ── Han Checks Whether To Include Hidden Administrative Bays ─────────────────
+    // Subentries are like the Empire's hidden administrative bays — they're there
+    // but not shown by default unless you specifically ask for them.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if subentries should be fetched.
-     * 
-     * @return the true if subentries should be fetched
+     * Returns {@code true} if subentry child entries should be fetched when
+     * browsing this connection's tree.
+     *
+     * @return {@code true} to fetch subentries.
      */
     boolean isFetchSubentries();
 
 
+    // ── Han Toggles The Hidden-Bays Switch ───────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets if subentries should be fetched.
-     * 
-     * @param fetchSubentries true to fetch subentries
+     * Sets whether subentry children should be fetched during browsing.
+     *
+     * @param fetchSubentries {@code true} to include subentries.
      */
     void setFetchSubentries( boolean fetchSubentries );
 
 
+    // ── Han Checks Whether To Use ManageDsaIT ────────────────────────────────────
+    // The ManageDsaIT control tells the server "treat referral entries as
+    // regular entries" — useful for editing referrals themselves.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if ManageDsaIT control should be used.
-     * 
-     * @return true if ManageDsaIT control should be used
+     * Returns {@code true} if the ManageDsaIT LDAP control should be sent with
+     * requests.  This instructs the server to treat referral entries as regular
+     * entries so they can be read and modified directly.
+     *
+     * @return {@code true} if ManageDsaIT is enabled.
      */
     boolean isManageDsaIT();
 
 
+    // ── Han Toggles The ManageDsaIT Control ──────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets if ManageDsaIT control should be used.
-     * 
-     * @param manageDsaIT true to use ManageDsaIT control
+     * Sets whether the ManageDsaIT control should be used.
+     *
+     * @param manageDsaIT {@code true} to enable ManageDsaIT.
      */
     void setManageDsaIT( boolean manageDsaIT );
 
 
+    // ── Han Checks Whether Operational Specs Are Fetched ─────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if operational attributes should be fetched.
-     * 
-     * @return the true if operational attributes should be fetched
+     * Returns {@code true} if operational attributes (timestamps, entryDN, etc.)
+     * should be fetched alongside regular attributes.
+     *
+     * @return {@code true} to fetch operational attributes.
      */
     boolean isFetchOperationalAttributes();
 
 
+    // ── Han Toggles The Operational-Specs Switch ──────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets if operational attributes should be fetched.
-     * 
-     * @param fetchSubentries true to fetch operational attributes
+     * Sets whether operational attributes should be fetched.
+     *
+     * @param fetchOperationalAttributes {@code true} to include operational attributes.
      */
     void setFetchOperationalAttributes( boolean fetchOperationalAttributes );
 
 
+    // ── Han Checks Whether Paged Results Are Active ───────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if paged search should be used.
-     * 
-     * @return the true if paged search should be used
+     * Returns {@code true} if the LDAP Paged Results control should be used for
+     * large result sets.  Paging avoids loading all results at once.
+     *
+     * @return {@code true} if paged search is enabled.
      */
     boolean isPagedSearch();
 
 
+    // ── Han Toggles Paged Results ─────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets if paged search should be used.
-     * 
-     * @param pagedSearch true to use paged search
+     * Sets whether paged search is used.
+     *
+     * @param pagedSearch {@code true} to enable the Paged Results control.
      */
     void setPagedSearch( boolean pagedSearch );
 
 
+    // ── Han Reads The Page Size ───────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the paged search size.
-     * 
-     * @return the paged search size
+     * Returns the number of entries per page when paged search is enabled.
+     *
+     * @return the paged search page size.
      */
     int getPagedSearchSize();
 
 
+    // ── Han Sets The Page Size ────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the paged search size.
-     * 
-     * @param pagedSearchSize the new paged search size
+     * Sets the page size for paged searches.
+     *
+     * @param pagedSearchSize the number of entries per page.
      */
     void setPagedSearchSize( int pagedSearchSize );
 
 
+    // ── Han Checks Whether Scrolling Mode Is Active ───────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if paged search scroll mode should be used.
-     * 
-     * @return the true if paged search scroll mode should be used
+     * Returns {@code true} if paged results should be accumulated in a scrollable
+     * view rather than one page at a time.
+     *
+     * @return {@code true} if scroll mode is enabled.
      */
     boolean isPagedSearchScrollMode();
 
 
+    // ── Han Toggles Scroll Mode ───────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets if paged search scroll mode should be used.
-     * 
-     * @param pagedSearch true to use paged search scroll mode
+     * Sets whether paged search uses scroll mode.
+     *
+     * @param pagedSearchScrollMode {@code true} for scroll mode.
      */
     void setPagedSearchScrollMode( boolean pagedSearchScrollMode );
 
 
+    // ── Han Reads The Cargo-Swap Strategy ────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the modify mode for attributes.
-     * 
-     * @return the modify mode for attributes
+     * Returns the modify mode for attributes that have an equality matching rule.
+     *
+     * @return the {@link ModifyMode}.
      */
     ModifyMode getModifyMode();
 
 
+    // ── Han Sets The Cargo-Swap Strategy ─────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the modify mode for attributes.
-     * 
-     * @param mode the modify mode for attributes
+     * Sets the modify mode for attributes with an equality matching rule.
+     *
+     * @param mode the new {@link ModifyMode}.
      */
     void setModifyMode( ModifyMode mode );
 
 
+    // ── Han Reads The EMR-Less Cargo-Swap Strategy ────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the modify mode for attributes without equality matching rule.
-     * 
-     * @return the modify mode for attributes without equality matching rule
+     * Returns the modify mode for attributes that lack an equality matching rule.
+     * Some attribute types have no equality rule, which means the server can't
+     * compare old and new values — so a REPLACE may be the only safe option.
+     *
+     * @return the {@link ModifyMode} for no-EMR attributes.
      */
     ModifyMode getModifyModeNoEMR();
 
 
+    // ── Han Sets The EMR-Less Cargo-Swap Strategy ─────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the modify mode for attributes without equality matching rule.
-     * 
-     * @param mode the modify mode for attributes without equality matching rule
+     * Sets the modify mode for attributes without an equality matching rule.
+     *
+     * @param mode the new {@link ModifyMode}.
      */
     void setModifyModeNoEMR( ModifyMode mode );
 
 
+    // ── Han Reads The Offload/Load Order ──────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the modify add/delete order.
-     * 
-     * @return the modify add/delete order
+     * Returns the order in which ADD and DELETE operations are sent to the server
+     * when using {@link ModifyMode#ADD_DELETE}.
+     *
+     * @return the {@link ModifyOrder}.
      */
     ModifyOrder getModifyAddDeleteOrder();
 
 
+    // ── Han Sets The Offload/Load Order ───────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the modify add/delete order.
-     * 
-     * @param mode the modify add/delete order
+     * Sets the ADD/DELETE order for modify operations.
+     *
+     * @param mode the new {@link ModifyOrder}.
      */
     void setModifyAddDeleteOrder( ModifyOrder mode );
 
 
+    // ── Han Stores The Quick-Search Preset ────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the quick search.
-     * 
-     * @param quickSearch the new quick search
+     * Sets the quick-search definition for this connection.
+     * Quick search is the instant-search bar at the top of the browser view.
+     *
+     * @param quickSearch the new quick search; may be {@code null} to clear.
      */
-     void setQuickSearch( IQuickSearch quickSearch );
+    void setQuickSearch( IQuickSearch quickSearch );
 
 
+    // ── Han Retrieves The Quick-Search Preset ────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the quick search.
-     * 
-     * @return the quick search
+     * Returns the quick-search definition for this connection.
+     *
+     * @return the {@link IQuickSearch}, or {@code null} if none is configured.
      */
     IQuickSearch getQuickSearch();
 
 
+    // ── Han Checks The Root Of The Directory Tree ─────────────────────────────────
+    // The Root DSE is the top of the directory — the "root of all roots."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the root DSE.
-     * 
-     * @return the root DSE
+     * Returns the Root DSE (Distinguished Service Entry) for this connection.
+     * The Root DSE is the topmost entry in the directory and contains metadata
+     * such as supported controls, naming contexts, and schema location.
+     *
+     * @return the {@link IRootDSE}; never {@code null} once the connection is initialised.
      */
     IRootDSE getRootDSE();
 
 
+    // ── The Jedi Archives On Board The Falcon ────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the schema.
-     * 
-     * @return the schema, never null
+     * Returns the LDAP schema loaded from this server.
+     * The schema describes all attribute types, object classes, and syntaxes
+     * available on the server.
+     *
+     * @return the {@link Schema}; never {@code null} (falls back to a default schema).
      */
     Schema getSchema();
 
 
+    // ── Han Installs A New Jedi Archives Module ────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the schema.
-     * 
-     * @param schema the new schema
+     * Replaces the schema for this connection.
+     * Called after a schema reload job completes.
+     *
+     * @param schema the new {@link Schema}; must not be {@code null}.
      */
     void setSchema( Schema schema );
 
 
+    // ── Han Checks The Search Mission Log ────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the search manager.
-     * 
-     * @return the search manager
+     * Returns the {@link SearchManager} that manages saved searches for this connection.
+     *
+     * @return the search manager; never {@code null}.
      */
     SearchManager getSearchManager();
 
 
+    // ── Han Checks The Bookmarked Waypoints ───────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the bookmark manager.
-     * 
-     * @return the bookmark manager
+     * Returns the {@link BookmarkManager} that manages saved entry shortcuts for
+     * this connection.
+     *
+     * @return the bookmark manager; never {@code null}.
      */
     BookmarkManager getBookmarkManager();
 
 
+    // ── Han Checks The Cargo Hold For A Known Crate ───────────────────────────────
+    // "Do we already have the entry for cn=Han Solo in the hold?  If so, use that
+    // instead of going back to the warehouse."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the entry from cache.
-     * 
-     * @param dn the Dn of the entry
-     * 
-     * @return the entry from cache or null if the entry isn't cached
+     * Returns the entry with the given DN from the in-memory cache, or {@code null}
+     * if it hasn't been loaded yet.
+     * Always check the cache before triggering a network fetch.
+     *
+     * @param dn the distinguished name of the entry to look up.
+     * @return the cached {@link IEntry}, or {@code null} if not cached.
      */
     IEntry getEntryFromCache( Dn dn );
 
 
+    // ── Han Retrieves The Underlying Network Socket ────────────────────────────────
+    // The raw {@link Connection} handles actual LDAP protocol on the wire.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the connection.
-     * 
-     * @return the connection
+     * Returns the underlying {@link Connection} that handles the raw LDAP network
+     * socket, authentication, and low-level protocol.
+     *
+     * @return the raw {@link Connection}; never {@code null}.
      */
     Connection getConnection();
 
 
+    // ── Han Stores A New Crate In The Cargo Hold ──────────────────────────────────
+    // "Load this entry into the hold so we don't have to fetch it again."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Puts the entry to the cache.
-     * 
-     * @param entry the entry to cache
+     * Adds the given entry to the in-memory cache.
+     * Called after a job successfully fetches or creates an entry.
+     *
+     * @param entry the entry to cache; must not be {@code null}.
      */
     void cacheEntry( IEntry entry );
 
 
+    // ── Han Empties A Cargo Bay And All Its Sub-Bays ──────────────────────────────
+    // If an entry is deleted or moved, we must evict it and all of its cached
+    // descendants so the stale data doesn't mislead the browser.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the entry and all children recursively from the cache.
-     * 
-     * @param entry the entry to remove from cache
+     * Removes the given entry and all of its descendants from the cache.
+     * Called after a delete or move operation to prevent stale data from appearing.
+     *
+     * @param entry the root entry to uncache; its entire sub-tree is removed.
      */
     void uncacheEntryRecursive( IEntry entry );
 
 
+    // ── Han Empties The Entire Cargo Hold ────────────────────────────────────────
+    // A full schema reload or reconnect may invalidate all cached data — nuke it.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Clears all caches.
+     * Clears all in-memory caches for this connection, including the entry cache
+     * and any other cached state.
+     * Called when the connection is closed or when a full refresh is requested.
      */
     void clearCaches();
 }

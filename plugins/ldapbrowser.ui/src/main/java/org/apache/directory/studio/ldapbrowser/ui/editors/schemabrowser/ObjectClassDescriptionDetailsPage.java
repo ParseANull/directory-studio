@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.schemabrowser;
@@ -41,9 +41,22 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: ObjectClassDescriptionDetailsPage — Death Star Blueprints, OC Detail ─
+// Luke pulls up the "person" blueprint from the Death Star plans: OID, the human
+// names ("person", "organizationalPerson"), the description, whether it is
+// structural, abstract, or auxiliary, and then the big collapsible appendices —
+// which attributes are required, which are permitted, which classes extend it,
+// and which classes it extends.  This class renders all of that for a single
+// object class, on the right half of the schema browser.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The ObjectClassDescriptionDetailsPage displays the details of an
- * object class description.
+ * The detail page that displays the full specification of a selected object
+ * class description on the right-hand side of the schema browser.
+ * It shows OID, names, description, and kind (structural/abstract/auxiliary)
+ * in a fixed "Details" section, then collapsible sections for "Must Attributes,"
+ * "May Attributes," "Superclasses," and "Subclasses" (all transitive), and the
+ * standard raw LDIF footer.
+ * Think of this class as R2 projecting the full object-class blueprint card.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -78,11 +91,15 @@ public class ObjectClassDescriptionDetailsPage extends SchemaDetailsPage
     private Section maySection;
 
 
+    // ── Luke Slots In The Object-Class Blueprint Module ───────────────────────────
+    // Luke drops the blueprint module into the projector, wiring it to the master
+    // page and toolkit so it can build the detail panel when asked.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ObjectClassDescriptionDetailsPage.
+     * Creates the object class details page linked to the given master schema page.
      *
-     * @param schemaPage the master schema page
-     * @param toolkit the toolkit used to create controls
+     * @param schemaPage  the master schema page that owns this detail page
+     * @param toolkit     the JFace forms toolkit used to create controls
      */
     public ObjectClassDescriptionDetailsPage( SchemaPage schemaPage, FormToolkit toolkit )
     {
@@ -90,8 +107,18 @@ public class ObjectClassDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── Luke Assembles The Full Blueprint Panel ───────────────────────────────────
+    // Luke arranges the holographic display: a fixed Details section, then four
+    // collapsible appendices — must attributes, may attributes, superclasses, and
+    // subclasses — topped and tailed with the raw LDIF line at the bottom.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the SWT layout for this detail page inside the given form.
+     * Creates a fixed "Details" section plus four collapsible sections
+     * (Must Attributes, May Attributes, Superclasses, Subclasses) and the
+     * standard "Raw Schema Definition" section.
+     *
+     * @param detailForm  the scrolled form that parents all sections
      */
     public void createContents( final ScrolledForm detailForm )
     {
@@ -171,8 +198,24 @@ public class ObjectClassDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── Luke Projects The Full Object-Class Blueprint ─────────────────────────────
+    // "Show me everything about 'person'."  R2 loads the entry and populates all
+    // six sections: OID + names + description + kind, must attributes (transitive),
+    // may attributes (transitive), superclasses, subclasses, and raw LDIF.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Updates all sections to display the given object class description.
+     * Rebuilds all dynamic sections and reflows the form on every call.
+     *
+     * <p>For example — Luke pulls up the "person" blueprint:</p>
+     * <pre>
+     *   setInput(personObjectClass);
+     *   // Details: OID, "person", Structural
+     *   // Must: cn, sn  |  May: description, telephoneNumber, ...
+     *   // Superclasses: top  |  Subclasses: organizationalPerson, ...
+     * </pre>
+     *
+     * @param input  the {@link ObjectClass} to display; null clears the pane
      */
     public void setInput( Object input )
     {
@@ -196,12 +239,18 @@ public class ObjectClassDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── Luke Fills The Header Fields ──────────────────────────────────────────────
+    // R2 reads the top card: OID, the human display name, a multi-line description,
+    // and the class kind (structural, abstract, or auxiliary), rebuilt fresh each
+    // time so multi-line descriptions resize the section properly.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the main section. It is newly created
-     * on every input change to ensure a proper layout of 
-     * multilined descriptions. 
+     * Recreates the "Details" section content with OID, names, description, and
+     * object class kind for the given object class.
+     * Disposing and recreating on every call ensures multi-line descriptions
+     * get proper layout space.
      *
-     * @param ocd the object class description
+     * @param ocd  the object class to display; null leaves the section empty
      */
     private void createMainContent( ObjectClass ocd )
     {
@@ -268,12 +317,17 @@ public class ObjectClassDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists All Required Attributes (Transitively) ───────────────────────────
+    // R2 walks up the superclass chain and collects every MUST attribute — not just
+    // the ones declared directly on this class, but all the inherited ones too —
+    // then renders them as clickable hyperlinks.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the must section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Must Attributes" section with hyperlinks to every required
+     * attribute type, including inherited ones from superclasses (transitive closure).
+     * Rebuilt on every input change.
      *
-     * @param ocd the object class description
+     * @param ocd  the object class whose must attributes to list; null clears
      */
     private void createMustContents( ObjectClass ocd )
     {
@@ -338,12 +392,17 @@ public class ObjectClassDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists All Permitted Attributes (Transitively) ─────────────────────────
+    // R2 walks up the superclass chain again, this time collecting every MAY
+    // attribute — all the optional fields this entry type is allowed to hold,
+    // including inherited ones — and renders them as clickable hyperlinks.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the may section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "May Attributes" section with hyperlinks to every optional
+     * attribute type, including inherited ones from superclasses (transitive closure).
+     * Rebuilt on every input change.
      *
-     * @param ocd the object class description
+     * @param ocd  the object class whose may attributes to list; null clears
      */
     private void createMayContents( ObjectClass ocd )
     {
@@ -407,12 +466,17 @@ public class ObjectClassDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists All Known Subclasses ─────────────────────────────────────────────
+    // R2 scans every object class in the schema and collects those that declare the
+    // current class as a superior — in effect, every known subtype — then lists them
+    // as clickable hyperlinks so the user can jump to a derived class.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the sub classes section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Subclasses" section with hyperlinks to every object class
+     * that directly extends this one.
+     * Rebuilt on every input change because the list is derived from the live schema.
      *
-     * @param ocd the object class description
+     * @param ocd  the object class whose subclasses to list; null clears
      */
     private void createSubclassContents( ObjectClass ocd )
     {
@@ -465,12 +529,16 @@ public class ObjectClassDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists All Declared Superclasses ────────────────────────────────────────
+    // R2 reads the SUP list on this object class definition and produces hyperlinks
+    // to each parent class so the user can trace the inheritance chain upward.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the super classes section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Superclasses" section with hyperlinks to the declared
+     * superior object classes.
+     * Rebuilt on every input change.
      *
-     * @param ocd the object class description
+     * @param ocd  the object class whose superclasses to list; null clears
      */
     private void createSuperclassContents( ObjectClass ocd )
     {

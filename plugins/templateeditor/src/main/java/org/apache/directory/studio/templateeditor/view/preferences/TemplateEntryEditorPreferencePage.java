@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.view.preferences;
 
@@ -72,8 +72,28 @@ import org.apache.directory.studio.templateeditor.view.wizards.ExportTemplatesWi
 import org.apache.directory.studio.templateeditor.view.wizards.ImportTemplatesWizard;
 
 
+// ── CLASS: TemplateEntryEditorPreferencePage — PALPATINE'S STANDING-ORDERS REVIEW PAGE
+// Palpatine sits down at his review desk — the Eclipse Preferences dialog — to
+// examine all standing orders (templates). He can switch between two views: a
+// tree grouped by object class, or a flat sorted list. He can import new orders
+// from disk, export selected ones, remove file-based orders, and designate one
+// order per object class as the default. When he clicks "OK", all staged changes
+// are committed to the real {@link TemplatesManager} via
+// {@link PreferencesTemplatesManager#saveModifications()}.
+// ──────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Template Entry Editor preference page.
+ * The Template Entry Editor preference page (Window > Preferences > LDAP Browser
+ * > Entry Editors > Template Entry Editor). Presents a {@link CheckboxTreeViewer}
+ * that lists all known templates, supports import/export/remove/set-default
+ * operations, and lets the user choose whether the template editor activates for
+ * any entry or only for entries matching an enabled template.
+ *
+ * <p>Think of this as Palpatine's standing-orders review page:</p>
+ * <pre>
+ *   All templates displayed → Palpatine reviews active standing orders
+ *   "Set Default" button    → Palpatine designates the primary order per class
+ *   "OK" click              → Orders are ratified and committed to the Empire
+ * </pre>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -186,8 +206,13 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     };
 
 
+    // ── CONSTRUCTOR: INITIALISE THE PREFERENCE PAGE ────────────────────────────────
+    // Palpatine opens his standing-orders review desk. The preference store is wired
+    // in and a fresh staging manager is created from the real TemplatesManager.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of TemplateEntryEditorPreferencePage.
+     * Creates a new {@code TemplateEntryEditorPreferencePage}. Wires up the preference
+     * store and creates the {@link PreferencesTemplatesManager} staging snapshot.
      */
     public TemplateEntryEditorPreferencePage()
     {
@@ -200,6 +225,11 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── CREATE CONTENTS: BUILD THE PREFERENCE PAGE UI ─────────────────────────────
+    // Palpatine assembles his review desk: the templates group, the viewer, the
+    // buttons, and the "use for any entry" radio group, then wires listeners and
+    // restores saved state.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -217,11 +247,12 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── CREATE UI: DELEGATE TO GROUP BUILDERS ─────────────────────────────────────
     /**
-     * Creates the user interface.
+     * Delegates to the two sub-builders: the templates group and the
+     * use-template-editor activation group.
      *
-     * @param parent
-     *      the parent composite
+     * @param parent  the parent composite
      */
     private void createUI( Composite parent )
     {
@@ -236,11 +267,12 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── CREATE TEMPLATES GROUP: BUILD THE VIEWER + TOOLBAR + BUTTONS ──────────────
     /**
-     * Creates the templates group.
+     * Builds the "Templates" group containing the presentation-mode toolbar,
+     * the {@link CheckboxTreeViewer} composite, and the action buttons.
      *
-     * @param composite
-     *      the parent composite
+     * @param parent  the parent composite
      */
     private void createTemplatesGroup( Composite parent )
     {
@@ -264,11 +296,13 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── CREATE TEMPLATES VIEWER COMPOSITE: HOST FOR THE TREE ──────────────────────
     /**
-     * Creates the templates viewer's composite.
+     * Creates the zero-margin host composite that wraps the {@link CheckboxTreeViewer}.
+     * Also registers a {@link ControlAdapter} that resizes columns proportionally
+     * when the window is resized.
      *
-     * @param composite
-     *      the parent composite
+     * @param parent  the parent composite
      */
     private void createTemplatesViewerComposite( Composite parent )
     {
@@ -292,11 +326,12 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── CREATE TOOLBAR: PRESENTATION-MODE TOGGLE BUTTONS ──────────────────────────
     /**
-     * Creates the toolbar.
-     * 
-     * @param composite
-     *      the parent composite
+     * Creates the two-button toolbar that lets Palpatine switch between
+     * object-class-tree mode and flat-template-list mode.
+     *
+     * @param composite  the parent composite
      */
     private void createToolbar( Composite composite )
     {
@@ -347,9 +382,16 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── TEMPLATE PRESENTATION TOOL ITEM SELECTED: SWITCH TO FLAT VIEW ─────────────
+    // Palpatine flips to the flat-list view: saves the preference, disposes the old
+    // tree, builds a new two-column tree (Title + ObjectClasses), wires listeners,
+    // and hides the "Set Default" button (it has no meaning in flat mode).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the flat template oriented presentation
-     * toolitem is selected.
+     * Handles a click on the flat-template-oriented presentation toolbar button.
+     * Saves the new presentation preference, tears down the existing viewer, builds
+     * a two-column tree (Title / Object Classes), restores checked state, and hides
+     * the "Set Default" button.
      */
     private void templatePresentationToolItemSelected()
     {
@@ -406,14 +448,21 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
         // Resizing columns
         resizeColumsToFit();
 
-        // Hiding the 'Set Default' button 
+        // Hiding the 'Set Default' button
         setDefaultTemplateButton.setVisible( false );
     }
 
 
+    // ── OBJECT CLASS PRESENTATION TOOL ITEM SELECTED: SWITCH TO TREE VIEW ─────────
+    // Palpatine flips to the object-class-grouped tree view: saves the preference,
+    // disposes the old tree, builds a single-column headerless tree, wires listeners,
+    // and shows the "Set Default" button (meaningful only in this mode).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the hierarchical object class oriented 
-     * presentation toolitem is selected.
+     * Handles a click on the hierarchical-object-class-oriented presentation toolbar
+     * button. Saves the new presentation preference, tears down the existing viewer,
+     * builds a single-column tree without headers, restores checked state, and shows
+     * the "Set Default" button.
      */
     private void objectClassPresentationToolItemSelected()
     {
@@ -460,14 +509,21 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
         // Resizing columns
         resizeColumsToFit();
 
-        // Showing the 'Set Default' button 
+        // Showing the 'Set Default' button
         setDefaultTemplateButton.setVisible( true );
         setDefaultTemplateButton.setEnabled( false );
     }
 
 
+    // ── CREATE TEMPLATES VIEWER: BUILD THE CHECKBOX TREE ──────────────────────────
+    // Palpatine's review-desk clerk assembles the actual CheckboxTreeViewer: creates
+    // the SWT Tree, wires content/label/comparator providers, and hooks up
+    // double-click expand/collapse behaviour.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the templates viewer.
+     * Creates the {@link CheckboxTreeViewer} and configures its content provider,
+     * label provider, comparator, and double-click listener. The viewer is hosted
+     * inside {@code templatesViewerComposite}.
      */
     private void createTemplatesViewer()
     {
@@ -519,11 +575,11 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── CREATE TEMPLATES TABLE BUTTONS: IMPORT / EXPORT / REMOVE / SET DEFAULT ────
     /**
-     * Creates the buttons associated with the templates table.
-     * 
-     * @param composite
-     *      the parent composite
+     * Creates the four action buttons that sit beside the templates viewer.
+     *
+     * @param composite  the parent group
      */
     private void createTemplatesTableButtons( Group composite )
     {
@@ -538,11 +594,13 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── CREATE USE TEMPLATE EDITOR GROUP: ACTIVATION-SCOPE RADIO BUTTONS ─────────
     /**
-     * Creates the Use Template Editor group.
+     * Creates the "Use the Template Entry Editor" radio group that lets Palpatine
+     * choose whether the editor activates for any entry or only for entries that
+     * match at least one enabled template.
      *
-     * @param composite
-     *      the parent composite
+     * @param composite  the parent composite
      */
     private void createUseTemplateEditorGroup( Composite composite )
     {
@@ -564,8 +622,10 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── INIT LISTENERS: WIRE ALL BUTTON CLICK HANDLERS ────────────────────────────
     /**
-     * Initializes the listeners
+     * Wires {@link SelectionAdapter} listeners to all six action buttons, delegating
+     * to the corresponding {@code *Action()} methods.
      */
     private void initListeners()
     {
@@ -619,8 +679,10 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── ADD TEMPLATES VIEWER LISTENERS: HOOK SELECTION EVENTS ────────────────────
     /**
-     * Adds the listeners to the templates viewer.
+     * Registers the check-state and selection-change listeners on the templates viewer,
+     * guarding against a disposed tree.
      */
     private void addTemplatesViewerListeners()
     {
@@ -632,8 +694,10 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── REMOVE TEMPLATES VIEWER LISTENERS: UNHOOK SELECTION EVENTS ───────────────
     /**
-     * Removes the listeners to the templates viewer.
+     * Deregisters the check-state and selection-change listeners from the templates
+     * viewer, guarding against a disposed tree.
      */
     private void removeTemplatesViewerListeners()
     {
@@ -645,8 +709,15 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── UPDATE BUTTONS STATES: ENABLE/DISABLE BASED ON SELECTION ─────────────────
+    // Palpatine's desk clerk checks the current selection and enables or disables
+    // the Remove and Set-Default buttons. Remove is only active for file-based
+    // templates; Set-Default is only active for a single enabled non-default template
+    // in object-class mode.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the states of the buttons.
+     * Enables or disables the Remove and Set-Default action buttons based on the
+     * current viewer selection and presentation mode.
      */
     @SuppressWarnings("unchecked")
     private void updateButtonsStates()
@@ -710,8 +781,9 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── IMPORT TEMPLATES ACTION: OPEN THE IMPORT WIZARD ──────────────────────────
     /**
-     * Implements the import templates action.
+     * Opens the {@link ImportTemplatesWizard} in a {@link WizardDialog}.
      */
     private void importTemplatesAction()
     {
@@ -722,8 +794,10 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── EXPORT TEMPLATES ACTION: OPEN THE EXPORT WIZARD ──────────────────────────
     /**
-     * Implements the export templates action.
+     * Collects the currently selected templates and opens the
+     * {@link ExportTemplatesWizard} with those templates pre-checked.
      */
     @SuppressWarnings("unchecked")
     private void exportTemplatesAction()
@@ -749,8 +823,13 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── REMOVE TEMPLATE ACTION: REMOVE SELECTED FILE TEMPLATES ───────────────────
+    // Palpatine tears up one or more standing orders (file-based templates). If the
+    // staging manager rejects the removal, an error dialog is shown.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Implements the remove template action.
+     * Removes each selected file-based template from the staging manager. Shows an
+     * error dialog if any removal fails.
      */
     @SuppressWarnings("unchecked")
     private void removeTemplateAction()
@@ -789,8 +868,13 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── SET DEFAULT TEMPLATE ACTION: DESIGNATE THE SELECTED AS DEFAULT ─────────────
+    // Palpatine marks the selected standing order as the primary one for its object
+    // class, then refreshes the viewer so the bold "(Default)" label appears.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Implements the set default template action.
+     * Sets the currently selected template as the default for its structural object
+     * class, then refreshes the viewer and button states.
      */
     private void setDefaultTemplateAction()
     {
@@ -808,8 +892,9 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── USE FOR ANY ENTRY ACTION: SELECT THE "ANY ENTRY" RADIO ────────────────────
     /**
-     * Implements the use for any entry action.
+     * Selects the "for any entry" radio button and deselects the other.
      */
     private void useForAnyEntryAction()
     {
@@ -818,8 +903,10 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── USE FOR ONLY ENTRIES WITH TEMPLATE ACTION: SELECT THE RESTRICTED RADIO ────
     /**
-     * Implements the use for only entries with template action.
+     * Selects the "only for entries matching at least one enabled template" radio
+     * button and deselects the other.
      */
     private void useForOnlyEntriesWithTemplateAction()
     {
@@ -828,8 +915,13 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── INIT UI: RESTORE SAVED PREFERENCES INTO THE UI ────────────────────────────
+    // Palpatine reviews the saved settings and configures the UI to match: which
+    // presentation mode was last used, which activation scope was saved.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the User Interface.
+     * Reads saved preferences and sets the initial state of the toolbar buttons
+     * and the activation-scope radio buttons.
      */
     private void initUI()
     {
@@ -864,6 +956,7 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── INIT: NOTHING TO DO ───────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -873,8 +966,15 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── REFRESH VIEWER: FULL VIEWER REFRESH FROM CONTENT PROVIDER ────────────────
+    // Palpatine's review desk is refreshed — the content provider feeds the latest
+    // template list back into the tree, checked/grayed states are recomputed, and
+    // the columns are resized to fit.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes the templates viewer.
+     * Refreshes the {@link CheckboxTreeViewer}: re-runs the content provider, re-applies
+     * checked/grayed state, and resizes columns. Called by {@link TemplatesContentProvider}
+     * when templates are added or removed.
      */
     public void refreshViewer()
     {
@@ -889,8 +989,11 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── RESIZE COLUMNS TO FIT: DISTRIBUTE WIDTH EQUALLY ──────────────────────────
     /**
-     * Resizes the columns to fit the size of the cells
+     * Distributes the available composite width equally across all tree columns.
+     * Subtracts the checkbox column width (21 px) and the vertical scrollbar width
+     * from the total before dividing.
      */
     private void resizeColumsToFit()
     {
@@ -913,6 +1016,11 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── PERFORM OK: SAVE PREFERENCES AND COMMIT STAGED CHANGES ───────────────────
+    // Palpatine signs off on all standing orders: saves the activation-scope
+    // preference and calls saveModifications() to commit all staged template changes
+    // to the real manager. If anything fails, returns false to keep the dialog open.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -934,9 +1042,16 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── SET STATE FOR CHECKED AND GRAYED ELEMENTS ─────────────────────────────────
+    // Palpatine's desk clerk needs to force-load every node before computing
+    // checked/grayed state — the JFace CheckboxTreeViewer only knows about nodes
+    // that have been expanded at least once. We expand all, collapse all, then
+    // walk every element to set the correct state.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the state for checked and grayed elements 
-     * (whether checked, grayed or not checked at all).
+     * Recomputes and applies checked and grayed checkbox state for every element in
+     * the tree. Expands all nodes to force lazy-loading, then collapses back,
+     * refills the checked/grayed lists, and restores the previous expansion state.
      */
     private void setStateForCheckedAndGrayedElements()
     {
@@ -963,13 +1078,17 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── FILL CHECKED AND GRAYED ELEMENTS LISTS ────────────────────────────────────
+    // Palpatine's clerk walks every node in the tree (breadth-first via an
+    // in-place list) and classifies each as checked, grayed, both, or neither,
+    // delegating to isChecked() and isGrayed().
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills the two given lists with checked and grayed elements.
+     * Walks all tree elements breadth-first and populates {@code checkedElements}
+     * and {@code grayedElements} using {@link #isChecked} and {@link #isGrayed}.
      *
-     * @param checkedElements
-     *      the checked elements list
-     * @param grayedElements
-     *      the grayed elements list
+     * @param checkedElements  the list to fill with checked elements
+     * @param grayedElements   the list to fill with grayed elements
      */
     private void fillCheckedElementsAndGrayedElementsLists( List<Object> checkedElements, List<Object> grayedElements )
     {
@@ -1008,8 +1127,20 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── IS CHECKED: DETERMINE CHECKED STATE FOR ONE ELEMENT ──────────────────────
+    // Palpatine's clerk determines whether a node should be ticked. Templates are
+    // checked if enabled. Object-class nodes are checked if at least one child
+    // template is enabled (partial checks are handled separately by isGrayed).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code true} if the given tree element should have its checkbox ticked.
+     * In object-class mode a template is checked when enabled; an object-class node
+     * is checked when at least one child template is enabled. In template mode a
+     * template is checked when enabled.
+     *
+     * @param contentProvider  the content provider — used to query presentation mode and children
+     * @param element          the tree element to evaluate
+     * @return {@code true} if the element should be checked
      */
     public boolean isChecked( TemplatesContentProvider contentProvider, Object element )
     {
@@ -1056,8 +1187,20 @@ public class TemplateEntryEditorPreferencePage extends PreferencePage implements
     }
 
 
+    // ── IS GRAYED: DETERMINE GRAYED (PARTIAL) STATE FOR ONE ELEMENT ──────────────
+    // Palpatine's clerk grays an object-class node when some — but not all — of its
+    // child templates are enabled. This partial-check indicator tells the user there
+    // is a mix of enabled and disabled templates under that node.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code true} if the given tree element should be shown grayed (partially
+     * checked). In object-class mode an object-class node is grayed when at least one
+     * child template is disabled. Templates themselves and all elements in template
+     * mode are never grayed.
+     *
+     * @param contentProvider  the content provider — used to query presentation mode and children
+     * @param element          the tree element to evaluate
+     * @return {@code true} if the element should be grayed
      */
     public boolean isGrayed( TemplatesContentProvider contentProvider, Object element )
     {

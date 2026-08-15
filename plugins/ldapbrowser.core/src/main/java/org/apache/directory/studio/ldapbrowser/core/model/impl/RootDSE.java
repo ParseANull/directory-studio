@@ -31,8 +31,23 @@ import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 import org.apache.directory.studio.ldapbrowser.core.model.IRootDSE;
 
 
+// ── CLASS: RootDSE — THE DEATH STAR'S MAIN CONTROL ROOM ──────────────────────
+// The Death Star has one special control room at the very top of the hierarchy
+// that has no parent — it contains the master list of everything: all naming
+// contexts, all supported extensions, all supported controls and features.
+// RootDSE is that control room: a BaseDNEntry with an empty DN whose parent is
+// always null, and that exposes convenience methods to query what extensions,
+// controls, and features the directory advertises.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The RootDSE class represents a root DSE entry.
+ * Represents the root DSE (Directory Specific Entry) of an LDAP directory.
+ * Extends {@link BaseDNEntry} with an empty DN and a {@code null} parent.
+ * Provides convenience accessors for the root DSE's supported extensions,
+ * controls, and features attributes, plus OID-level check methods.
+ *
+ * <p>Think of this as the Death Star's main control room — no parent, sits at
+ * the absolute top of the directory tree, and contains the master capability
+ * advertisement.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -42,15 +57,17 @@ public final class RootDSE extends BaseDNEntry implements IRootDSE
     private static final long serialVersionUID = -8445018787232919754L;
 
 
+    // ── No-Arg Constructor For Serialisation ─────────────────────────────────────
     protected RootDSE()
     {
     }
 
 
+    // ── Control Room Constructor: Just The Connection ─────────────────────────────
     /**
-     * Creates a new instance of RootDSE.
-     * 
-     * @param browserConnection the browser connection
+     * Creates a new instance of RootDSE with an empty DN.
+     *
+     * @param browserConnection the browser connection this root DSE belongs to
      */
     public RootDSE( IBrowserConnection browserConnection )
     {
@@ -58,6 +75,7 @@ public final class RootDSE extends BaseDNEntry implements IRootDSE
     }
 
 
+    // ── Root Has No Parent — Always Returns null ──────────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.impl.BaseDNEntry#getParententry()
      */
@@ -67,6 +85,7 @@ public final class RootDSE extends BaseDNEntry implements IRootDSE
     }
 
 
+    // ── Control Room: List All Supported Extension OIDs ──────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IRootDSE#getSupportedExtensions()
      */
@@ -76,6 +95,7 @@ public final class RootDSE extends BaseDNEntry implements IRootDSE
     }
 
 
+    // ── Control Room: List All Supported Control OIDs ─────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IRootDSE#getSupportedControls()
      */
@@ -85,6 +105,7 @@ public final class RootDSE extends BaseDNEntry implements IRootDSE
     }
 
 
+    // ── Control Room: List All Supported Feature OIDs ─────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IRootDSE#getSupportedFeatures()
      */
@@ -94,12 +115,12 @@ public final class RootDSE extends BaseDNEntry implements IRootDSE
     }
 
 
+    // ── R2-D2 Fetches And Sorts The Values Of One Root DSE Attribute ─────────────
     /**
      * Gets the attribute values.
-     * 
-     * @param attributeDescription the attribute description
-     * 
-     * @return the attribute values
+     *
+     * @param attributeDescription the attribute description to look up
+     * @return sorted array of string values, or an empty array if the attribute is absent
      */
     private String[] getAttributeValues( String attributeDescription )
     {
@@ -117,6 +138,7 @@ public final class RootDSE extends BaseDNEntry implements IRootDSE
     }
 
 
+    // ── The Root DSE Is Never A Subentry ─────────────────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.impl.AbstractEntry#isSubentry()
      */
@@ -126,6 +148,7 @@ public final class RootDSE extends BaseDNEntry implements IRootDSE
     }
 
 
+    // ── Mace Windu Checks: Does The Server Support This Extension OID? ───────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IRootDSE#isExtensionSupported(java.lang.String)
      */
@@ -136,6 +159,7 @@ public final class RootDSE extends BaseDNEntry implements IRootDSE
     }
 
 
+    // ── Mace Windu Checks: Does The Server Support This Control OID? ─────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IRootDSE#isControlSupported(java.lang.String)
      */
@@ -146,6 +170,7 @@ public final class RootDSE extends BaseDNEntry implements IRootDSE
     }
 
 
+    // ── Mace Windu Checks: Does The Server Support This Feature OID? ─────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IRootDSE#isFeatureSupported(java.lang.String)
      */

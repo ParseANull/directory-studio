@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.controller.actions;
 
@@ -50,8 +50,21 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 
 
+// ── CLASS: DeleteSchemaElementAction — Clone Troopers Clear The Archive ──────
+// After Order 66, clone troopers sweep through the Jedi Archives and remove
+// specific records — holochrons, lineage files, individual scrolls — systematically
+// and with care not to double-delete things already purged as part of a larger set.
+// This action mirrors that precision: it deletes selected schemas, attribute types,
+// and object classes from the schema handler, making sure items inside a deleted
+// schema aren't redundantly removed a second time.
+// ────────────────────────────────────────────────────────────────────────────
 /**
- * This action deletes one or more Schema Elements from the SchemaView.
+ * Deletes selected schemas, attribute types, or object classes from the schema view.
+ * We handle mixed selections carefully: if a whole schema and some of its child
+ * elements are both selected, we remove the schema once and skip redundant child
+ * deletes, because removing the schema already takes care of them.
+ * Think of this as clone troopers clearing the Jedi Archive: they collect the full
+ * list, deduplicate, and remove each record exactly once.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -61,8 +74,20 @@ public class DeleteSchemaElementAction extends Action implements IWorkbenchWindo
     private TreeViewer viewer;
 
 
+    // ── Troopers Study The Archive Floor Plan ─────────────────────────────────
+    // The clone squad is briefed on the Archive layout — which shelves hold
+    // holochrons, which hold lineage scrolls, and which are whole collections.
+    // They'll only accept a mission targeting items they're trained to handle.
+    // We register a selection listener that enables us only when every selected
+    // item is a Schema, AttributeType, or ObjectClass wrapper — no random nodes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DeleteSchemaElementAction.
+     * Creates a new DeleteSchemaElementAction wired to the given tree viewer.
+     * We attach a selection listener that enables the action only when every
+     * selected item is a type we know how to delete (Schema, AttributeType,
+     * or ObjectClass wrapper); anything else disables us.
+     *
+     * @param viewer  the TreeViewer showing schema elements; we watch its selection
      */
     public DeleteSchemaElementAction( TreeViewer viewer )
     {
@@ -107,8 +132,20 @@ public class DeleteSchemaElementAction extends Action implements IWorkbenchWindo
     }
 
 
+    // ── Troopers Execute: Confirm, Deduplicate, Remove ────────────────────────
+    // The squad confirms the target list with the archivist, then works through
+    // it methodically: whole collections first, then individual scrolls — but
+    // never twice for the same item.
+    // We sort selected items into schemas and individual schema objects, show a
+    // confirmation dialog, remove the standalone objects (skipping those that
+    // belong to a to-be-deleted schema), then remove the schemas themselves.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Confirms with the user, then deletes the selected schema elements.
+     * The confirmation message varies by type and count; for single items we name
+     * the type, for multiple items we give the count.
+     * We avoid double-deleting schema objects that belong to a schema also being
+     * deleted — the schema removal takes care of its own children.
      */
     public void run()
     {
@@ -203,8 +240,14 @@ public class DeleteSchemaElementAction extends Action implements IWorkbenchWindo
     }
 
 
+    // ── Order Relayed Through Imperial Comms ──────────────────────────────────
+    // The squad's orders arrive through the standard Imperial relay — same mission,
+    // same execution, regardless of which comm channel carried the signal.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Delegates to {@link #run()} when called via the workbench action delegate channel.
+     *
+     * @param action  the workbench action proxy; we ignore it and call our own run()
      */
     public void run( IAction action )
     {
@@ -212,8 +255,12 @@ public class DeleteSchemaElementAction extends Action implements IWorkbenchWindo
     }
 
 
+    // ── Archive Cleared: Nothing Left To Release ──────────────────────────────
+    // The squad withdraws from the Archive — mission done, no equipment left behind.
+    // We hold no resources that need cleanup.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op dispose — we hold no resources that need explicit cleanup.
      */
     public void dispose()
     {
@@ -221,8 +268,14 @@ public class DeleteSchemaElementAction extends Action implements IWorkbenchWindo
     }
 
 
+    // ── Squad Reports In: No Window-Specific Orders ───────────────────────────
+    // The squad leader checks in at the command post but receives no instructions
+    // tied to this particular workbench window — standing orders suffice.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op init — we don't need the workbench window reference.
+     *
+     * @param window  the workbench window; not used here
      */
     public void init( IWorkbenchWindow window )
     {
@@ -230,8 +283,15 @@ public class DeleteSchemaElementAction extends Action implements IWorkbenchWindo
     }
 
 
+    // ── Comms Idle: Workbench Selection Ignored ────────────────────────────────
+    // The squad's own viewer listener already handles selection updates; the
+    // workbench-level selection callback carries nothing useful for us here.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — we track selection through our own viewer listener, not this callback.
+     *
+     * @param action     the workbench action proxy; not used
+     * @param selection  the workbench selection; not used
      */
     public void selectionChanged( IAction action, ISelection selection )
     {

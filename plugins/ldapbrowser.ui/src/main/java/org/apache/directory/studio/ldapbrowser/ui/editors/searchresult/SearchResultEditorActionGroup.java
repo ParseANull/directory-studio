@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.searchresult;
@@ -65,9 +65,22 @@ import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.actions.ContributionItemFactory;
 
 
+// ── CLASS: SearchResultEditorActionGroup — Clone Troopers Receiving Order 66 ──
+// When Order 66 goes out, every clone trooper across the galaxy has their
+// assignment: some guard the toolbar, some manage the context menu, some handle
+// global keybindings.  Each trooper knows their role and activates or deactivates
+// on command.  This class is the commander that deploys all of them.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The SearchResultEditorActionGroup manages all actions of the search result editor.
- * 
+ * Manages all actions available in the search result editor: toolbar buttons,
+ * context menu items, and global keybinding handlers.
+ * We create every action at construction time, wire them into their menu/toolbar
+ * slots, and expose {@link #activateGlobalActionHandlers()} /
+ * {@link #deactivateGlobalActionHandlers()} so the editor can toggle them on/off
+ * while a cell editor is active.
+ * Think of this as the clone commander who deploys each trooper (action) to the
+ * right position when Order 66 is issued.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SearchResultEditorActionGroup implements ActionHandlerManager, IMenuListener
@@ -171,10 +184,29 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     private SearchResultEditor searchResultEditor;
 
 
+    // ── Commander Deploys All Troopers ────────────────────────────────────────
+    // When the commander receives their orders, they immediately deploy every trooper
+    // to their station: ShowDNAction to the menu, value editor actions to the context
+    // menu, copy/paste/delete actions to the global handlers.  Each trooper is created,
+    // briefed with the current viewer/cursor, and stored in the map.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SearchResultEditorActionGroup.
-     * 
-     * @param searchResultEditor the search result editor
+     * Creates all actions for the search result editor and stores them ready for use.
+     * We resolve the viewer and cursor from the editor, then instantiate every action
+     * that can appear in a toolbar, menu, or keybinding.  The editor doesn't need to
+     * know which action class handles which command — it just asks us.
+     *
+     * <p>For example — the commander deploys the squad:</p>
+     * <pre>
+     *   viewer = editor.getMainWidget().getViewer();
+     *   cursor = configuration.getCursor(viewer);
+     *   showDNAction = new ShowDNAction();          // trooper 1
+     *   openBestValueEditorProxy = new ...;         // trooper 2
+     *   // ... many more ...
+     * </pre>
+     *
+     * @param searchResultEditor the editor this group belongs to; used to resolve
+     *                           the viewer, cursor, and configuration
      */
     public SearchResultEditorActionGroup( SearchResultEditor searchResultEditor )
     {
@@ -274,8 +306,15 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Recalls All Troopers ────────────────────────────────────────
+    // Mission over — the commander calls every trooper back and releases them.
+    // We null out every action reference and clear the map to avoid memory leaks.
+    // This is called when the editor itself is closed.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes this action group.
+     * Disposes all actions managed by this group.
+     * We dispose every proxy in the map, null out standalone actions, and clear
+     * all state.  After this call the group must not be used.
      */
     public void dispose()
     {
@@ -320,10 +359,16 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Stations Troopers on the Toolbar ───────────────────────────
+    // The commander assigns specific troopers to guard the toolbar — new value,
+    // delete, refresh, copy table, and quick filter each get a spot.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills the tool bar.
-     * 
-     * @param toolBarManager the tool bar manager
+     * Populates the editor's toolbar with the standard action buttons.
+     * We add new-value, delete, refresh, copy-as-CSV, and show-quick-filter buttons,
+     * separated by visual dividers.
+     *
+     * @param toolBarManager the toolbar manager to add actions to
      */
     public void fillToolBar( IToolBarManager toolBarManager )
     {
@@ -341,10 +386,17 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Stations Troopers on the View Menu ──────────────────────────
+    // The commander puts the view-level toggles in the dropdown menu: show/hide DN,
+    // show links, decorated values, and a shortcut to preferences.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills the menu.
-     * 
-     * @param menuManager the menu manager
+     * Populates the editor's view menu (the drop-down from the toolbar chevron).
+     * We add the DN toggle, links toggle, decorated-values toggle, and a link to
+     * the preference page.  The decorated-values action updates its checked state
+     * dynamically from the preference store each time the menu opens.
+     *
+     * @param menuManager the menu manager for the editor's view menu
      */
     public void fillMenu( IMenuManager menuManager )
     {
@@ -365,10 +417,16 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Registers the Action Bars Headquarters ─────────────────────
+    // The commander needs to know where the main command channel (action bars) is
+    // so they can broadcast global action handler updates to the workbench.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Enable global action handlers.
-     * 
-     * @param actionBars the action bars
+     * Stores the action bars reference so we can register/unregister global handlers.
+     * Call this once when the editor initializes, before any
+     * {@link #activateGlobalActionHandlers()} calls.
+     *
+     * @param actionBars the workbench action bars for this editor's site
      */
     public void enableGlobalActionHandlers( IActionBars actionBars )
     {
@@ -376,10 +434,16 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Sets Up the Context Menu ────────────────────────────────────
+    // The context menu is populated fresh each time it opens (via menuAboutToShow),
+    // so we just register the listener here and let menuAboutToShow do the work.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills the context menu.
-     * 
-     * @param menuManager the menu manager
+     * Configures the context menu to rebuild itself fresh each time it opens.
+     * We set remove-all-when-shown and register ourselves as the menu listener
+     * so {@link #menuAboutToShow(IMenuManager)} is called every time.
+     *
+     * @param menuManager the context menu manager for the table viewer
      */
     public void fillContextMenu( IMenuManager menuManager )
     {
@@ -388,8 +452,18 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Briefs the Troops Just Before the Door Opens ───────────────
+    // Right before the context menu appears, the commander assembles the full squad:
+    // navigation actions, copy/paste/delete, value editors, schema browser links.
+    // Each trooper gets their position in the menu in the right order.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the context menu content immediately before it is shown.
+     * We add actions in logical groups separated by dividers: new operations,
+     * navigation, copy/paste/delete (with advanced sub-menu), value editors,
+     * refresh, and properties.
+     *
+     * @param menuManager the context menu manager; we add actions directly to it
      */
     public void menuAboutToShow( IMenuManager menuManager )
     {
@@ -477,8 +551,16 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Opens the Command Channel ───────────────────────────────────
+    // When the editor gains focus, the commander opens the main channel and registers
+    // every trooper (action) with the workbench global action handler map.
+    // This makes Ctrl+C, Ctrl+V, Delete, F5, etc. work in this editor.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Registers global action handlers so standard keybindings (Ctrl+C, Delete, F5,
+     * etc.) trigger the right actions in this editor.
+     * Called when the editor part is activated.  We also activate individual
+     * action handlers via {@link ActionUtils} for actions with explicit command IDs.
      */
     public void activateGlobalActionHandlers()
     {
@@ -509,8 +591,16 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Closes the Command Channel ──────────────────────────────────
+    // When a cell editor opens, the global actions must be suspended so that
+    // Ctrl+C, Delete, etc. go to the cell editor, not to this action group.
+    // The commander recalls all troopers from the global handler map.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Unregisters all global action handlers so keybindings are not intercepted
+     * by this editor while a cell editor is active.
+     * Called when a cell editor opens (in {@link AbstractOpenEditorAction#activateEditor})
+     * and when the editor part is deactivated.
      */
     public void deactivateGlobalActionHandlers()
     {
@@ -536,10 +626,16 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Identifies the Lead Trooper ────────────────────────────────
+    // The lead trooper for the editing mission is the best-editor action — callers
+    // need direct access to it to check which editor was selected.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the open best editor action.
-     * 
-     * @return the open best editor action
+     * Returns the {@link OpenBestEditorAction} from its proxy wrapper.
+     * The universal listener uses this to wire up the "start edit on double-click"
+     * behavior by calling the action directly.
+     *
+     * @return the unwrapped {@link OpenBestEditorAction} instance
      */
     public OpenBestEditorAction getOpenBestEditorAction()
     {
@@ -547,10 +643,16 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Updates All Troopers' Target ────────────────────────────────
+    // When the user selects a different search in the browser, the commander
+    // updates every trooper's context so they know what they're operating on.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the input.
-     * 
-     * @param search the new input
+     * Notifies all actions that the editor's input has changed to a new search.
+     * Each proxy's {@code inputChanged()} updates the underlying action's context
+     * so that enablement checks and operations target the new search.
+     *
+     * @param search the newly selected {@link ISearch}, or {@code null} if nothing is selected
      */
     public void setInput( ISearch search )
     {
@@ -561,10 +663,17 @@ public class SearchResultEditorActionGroup implements ActionHandlerManager, IMen
     }
 
 
+    // ── Commander Checks if Any Trooper Is Mid-Mission ────────────────────────
+    // If any cell editor is currently open, the editor is "active" and we should
+    // suppress other editing actions until the current one finishes.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if is editor active.
-     * 
-     * @return true, if is editor active
+     * Returns {@code true} if any value editor is currently open and active.
+     * We check the default, best, entry, and all alternative editor proxies —
+     * if any of them report active, we return true.
+     * The editor uses this to decide whether to allow new editing operations.
+     *
+     * @return {@code true} if at least one cell editor is currently open
      */
     public boolean isEditorActive()
     {

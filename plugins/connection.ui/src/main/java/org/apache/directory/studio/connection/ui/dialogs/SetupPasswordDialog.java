@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.ui.dialogs;
@@ -41,49 +41,68 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: SetupPasswordDialog — SEALING THE VAULT FOR THE FIRST TIME ────────────
+// When the Rebel Alliance first encrypts their data vault, they need to choose a
+// master key — and to make sure they didn't mistype it, they have to enter it twice.
+// SetupPasswordDialog is that first-time setup moment: two masked text fields
+// (password + verify) inside a single "Password" group.  The OK button stays
+// disabled until both fields are non-empty and identical.
+// Used by PasswordsKeystorePreferencePage when the user first enables the keystore.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * The SetupPasswordDialog is used to ask the user for a setup password 
- * with a second text widget for verification purposes.
- * <p>
- * It has a useful checkbox that can show/hide the typed passwords.
+ * Two-field dialog for setting up a new password (no "current password" field).
+ *
+ * <p>Useful for first-time setup flows where we don't need to verify an existing
+ * credential — just confirm the new one.  The OK button is enabled only when
+ * both the password and verify fields are non-empty and identical.</p>
+ *
+ * <p>Each text field has a "Show password" checkbox to toggle masking.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SetupPasswordDialog extends Dialog
 {
-    /** The title of the dialog */
+    // ── FIELDS ────────────────────────────────────────────────────────────────────
+
+    /** The window title. */
     private String title;
 
-    /** The message to display, or <code>null</code> if none */
+    /** Optional message above the group; may be {@code null}. */
     private String message;
 
-    /** The input value; the empty string by default */
-    private String value = StringUtils.EMPTY;//$NON-NLS-1$
+    /**
+     * The password value.  Pre-filled from {@code initialValue}, then updated
+     * from the text field on OK.  Set to {@code null} on Cancel.
+     */
+    private String value = StringUtils.EMPTY;
 
-    // UI Widgets
-    /** The OK button */
+    // ── UI WIDGETS ────────────────────────────────────────────────────────────────
+
+    /** OK button — kept as a field so {@link #validate()} can enable/disable it. */
     private Button okButton;
 
-    /** The Password Text */
+    /** The primary (new) password text field. */
     private Text passwordText;
-    
-    /** The Show Password Checkbox */
+
+    /** Checkbox to toggle masking on {@link #passwordText}. */
     private Button showPasswordCheckbox;
-    
-    /** The Verify Password Text */
+
+    /** Confirmation copy of the new password. */
     private Text verifyPasswordText;
 
-    /** The Show Verify Password Checkbox */
+    /** Checkbox to toggle masking on {@link #verifyPasswordText}. */
     private Button showVerifyPasswordCheckbox;
 
 
+    // ── CONSTRUCTOR ───────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of CredentialsDialog.
-     * 
-     * @param parentShell the parent shell
-     * @param title the title
-     * @param message the dialog message
-     * @param initialValue the initial value
+     * Creates a new {@link SetupPasswordDialog}.
+     *
+     * @param parentShell  The parent SWT shell.
+     * @param title        Title shown in the dialog's title bar.
+     * @param message      Explanatory message above the password group; may be
+     *                     {@code null} to omit.
+     * @param initialValue Pre-filled password value; pass {@code null} for empty.
      */
     public SetupPasswordDialog( Shell parentShell, String title, String message, String initialValue )
     {
@@ -93,7 +112,7 @@ public class SetupPasswordDialog extends Dialog
 
         if ( initialValue == null )
         {
-            value = StringUtils.EMPTY;//$NON-NLS-1$
+            value = StringUtils.EMPTY;
         }
         else
         {
@@ -102,20 +121,26 @@ public class SetupPasswordDialog extends Dialog
     }
 
 
+    // ── CONFIGURE SHELL ───────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Sets the shell title.
      */
     @Override
     protected void configureShell( Shell shell )
     {
         super.configureShell( shell );
-
         shell.setText( CommonUIUtils.getTextValue( title ) );
     }
 
 
+    // ── CREATE BUTTONS FOR BUTTON BAR ─────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Creates OK and Cancel buttons, and immediately validates so the initial
+     * disabled state is correct (both fields are empty at creation).
      */
     @Override
     protected void createButtonsForButtonBar( Composite parent )
@@ -127,8 +152,11 @@ public class SetupPasswordDialog extends Dialog
     }
 
 
+    // ── BUTTON PRESSED ────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * On OK, captures the password text.  On Cancel, sets value to {@code null}.
      */
     @Override
     protected void buttonPressed( int buttonId )
@@ -141,17 +169,22 @@ public class SetupPasswordDialog extends Dialog
         {
             value = null;
         }
+
         super.buttonPressed( buttonId );
     }
 
 
+    // ── CREATE DIALOG AREA ────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds a single "Password" group with two masked text fields (password and
+     * verify) each followed by a "Show password" checkbox.
      */
     @Override
     protected Control createDialogArea( Composite parent )
     {
-        // Composite
+        // ── OUTER COMPOSITE ───────────────────────────────────────────────────────
         Composite composite = new Composite( parent, SWT.NONE );
         GridLayout layout = new GridLayout();
         layout.marginHeight = convertVerticalDLUsToPixels( IDialogConstants.VERTICAL_MARGIN );
@@ -163,7 +196,7 @@ public class SetupPasswordDialog extends Dialog
         compositeGridData.widthHint = convertHorizontalDLUsToPixels( IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH );
         composite.setLayoutData( compositeGridData );
 
-        // Message
+        // ── OPTIONAL MESSAGE ──────────────────────────────────────────────────────
         if ( message != null )
         {
             Label messageLabel = BaseWidgetUtils.createWrappedLabel( composite, message, 1 );
@@ -172,19 +205,21 @@ public class SetupPasswordDialog extends Dialog
             messageLabel.setLayoutData( messageLabelGridData );
         }
 
-        // Password Group
+        // ── PASSWORD GROUP ────────────────────────────────────────────────────────
+        // A two-column group: label | field, with "Show password" checkboxes.
+        // ──────────────────────────────────────────────────────────────────────────
         Group passwordGroup = BaseWidgetUtils.createGroup( composite,
             Messages.getString( "SetupPasswordDialog.Password" ), 1 ); //$NON-NLS-1$
         passwordGroup.setLayout( new GridLayout( 2, false ) );
 
-        // Password Text
+        // Password field
         BaseWidgetUtils.createLabel( passwordGroup, Messages.getString( "SetupPasswordDialog.PasswordColon" ), 1 ); //$NON-NLS-1$
         passwordText = BaseWidgetUtils.createText( passwordGroup, value, 1 );
-        passwordText.setEchoChar( '\u2022' );
+        passwordText.setEchoChar( '•' );
         passwordText.addModifyListener( event -> validate() );
 
-        // Show Password Checkbox
-        BaseWidgetUtils.createLabel( passwordGroup, StringUtils.EMPTY, 1 ); //$NON-NLS-1$
+        // Show-password checkbox for the password field
+        BaseWidgetUtils.createLabel( passwordGroup, StringUtils.EMPTY, 1 );
         showPasswordCheckbox = BaseWidgetUtils.createCheckbox( passwordGroup,
             Messages.getString( "SetupPasswordDialog.ShowPassword" ), 1 ); //$NON-NLS-1$
         showPasswordCheckbox.addSelectionListener( new SelectionAdapter()
@@ -201,19 +236,19 @@ public class SetupPasswordDialog extends Dialog
                 }
                 else
                 {
-                    passwordText.setEchoChar( '\u2022' );
+                    passwordText.setEchoChar( '•' );
                 }
             }
         } );
 
-        // Verify Text
+        // Verify field
         BaseWidgetUtils.createLabel( passwordGroup, Messages.getString( "SetupPasswordDialog.VerifyPasswordColon" ), 1 ); //$NON-NLS-1$
         verifyPasswordText = BaseWidgetUtils.createText( passwordGroup, value, 1 );
-        verifyPasswordText.setEchoChar( '\u2022' );
+        verifyPasswordText.setEchoChar( '•' );
         verifyPasswordText.addModifyListener( event -> validate() );
 
-        // Show Verify Password Checkbox
-        BaseWidgetUtils.createLabel( passwordGroup, StringUtils.EMPTY, 1 ); //$NON-NLS-1$
+        // Show-password checkbox for the verify field
+        BaseWidgetUtils.createLabel( passwordGroup, StringUtils.EMPTY, 1 );
         showVerifyPasswordCheckbox = BaseWidgetUtils.createCheckbox( passwordGroup,
             Messages.getString( "SetupPasswordDialog.ShowPassword" ), 1 ); //$NON-NLS-1$
         showVerifyPasswordCheckbox.addSelectionListener( new SelectionAdapter()
@@ -230,12 +265,11 @@ public class SetupPasswordDialog extends Dialog
                 }
                 else
                 {
-                    verifyPasswordText.setEchoChar( '\u2022' );
+                    verifyPasswordText.setEchoChar( '•' );
                 }
             }
         } );
 
-        // Setting focus
         passwordText.setFocus();
 
         applyDialogFont( composite );
@@ -243,10 +277,13 @@ public class SetupPasswordDialog extends Dialog
     }
 
 
+    // ── GET PASSWORD ──────────────────────────────────────────────────────────────
     /**
-     * Returns the string typed into this password dialog.
-     * 
-     * @return the input string
+     * Returns the password typed by the user.
+     *
+     * <p>Returns {@code null} if the dialog was cancelled.</p>
+     *
+     * @return The typed password string, or {@code null} if cancelled.
      */
     public String getPassword()
     {
@@ -254,14 +291,18 @@ public class SetupPasswordDialog extends Dialog
     }
 
 
+    // ── VALIDATE ──────────────────────────────────────────────────────────────────
     /**
-     * Validates the input.
+     * Enables the OK button only when both fields are non-empty and identical.
+     *
+     * <p>Called on every ModifyEvent from both text fields.</p>
      */
     private void validate()
     {
+        // ── OK ENABLED WHEN: non-empty AND matching ────────────────────────────────
         String password = passwordText.getText();
         String verifyPassword = verifyPasswordText.getText();
 
-        okButton.setEnabled( ( !Strings.isEmpty( password ) ) && ( password.equals( verifyPassword ) ) ); //$NON-NLS-1$ //$NON-NLS-2$
+        okButton.setEnabled( !Strings.isEmpty( password ) && password.equals( verifyPassword ) );
     }
 }

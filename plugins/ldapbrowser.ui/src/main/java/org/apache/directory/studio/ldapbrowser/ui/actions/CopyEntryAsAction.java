@@ -37,8 +37,24 @@ import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.widgets.Display;
 
 
+// ── CLASS: CopyEntryAsAction — YODA LIFTS THE X-WING FROM THE SWAMP ─────────
+// On Dagobah, Luke stares at his sunken X-wing and says "It's too big." Yoda
+// closes his eyes, reaches out, and transforms impossibility into reality —
+// the fighter rises from the muck, fully intact, in a new form. This abstract
+// class does the same: given LDAP entries (possibly uninitialized, possibly
+// buried in search results or bookmarks), it lifts them out of the directory,
+// ensures their attributes are loaded, and hands them to subclasses to
+// serialize into whatever output format is needed (LDIF, CSV, etc.).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This abstract class must be extended by each Action that <em>"Copies an Entry as..."</em>.
+ * Abstract base class for actions that copy one or more LDAP entries to the
+ * clipboard in a specific serialized format (LDIF, CSV, and so on).
+ * We handle the common heavy lifting: resolving entries from bookmarks, fetching
+ * uninitialized attributes from the server, and placing the result on the
+ * clipboard. Subclasses only need to implement {@link #serialializeEntries} to
+ * define the output format.
+ * Think of this class as Yoda: we do the Force-heavy work so the subclass
+ * (Luke) just has to pick up the X-wing.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -71,13 +87,22 @@ public abstract class CopyEntryAsAction extends BrowserAction
     protected String appendix;
 
 
+    // ── Yoda Chooses the Depth of the Lift ────────────────────────────────────
+    // Before Yoda lifts the X-wing, he decides what form it needs to take:
+    // just the hull (DN only), user-visible parts (normal), or everything
+    // including the hidden machinery (operational attributes).
+    // We store the target format type and mode, and derive the human-readable
+    // appendix that appears in the menu label.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of CopyEntryAsAction.
+     * Creates a new {@code CopyEntryAsAction} configured for a specific output
+     * format and copy mode.
+     * The {@code mode} constant determines which attributes are included in the
+     * serialized output and which menu label appendix is appended.
      *
-     * @param type
-     *      the type of the target
-     * @param mode
-     *      the copy Mode
+     * @param type    the human-readable format name (e.g., "LDIF", "CSV") shown in the menu
+     * @param mode    one of the {@code MODE_*} constants defined in this class;
+     *                controls which entry data is included in the copy
      */
     public CopyEntryAsAction( String type, int mode )
     {
@@ -107,8 +132,19 @@ public abstract class CopyEntryAsAction extends BrowserAction
     }
 
 
+    // ── Yoda Announces What He's About to Lift ────────────────────────────────
+    // Yoda looks at the X-wing, then at Luke, and describes what he's going to
+    // do — "One X-wing as LDIF (User Attributes)" — so everyone knows the plan.
+    // We build the menu label dynamically from the count of selected entries
+    // and the configured format type and mode.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the context-sensitive menu label describing what will be copied
+     * and in what format (e.g., "Copy 3 Entries as LDIF (User Attributes)").
+     * The label changes based on whether entries, search results, bookmarks, or
+     * whole searches are selected.
+     *
+     * @return  the localised display name for this action
      */
     public String getText()
     {
@@ -137,8 +173,15 @@ public abstract class CopyEntryAsAction extends BrowserAction
     }
 
 
+    // ── Yoda Has No Need for Command Codes ───────────────────────────────────
+    // Yoda acts through the Force, not through keyboard shortcuts — no command
+    // ID is registered for this abstract action.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code null} because this action has no registered Eclipse
+     * command ID and therefore no keyboard shortcut binding.
+     *
+     * @return  {@code null} always
      */
     public String getCommandId()
     {
@@ -146,8 +189,19 @@ public abstract class CopyEntryAsAction extends BrowserAction
     }
 
 
+    // ── Yoda Raises the X-wing From the Swamp ────────────────────────────────
+    // Yoda closes his eyes and the X-wing stirs: first he gathers all the pieces
+    // (entries, search results, bookmarks), then makes sure their attributes are
+    // loaded (the hidden parts under the water), and finally shapes the whole
+    // thing into the target form and lifts it to the clipboard.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Collects all selected entries (including those behind bookmarks and search
+     * results), lazily fetches any uninitialized attributes from the LDAP server,
+     * serializes them via {@link #serialializeEntries}, and places the result on
+     * the system clipboard.
+     * This is the heart of the operation — subclasses define the output format
+     * by implementing {@link #serialializeEntries}.
      */
     public void run()
     {
@@ -215,19 +269,35 @@ public abstract class CopyEntryAsAction extends BrowserAction
     }
 
 
+    // ── Yoda Channels the Force Into the Right Shape ─────────────────────────
+    // After the X-wing is clear of the swamp, Yoda shapes it — but he steps back
+    // and lets Luke finish the job: the exact form is the subclass's responsibility.
+    // Subclasses must implement this to define the serialized output format.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Serializes Entries.
+     * Serializes the given entries into the target format, appending the result
+     * to {@code text}.
+     * Subclasses implement this to produce LDIF, CSV, or any other text format.
+     * The method is called after attributes have been initialized.
      *
-     * @param entries
-     *      the Entries to serialize
-     * @param text
-     *      the StringBuffer to serialize to
+     * @param entries  the fully initialized entries to serialize; may be empty but not null
+     * @param text     the buffer to append serialized text to; must not be null
      */
     protected abstract void serialializeEntries( IEntry[] entries, StringBuffer text );
 
 
+    // ── Yoda Senses Whether the X-wing Is Within Reach ───────────────────────
+    // Yoda reaches out with the Force to see if there's something worth lifting —
+    // the mode determines which kinds of selections are compatible with this action.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code true} when the current selection contains entries, search
+     * results, bookmarks, or a search whose results are loaded, and the configured
+     * mode is compatible with what's selected.
+     * Search results selected alone only support returning-attributes, normal,
+     * DN-only, and operational-attributes modes.
+     *
+     * @return  {@code true} if this action can operate on the current selection
      */
     public boolean isEnabled()
     {
@@ -252,11 +322,19 @@ public abstract class CopyEntryAsAction extends BrowserAction
     }
 
 
+    // ── Yoda Sets the X-wing Down on Solid Ground ─────────────────────────────
+    // Once the X-wing is in its new form, Yoda places it gently on dry land —
+    // the clipboard — so Luke (the user) can pick it up and use it.
+    // We create a fresh SWT Clipboard, set the text content, and dispose
+    // immediately to avoid leaking the native resource.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Copies text to Clipboard
+     * Writes {@code text} to the system clipboard as plain text using SWT's
+     * {@link Clipboard} API.
+     * We create and dispose the clipboard handle in a single call to avoid
+     * native resource leaks — always call {@code dispose()} in a finally block.
      *
-     * @param text
-     *      the Text to copy
+     * @param text  the serialized entry data to place on the clipboard; must not be null
      */
     protected void copyToClipboard( String text )
     {

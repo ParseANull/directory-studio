@@ -28,9 +28,21 @@ import org.apache.directory.studio.connection.core.jobs.StudioConnectionBulkRunn
 import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 
 
+// ── CLASS: ChildrenInfo — LANDO'S WING MANIFEST FOR ONE CLOUD CITY SECTOR ───
+// Lando keeps a manifest for each sector of Cloud City: has it been surveyed?
+// Who currently lives there?  Are there more residents beyond what's been
+// loaded?  Which patrol droids are waiting to fetch the first and next pages?
+// ChildrenInfo is that manifest — a compact bundle of child state stored off
+// the entry itself in BrowserConnection's children map so entries stay lean.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A ChildrenInfo is used to hold the list of children entries
- * of a parent entry.
+ * Holds the loaded children state for a single {@link AbstractEntry}.
+ * Stored in {@link BrowserConnection}'s children info map rather than directly
+ * on the entry to keep per-entry memory usage low.
+ *
+ * <p>Think of this as Lando's wing manifest for one Cloud City sector —
+ * initialized flag, resident set, a "more residents" flag, and two patrol
+ * runnables for paged loading.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -55,8 +67,11 @@ public class ChildrenInfo implements Serializable
     protected StudioConnectionBulkRunnableWithProgress nextPageChildrenRunnable;
 
 
+    // ── Lando Opens A Fresh Empty Wing Manifest ───────────────────────────────────
     /**
      * Creates a new instance of ChildrenInfo.
+     * All flags start {@code false}, the children set starts {@code null},
+     * and both paging runnables start {@code null}.
      */
     public ChildrenInfo()
     {

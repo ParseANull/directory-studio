@@ -24,8 +24,26 @@ package org.apache.directory.studio.ldapbrowser.core.events;
 import org.apache.directory.studio.ldapbrowser.core.model.ISearch;
 
 
+// ── CLASS: SearchUpdateEvent — C-3PO RELAYS A SEARCH BULLETIN TO THE ALLIANCE
+// C-3PO has just finished translating a complex transmission from the Jawa
+// sand-crawlers: "They've finished the search!  Found two droids matching your
+// description — but wait, the search criteria have been updated.  Now they're
+// looking for different serial numbers."  Each bulletin says which search mission
+// it refers to and what happened to it: was it added to the board, completed,
+// parameter-changed, or struck off the board entirely?
+// This class is that bulletin: it wraps an {@link ISearch} — a saved LDAP search
+// with a filter, scope, and base DN — and a {@link EventDetail} code describing
+// what changed about the search's lifecycle or parameters.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An SearchUpdateEvent indicates that an {@link ISearch} was updated.
+ * Signals that an {@link ISearch} was added, removed, performed, renamed, or
+ * had its parameters updated.
+ * A search in Directory Studio is a saved LDAP query (filter + scope + base DN)
+ * that appears in the Searches view.  Whenever the
+ * {@link org.apache.directory.studio.ldapbrowser.core.SearchManager} changes a
+ * search, or a job runs it, it fires one of these events.
+ * Listeners check the {@link EventDetail} code to decide whether to insert a row,
+ * refresh results, update a name, or remove the search from the view.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -33,7 +51,9 @@ public class SearchUpdateEvent
 {
 
     /**
-     * Contains constants to specify the event detail.
+     * The bulletin codes describing what happened to the search.
+     * C-3PO has five types of dispatch: the mission was filed, completed,
+     * briefing-updated, re-named, or cancelled.
      */
     public enum EventDetail
     {
@@ -64,11 +84,21 @@ public class SearchUpdateEvent
     private ISearch search;
 
 
+    // ── C-3PO Files The Bulletin With Mission And Action ─────────────────────────
+    // "Mission: Locate Skywalker.  Status: SEARCH_PERFORMED."  Both the mission
+    // object and the action code go into the same bulletin so listeners don't
+    // have to look them up separately.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SearchUpdateEvent.
+     * Creates a new SearchUpdateEvent.
      *
-     * @param search the updated search
-     * @param detail the event detail
+     * <p>For example — fired when a search run completes:</p>
+     * <pre>
+     *   new SearchUpdateEvent(mySearch, EventDetail.SEARCH_PERFORMED);
+     * </pre>
+     *
+     * @param search the search that was updated.
+     * @param detail what happened to it (ADDED, REMOVED, PERFORMED, etc.).
      */
     public SearchUpdateEvent( ISearch search, EventDetail detail )
     {
@@ -77,10 +107,17 @@ public class SearchUpdateEvent
     }
 
 
+    // ── C-3PO Hands Over The Mission Dossier ─────────────────────────────────────
+    // "Here's the full mission file — filter, scope, base DN, results."
+    // Listeners use the search object to refresh the Searches view row, render
+    // results, update name labels, and so on.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the updated search.
+     * Returns the search that was affected by this event.
+     * For SEARCH_REMOVED events the object still exists in memory; for all
+     * other events it reflects the current (updated) state of the search.
      *
-     * @return the updated search
+     * @return the {@link ISearch}; never {@code null}.
      */
     public ISearch getSearch()
     {
@@ -88,10 +125,22 @@ public class SearchUpdateEvent
     }
 
 
+    // ── C-3PO Reads Out The Action Code ──────────────────────────────────────────
+    // "Status: SEARCH_ADDED."  The listener switches on this to decide what
+    // to do — insert a new row, refresh results, update a label, remove a row.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the event detail.
+     * Returns the {@link EventDetail} constant indicating what changed.
+     * Listeners switch on this value:
+     * <ul>
+     *   <li>{@code SEARCH_ADDED}             — insert a new row in the Searches view.</li>
+     *   <li>{@code SEARCH_REMOVED}           — remove the row.</li>
+     *   <li>{@code SEARCH_PERFORMED}         — refresh the results display.</li>
+     *   <li>{@code SEARCH_PARAMETER_UPDATED} — refresh parameter labels (filter, scope).</li>
+     *   <li>{@code SEARCH_RENAMED}           — refresh the name label.</li>
+     * </ul>
      *
-     * @return the event detail
+     * @return the event detail; never {@code null}.
      */
     public EventDetail getDetail()
     {

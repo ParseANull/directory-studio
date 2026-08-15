@@ -35,8 +35,25 @@ import antlr.LexerSharedInputState;
 import antlr.collections.impl.BitSet;
 import antlr.SemanticException;
 
+// ── CLASS: AntlrAclLexer — C-3PO READING THE JAWA DIALECT ────────────────────
+// C-3PO is fluent in over six million forms of communication. This class is
+// his Jawa-dialect parsing module: an ANTLR 2.7.7 auto-generated lexer that
+// tokenises the OpenLDAP ACL text into the stream consumed by AntlrAclParser.
+// It recognises all ACL keywords (access, to, by, dn, group, filter, attrs,
+// read, write, manage, etc.) case-insensitively and produces the token types
+// defined in AntlrAclLexerTokenTypes. THIS FILE IS AUTO-GENERATED from Acl.g
+// by the ANTLR tool — do not modify the method bodies directly.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The ANTLR generated OpenLDAP ACL parser.
+ * ANTLR 2.7.7 auto-generated lexer for OpenLDAP ACL text.
+ * Converts raw ACL strings into a token stream consumed by {@link AntlrAclParser}.
+ *
+ * <p><b>Auto-generated</b> from {@code Acl.g} — do not edit method bodies.</p>
+ * <p>Think of this class as C-3PO reading the Jawa dialect — he recognises all
+ * ACL keywords case-insensitively and produces a clean token stream.</p>
+ *
+ * @see AntlrAclParser
+ * @see AntlrAclLexerTokenTypes
  */
 public class AntlrAclLexer extends antlr.CharScanner implements AntlrAclLexerTokenTypes, TokenStream
  {

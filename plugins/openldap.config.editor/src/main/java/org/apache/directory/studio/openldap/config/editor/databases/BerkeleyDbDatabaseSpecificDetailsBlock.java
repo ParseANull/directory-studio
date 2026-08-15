@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.databases;
 
@@ -49,9 +49,26 @@ import org.apache.directory.studio.openldap.config.model.widgets.IndicesWidget;
 import org.apache.directory.studio.openldap.config.model.widgets.LockDetectWidget;
 
 
+// ── CLASS: BerkeleyDbDatabaseSpecificDetailsBlock — Palpatine's Imperial Archives ──
+// The Empire kept its most critical records in the massive Berkeley vaults:
+// indexed, encrypted, precisely tuned for performance, and locked down with
+// sophisticated concurrency controls. Berkeley DB (BDB/HDB) is OpenLDAP's
+// most feature-rich storage backend, giving administrators control over
+// caching, indexing, encryption, checkpointing, and deadlock handling.
+// This block exposes all of those controls in five collapsible form sections.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements a block for Berkeley DB Database Specific Details.
- * 
+ * Database-specific UI block for the OpenLDAP Berkeley DB backends
+ * ({@code olcBdbConfig} / {@code olcHdbConfig}).
+ * BDB is the original high-performance storage backend for OpenLDAP, offering
+ * fine-grained control over caching, indexing strategies, file encryption,
+ * shared-memory keys, checkpoint intervals, page sizes, and deadlock detection.
+ * We organise all those knobs into five collapsible sections:
+ * Database Configuration, Database Indices, Database Cache,
+ * Database Limits, and Database Options.
+ * Think of it as Palpatine's Imperial archives — enormous, meticulously indexed,
+ * encrypted, and tuned to serve the galaxy at scale.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> extends
@@ -85,7 +102,7 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
         {
             DbConfigurationDialog dialog = new DbConfigurationDialog( editConfigurationButton.getShell(),
                 database.getOlcDbConfig().toArray( new String[0] ) );
-            
+
             if ( dialog.open() == DbConfigurationDialog.OK )
             {
                 List<String> newConfiguration = new ArrayList<>();
@@ -107,12 +124,20 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     };
 
 
+    // ── Commission the Imperial Archive ──────────────────────────────────────
+    // The Imperial archivist receives their assignment: manage this particular
+    // Berkeley DB vault. We bind the block to its parent details page, the
+    // OlcBdbConfig model, and the live LDAP connection used for DN pickers.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BdbDatabaseSpecificDetailsBlock.
-     * 
-     * @param databaseDetailsPage the database details page 
-     * @param database the database
-     * @param browserConnection the connection
+     * Constructs a new Berkeley DB block, linking it to the parent details page,
+     * the BDB model object, and the live browser connection.
+     * A browser connection is needed here because BDB config includes DN-based
+     * settings that require an entry picker.
+     *
+     * @param detailsPage       the parent details page that receives dirty signals
+     * @param database          the {@link OlcBdbConfig} (or subtype) model we are editing
+     * @param browserConnection the live LDAP connection for DN picker widgets
      */
     public BerkeleyDbDatabaseSpecificDetailsBlock( DatabasesDetailsPage detailsPage, BDB database,
         IBrowserConnection browserConnection )
@@ -121,8 +146,18 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     }
 
 
+    // ── Build the Five-Section Control Console ────────────────────────────────
+    // The archivist lays out the five vault-management consoles side by side:
+    // configuration, indexes, cache, limits, and options. Each section can be
+    // collapsed so the operator can focus on one subsystem at a time.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the complete block UI — five collapsible {@link Section} panels
+     * covering every configurable aspect of a Berkeley DB database.
+     *
+     * @param parent   the parent composite to attach our content to
+     * @param toolkit  the JFace Forms toolkit for styled widget creation
+     * @return         the top-level composite that wraps all five sections
      */
     public Composite createBlockContent( Composite parent, FormToolkit toolkit )
     {
@@ -141,11 +176,18 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     }
 
 
+    // ── Build the Configuration Console ──────────────────────────────────────
+    // The main vault-management panel: where files are stored, what permissions
+    // they have, the raw BDB config directives, the encryption file and key,
+    // and the shared-memory segment key used for inter-process communication.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the database configuration section.
+     * Creates the "Database Configuration" section — the primary set of controls
+     * covering filesystem location, file permissions, raw {@code olcDbConfig} directives,
+     * encryption file, encryption key, and shared-memory key.
      *
-     * @param parent the parent composite
-     * @param toolkit the toolkit
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createDatabaseConfigurationSection( Composite parent, FormToolkit toolkit )
     {
@@ -205,11 +247,19 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     }
 
 
+    // ── Build the Indexing Console ────────────────────────────────────────────
+    // The index management panel: the multi-value indices widget lets the
+    // operator define which attributes get BDB indices and what kind (eq, sub,
+    // approx, pres). The linear-index toggle switches between the default
+    // two-pass indexing and a single-pass linear index (faster for writes).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the database indexes section.
+     * Creates the "Database Indices" section — an {@link IndicesWidget} for multi-value
+     * {@code olcDbIndex} entries plus a {@link BooleanWithDefaultWidget} for
+     * {@code olcDbLinearIndex}.
      *
-     * @param parent the parent composite
-     * @param toolkit the toolkit
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createDatabaseIndexesSection( Composite parent, FormToolkit toolkit )
     {
@@ -236,11 +286,19 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     }
 
 
+    // ── Build the Cache Console ───────────────────────────────────────────────
+    // BDB uses an in-memory cache to speed up reads. The Imperial archivist
+    // tunes four cache dimensions: main cache size, how many entries to free
+    // when the cache is full, DN cache size (for quick DN lookups), and IDL
+    // cache size (for index data lists). More cache = faster reads, bigger RAM.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the database cache section.
+     * Creates the "Database Cache" section — four numeric inputs covering
+     * {@code olcDbCacheSize}, {@code olcDbCacheFree}, {@code olcDbDNcacheSize},
+     * and {@code olcDbIDLcacheSize}.
      *
-     * @param parent the parent composite
-     * @param toolkit the toolkit
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createDatabaseCacheSection( Composite parent, FormToolkit toolkit )
     {
@@ -275,11 +333,19 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     }
 
 
+    // ── Build the Limits Console ──────────────────────────────────────────────
+    // Operational ceilings for the Berkeley vault: how deep the search stack
+    // can grow, how large each BDB page can be (affects storage efficiency),
+    // and at what interval BDB should flush (checkpoint) its transaction log.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the database limits section.
+     * Creates the "Database Limits" section — three controls for
+     * {@code olcDbSearchStack} (search recursion depth),
+     * {@code olcDbPageSize} (BDB page size), and
+     * {@code olcDbCheckpoint} (checkpoint interval).
      *
-     * @param parent the parent composite
-     * @param toolkit the toolkit
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createDatabaseLimitsSection( Composite parent, FormToolkit toolkit )
     {
@@ -309,11 +375,19 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     }
 
 
+    // ── Build the Options Console ─────────────────────────────────────────────
+    // Advanced behavioral switches: whether BDB should flush writes synchronously
+    // (safer but slower), whether dirty reads are allowed (faster but can return
+    // stale data), and which deadlock-detection algorithm the BDB environment
+    // should use when multiple transactions collide.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the database options section.
+     * Creates the "Database Options" section — two {@link BooleanWithDefaultWidget}
+     * controls for {@code olcDbNoSync} and dirty-read mode, plus a
+     * {@link LockDetectWidget} for the {@code olcDbLockDetect} deadlock algorithm.
      *
-     * @param parent the parent composite
-     * @param toolkit the toolkit
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createDatabaseOptionsSection( Composite parent, FormToolkit toolkit )
     {
@@ -348,8 +422,17 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     }
 
 
+    // ── Re-read All Vault Settings from the Model ─────────────────────────────
+    // The archivist steps through every control panel and updates it to reflect
+    // the current state of the OlcBdbConfig model — directory, mode, encryption,
+    // indexes, caches, limits, and options. Listeners are paused during this
+    // operation so we don't generate spurious dirty signals.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reloads all UI controls from the current {@link OlcBdbConfig} model.
+     * Every widget in all five sections is updated to match the model's current values.
+     * Null model values are converted to safe defaults (empty strings, false, etc.)
+     * Listeners are removed before the update and re-attached after.
      */
     public void refresh()
     {
@@ -425,8 +508,14 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     }
 
 
+    // ── Start Watching All Controls ───────────────────────────────────────────
+    // The vault's change-monitoring system activates: every text field, widget,
+    // and button now reports user changes upward as "editor is dirty."
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the listeners.
+     * Attaches dirty listeners to every widget in all five sections.
+     * Any user interaction with any control will propagate a dirty signal
+     * to the parent editor, enabling the Save button.
      */
     private void addListeners()
     {
@@ -455,8 +544,14 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     }
 
 
+    // ── Stop Watching All Controls ────────────────────────────────────────────
+    // The vault's change-monitoring system deactivates before we update
+    // the controls programmatically, preventing false dirty signals.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the listeners
+     * Detaches all dirty listeners from every widget in all five sections.
+     * Called before populating controls from the model so that programmatic
+     * updates do not trigger spurious "editor is dirty" events.
      */
     private void removeListeners()
     {
@@ -485,8 +580,20 @@ public class BerkeleyDbDatabaseSpecificDetailsBlock<BDB extends OlcBdbConfig> ex
     }
 
 
+    // ── Commit All Vault Settings to the Model ────────────────────────────────
+    // The archivist reads every control and stamps its current value into the
+    // official OlcBdbConfig record. Empty/unparseable numeric fields are
+    // committed as null (no value). The directory and crypt-file browsers
+    // also save their dialog history at commit time.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Pushes the current state of every UI control back into the {@link OlcBdbConfig} model.
+     * Empty numeric fields are stored as null. The directory and crypt-file widgets
+     * additionally save their dialog settings (browse history) on commit.
+     * Note: page-size commit is currently a TODO — the field is not yet wired up.
+     *
+     * @param onSave  {@code true} when triggered by a full editor save;
+     *                {@code false} for page-change commits
      */
     public void commit( boolean onSave )
     {

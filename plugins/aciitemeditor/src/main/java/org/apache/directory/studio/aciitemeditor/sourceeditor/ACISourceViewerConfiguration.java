@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.sourceeditor;
 
@@ -35,13 +35,33 @@ import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.SourceViewerConfiguration;
 
 
+// ── CLASS: ACISourceViewerConfiguration — THE ISB COMMAND CONSOLE SETUP ─────
+// When Grand Moff Tarkin sits at his command console, an orderly plugs in the
+// colour-coded display, the autocomplete terminal, and the document-formatter
+// module — making the console fully operational.
+// ACISourceViewerConfiguration is that setup pass: it plugs syntax highlighting,
+// content assist, and formatting into the ACI SourceViewer.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class enables the features of the editor (Syntax coloring, code completion, etc.)
+ * JFace {@link SourceViewerConfiguration} for the ACI source editor.
+ * Wires together three subsystems for the source viewer:
+ * <ul>
+ *   <li>{@link IPresentationReconciler} — drives syntax colouring via {@link ACICodeScanner}</li>
+ *   <li>{@link IContentAssistant} — provides snippet proposals via {@link ACIContentAssistProcessor}</li>
+ *   <li>{@link IContentFormatter} — pretty-prints ACI text via {@link ACIFormattingStrategy}</li>
+ * </ul>
+ * Think of this class as the ISB command console setup: one class plugs all
+ * three modules in so the editor is fully operational.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ACISourceViewerConfiguration extends SourceViewerConfiguration
 {
+    // ── INSTALL SYNTAX HIGHLIGHTING ───────────────────────────────────────────
+    // The orderly plugs in the colour-coded display: a PresentationReconciler
+    // backed by ACICodeScanner so every keyword, grant, and deny glows in its
+    // designated colour the moment the cursor moves.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -59,6 +79,11 @@ public class ACISourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── INSTALL CONTENT ASSIST ────────────────────────────────────────────────
+    // The orderly plugs in the autocomplete terminal: a ContentAssistant wired
+    // to ACIContentAssistProcessor so the user gets snippet proposals after
+    // 500 ms idle time, and the popup is stacked below the cursor.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -78,6 +103,11 @@ public class ACISourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── INSTALL DOCUMENT FORMATTER ────────────────────────────────────────────
+    // The orderly plugs in the document-formatter module: a ContentFormatter
+    // backed by ACIFormattingStrategy so the Format command re-indents the whole
+    // ACI text in one pass.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */

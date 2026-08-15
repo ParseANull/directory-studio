@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.core.jobs;
@@ -34,17 +34,38 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 
 
+// ── CLASS: StudioConnectionJob — HAN'S PRE-FLIGHT MISSION ORCHESTRATOR ────────
+// Before Han launches on any mission, he checks that the Falcon is actually
+// running (connect + bind), then executes the mission (the runnables), and
+// finally fires the "mission complete" notifications so the crew knows what
+// happened.  Bulk missions (StudioConnectionBulkRunnableWithProgress) get
+// special treatment: event firing is suppressed while they run, then a
+// runNotification() round fires all the accumulated changes at once.
+// This class is that orchestrator: it's an Eclipse background Job that wires
+// connection-open, runnable execution, and event notification together.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Job to run {@link StudioRunnableWithProgress} runnables.
+ * Eclipse background {@link Job} that executes one or more
+ * {@link StudioConnectionRunnableWithProgress} runnables.
+ * Before running each runnable, we open its required connections if they are
+ * not already connected.  Bulk runnables ({@link StudioConnectionBulkRunnableWithProgress})
+ * get event firing suppressed during their {@code run()} phase; a subsequent
+ * {@code runNotification()} call fires all accumulated change events at once.
+ * Scheduling is guarded: if an identical runnable type is already running against
+ * the same connection (same host:port lock identifier), the new job is not scheduled.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class StudioConnectionJob extends StudioJob<StudioConnectionRunnableWithProgress>
 {
+    // ── CONSTRUCTOR — CREATE A JOB WITH ONE OR MORE RUNNABLES ─────────────────────
+    // Han assembles his mission briefing: which tasks to run (in order).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of StudioConnectionJob.
-     * 
-     * @param runnables the runnables to run
+     * Creates a new {@link StudioConnectionJob} wrapping the given runnables.
+     * Multiple runnables are executed in order.
+     *
+     * @param runnables  One or more runnables to execute.
      */
     public StudioConnectionJob( StudioConnectionRunnableWithProgress... runnables )
     {
@@ -52,8 +73,18 @@ public class StudioConnectionJob extends StudioJob<StudioConnectionRunnableWithP
     }
 
 
+    // ── RUN — EXECUTE THE MISSION ─────────────────────────────────────────────────
+    // 1. Open any connections that aren't already connected.
+    // 2. Run the runnables. Bulk runnables get event-firing suspended and a
+    //    separate runNotification() call afterward.
+    // 3. Report errors or OK status.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.core.runtime.jobs.Job#run(org.eclipse.core.runtime.IProgressMonitor)
+     * Executes the job: opens required connections, runs the runnables, handles errors.
+     * Overrides {@link Job#run(IProgressMonitor)}.
+     *
+     * @param ipm  The Eclipse progress monitor supplied by the job framework.
+     * @return     An {@link IStatus} (OK, CANCEL, or error) reflecting the outcome.
      */
     protected IStatus run( IProgressMonitor ipm )
     {
@@ -146,8 +177,12 @@ public class StudioConnectionJob extends StudioJob<StudioConnectionRunnableWithP
     }
 
 
+    // ── SUSPEND / RESUME EVENT FIRING — DELEGATE TO REGISTRY ──────────────────────
+    // Protected so subclasses can override the event-suspension strategy if needed.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Suspends event firing in current thread.
+     * Suspends event firing in the current thread.
+     * Called before a bulk runnable's {@code run()} phase.
      */
     protected void suspendEventFiringInCurrentThread()
     {
@@ -156,7 +191,8 @@ public class StudioConnectionJob extends StudioJob<StudioConnectionRunnableWithP
 
 
     /**
-     * Resumes event firing in current thread.
+     * Resumes event firing in the current thread.
+     * Called in the {@code finally} block after a bulk runnable's {@code run()} phase.
      */
     protected void resumeEventFiringInCurrentThread()
     {
@@ -164,8 +200,17 @@ public class StudioConnectionJob extends StudioJob<StudioConnectionRunnableWithP
     }
 
 
+    // ── SHOULD SCHEDULE — PREVENT DUPLICATE CONCURRENT JOBS ───────────────────────
+    // Han won't fly the same mission twice at the same time to the same target.
+    // We check whether an identical runnable type is already running against the
+    // same connection (same host:port) and return false if so.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code false} if an identical runnable type is already running against
+     * the same connection (determined by host:port lock identifier), preventing
+     * duplicate concurrent jobs.
+     *
+     * @return  {@code true} if this job should be scheduled; {@code false} otherwise.
      */
     public boolean shouldSchedule()
     {
@@ -212,8 +257,15 @@ public class StudioConnectionJob extends StudioJob<StudioConnectionRunnableWithP
     }
 
 
+    // ── GET LOCK IDENTIFIERS — BUILD THE COLLISION-DETECTION KEYS ─────────────────
+    // For each locked object, we produce a string key.  Connection objects get a
+    // "host:port" key so two jobs talking to the same server are considered
+    // conflicting.  Other objects get a generic "-toString" key.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Overrides the default implementation to use a host:port string for
+     * {@link Connection} locked objects.
      */
     protected String[] getLockIdentifiers( Object[] objects )
     {
@@ -235,12 +287,12 @@ public class StudioConnectionJob extends StudioJob<StudioConnectionRunnableWithP
 
 
     /**
-     * Gets the string identifier for a {@link Connection} object.
+     * Returns the lock identifier for a {@link Connection}: {@code "host:port"}.
+     * Two connections with the same host and port are treated as the same target
+     * for scheduling conflict purposes.
      *
-     * @param connection
-     *      the connection
-     * @return
-     *      the lock identifier for the connection
+     * @param connection  The connection to identify.
+     * @return  The {@code "host:port"} lock identifier string.
      */
     private String getLockIdentifier( Connection connection )
     {
@@ -249,12 +301,10 @@ public class StudioConnectionJob extends StudioJob<StudioConnectionRunnableWithP
 
 
     /**
-     * Gets the generic lock identifier for an object.
+     * Returns the generic lock identifier for a non-connection object: {@code "-toString()"}.
      *
-     * @param object
-     *      the object
-     * @return
-     *      the lock identifier for the object
+     * @param object  The object to identify.
+     * @return  A string starting with {@code '-'} followed by the object's toString.
      */
     private String getLockIdentifier( Object object )
     {

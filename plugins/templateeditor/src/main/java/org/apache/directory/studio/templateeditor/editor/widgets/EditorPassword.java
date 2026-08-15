@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.editor.widgets;
 
@@ -42,8 +42,22 @@ import org.apache.directory.studio.templateeditor.EntryTemplatePluginConstants;
 import org.apache.directory.studio.templateeditor.model.widgets.TemplatePassword;
 
 
+// ── CLASS: EditorPassword — THE TANTIVE IV SECURITY CONSOLE ──────────────────────
+// On the Tantive IV, access codes are displayed as dots — not plaintext — and
+// only a security officer with the right clearance can change them by entering
+// the new code through the secure console dialog. This class is that security
+// console: it displays the current LDAP password attribute as dots (or plaintext
+// if the "Show Password" checkbox is checked), and an optional "Edit..." button
+// opens the Eclipse PasswordDialog so the officer can change the value using the
+// proper password management UI (which handles hashing, etc.).
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an editor spinner.
+ * A password display and editor widget bound to a single binary LDAP attribute.
+ * The password is always displayed as masked dots by default. An optional
+ * "Edit…" button opens the Eclipse {@link PasswordDialog} for secure password
+ * entry. An optional "Show Password" checkbox toggles the echo character between
+ * dots and plaintext.
+ * Think of this as the Tantive IV security console.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -62,15 +76,17 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
     private Button showPasswordCheckbox;
 
 
+    // ── CONSTRUCTOR: INSTALL THE SECURITY CONSOLE ─────────────────────────────────
+    // The security technician installs the password panel. It binds to the binary
+    // LDAP attribute declared in templatePassword and shows the password in the
+    // configured mode (hidden or visible).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EditorPassword.
-     * 
-     * @param editor
-     *      the associated editor
-     * @param templatePassword
-     *      the associated template password
-     * @param toolkit
-     *      the associated toolkit
+     * Creates a new {@code EditorPassword} bound to the given template password model.
+     *
+     * @param editor            the owning entry editor
+     * @param templatePassword  the template model specifying attribute type, hidden flag, etc.
+     * @param toolkit           the form toolkit
      */
     public EditorPassword( IEntryEditor editor, TemplatePassword templatePassword, FormToolkit toolkit )
     {
@@ -78,8 +94,14 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
     }
 
 
+    // ── CREATE WIDGET: POWER UP THE SECURITY CONSOLE ─────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the password text field (with echo char), the optional "Edit…" button,
+     * and the optional "Show Password" checkbox. Fills the text from the current
+     * LDAP attribute value.
+     *
+     * @param parent  the parent composite
+     * @return the widget composite
      */
     public Composite createWidget( Composite parent )
     {
@@ -96,13 +118,17 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
     }
 
 
+    // ── INIT WIDGET: BUILD THE PASSWORD DISPLAY ───────────────────────────────────
+    // We create a composite with 1 or 2 columns (text + optional toolbar), set the
+    // echo character to the bullet symbol if the password should be hidden, and
+    // optionally add the "Show Password" checkbox below.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and initializes the widget UI.
+     * Builds the composite: a non-editable text field with configurable echo char,
+     * an optional "Edit…" toolbar button, and an optional "Show Password" checkbox.
      *
-     * @param parent
-     *      the parent composite
-     * @return
-     *      the associated composite
+     * @param parent  the parent composite
+     * @return the password widget composite
      */
     private Composite initWidget( Composite parent )
     {
@@ -133,7 +159,7 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
         // Setting the echo char for the password text field
         if ( getWidget().isHidden() )
         {
-            passwordTextField.setEchoChar( '\u2022' );
+            passwordTextField.setEchoChar( '•' );
         }
         else
         {
@@ -162,8 +188,14 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
     }
 
 
+    // ── UPDATE WIDGET: REFRESH THE PASSWORD DISPLAY ───────────────────────────────
+    // We re-read the binary LDAP attribute value and display it in the text field.
+    // The echo character masking means the actual bytes aren't revealed unless the
+    // "Show Password" checkbox is active.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the widget's content.
+     * Re-reads the binary LDAP attribute value and updates the text field.
+     * The echo character is already set, so the display respects the hidden flag.
      */
     private void updateWidget()
     {
@@ -190,8 +222,10 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
     }
 
 
+    // ── ADD LISTENERS: WIRE THE EDIT AND SHOW-PASSWORD HANDLERS ─────────────────
     /**
-     * Adds the listeners.
+     * Attaches selection listeners to the "Edit…" toolbar button and the "Show
+     * Password" checkbox (if present).
      */
     private void addListeners()
     {
@@ -221,8 +255,14 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
     }
 
 
+    // ── EDIT TOOL ITEM ACTION: OPEN THE PASSWORD DIALOG ──────────────────────────
+    // The security officer clicks "Edit..." and the standard Eclipse PasswordDialog
+    // appears. If they enter a new password and click OK, we store the new bytes
+    // and write them to the LDAP attribute.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the edit tool item is clicked.
+     * Opens a {@link PasswordDialog} pre-populated with the current password bytes.
+     * If the user confirms a new password, writes it to the LDAP attribute.
      */
     private void editToolItemAction()
     {
@@ -241,8 +281,13 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
     }
 
 
+    // ── SHOW PASSWORD ACTION: TOGGLE ECHO CHARACTER ───────────────────────────────
+    // The operator checks "Show Password" — the dots change to the actual characters
+    // so they can verify what's stored.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This action is called when the 'Show Password' checkbox is clicked.
+     * Toggles the echo character between {@code '\0'} (plaintext) and the bullet
+     * character {@code '•'} based on the "Show Password" checkbox state.
      */
     private void showPasswordAction()
     {
@@ -252,13 +297,16 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
         }
         else
         {
-            passwordTextField.setEchoChar( '\u2022' );
+            passwordTextField.setEchoChar( '•' );
         }
     }
 
 
+    // ── UPDATE ENTRY: WRITE THE NEW PASSWORD TO THE ATTRIBUTE ────────────────────
     /**
-     * This method is called when the entry has been updated in the UI.
+     * Writes the current {@code currentPassword} bytes to the LDAP attribute.
+     * Creates, modifies, or deletes the attribute depending on whether the
+     * password is set.
      */
     private void updateEntry()
     {
@@ -288,8 +336,9 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
     }
 
 
+    // ── UPDATE: REFRESH THE PASSWORD DISPLAY ─────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Refreshes the password text field from the current LDAP attribute value.
      */
     public void update()
     {
@@ -297,8 +346,9 @@ public class EditorPassword extends EditorWidget<TemplatePassword>
     }
 
 
+    // ── DISPOSE: NOTHING EXTRA TO CLEAN UP ───────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — SWT controls are owned by their parent composite.
      */
     public void dispose()
     {

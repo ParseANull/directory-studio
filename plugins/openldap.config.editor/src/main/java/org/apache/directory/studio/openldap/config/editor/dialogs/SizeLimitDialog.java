@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -41,6 +41,12 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.LimitWrapper;
 import org.apache.directory.studio.openldap.config.editor.wrappers.SizeLimitWrapper;
 
 
+// Like Mace Windu stepping before the Senate chamber to confront Palpatine —
+// scrutinising every detail of the size limit values the administrator enters,
+// checking soft, hard, global, unchecked, paged-results, and paged-results-total
+// limits one by one against the grammar rules, turning the text red when something
+// is wrong, and keeping OK disabled until every field passes inspection — we guard
+// the SizeLimit dialog so only valid configurations escape into the configuration.
 /**
  * The SizeLimitDialog is used to edit the SizeLimit parameter<br/>
  * The SizeLimit grammar is :
@@ -55,9 +61,9 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.SizeLimitWrap
  * prLimit   ::= 'noEstimate' | limit
  * prTLimit  ::= ulimit | 'hard'
  * </pre>
- * 
+ *
  * The dialog overlay is like :
- * 
+ *
  * <pre>
  * +--------------------------------------------------------------------------+
  * | Size Limit                                                               |
@@ -82,14 +88,14 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.SizeLimitWrap
  * |  (Cancel)                                                          (OK)  |
  * +--------------------------------------------------------------------------+
  * </pre>
- * 
+ *
  * A few rules :
  * <ul>
  * <li>When the global limit is set, the soft and hard limits are not used</li>
  * <li>When the Unlimited button is checked, the integer value is discarded</li>
  * <li>When the Soft checkbox for the hard limit is checked, the Global value is used </li>
  * </ul>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
@@ -98,150 +104,18 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
     private Text uncheckedLimitText;
     private Button uncheckedUnlimitedCheckbox;
     private Button uncheckedDisabledCheckbox;
-    
+
     /** The prLimit Text and checkboxes */
     private Text prLimitText;
     private Button prUnlimitedCheckbox;
     private Button prNoEstimateCheckbox;
-    
+
     /** The prTotalLimit Text and checkboxes */
     private Text prTotalLimitText;
     private Button prTotalUnlimitedCheckbox;
     private Button prTotalDisabledCheckbox;
     private Button prTotalHardCheckbox;
-    
-    /**
-     * Create a new instance of the SizeLimitDialog
-     * 
-     * @param parentShell The parent Shell
-     */
-    public SizeLimitDialog( Shell parentShell )
-    {
-        super( parentShell );
-        super.setShellStyle( super.getShellStyle() | SWT.RESIZE );
-    }
 
-
-    /**
-     * Create a new instance of the SizeLimitDialog
-     * 
-     * @param parentShell The parent Shell
-     * @param sizeLimitStr The instance containing the sizeLimit data
-     */
-    public SizeLimitDialog( Shell parentShell, String sizeLimitStr )
-    {
-        super( parentShell );
-        super.setShellStyle( super.getShellStyle() | SWT.RESIZE );
-        
-        setEditedElement( new SizeLimitWrapper( sizeLimitStr ) );
-    }
-    
-    
-    /**
-     * Check if the global SizeLimit is valid : 
-     * the values must be numeric, or "unlimited" or "none" or "soft" (for the hard limit). They
-     * also have to be >=0
-     */
-    @Override
-    protected boolean isValid()
-    {
-        return super.isValid() && isValidUnchecked() && isValidPr() && isValidPrTotal();
-    }
-    
-    
-    /**
-     * Check if the unchecked value is valid or not
-     */
-    protected boolean isValidUnchecked()
-    {
-        String uncheckedlLimitStr = uncheckedLimitText.getText();
-        
-        if ( !Strings.isEmpty( uncheckedlLimitStr ) )
-        {
-            if ( !SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( uncheckedlLimitStr ) && 
-                 !SizeLimitWrapper.NONE_STR.equalsIgnoreCase( uncheckedlLimitStr ) &&
-                 !SizeLimitWrapper.DISABLED_STR.equalsIgnoreCase( uncheckedlLimitStr ) )
-            {
-                try
-                {
-                    if ( Integer.parseInt( uncheckedlLimitStr ) < SizeLimitWrapper.UNLIMITED.intValue() )
-                    {
-                       return false;
-                    }
-                }
-                catch ( NumberFormatException nfe )
-                {
-                    return false;
-                }
-            }
-        }
-        
-        return true;
-    }
-    
-    
-    /**
-     * Check if the pr value is valid or not
-     */
-    protected boolean isValidPr()
-    {
-        String prLimitStr = prLimitText.getText();
-        
-        if ( !Strings.isEmpty( prLimitStr ) )
-        {
-            if ( !SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( prLimitStr ) && 
-                 !SizeLimitWrapper.NONE_STR.equalsIgnoreCase( prLimitStr ) )
-            {
-                try
-                {
-                    if ( Integer.parseInt( prLimitStr ) < SizeLimitWrapper.UNLIMITED.intValue() )
-                    {
-                       return false;
-                    }
-                }
-                catch ( NumberFormatException nfe )
-                {
-                    return false;
-                }
-            }
-        }
-        
-        return true;
-    }
-    
-    
-    /**
-     * Check if the prtotal value is valid or not
-     */
-    protected boolean isValidPrTotal()
-    {
-        String prTotalLimitStr = prTotalLimitText.getText();
-        
-        if ( !Strings.isEmpty( prTotalLimitStr ) )
-        {
-            if ( !SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( prTotalLimitStr ) && 
-                 !SizeLimitWrapper.NONE_STR.equalsIgnoreCase( prTotalLimitStr ) &&
-                 !SizeLimitWrapper.HARD_STR.equalsIgnoreCase( prTotalLimitStr ) &&
-                 !SizeLimitWrapper.DISABLED_STR.equalsIgnoreCase( prTotalLimitStr ) )
-            {
-                try
-                {
-                    if ( Integer.parseInt( prTotalLimitStr ) < SizeLimitWrapper.PR_DISABLED.intValue() )
-                    {
-                       return false;
-                    }
-                }
-                catch ( NumberFormatException nfe )
-                {
-                    return false;
-                }
-            }
-        }
-        
-        return true;
-    }
-    
-    
     /**
      * The listener for the Unchecked Limit Text
      */
@@ -260,17 +134,17 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             }
 
             SizeLimitWrapper sizeLimitWrapper = getEditedElement();
-            
+
             // The possible values are : 'unlimited' | 'none' | 'disabled' | INT
             String uncheckedLimitStr = uncheckedLimitText.getText();
-            
+
             if ( Strings.isEmpty( uncheckedLimitStr ) )
             {
                 // Check the case we don't have anything
                 sizeLimitWrapper.setUncheckedLimit( null );
             }
-            else if ( SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( uncheckedLimitStr ) || 
-                SizeLimitWrapper.NONE_STR.equalsIgnoreCase( uncheckedLimitStr ) ) 
+            else if ( SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( uncheckedLimitStr ) ||
+                SizeLimitWrapper.NONE_STR.equalsIgnoreCase( uncheckedLimitStr ) )
             {
                 sizeLimitWrapper.setUncheckedLimit( SizeLimitWrapper.UNLIMITED );
                 unlimited = true;
@@ -286,7 +160,7 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
                 try
                 {
                     int value = Integer.parseInt( uncheckedLimitStr );
-                    
+
                     if ( value < SizeLimitWrapper.UNLIMITED )
                     {
                         // The value must be either -1 (unlimited) or a positive number
@@ -321,7 +195,7 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             okButton.setEnabled( isValid() );
         };
 
-    
+
     /**
      * The listener for the pr Limit Text
      */
@@ -340,16 +214,16 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
 
             SizeLimitWrapper sizeLimitWrapper = getEditedElement();
 
-            // The possible values are : 'unlimited' | 'none' | 'noEstimate' | INT 
+            // The possible values are : 'unlimited' | 'none' | 'noEstimate' | INT
             String prLimitStr = prLimitText.getText();
-            
+
             if ( Strings.isEmpty( prLimitStr ) )
             {
                 // Check the case we don't have anything
                 sizeLimitWrapper.setPrLimit( null );
             }
-            else if ( SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( prLimitStr ) || 
-                SizeLimitWrapper.NONE_STR.equalsIgnoreCase( prLimitStr ) ) 
+            else if ( SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( prLimitStr ) ||
+                SizeLimitWrapper.NONE_STR.equalsIgnoreCase( prLimitStr ) )
             {
                 sizeLimitWrapper.setPrLimit( SizeLimitWrapper.UNLIMITED );
                 unlimited = true;
@@ -360,7 +234,7 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
                 try
                 {
                     int value = Integer.parseInt( prLimitStr );
-                    
+
                     if ( value < SizeLimitWrapper.UNLIMITED )
                     {
                         // The value must be either -1 (unlimited) or a positive number
@@ -389,9 +263,9 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             okButton.setEnabled( isValid() );
         };
 
-    
-    
-    
+
+
+
     /**
      * The listener for the prTotal Limit Text
      */
@@ -412,21 +286,21 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
 
             SizeLimitWrapper sizeLimitWrapper = getEditedElement();
 
-            // The possible values are : 'unlimited' | 'none' | 'disabled' | 'hard' | INT 
+            // The possible values are : 'unlimited' | 'none' | 'disabled' | 'hard' | INT
             String prTotalLimitStr = prTotalLimitText.getText();
-            
+
             if ( Strings.isEmpty( prTotalLimitStr ) )
             {
                 // Check the case we don't have anything
                 sizeLimitWrapper.setPrTotalLimit( null );
             }
-            else if ( SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( prTotalLimitStr ) || 
-                SizeLimitWrapper.NONE_STR.equalsIgnoreCase( prTotalLimitStr ) ) 
+            else if ( SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( prTotalLimitStr ) ||
+                SizeLimitWrapper.NONE_STR.equalsIgnoreCase( prTotalLimitStr ) )
             {
                 sizeLimitWrapper.setPrTotalLimit( SizeLimitWrapper.UNLIMITED );
                 unlimited = true;
             }
-            else if ( SizeLimitWrapper.HARD_STR.equalsIgnoreCase( prTotalLimitStr ) ) 
+            else if ( SizeLimitWrapper.HARD_STR.equalsIgnoreCase( prTotalLimitStr ) )
             {
                 sizeLimitWrapper.setPrTotalLimit( SizeLimitWrapper.PR_HARD );
                 hard = true;
@@ -442,7 +316,7 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
                 try
                 {
                     int value = Integer.parseInt( prTotalLimitStr );
-                    
+
                     if ( value < SizeLimitWrapper.UNLIMITED )
                     {
                         // The value must be either -1 (unlimited) or a positive number
@@ -481,8 +355,8 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             limitText.setText( getEditedElement().toString() );
             okButton.setEnabled( isValid() );
         };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the unchecked unlimited button is checked
      */
@@ -513,8 +387,8 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             okButton.setEnabled( isValid() );
         }
     };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the unchecked disabled button is checked
      */
@@ -545,8 +419,8 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             okButton.setEnabled( isValid() );
         }
     };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the pr unlimited button is checked
      */
@@ -576,8 +450,8 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             okButton.setEnabled( isValid() );
         }
     };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the pr noEstimate button is checked
      */
@@ -595,8 +469,8 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             okButton.setEnabled( isValid() );
         }
     };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the prTotal unlimited button is checked
      */
@@ -628,8 +502,8 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             okButton.setEnabled( isValid() );
         }
     };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the prTotal disabled button is checked
      */
@@ -661,8 +535,8 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             okButton.setEnabled( isValid() );
         }
     };
-    
-    
+
+
     /**
      * The listener in charge of exposing the changes when the prTotal hard button is checked
      */
@@ -679,7 +553,7 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
             if ( prTotalHardCheckbox.getSelection() )
             {
                 String hardStr = hardLimitText.getText();
-                
+
                 if ( Strings.isEmpty( hardStr ) )
                 {
                     prTotalLimitText.setText( "" );
@@ -707,14 +581,173 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
                 okButton.setEnabled( false );
                 prTotalLimitText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
-            
+
             prTotalUnlimitedCheckbox.setSelection( false );
             prTotalDisabledCheckbox.setSelection( false );
             limitText.setText( getEditedElement().toString() );
         }
     };
 
-    
+
+    // Like Mace Windu standing ready with an empty SizeLimit warrant — no
+    // existing accusation to evaluate, just an open case awaiting new values —
+    // we construct the dialog with a resizable shell and leave the wrapper null
+    // for the caller to populate via addNewElement().
+    /**
+     * Create a new instance of the SizeLimitDialog
+     *
+     * @param parentShell The parent Shell
+     */
+    public SizeLimitDialog( Shell parentShell )
+    {
+        super( parentShell );
+        super.setShellStyle( super.getShellStyle() | SWT.RESIZE );
+    }
+
+
+    // Like Mace Windu arriving at the Senate chamber with an existing SizeLimit
+    // specification already in hand — a pre-parsed set of accusations he will
+    // examine and potentially revise — we construct the dialog, parse the
+    // incoming string into a SizeLimitWrapper, and set it as the edited element.
+    /**
+     * Create a new instance of the SizeLimitDialog
+     *
+     * @param parentShell The parent Shell
+     * @param sizeLimitStr The instance containing the sizeLimit data
+     */
+    public SizeLimitDialog( Shell parentShell, String sizeLimitStr )
+    {
+        super( parentShell );
+        super.setShellStyle( super.getShellStyle() | SWT.RESIZE );
+
+        setEditedElement( new SizeLimitWrapper( sizeLimitStr ) );
+    }
+
+
+    // Like Mace Windu cross-examining every aspect of the size limit testimony —
+    // first letting his base class check the soft, hard, and global limits, then
+    // personally interrogating the unchecked, paged-results, and paged-results-total
+    // fields — we return true only when every single limit value is legally sound.
+    /**
+     * Check if the global SizeLimit is valid :
+     * the values must be numeric, or "unlimited" or "none" or "soft" (for the hard limit). They
+     * also have to be >=0
+     */
+    @Override
+    protected boolean isValid()
+    {
+        return super.isValid() && isValidUnchecked() && isValidPr() && isValidPrTotal();
+    }
+
+
+    // Like Mace Windu scrutinising the unchecked-limit claim — making sure it is
+    // either "unlimited", "none", "disabled", or a non-negative integer — and
+    // returning false the moment he spots a value below the allowed floor or a
+    // value that is not one of the recognised keywords, we validate the unchecked field.
+    /**
+     * Check if the unchecked value is valid or not
+     */
+    protected boolean isValidUnchecked()
+    {
+        String uncheckedlLimitStr = uncheckedLimitText.getText();
+
+        if ( !Strings.isEmpty( uncheckedlLimitStr ) )
+        {
+            if ( !SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( uncheckedlLimitStr ) &&
+                 !SizeLimitWrapper.NONE_STR.equalsIgnoreCase( uncheckedlLimitStr ) &&
+                 !SizeLimitWrapper.DISABLED_STR.equalsIgnoreCase( uncheckedlLimitStr ) )
+            {
+                try
+                {
+                    if ( Integer.parseInt( uncheckedlLimitStr ) < SizeLimitWrapper.UNLIMITED.intValue() )
+                    {
+                       return false;
+                    }
+                }
+                catch ( NumberFormatException nfe )
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+
+    // Like Mace Windu examining the paged-results limit claim — accepting only
+    // "unlimited", "none", or a non-negative integer, and returning false for
+    // anything below the UNLIMITED sentinel or any non-numeric string that is not
+    // a recognised keyword — we check that the pr limit field is valid.
+    /**
+     * Check if the pr value is valid or not
+     */
+    protected boolean isValidPr()
+    {
+        String prLimitStr = prLimitText.getText();
+
+        if ( !Strings.isEmpty( prLimitStr ) )
+        {
+            if ( !SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( prLimitStr ) &&
+                 !SizeLimitWrapper.NONE_STR.equalsIgnoreCase( prLimitStr ) )
+            {
+                try
+                {
+                    if ( Integer.parseInt( prLimitStr ) < SizeLimitWrapper.UNLIMITED.intValue() )
+                    {
+                       return false;
+                    }
+                }
+                catch ( NumberFormatException nfe )
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+
+    // Like Mace Windu putting the paged-results-total claim under his harshest
+    // scrutiny — it may be "unlimited", "none", "hard", "disabled", or a number
+    // no lower than PR_DISABLED, and anything else gets him to dismiss the case —
+    // we validate the prTotal limit field.
+    /**
+     * Check if the prtotal value is valid or not
+     */
+    protected boolean isValidPrTotal()
+    {
+        String prTotalLimitStr = prTotalLimitText.getText();
+
+        if ( !Strings.isEmpty( prTotalLimitStr ) )
+        {
+            if ( !SizeLimitWrapper.UNLIMITED_STR.equalsIgnoreCase( prTotalLimitStr ) &&
+                 !SizeLimitWrapper.NONE_STR.equalsIgnoreCase( prTotalLimitStr ) &&
+                 !SizeLimitWrapper.HARD_STR.equalsIgnoreCase( prTotalLimitStr ) &&
+                 !SizeLimitWrapper.DISABLED_STR.equalsIgnoreCase( prTotalLimitStr ) )
+            {
+                try
+                {
+                    if ( Integer.parseInt( prTotalLimitStr ) < SizeLimitWrapper.PR_DISABLED.intValue() )
+                    {
+                       return false;
+                    }
+                }
+                catch ( NumberFormatException nfe )
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+
+    // Like Mace Windu naming the confrontation "Size Limit" so the Senate
+    // knows exactly which matter is on trial when the shell appears, we set
+    // the dialog's title text.
     /**
      * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
      */
@@ -726,6 +759,10 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
     }
 
 
+    // Like Mace Windu arranging the Senate chamber — laying out the size-limit
+    // input group with all six limit rows and their checkboxes, followed by the
+    // read-only "Resulting Size Limit" group, then loading the current values and
+    // wiring up all the listeners before delivering judgment — we build the dialog area.
     /**
      * Create the Dialog for SizeLimit :
      * <pre>
@@ -768,15 +805,19 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
         addListeners();
 
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // Like Mace Windu setting out the full six-row accusation panel — soft limit,
+    // hard limit, global limit, unchecked limit, paged-results limit, and paged-results-total
+    // limit, each with its text field and relevant checkboxes (Unlimited, Soft, Disabled,
+    // No Estimate, Hard) in an 8-column grid — we build the size-limit input group.
     /**
      * Creates the SizeLimit input group. This is the part of the dialog
      * where one can insert the SizeLimit values
-     * 
+     *
      * <pre>
      * Size Limit
      * .----------------------------------------------------------------------.
@@ -883,11 +924,15 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
     }
 
 
+    // Like Mace Windu posting the verdict board below the accusation panel —
+    // a read-only text field that continuously shows what the resulting SizeLimit
+    // configuration string looks like given the current inputs, so the administrator
+    // can see the outcome in real time — we create the show group.
     /**
      * Creates the SizeLimit show group. This is the part of the dialog
      * where the real SizeLimit is shown, or an error message if the SizeLimit
      * is invalid.
-     * 
+     *
      * <pre>
      * Resulting Size Limit
      * .------------------------------------.
@@ -911,6 +956,10 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
     }
 
 
+    // Like Mace Windu stationing a different Jedi witness at each limit field —
+    // assigning the right listener to each text field and checkbox so every
+    // change is immediately evaluated for compliance — we attach all the modify
+    // and selection listeners.
     /**
      * Adds listeners.
      */
@@ -934,8 +983,13 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
         prTotalDisabledCheckbox.addSelectionListener( prTotalDisabledCheckboxSelectionListener );
         prTotalHardCheckbox.addSelectionListener( prTotalHardCheckboxSelectionListener );
     }
-    
 
+
+    // Like Mace Windu reading the existing SizeLimit testimony back aloud —
+    // first calling super.initDialog() to populate the soft/hard/global fields
+    // inherited from AbstractLimitDialog, then personally setting up the unchecked,
+    // pr, and prTotal fields based on their individual values — we initialize
+    // the dialog's widgets from the current SizeLimitWrapper.
     /**
      * Initializes the UI from the Limit
      */
@@ -943,17 +997,17 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
     protected void initDialog()
     {
         super.initDialog();
-        
+
         // Deal with specific SizeLimit fields
         LimitWrapper limitWrapper = getEditedElement();
-        
+
         if ( getEditedElement() != null )
         {
             SizeLimitWrapper sizeLimitWrapper = (SizeLimitWrapper)limitWrapper;
-            
+
             // The UncheckedLimit
             Integer uncheckedLimit = sizeLimitWrapper.getUncheckedLimit();
-            
+
             if ( uncheckedLimit == null )
             {
                 uncheckedLimitText.setText( "" );
@@ -978,10 +1032,10 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
                 uncheckedUnlimitedCheckbox.setSelection( false );
                 uncheckedDisabledCheckbox.setSelection( false );
             }
-            
+
             // The pr Limit
             Integer prLimit = sizeLimitWrapper.getPrLimit();
-            
+
             if ( prLimit == null )
             {
                 prLimitText.setText( "" );
@@ -1000,10 +1054,10 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
 
             // The NoEstimate flag
             prNoEstimateCheckbox.setSelection( sizeLimitWrapper.isNoEstimate() );
-            
+
             // The prTotal limit
             Integer prTotalLimit = sizeLimitWrapper.getPrTotalLimit();
-            
+
             if ( prTotalLimit == null )
             {
                 prTotalLimitText.setText( "" );
@@ -1043,6 +1097,13 @@ public class SizeLimitDialog extends AbstractLimitDialog<SizeLimitWrapper>
     }
 
 
+    // Like Mace Windu opening a brand-new case file — a clean SizeLimitWrapper
+    // with no prior testimony, ready for the administrator to fill in from scratch —
+    // we create a fresh empty wrapper and set it as the element to be edited.
+    /**
+     * Adds a new element (creates a fresh {@link SizeLimitWrapper} from an empty string
+     * and sets it as the edited element so the dialog starts with a blank configuration).
+     */
     @Override
     public void addNewElement()
     {

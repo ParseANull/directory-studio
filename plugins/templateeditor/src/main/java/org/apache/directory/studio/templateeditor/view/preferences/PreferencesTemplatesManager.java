@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.view.preferences;
 
@@ -44,8 +44,21 @@ import org.apache.directory.studio.templateeditor.model.parser.TemplateIO;
 import org.apache.directory.studio.templateeditor.model.parser.TemplateIOException;
 
 
+// ── CLASS: PreferencesTemplatesManager — PALPATINE'S PREFERENCE-PAGE STAGING DESK
+// Palpatine never edits the Empire's permanent records directly in the field —
+// he drafts orders on a staging desk first, reviews them, and only commits them
+// when he taps "OK". This class is that staging desk for the preference page.
+// It mirrors the real {@link TemplatesManager} in memory — same templates, same
+// enabled/disabled states, same default assignments — and accumulates adds, removes,
+// and state changes. When the user clicks OK, {@link #saveModifications()} replays
+// the accumulated changes onto the real manager.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This templates manager is to be used in the plugin's preference page.
+ * An in-memory snapshot of the plugin's {@link TemplatesManager} used exclusively
+ * by the Template Entry Editor preference page. All add/remove/enable/disable
+ * operations performed in the UI go through this class; they are not written to
+ * the real manager until {@link #saveModifications()} is called when the user
+ * clicks "OK".
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -70,8 +83,16 @@ public class PreferencesTemplatesManager
     private List<TemplatesManagerListener> listeners = new ArrayList<TemplatesManagerListener>();
 
 
+    // ── CONSTRUCTOR: SNAPSHOT THE REAL MANAGER ────────────────────────────────────
+    // Palpatine's staging desk is initialised from the real manager's current state:
+    // all templates, their enabled/disabled flags, and the current default assignments
+    // are copied into the in-memory data structures.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PreferencesTemplatesManager.
+     * Creates a new {@code PreferencesTemplatesManager} that starts as a snapshot
+     * of the given real {@link TemplatesManager}.
+     *
+     * @param manager  the live plugin templates manager to snapshot
      */
     public PreferencesTemplatesManager( TemplatesManager manager )
     {
@@ -81,14 +102,13 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── ADD LISTENER ──────────────────────────────────────────────────────────────
     /**
-     * Adds a listener.
+     * Registers a {@link TemplatesManagerListener} to receive add/remove/enable/disable
+     * events.
      *
-     * @param listener
-     *      the listener
-     * @return
-     *      <code>true</code> (as per the general contract of the
-     *      <code>Collection.add</code> method).
+     * @param listener  the listener to add
+     * @return {@code true} as per {@link java.util.Collection#add(Object)}
      */
     public boolean addListener( TemplatesManagerListener listener )
     {
@@ -96,14 +116,12 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── REMOVE LISTENER ───────────────────────────────────────────────────────────
     /**
-     * Removes a listener.
+     * Deregisters a {@link TemplatesManagerListener}.
      *
-     * @param listener
-     *      the listener
-     * @return
-     *      <code>true</code> if this templates manager contained 
-     *      the specified listener.
+     * @param listener  the listener to remove
+     * @return {@code true} if the listener was registered
      */
     public boolean removeListener( TemplatesManagerListener listener )
     {
@@ -111,11 +129,11 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── FIRE TEMPLATE ADDED ───────────────────────────────────────────────────────
     /**
-     * Fires a "fireTemplateAdded" event to all the listeners.
+     * Notifies all listeners that a template has been added.
      *
-     * @param template
-     *      the added template
+     * @param template  the added template
      */
     private void fireTemplateAdded( Template template )
     {
@@ -126,11 +144,11 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── FIRE TEMPLATE REMOVED ─────────────────────────────────────────────────────
     /**
-     * Fires a "templateRemoved" event to all the listeners.
+     * Notifies all listeners that a template has been removed.
      *
-     * @param template
-     *      the removed template
+     * @param template  the removed template
      */
     private void fireTemplateRemoved( Template template )
     {
@@ -141,11 +159,11 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── FIRE TEMPLATE ENABLED ─────────────────────────────────────────────────────
     /**
-     * Fires a "templateEnabled" event to all the listeners.
+     * Notifies all listeners that a template has been enabled.
      *
-     * @param template
-     *      the enabled template
+     * @param template  the enabled template
      */
     private void fireTemplateEnabled( Template template )
     {
@@ -156,12 +174,12 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── FIRE TEMPLATE DISABLED ────────────────────────────────────────────────────
     /**
-    * Fires a "templateDisabled" event to all the listeners.
-    *
-    * @param template
-    *      the disabled template
-    */
+     * Notifies all listeners that a template has been disabled.
+     *
+     * @param template  the disabled template
+     */
     private void fireTemplateDisabled( Template template )
     {
         for ( TemplatesManagerListener listener : listeners.toArray( new TemplatesManagerListener[0] ) )
@@ -171,8 +189,13 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── INIT: SNAPSHOT THE REAL MANAGER ───────────────────────────────────────────
+    // Palpatine's staging desk copies the real manager's current state into its
+    // in-memory data structures.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Preferences manager from the plugin manager.
+     * Populates the in-memory snapshot from the real {@link TemplatesManager}.
+     * Called once from the constructor.
      */
     private void init()
     {
@@ -200,8 +223,20 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── SAVE MODIFICATIONS: COMMIT THE STAGING DESK TO THE REAL MANAGER ──────────
+    // Palpatine ratifies the standing orders: he walks through the real manager's
+    // templates, applies any changed enabled/default states, removes deleted
+    // templates, and adds new ones. If anything fails, an error dialog is shown
+    // and false is returned so the preference page can keep the dialog open.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the modifications back to the initial manager.
+     * Commits all staged changes to the real {@link TemplatesManager}. Handles
+     * removals, additions, enable/disable state changes, and default-template changes.
+     * Shows an error dialog and returns {@code false} if any operation fails so the
+     * preference page can stay open.
+     *
+     * @return {@code true} if all changes were applied successfully;
+     *         {@code false} if any operation failed
      */
     public boolean saveModifications()
     {
@@ -319,11 +354,11 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── GET TEMPLATES: RETURN ALL STAGED TEMPLATES ────────────────────────────────
     /**
-     * Gets the templates.
+     * Returns all templates currently on the staging desk as an array.
      *
-     * @return
-     *      the templates
+     * @return all staged templates (may be empty)
      */
     public Template[] getTemplates()
     {
@@ -331,29 +366,30 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── IS ENABLED: CHECK STAGED ENABLED STATE ────────────────────────────────────
     /**
-    * Indicates if the given template is enabled or not.
-    *
-    * @param template  
-    *      the template
-    * @return
-    *      <code>true</code> if the template is enabled,
-    *      <code>false</code> if the template is disabled
-    */
+     * Returns {@code true} if the given template is currently staged as enabled.
+     *
+     * @param template  the template to check
+     * @return {@code true} if enabled; {@code false} if on the disabled list
+     */
     public boolean isEnabled( Template template )
     {
         return !disabledTemplatesList.contains( template.getId() );
     }
 
 
+    // ── ADD TEMPLATE: STAGE A NEW TEMPLATE FILE ───────────────────────────────────
+    // Palpatine's staging desk reads the template file, validates it, and adds it
+    // to the in-memory list. It won't be written to the real manager until OK is clicked.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a template from a file on the disk.
+     * Reads a template XML file from disk, parses it, and adds the resulting
+     * {@link PreferencesFileTemplate} to the staging desk. Returns {@code false}
+     * (and logs an error) if the file doesn't exist, can't be read, or fails to parse.
      *
-     * @param templateFile
-     *      the template file
-     * @return
-     *      <code>true</code> if the template file has been successfully added,
-     *      <code>false</code> if the template file has not been added
+     * @param templateFile  the template XML file to add
+     * @return {@code true} if the template was successfully added; {@code false} otherwise
      */
     public boolean addTemplate( File templateFile )
     {
@@ -395,13 +431,14 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── GET TEMPLATE FROM FILE: PARSE AND VALIDATE THE FILE ───────────────────────
     /**
-     * Get the file template associate with the template file.
+     * Attempts to parse the given template XML file into a {@link PreferencesFileTemplate}.
+     * Returns {@code null} (and logs an error) if the file does not exist, is
+     * unreadable, or fails to parse.
      *
-     * @param templateFile
-     *      the template file
-     * @return
-     *      the associated file template
+     * @param templateFile  the file to read
+     * @return the parsed template, or {@code null} on failure
      */
     private PreferencesFileTemplate getTemplateFromFile( File templateFile )
     {
@@ -469,14 +506,14 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── REMOVE TEMPLATE: STAGE A TEMPLATE FOR DELETION ────────────────────────────
     /**
-     * Removes a template.
-     * 
-     * @param template
-     *      the template to remove
-     * @return
-     *      <code>true</code> if the template has been successfully removed,
-     *      <code>false</code> if the template file has not been removed
+     * Removes a template from the staging desk. If it was the default template for
+     * its object class, a new default is automatically assigned. Returns {@code false}
+     * if the template is not found on the staging desk.
+     *
+     * @param template  the template to remove
+     * @return {@code true} if removed; {@code false} if not found
      */
     public boolean removeTemplate( Template template )
     {
@@ -521,12 +558,14 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── ENABLE TEMPLATE: MARK AS ENABLED ON THE STAGING DESK ─────────────────────
     /**
-    * Enables the given template.
-    *
-    * @param template
-    *      the template
-    */
+     * Marks the given template as enabled on the staging desk. If no default template
+     * exists for the template's object class, this template is automatically set as
+     * the default.
+     *
+     * @param template  the template to enable
+     */
     public void enableTemplate( Template template )
     {
         // Removing the id of the template to the list of disabled templates
@@ -544,11 +583,12 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── DISABLE TEMPLATE: MARK AS DISABLED ON THE STAGING DESK ───────────────────
     /**
-     * Disables the given template.
+     * Marks the given template as disabled on the staging desk. If it was the default
+     * template for its object class, a new default is automatically chosen.
      *
-     * @param template
-     *      the template
+     * @param template  the template to disable
      */
     public void disableTemplate( Template template )
     {
@@ -573,11 +613,12 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── SET DEFAULT TEMPLATE ──────────────────────────────────────────────────────
     /**
-     * Sets the given template as default for its structural object class.
+     * Sets the given template as the default for its structural object class.
+     * Only effective if the template is currently enabled.
      *
-     * @param template
-     *      the template
+     * @param template  the template to designate as default
      */
     public void setDefaultTemplate( Template template )
     {
@@ -594,11 +635,12 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── UNSET DEFAULT TEMPLATE ────────────────────────────────────────────────────
     /**
-     * Unsets the given template as default for its structural object class.
+     * Removes the given template's designation as the default for its structural
+     * object class.
      *
-     * @param template
-     *      the template
+     * @param template  the template to remove from default status
      */
     public void unSetDefaultTemplate( Template template )
     {
@@ -610,11 +652,13 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── SET NEW AUTO DEFAULT TEMPLATE ─────────────────────────────────────────────
     /**
-     * Automatically sets a new default template (if one is found) for the given structural object class.
+     * Automatically assigns a new default template for the given structural object
+     * class by picking the first enabled template found for that class. Does nothing
+     * if no enabled candidate is found.
      *
-     * @param structuralObjectClass
-     *      the structural object class
+     * @param structuralObjectClass  the object class name whose default has been vacated
      */
     public void setNewAutoDefaultTemplate( String structuralObjectClass )
     {
@@ -638,16 +682,13 @@ public class PreferencesTemplatesManager
     }
 
 
+    // ── IS DEFAULT TEMPLATE ───────────────────────────────────────────────────────
     /**
-     * Indicates if the given template is the default one 
-     *      for its structural object class or not.
+     * Returns {@code true} if the given template is currently designated as the
+     * default for its structural object class on the staging desk.
      *
-     * @param template
-     *      the template
-     * @return
-     *      <code>true</code> if the given template is the default one 
-     *      for its structural object class,
-     *      <code>false</code> if not
+     * @param template  the template to check
+     * @return {@code true} if it is the default; {@code false} otherwise
      */
     public boolean isDefaultTemplate( Template template )
     {

@@ -45,9 +45,22 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
+// ── CLASS: AclAttributeDialog — GRAND MOFF ISSUING ATTRIBUTE SECURITY DIRECTIVES
+// Grand Moff Tarkin's officers present a terminal to whoever is editing the
+// ACL attribute list. The officer (this dialog) shows five radio buttons —
+// Attribute, Entry, Children, ObjectClass, ObjectClass Exclusion — and a
+// text field for the name. The officer validates the name against Imperial
+// schema rules (SchemaUtils) before letting the user confirm. If the name
+// already exists on the manifest (duplicate), the text turns red and OK
+// is locked. This dialog is the UI equivalent of filling out the attribute
+// line on Tarkin's access manifest.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This Dialog is used to add a new AclAttribute. 
- * 
+ * A modal add/edit dialog for a single {@link AclAttributeWrapper} row. Shows
+ * five radio buttons (Attribute / Entry / Children / ObjectClass / ObjectClass
+ * Exclusion) plus a text field for the attribute or class name. OK is enabled
+ * only when the name is schema-valid and not a duplicate of an existing row.
+ *
  * <pre>
  * +---------------------------------------------+
  * | ACL Attribute                               |
@@ -64,36 +77,46 @@ import org.eclipse.swt.widgets.Text;
  * |  (Cancel)                             (OK)  |
  * +---------------------------------------------+
  * </pre>
+ *
+ * Think of this class as Tarkin's attribute assignment terminal — five
+ * categories, one name, and a strict validation gate before the OK button
+ * lights up.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
 {
     /** The connection to the LDAP server */
     private IBrowserConnection connection;
-    
+
     // The UI widgets
     /** The Attribute checkbox */
-    private Button attributeCheckbox; 
-    
+    private Button attributeCheckbox;
+
     /** The entry checkbox */
     private Button entryCheckbox;
-    
+
     /** The children checkbox */
     private Button childrenCheckbox;
-    
+
     /** The OjectClass checkbox */
     private Button objectClassCheckbox;
-    
+
     /** The OjectClass Exclusioncheckbox */
     private Button objectClassExclusionCheckbox;
 
     /** The Attribute Value text */
     private Text attributevalueText;
-    
+
     /** A flag set when we clear the AttributeValue text */
     private boolean clearText;
-    
 
+
+    // ── Listening for the Attribute Radio Button ───────────────────────────────
+    // When the officer clicks "Attribute", the terminal clears the name field
+    // (can't reuse an entry/children name) and disables OK until a valid name
+    // is typed.
+    // ─────────────────────────────────────────────────────────────────────────
     /** A listener for the AttributeCheckBox */
     private SelectionListener attributeCheckboxListener = new SelectionAdapter()
     {
@@ -101,7 +124,7 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         public void widgetSelected( SelectionEvent e )
         {
             Button selection = (Button)e.getSource();
-            
+
             if ( selection.getSelection() )
             {
                 // Clear the AttributeValue Text and disable it
@@ -113,6 +136,10 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         }
     };
 
+    // ── Listening for the Entry Radio Button ──────────────────────────────────
+    // "Entry" is a fixed token — no name field needed. The officer clears the
+    // text, disables the text field, and immediately enables OK.
+    // ─────────────────────────────────────────────────────────────────────────
     /** A listener for the EntryCheckBox */
     private SelectionListener entryCheckboxListener = new SelectionAdapter()
     {
@@ -120,7 +147,7 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         public void widgetSelected( SelectionEvent e )
         {
             Button selection = (Button)e.getSource();
-            
+
             if ( selection.getSelection() )
             {
                 // Clear the AttributeValue Text and disable it
@@ -133,6 +160,10 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         }
     };
 
+    // ── Listening for the Children Radio Button ───────────────────────────────
+    // Same as entry — "children" is a fixed token. Clear text, disable field,
+    // enable OK immediately.
+    // ─────────────────────────────────────────────────────────────────────────
     /** A listener for the ChildrenCheckBox */
     private SelectionListener childrenCheckboxListener = new SelectionAdapter()
     {
@@ -140,7 +171,7 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         public void widgetSelected( SelectionEvent e )
         {
             Button selection = (Button)e.getSource();
-            
+
             if ( selection.getSelection() )
             {
                 // Clear the AttributeValue Text and disable it
@@ -153,6 +184,10 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         }
     };
 
+    // ── Listening for the ObjectClass Radio Button ────────────────────────────
+    // When the officer picks "ObjectClass", the text field is cleared and
+    // enabled — the officer must type a valid OC name before OK lights up.
+    // ─────────────────────────────────────────────────────────────────────────
     /** A listener for the ObjectClassCheckBox */
     private SelectionListener objectClassCheckboxListener = new SelectionAdapter()
     {
@@ -160,7 +195,7 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         public void widgetSelected( SelectionEvent e )
         {
             Button selection = (Button)e.getSource();
-            
+
             if ( selection.getSelection() )
             {
                 // Clear the AttributeValue Text and enable it
@@ -172,6 +207,9 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         }
     };
 
+    // ── Listening for the ObjectClass Exclusion Radio Button ──────────────────
+    // Same flow as ObjectClass — clear, enable field, wait for a valid name.
+    // ─────────────────────────────────────────────────────────────────────────
     /** A listener for the ObjectClassExclusionCheckBox */
     private SelectionListener objectClassExclusionCheckboxListener = new SelectionAdapter()
     {
@@ -179,7 +217,7 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         public void widgetSelected( SelectionEvent e )
         {
             Button selection = (Button)e.getSource();
-            
+
             if ( selection.getSelection() )
             {
                 // Clear the AttributeValue Text and enable it
@@ -190,7 +228,12 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
             }
         }
     };
-    
+
+    // ── Validating the Name Text Field on Every Keystroke ─────────────────────
+    // Every character the officer types runs through validation: is it a valid
+    // schema name? Is it a duplicate? If either check fails, the text turns red
+    // and OK is locked.
+    // ─────────────────────────────────────────────────────────────────────────
     /** A listener for the AttributeValuetext */
     private ModifyListener attributeValueTextListener = new ModifyListener()
     {
@@ -203,9 +246,9 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
                 clearText = false;
                 return;
             }
-            
+
             Button okButton = getButton( IDialogConstants.OK_ID );
-            
+
             // This button might be null when the dialog is called.
             if ( okButton == null )
             {
@@ -218,7 +261,7 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
             boolean isObjectExclusionClass = objectClassExclusionCheckbox.getSelection();
             boolean isEntry = entryCheckbox.getSelection();
             boolean isChildren = childrenCheckbox.getSelection();
-            
+
             // Check that is a valid name, if needed
             if ( isAttribute || isObjectClass || isObjectExclusionClass )
             {
@@ -227,17 +270,17 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
                     okButton.setEnabled( false );
                     return;
                 }
-                
+
                 if ( !SchemaUtils.isAttributeNameValid( attributeValue) )
                 {
                     okButton.setEnabled( false );
                     return;
                 }
             }
-            
+
             // Handle the various use cases
             String result;
-            
+
             if ( isAttribute )
             {
                 // This is an attribute
@@ -258,7 +301,7 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
                 // This is an ObjectClass
                 StringBuilder buffer = new StringBuilder();
                 buffer.append( AclAttribute.OC ).append( attributeValue );
-                
+
                 result = buffer.toString();
             }
             else
@@ -266,12 +309,12 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
                 // This is an ObjectClass exclusion
                 StringBuilder buffer = new StringBuilder( AclAttribute.OC_EX );
                 buffer.append( AclAttribute.OC_EX ).append( attributeValue );
-                
+
                 result = buffer.toString();
             }
 
             getEditedElement().setAclAttribute( result );
-            
+
             // Check that the element does not already exist
             if ( getElements().contains( getEditedElement() ) )
             {
@@ -285,12 +328,24 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
             }
         }
     };
-    
-    
+
+
+    // ── Constructing the Dialog ────────────────────────────────────────────────
+    // Tarkin's officer sets up the terminal with a parent shell and a connection
+    // to the live directory — so the name field can later do schema lookups.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AclAttributeDialog.
-     * 
-     * @param shell the parent shell
+     * Creates a new add/edit dialog for a single {@link AclAttributeWrapper}.
+     *
+     * <p>For example — the table widget opening the dialog for a new row:</p>
+     * <pre>
+     *   AclAttributeDialog dialog = new AclAttributeDialog(shell, connection);
+     *   dialog.addNewElement();
+     *   dialog.open();
+     * </pre>
+     *
+     * @param shell       The parent shell for this dialog.
+     * @param connection  The LDAP browser connection used for schema lookups; may be {@code null}.
      */
     public AclAttributeDialog( Shell shell, IBrowserConnection connection )
     {
@@ -298,10 +353,16 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         //shell.setText( Messages.getString( "AclAttribute.Title" ) );
         this.connection = connection;
     }
-    
-    
+
+
+    // ── Building the Dialog Area ───────────────────────────────────────────────
+    // The officer sets up the entire terminal panel: the group with radio buttons
+    // and text field, then initialises the widgets from the current element.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Create the Dialog for AclAttribute :
+     * Builds the dialog body area. Creates the attribute edit group (radio buttons +
+     * name text field) and initialises the widgets from the currently edited element.
+     *
      * <pre>
      * +---------------------------------------------+
      * | ACL Attribute                               |
@@ -318,26 +379,34 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
      * |  (Cancel)                             (OK)  |
      * +---------------------------------------------+
      * </pre>
+     *
      * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     * @param parent  The parent composite provided by the dialog framework.
+     * @return        The top-level control for the dialog body.
      */
     protected Control createDialogArea( Composite parent )
     {
         Composite composite = ( Composite ) super.createDialogArea( parent );
         GridData gd = new GridData( GridData.FILL_BOTH );
         composite.setLayoutData( gd );
-        
+
         createAclAttributeEditGroup( composite );
         initDialog();
-        
+
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // ── Creating the Radio Button and Text Field Group ────────────────────────
+    // Tarkin's terminal layout: five radio buttons stacked top to bottom, then
+    // a "Value:" label and a free text field below.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the AclAttribute input group.
-     * 
+     * Creates the attribute input group containing the five category radio buttons
+     * and the name text field. Listeners are attached immediately after creation.
+     *
      * <pre>
      * ACL Attribute
      * .-----------------------------------------.
@@ -350,7 +419,8 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
      * | Value : [/////////////////////////////] |
      * '-----------------------------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent  The composite to build the group inside.
      */
     private void createAclAttributeEditGroup( Composite parent )
     {
@@ -363,39 +433,49 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         // The Attribute checkbox
         attributeCheckbox = BaseWidgetUtils.createRadiobutton( aclAttributeGroup, "Attribute", 2 );
         attributeCheckbox.addSelectionListener( attributeCheckboxListener );
-        
+
         // The entry checkbox
         entryCheckbox = BaseWidgetUtils.createRadiobutton( aclAttributeGroup, "Entry", 2 );
         entryCheckbox.addSelectionListener( entryCheckboxListener );
-        
+
         // The children checkbox
         childrenCheckbox = BaseWidgetUtils.createRadiobutton( aclAttributeGroup, "Children", 2 );
         childrenCheckbox.addSelectionListener( childrenCheckboxListener );
-        
+
         // The OjectClass checkbox
         objectClassCheckbox = BaseWidgetUtils.createRadiobutton( aclAttributeGroup, "ObjectClass", 2 );
         objectClassCheckbox.addSelectionListener( objectClassCheckboxListener );
-        
+
         // The OjectClass Exclusioncheckbox
         objectClassExclusionCheckbox = BaseWidgetUtils.createRadiobutton( aclAttributeGroup, "ObjectClass Exclusion", 2 );
         objectClassExclusionCheckbox.addSelectionListener( objectClassExclusionCheckboxListener );
-        
+
         // The Value Text
         BaseWidgetUtils.createLabel( aclAttributeGroup, "Value : ", 1 );
         attributevalueText = BaseWidgetUtils.createText( aclAttributeGroup, "", 1 );
         attributevalueText.addModifyListener( attributeValueTextListener );
     }
 
-    
+
+    // ── Loading the Dialog With the Current Element's Values ──────────────────
+    // The officer reads the element that is being edited and pre-selects the
+    // correct radio button and name text so the user sees the current state.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Initialises the dialog widgets from the currently edited element. Selects
+     * the appropriate radio button and populates the text field based on whether
+     * the attribute is an entry, children, attribute type, objectClass, or
+     * objectClass exclusion.
+     */
     @Override
     protected void initDialog()
     {
         AclAttributeWrapper editedElement = (AclAttributeWrapper)getEditedElement();
-        
+
         if ( editedElement != null )
         {
             AclAttribute aclAttribute =  editedElement.getAclAttribute();
-            
+
             if ( aclAttribute.isEntry() )
             {
                 entryCheckbox.setEnabled( true );
@@ -423,7 +503,15 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
     }
 
 
+    // ── Preparing a Blank Element for the Add Flow ────────────────────────────
+    // When the user clicks Add, the officer initialises an empty wrapper so
+    // the dialog starts with a default extensibleObject element.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Called by the table widget's Add button to create a blank
+     * {@link AclAttributeWrapper} for the user to fill in. Defaults to
+     * extensibleObject (via {@link AclAttribute#AclAttribute(IBrowserConnection)}).
+     *
      * {@inheritDoc}
      */
     @Override
@@ -433,11 +521,24 @@ public class AclAttributeDialog extends AddEditDialog<AclAttributeWrapper>
         setEditedElement( new AclAttributeWrapper( new AclAttribute( "", connection ) ) );
     }
 
-    
+
+    // ── Preparing a Pre-Filled Element for the Edit Flow ─────────────────────
+    // When the user clicks Edit on an existing row, the officer clones the
+    // wrapper so the dialog can change it without touching the live row until
+    // OK is confirmed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Add an Element that will be edited
-     * 
-     * @param editedElement The element to edit
+     * Called by the table widget's Edit button. Clones the given wrapper so the
+     * dialog operates on a copy — the original row is only updated when the user
+     * clicks OK.
+     *
+     * <p>For example — editing an existing row without corrupting the original:</p>
+     * <pre>
+     *   dialog.addNewElement(existingWrapper);
+     *   // dialog opens; user edits; on OK the clone replaces the row
+     * </pre>
+     *
+     * @param editedElement  The wrapper to clone for editing.
      */
     public void addNewElement( AclAttributeWrapper editedElement )
     {

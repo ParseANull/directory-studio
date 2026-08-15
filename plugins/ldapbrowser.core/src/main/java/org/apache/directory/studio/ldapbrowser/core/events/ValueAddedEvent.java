@@ -28,8 +28,23 @@ import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 import org.apache.directory.studio.ldapbrowser.core.model.IValue;
 
 
+// ── CLASS: ValueAddedEvent — HAN ADDS A NEW ROUTE TO THE FALCON'S NAVICOMP ──
+// Han Solo is in the Falcon's cockpit and punches a new hyperspace route into
+// the navigation computer.  The route (a value) is appended to the ship's
+// existing route library (the attribute).  "Kessel Run — added."  Chewie
+// grunts approval; the navicomp confirms the new entry.
+// This event fires when a real, non-empty {@link IValue} is appended to an
+// existing LDAP attribute.  The attribute already existed on the entry; we
+// just added another value to it.  For example, adding a second email address
+// to a user who already has one: the "mail" attribute gains a new value.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An ValueAddedEvent indicates that an {@link IValue} was added to an {@link IEntry}.
+ * Signals that a new {@link IValue} was added to an existing {@link IAttribute}
+ * on an {@link IEntry}.
+ * This is distinct from {@link AttributeAddedEvent}: the attribute itself was
+ * already present; we just appended another value to it.  Listeners — typically
+ * the attribute table viewer — respond by inserting a new value row under the
+ * existing attribute section.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -43,13 +58,25 @@ public class ValueAddedEvent extends EntryModificationEvent
     private IValue addedValue;
 
 
+    // ── Han Logs The New Route: Ship, Attribute Panel, Value ─────────────────────
+    // "Connection: Millennium Falcon comms.  Attribute panel: hyperspace routes.
+    //  New value: Kessel Run, 12 parsecs."
+    // All three references — attribute and value — are stored alongside the
+    // standard connection+entry from the parent, so listeners have the full
+    // picture without an extra server round-trip.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ValueAddedEvent.
+     * Creates a new ValueAddedEvent.
      *
-     * @param connection the connection
-     * @param modifiedEntry the modified entry
-     * @param modifiedAttribute the modified attribute
-     * @param addedValue the added value
+     * <p>For example — a second email address is added to a user:</p>
+     * <pre>
+     *   new ValueAddedEvent(conn, userEntry, mailAttribute, newMailValue);
+     * </pre>
+     *
+     * @param connection         the browser connection through which the change was made.
+     * @param modifiedEntry      the LDAP entry that owns the modified attribute.
+     * @param modifiedAttribute  the attribute that received the new value.
+     * @param addedValue         the value that was added.
      */
     public ValueAddedEvent( IBrowserConnection connection, IEntry modifiedEntry, IAttribute modifiedAttribute,
         IValue addedValue )
@@ -60,10 +87,15 @@ public class ValueAddedEvent extends EntryModificationEvent
     }
 
 
+    // ── Han Identifies Which Panel The Route Was Added To ────────────────────────
+    // "Hyperspace routes panel — that's where the new Kessel Run entry sits."
+    // Listeners use the attribute to find the right section of the attribute
+    // table and refresh or extend it.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the modified attribute.
+     * Returns the attribute to which the new value was appended.
      *
-     * @return the modified attribute
+     * @return the {@link IAttribute} that was modified; never {@code null}.
      */
     public IAttribute getModifiedAttribute()
     {
@@ -71,10 +103,14 @@ public class ValueAddedEvent extends EntryModificationEvent
     }
 
 
+    // ── Han Retrieves The New Route Data ─────────────────────────────────────────
+    // "Kessel Run — string value, 12 parsecs."  The listener renders this value
+    // in a new row under the attribute section.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the added value.
+     * Returns the value that was added to the attribute.
      *
-     * @return the added value
+     * @return the newly added {@link IValue}; never {@code null}.
      */
     public IValue getAddedValue()
     {
@@ -82,8 +118,14 @@ public class ValueAddedEvent extends EntryModificationEvent
     }
 
 
+    // ── Chewie Logs The New Route For The Ship's Records ─────────────────────────
+    // "Added 'han.solo@rebelbase.org' to 'mail' at 'cn=Han Solo,dc=rebel,...'"
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns a human-readable description of this event, suitable for logs and
+     * the status bar.
+     *
+     * @return a localised string like "Added value 'foo' to 'mail' at 'cn=Han,...'".
      */
     public String toString()
     {

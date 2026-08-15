@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -36,8 +36,21 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 
 
+// ── CLASS: ExportConnectionsWizardPage — HAN PLOTS THE JUMP COORDINATES ──────
+// Han stands at the navicomputer: "Where are we jumping to?" He picks a
+// destination archive file, checks the overwrite box if needed, and the
+// navicomputer confirms the path is valid. This page is that interaction —
+// a file-save dialog pre-filtered to *.lbc archives, with live validation
+// that checks for directory conflicts, existing files, and write permissions.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the page used to select the connections to export.
+ * The single wizard page for the export connections wizard.
+ * Lets the user pick a destination file path (*.lbc format) and choose
+ * whether to overwrite an existing file. Validates the path in real time:
+ * errors if the path is blank, points to a directory, points to a read-only
+ * existing file, or has a non-writable parent directory.
+ * Think of Han at the navicomputer: the coordinates must be valid before
+ * the Falcon can make the jump.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -50,8 +63,13 @@ public class ExportConnectionsWizardPage extends WizardPage
     private Button overwriteFileButton;
 
 
+    // ── Han Powers Up the Navicomputer ────────────────────────────────────────────
+    // The page opens, title set, description set, image set, not yet complete
+    // because no destination file has been chosen.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExportConnectionsWizardPage.
+     * Creates a new ExportConnectionsWizardPage with title, description, and
+     * wizard-header image set. Starts incomplete — the user must pick a file.
      */
     protected ExportConnectionsWizardPage()
     {
@@ -64,8 +82,20 @@ public class ExportConnectionsWizardPage extends WizardPage
     }
 
 
+    // ── Han Lays Out the Navigation Panel ────────────────────────────────────────
+    // The panel has one file-save widget and an overwrite checkbox.
+    // Everything else (the commented-out connection-tree selector) was planned
+    // but not shipped — we export all connections unconditionally.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the page UI: a three-column grid with a labelled FileBrowserWidget
+     * for picking the destination .lbc archive path, and an "Overwrite existing file"
+     * checkbox. The file browser is pre-filtered to *.lbc and *.* extensions.
+     * Change events trigger {@code validate()} so the Finish button tracks live state.
+     *
+     * @param parent  the parent composite.
      */
     public void createControl( Composite parent )
     {
@@ -162,7 +192,7 @@ public class ExportConnectionsWizardPage extends WizardPage
 
 
     /**
-     * Validates this page. This method is responsible for displaying errors, 
+     * Validates this page. This method is responsible for displaying errors,
      * as well as enabling/disabling the "Finish" button
      */
     private void validate()
@@ -204,11 +234,15 @@ public class ExportConnectionsWizardPage extends WizardPage
     }
 
 
+    // ── Han Reads Back the Destination Coordinates ────────────────────────────────
+    // The wizard needs to know the file path for performFinish() to write the archive.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the export file name.
-     * 
-     * @return
-     *      the export file name
+     * Returns the destination file path picked by the user.
+     * Used by {@link ExportConnectionsWizard#performFinish()} to open the
+     * output stream.
+     *
+     * @return  the selected file path string.
      */
     public String getExportFileName()
     {
@@ -216,8 +250,13 @@ public class ExportConnectionsWizardPage extends WizardPage
     }
 
 
+    // ── Han Logs the Coordinates for Next Jump ────────────────────────────────────
+    // After a successful jump, the navicomputer remembers the destination so
+    // the next jump can start from the same place.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the dialog settings.
+     * Persists the FileBrowserWidget's current directory to dialog settings
+     * so the file browser opens in the same location next time.
      */
     public void saveDialogSettings()
     {

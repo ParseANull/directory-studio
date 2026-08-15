@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.wizards;
 
@@ -60,11 +60,20 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: NewObjectClassGeneralPageWizardPage — Palpatine Issues The Station's Identity ─
+// In the Imperial Senate, Palpatine stands at the podium and announces the identity of the
+// new station: which Imperial order it belongs to, its official designation number, the
+// names by which the galaxy will know it, and its stated purpose.
+// This is the identity briefing — not the technical specs, just the who and what.
+// This page captures the same for a new LDAP object class: schema affiliation, OID,
+// aliases, and description.
+// ───────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the General WizardPage of the NewObjectClassWizard.
- * <p>
- * It is used to let the user enter general information about the
- * attribute type he wants to create (schema, OID, aliases an description).
+ * The first wizard page in the New Object Class wizard, collecting identity information.
+ * We ask for the schema container, a globally unique OID, human-readable aliases, and a
+ * description for the new object class.
+ * Think of Palpatine formally declaring the identity of a new Imperial initiative at the
+ * Senate: "This belongs to Order 66, designation 1.3.6.1.4.1.99, known as inetOrgPerson."
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -87,8 +96,16 @@ public class NewObjectClassGeneralPageWizardPage extends AbstractWizardPage
     private Text descriptionText;
 
 
+    // ── Palpatine Calls The Senate To Order ──────────────────────────────────────────
+    // Palpatine rises, announces the session's title and purpose, and displays the Imperial
+    // seal — everything ceremonially initialized before the real work begins.
+    // We set this page's title, description, and image here, then grab the schema handler
+    // and initialize an empty alias list.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of NewObjectClassGeneralPageWizardPage.
+     * Constructs this wizard page and sets its title, description, and image.
+     * We grab the SchemaHandler at construction time and create an empty alias list that
+     * will be populated as the user types in the Aliases field.
      */
     protected NewObjectClassGeneralPageWizardPage()
     {
@@ -102,8 +119,18 @@ public class NewObjectClassGeneralPageWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Palpatine Unfolds The Full Declaration Document ──────────────────────────────
+    // Palpatine unrolls the full declaration scroll: schema affiliation at the top, then
+    // the designation (OID), then the aliases, then the official description — all in order.
+    // We build the two SWT groups with their widgets, wire up their listeners, and call
+    // initFields() to populate the schema combo.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all the SWT widgets for this page: a Schema group and a Naming/Description group.
+     * Eclipse calls this once when the page first becomes visible.
+     * Each field has a listener that calls {@link #dialogChanged()} to keep validation live.
+     *
+     * @param parent  the parent composite Eclipse provides — we nest our layout inside it.
      */
     public void createControl( Composite parent )
     {
@@ -272,8 +299,17 @@ public class NewObjectClassGeneralPageWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Palpatine Checks Whether The Senate Is Even In Session ───────────────────────
+    // Before issuing a declaration, Palpatine checks whether there are any senators present
+    // to receive it — if not, he locks the doors and displays an error message.
+    // We disable all fields if there's no schema project open, or populate the schema combo
+    // from the handler and pre-select a schema if one was injected.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the UI fields.
+     * Populates the Schema combo from the loaded schema project, sorted alphabetically.
+     * If no schema project is open (schemaHandler is null), we disable all fields and
+     * show an error explaining why.
+     * We also pre-select a schema if one was set via {@link #setSelectedSchema(Schema)}.
      */
     private void initFields()
     {
@@ -315,8 +351,16 @@ public class NewObjectClassGeneralPageWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Palpatine Audits The Declaration Every Time A Senator Edits It ───────────────
+    // Every time a senator crosses out a word or adds an amendment, Palpatine re-reads the
+    // full declaration to make sure it's still valid before stamping it with the Imperial seal.
+    // We re-validate all fields in priority order and show the first error or warning.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the user modifies something in the UI.
+     * Re-validates all fields whenever the user changes any input on this page.
+     * We check in order: schema selected, OID present and valid, OID unique, at least one
+     * alias, all aliases syntactically valid.
+     * The page stays incomplete until everything passes.
      */
     private void dialogChanged()
     {
@@ -371,8 +415,15 @@ public class NewObjectClassGeneralPageWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Palpatine Rewrites The Official Name List After An Amendment ──────────────────
+    // After a senator amends the list of official names for the new initiative, Palpatine
+    // rewrites the declaration text so it reflects the current canonical list.
+    // We rebuild the aliases text field from the in-memory alias list.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills in the Aliases Label.
+     * Refreshes the aliases text field from the current in-memory alias list.
+     * Called after the user accepts changes from the Edit Aliases dialog so the text
+     * field stays synchronized with the parsed internal representation.
      */
     private void fillInAliasesLabel()
     {
@@ -391,11 +442,15 @@ public class NewObjectClassGeneralPageWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Palpatine Reads Back Which Order This Initiative Belongs To ───────────────────
+    // "This belongs to the Core schema — it is an Imperial standard, not a local matter."
+    // The schema name tells the wizard where to register the new object class.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Get the name of the schema.
+     * Returns the name of the schema the user selected in the Schema combo.
+     * The wizard uses this at finish time to place the new object class in the correct schema.
      *
-     * @return
-     *      the name of the schema
+     * @return  the schema name string, or null if nothing is selected.
      */
     public String getSchemaValue()
     {
@@ -413,11 +468,15 @@ public class NewObjectClassGeneralPageWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Palpatine Reads Back The Official Designation Number ─────────────────────────
+    // "Imperial designation: 1.2.840.113556.1.5.9 — recorded for posterity."
+    // The OID is the globally unique dotted-number identifier for this object class.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the value of the OID.
+     * Returns the OID string the user typed into the OID combo.
+     * This becomes the primary identifier for the new object class across all LDAP servers.
      *
-     * @return
-     *      the value of the OID
+     * @return  the OID string as the user entered it.
      */
     public String getOidValue()
     {
@@ -425,11 +484,16 @@ public class NewObjectClassGeneralPageWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Palpatine Reads Back All Official Names For The Initiative ────────────────────
+    // "It shall be known as inetOrgPerson, also as organizationalPerson — both names
+    // are official." Palpatine lists every alias that will be recognized by the galaxy.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the value of the aliases.
+     * Returns the list of alias strings the user entered for this object class.
+     * Aliases are the friendly names LDAP clients use to reference the class (e.g. "person",
+     * "inetOrgPerson"). We return plain strings, discarding internal parse metadata.
      *
-     * @return
-     *      the value of the aliases
+     * @return  a list of alias strings; may be empty if the user hasn't entered any.
      */
     public List<String> getAliasesValue()
     {
@@ -444,11 +508,16 @@ public class NewObjectClassGeneralPageWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Palpatine Reads The Official Statement Of Purpose ────────────────────────────
+    // "Its purpose: to hold the personal data of citizens in the Imperial records system."
+    // The description is the free-form human-readable explanation of the object class.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the value of the description.
+     * Returns the description text the user typed for this object class.
+     * The description is stored in the schema definition and visible to LDAP clients
+     * that query schema information.
      *
-     * @return
-     *      the value of the description
+     * @return  the description string, possibly empty if the user left it blank.
      */
     public String getDescriptionValue()
     {
@@ -456,11 +525,17 @@ public class NewObjectClassGeneralPageWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Palpatine Pre-Loads The Target Schema Before The Session Opens ────────────────
+    // Before the Senate convenes, Palpatine has already designated which order the new
+    // initiative belongs to — the paperwork is pre-filled when senators arrive.
+    // Context-menu callers inject the known schema so the user doesn't have to pick it.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the selected schema.
+     * Pre-selects a schema in the Schema combo before the page is displayed.
+     * The wizard calls this when the user invoked the action from a schema context (e.g.
+     * right-clicking a schema node) so the page opens with the right schema already chosen.
      *
-     * @param schema
-     *      the selected schema
+     * @param schema  the Schema to pre-select — if null, no pre-selection is applied.
      */
     public void setSelectedSchema( Schema schema )
     {

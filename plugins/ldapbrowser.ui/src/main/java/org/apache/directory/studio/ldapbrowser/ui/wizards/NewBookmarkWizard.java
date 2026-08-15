@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -46,8 +46,22 @@ import org.eclipse.ui.INewWizard;
 import org.eclipse.ui.IWorkbench;
 
 
+// ── CLASS: NewBookmarkWizard — LEIA'S HOLOGRAM MARKS A TARGET ────────────────
+// Leia's hologram says "Help me, Obi-Wan Kenobi" and pins a location in the
+// Rebellion's memory: a name and a place. This wizard does the same for LDAP:
+// the user gives a human-readable name and a target DN, and a Bookmark object
+// is pinned to the browser connection so the entry is easy to jump back to.
+// If no entry was selected when the wizard opened, a dummy page explains
+// what's needed instead of showing a broken form.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The NewConnectionWizard is used to create a new bookmark.
+ * Wizard for creating a new LDAP browser bookmark.
+ * Inspects the current workbench selection to find the target entry; if found,
+ * shows {@link NewBookmarkMainWizardPage} so the user can name the bookmark and
+ * optionally change its target DN. If no entry is selected, a placeholder
+ * {@code DummyWizardPage} explains the requirement.
+ * On Finish, a {@link Bookmark} is created and registered with the
+ * browser connection's bookmark manager.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -61,8 +75,12 @@ public class NewBookmarkWizard extends Wizard implements INewWizard
     private IEntry selectedEntry;
 
 
+    // ── Leia Prepares the Hologram Transmitter ────────────────────────────────────
+    // The wizard doesn't need a progress monitor (no background work needed).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of NewBookmarkWizard.
+     * Creates a new NewBookmarkWizard with the localised "New Bookmark" title.
+     * No progress monitor is needed because bookmark creation is instant.
      */
     public NewBookmarkWizard()
     {
@@ -71,10 +89,13 @@ public class NewBookmarkWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Leia Knows the Beacon ID ──────────────────────────────────────────────────
+    // The wizard is reachable by constant ID from any action.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the id.
-     * 
-     * @return the id
+     * Returns the Eclipse wizard ID for the new bookmark wizard.
+     *
+     * @return  the wizard ID string from {@link BrowserUIConstants}.
      */
     public static String getId()
     {
@@ -82,12 +103,25 @@ public class NewBookmarkWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Leia Locks On to the Target ───────────────────────────────────────────────
+    // We inspect the first selected element to find an IEntry. Accepted types:
+    // IEntry directly, or any model object that carries a reference to one.
+    // If none found, selectedEntry stays null and we show the DummyWizardPage.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Derives the target entry from the current workbench selection.
+     * Accepts IEntry, ISearchResult, IBookmark, IAttribute, IValue,
+     * IBrowserConnection (uses rootDSE), ISearch, BrowserCategory, BrowserSearchResultPage,
+     * and BrowserEntryPage. Sets {@code selectedEntry} to null if no match.
+     *
+     * @param workbench  the current workbench (unused).
+     * @param selection  the current structured selection.
      */
     public void init( IWorkbench workbench, IStructuredSelection selection )
     {
-        // determine the currently selected entry, used 
+        // determine the currently selected entry, used
         // to preset the bookmark target Dn
         Object o = selection.getFirstElement();
         if ( o instanceof IEntry )
@@ -138,8 +172,15 @@ public class NewBookmarkWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Leia Broadcasts the Hologram ──────────────────────────────────────────────
+    // If an entry was found, show the real page. Otherwise, show the DummyWizardPage
+    // that explains why the wizard can't do anything useful.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Adds {@link NewBookmarkMainWizardPage} if an entry was selected, or a
+     * {@link DummyWizardPage} that explains the requirement if no entry was found.
      */
     public void addPages()
     {
@@ -155,16 +196,27 @@ public class NewBookmarkWizard extends Wizard implements INewWizard
         }
     }
 
+    // ── CLASS: DummyWizardPage — LEIA'S HOLOGRAM SAYS "SELECT AN ENTRY FIRST" ────
+    // When no entry is selected, the hologram can only say: "I need a target."
+    // This placeholder page tells the user what they need to do.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Just a dummy page.
+     * A placeholder page shown when no entry is selected in the browser.
+     * Displays "No entry selected" with an instruction message. The page is
+     * always complete so the user can Finish immediately (which does nothing useful,
+     * but at least doesn't block the wizard close).
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
     class DummyWizardPage extends WizardPage
     {
 
+        // ── Leia's Hologram Announces the Target Requirement ──────────────────────
+        // Title and description explain that an entry must be selected first.
+        // ────────────────────────────────────────────────────────────────────────
         /**
-         * Creates a new instance of DummyWizardPage.
+         * Creates a new DummyWizardPage with the "no entry selected" title
+         * and instruction description.
          */
         protected DummyWizardPage()
         {
@@ -176,8 +228,16 @@ public class NewBookmarkWizard extends Wizard implements INewWizard
         }
 
 
+        // ── Leia's Hologram Shows an Empty Frame ──────────────────────────────────
+        // No widgets — the description text in the header tells the whole story.
+        // ────────────────────────────────────────────────────────────────────────
         /**
          * {@inheritDoc}
+         *
+         * Creates an empty composite — all information is in the page title and
+         * description; no additional widgets are needed.
+         *
+         * @param parent  the parent composite.
          */
         public void createControl( Composite parent )
         {
@@ -191,8 +251,19 @@ public class NewBookmarkWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Leia Pins the Beacon ──────────────────────────────────────────────────────
+    // If an entry was selected, we create the Bookmark object from the user's
+    // name and DN, register it with the connection, and save dialog settings.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Creates a new {@link Bookmark} from the user's chosen name and DN and
+     * registers it with the browser connection's bookmark manager.
+     * Does nothing if no entry was selected (DummyWizardPage case), but still
+     * calls saveDialogSettings() to persist the entry widget's directory.
+     *
+     * @return  {@code true} always.
      */
     public boolean performFinish()
     {

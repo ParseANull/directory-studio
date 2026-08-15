@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -23,9 +23,16 @@ package org.apache.directory.studio.openldap.config.editor.dialogs;
 import java.text.ParseException;
 
 
+// Like C-3PO painstakingly reading the Jawa dialect to decode exactly
+// what the Jawas are trying to say, we parse time span strings in the
+// format "DD+HH:MM:SS" and translate them into structured days/hours/
+// minutes/seconds values the rest of the system can actually use.
 /**
- * This class represents the time span used for purge age and interval.
- * 
+ * Represents a time span used for purge age and purge interval in the
+ * OpenLDAP AccessLog configuration. We parse strings like "2+12:30:00"
+ * (2 days, 12 hours, 30 minutes, 0 seconds) and can also serialize back
+ * to the same format.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class PurgeTimeSpan
@@ -43,18 +50,26 @@ public class PurgeTimeSpan
     protected int seconds = 0;
 
 
+    // Like C-3PO standing by with no messages to translate yet, we
+    // initialize all time components to zero so the span starts out
+    // as a clean, empty duration ready to be populated.
     /**
-     * Creates a new instance of PurgeTimeSpan.
+     * Creates a new PurgeTimeSpan with all components initialized to zero.
      */
     public PurgeTimeSpan()
     {
     }
 
 
+    // Like C-3PO receiving an encoded message from the Jawas and immediately
+    // starting the translation process, we accept a time span string and
+    // delegate to parse() to decode it into days/hours/minutes/seconds.
     /**
-     * Creates a new instance of PurgeTimeSpan.
+     * Creates a new PurgeTimeSpan by parsing the given time span string.
+     * The string format is {@code [DD+]HH:MM[:SS]}.
      *
-     * @param s the string
+     * @param s the time span string to parse
+     * @throws ParseException if the string doesn't match the expected format
      */
     public PurgeTimeSpan( String s ) throws ParseException
     {
@@ -62,13 +77,18 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO receiving a pre-decoded briefing with all four time
+    // components already worked out, we accept them directly after
+    // validating each one so nothing out of range sneaks through.
     /**
-     * Creates a new instance of PurgeTimeSpan.
+     * Creates a new PurgeTimeSpan from explicit days, hours, minutes, and seconds
+     * values. We validate each argument before storing it.
      *
-     * @param days the days
-     * @param hours the hours
-     * @param minutes the minutes
-     * @param seconds the seconds
+     * @param days the number of days (0 to 99999)
+     * @param hours the number of hours (0 to 23)
+     * @param minutes the number of minutes (0 to 59)
+     * @param seconds the number of seconds (0 to 59)
+     * @throws IllegalArgumentException if any argument is out of its valid range
      */
     public PurgeTimeSpan( int days, int hours, int minutes, int seconds )
     {
@@ -84,11 +104,14 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO checking whether the Jawa's claimed number of market days
+    // is a realistic figure before accepting the translation, we validate
+    // the days value and throw if it's outside the acceptable range.
     /**
-     * Checks the days argument.
+     * Validates the days argument and throws if it's out of range (0-99999).
      *
-     * @param value the days argument
-     * @throws IllegalArgumentException
+     * @param value the days value to validate
+     * @throws IllegalArgumentException if the value is out of the valid range
      */
     private void checkDaysArgument( int value ) throws IllegalArgumentException
     {
@@ -99,12 +122,15 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO quietly checking his internal calendar to see if the
+    // day count makes sense before committing to the translation, we
+    // return true when the days value is outside the acceptable bounds
+    // and false when it's valid.
     /**
-     * Checks the days value.
+     * Checks whether the given days value is out of the valid range (0-99999).
      *
-     * @param value the days value
-     * @return <code>true</code> if the days value is correct,
-     *         <code>false</code> if not.
+     * @param value the days value to check
+     * @return {@code true} if the value is out of range (invalid), {@code false} if it's valid
      */
     private boolean checkDays( int value )
     {
@@ -112,10 +138,14 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO cross-referencing the Jawa's claimed hour count against
+    // what a standard day actually contains, we validate hours and throw
+    // if the value is outside the 0-23 range.
     /**
-     * Checks the hours argument.
+     * Validates the hours argument and throws if it's out of range (0-23).
      *
-     * @param value the hours argument
+     * @param value the hours value to validate
+     * @throws IllegalArgumentException if the value is outside 0-23
      */
     private void checkHoursArgument( int value )
     {
@@ -126,12 +156,14 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO silently verifying that the hour in the Jawa's time code
+    // falls within a standard clock range, we return true when hours are
+    // out of bounds and false when they're fine.
     /**
-     * Checks the hours value.
+     * Checks whether the given hours value is out of the valid range (0-23).
      *
-     * @param value the hours value
-     * @return <code>true</code> if the hours value is correct,
-     *         <code>false</code> if not.
+     * @param value the hours value to check
+     * @return {@code true} if the value is out of range (invalid), {@code false} if it's valid
      */
     private boolean checkHours( int value )
     {
@@ -139,10 +171,14 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO verifying that the Jawa's minute and second counts stay
+    // within a realistic clock range before stamping the translation as
+    // correct, we validate and throw for any value outside 0-59.
     /**
-     * Checks the minutes or seconds argument.
+     * Validates a minutes or seconds argument and throws if it's out of range (0-59).
      *
-     * @param value the minutes or seconds argument
+     * @param value the minutes or seconds value to validate
+     * @throws IllegalArgumentException if the value is outside 0-59
      */
     private void checkMinutesSecondsArgument( int value )
     {
@@ -153,12 +189,14 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO quietly confirming the Jawa's minutes/seconds figure
+    // is clock-legal before continuing the translation, we return true
+    // when the value is out of range and false when it's acceptable.
     /**
-     * Checks the minutes or seconds value.
+     * Checks whether the given minutes or seconds value is out of range (0-59).
      *
-     * @param value the minutes or seconds value
-     * @return <code>true</code> if the minutes or seconds value is correct,
-     *         <code>false</code> if not.
+     * @param value the minutes or seconds value to check
+     * @return {@code true} if the value is out of range (invalid), {@code false} if it's valid
      */
     private boolean checkMinutesSeconds( int value )
     {
@@ -166,11 +204,17 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO slowly but methodically working through the Jawa dialect
+    // character by character — parsing digits, plus signs, and colons —
+    // we walk through the time span string and extract days, hours, minutes,
+    // and seconds into their respective fields.
     /**
-     * Parse the given string.
+     * Parses a time span string in the format {@code [DD+]HH:MM[:SS]} and
+     * populates the days/hours/minutes/seconds fields. We throw a
+     * {@link ParseException} at the first sign of invalid content.
      *
-     * @param s the string
-     * @throws ParseException in case of error during parsing.
+     * @param s the string to parse
+     * @throws ParseException if the string is null, too short, or contains illegal characters or out-of-range values
      */
     private void parse( String s ) throws ParseException
     {
@@ -305,8 +349,13 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO retrieving the days field from the completed translation
+    // so the caller can see how many days the Jawa actually meant, we
+    // hand back the stored days value.
     /**
-     * @return the days
+     * Returns the days component of this time span.
+     *
+     * @return the number of days
      */
     public int getDays()
     {
@@ -314,8 +363,13 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO handing back the hours portion of the decoded time code
+    // so the caller knows how many hours are included in the span, we
+    // return the stored hours value.
     /**
-     * @return the hours
+     * Returns the hours component of this time span.
+     *
+     * @return the number of hours (0-23)
      */
     public int getHours()
     {
@@ -323,8 +377,13 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO reading out the minutes component of the decoded Jawa
+    // time reference so the caller has the full picture, we return
+    // the stored minutes value.
     /**
-     * @return the minutes
+     * Returns the minutes component of this time span.
+     *
+     * @return the number of minutes (0-59)
      */
     public int getMinutes()
     {
@@ -332,8 +391,13 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO delivering the final seconds component of the time
+    // code translation, we hand back the stored seconds value so
+    // the caller can use the complete breakdown.
     /**
-     * @return the seconds
+     * Returns the seconds component of this time span.
+     *
+     * @return the number of seconds (0-59)
      */
     public int getSeconds()
     {
@@ -341,8 +405,13 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO updating his translation notes when the Jawa revises
+    // the number of market days, we replace the stored days value
+    // with the new one.
     /**
-     * @param days the days to set
+     * Sets the days component of this time span.
+     *
+     * @param days the new number of days to store
      */
     public void setDays( int days )
     {
@@ -350,8 +419,12 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO correcting the hours field in the translation when
+    // the operator points out an error, we replace the stored hours value.
     /**
-     * @param hours the hours to set
+     * Sets the hours component of this time span.
+     *
+     * @param hours the new number of hours to store (0-23)
      */
     public void setHours( int hours )
     {
@@ -359,8 +432,12 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO updating the minutes portion of the decoded time
+    // when a correction comes in, we replace the stored minutes value.
     /**
-     * @param minutes the minutes to set
+     * Sets the minutes component of this time span.
+     *
+     * @param minutes the new number of minutes to store (0-59)
      */
     public void setMinutes( int minutes )
     {
@@ -368,8 +445,12 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO revising the seconds value in the translation after
+    // a correction, we update the stored seconds component.
     /**
-     * @param seconds the seconds to set
+     * Sets the seconds component of this time span.
+     *
+     * @param seconds the new number of seconds to store (0-59)
      */
     public void setSeconds( int seconds )
     {
@@ -377,8 +458,16 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO delivering his completed translation in the format the
+    // Jawas will recognize — reassembling days, hours, minutes, and seconds
+    // back into the canonical "DD+HH:MM:SS" string — we serialize the
+    // time span back to its wire format.
     /**
-     * {@inheritDoc}
+     * Returns the string representation of this time span in the format
+     * {@code [DD+]HH:MM[:SS]}, omitting the days prefix when zero and
+     * omitting the seconds suffix when zero.
+     *
+     * @return the formatted time span string
      */
     public String toString()
     {
@@ -409,12 +498,16 @@ public class PurgeTimeSpan
     }
 
 
+    // Like C-3PO padding a single-digit time component with a leading zero
+    // so the formatted output looks right — "03" instead of just "3" —
+    // we ensure consistent two-digit formatting for time components.
     /**
-     * Gets the string representation of an int
-     * (prefixed with a 0 if needed).
+     * Formats an integer time component as a two-character string,
+     * padding with a leading zero if the value is less than 10.
+     * Returns "00" for any value outside the 0-60 range.
      *
-     * @param value the value
-     * @return the string equivalent
+     * @param value the time component value to format
+     * @return a two-character string representation
      */
     private String toString( int value )
     {

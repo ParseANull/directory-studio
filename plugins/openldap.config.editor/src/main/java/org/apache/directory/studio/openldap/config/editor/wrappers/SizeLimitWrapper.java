@@ -6,19 +6,28 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.wrappers;
 
+// ── CLASS: SizeLimitWrapper — The Death Star's Blast Radius Limiter ───────────
+// The Death Star's superlaser can destroy a planet, but the Empire still needs
+// to tune its blast parameters — overall radius, soft cap, hard cap, unchecked
+// expansion, and paged-results constraints.  SizeLimitWrapper wraps one or more
+// "size..." tokens from an olcLimits value: the standard global/hard/soft fields
+// inherited from AbstractLimitWrapper, plus uncheckedLimit, prLimit,
+// prTotalLimit, and the noEstimate flag.  It parses the full BNF grammar and
+// serializes back in the same format.
+// ─────────────────────────────────────────────────────────────────────────────
 import org.apache.directory.api.util.Strings;
 
 /**
@@ -34,39 +43,42 @@ import org.apache.directory.api.util.Strings;
  * prLimit   ::= 'noEstimate' | limit
  * prTLimit  ::= ulimit | 'hard'
  * </pre>
- * 
+ *
  * Note : each of the limit is an Integer, so that we can have two states :
  * <ul>
  * <li>not existent</li>
  * <li>has a value</li>
  * </ul>
  * A -1 value means unlimited. Any other value is accepted, if > 0.
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SizeLimitWrapper extends AbstractLimitWrapper
 {
     /** The unchecked limit */
     private Integer uncheckedLimit;
-    
+
     /** The PR limit */
     private Integer prLimit;
-    
+
     /** The PRTotal limit */
     private Integer prTotalLimit;
 
     /** The noEstimate flag */
     private boolean noEstimate;
-    
+
     //Define some of the used constants
     public static final Integer PR_DISABLED = Integer.valueOf( -2 );
     public static final Integer PR_HARD = Integer.valueOf( 0 );
     public static final Integer UC_DISABLED = Integer.valueOf( 0 );
-    
+
     public static final String DISABLED_STR = "disabled";
     public static final String UNCHECKED_STR = "unchecked";
 
 
+    // ── Protected No-Arg Constructor — An Unconfigured Blast Limiter ───────────
+    // The weapons officer creates an empty limiter before parsing each token.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Create a SizeLimitWrapper instance
      */
@@ -74,11 +86,15 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     {
         super();
     }
-    
-    
+
+
+    // ── Constructor (all params) — Set All Blast Parameters Directly ───────────
+    // The weapons officer configures all six limit values and the noEstimate flag
+    // in one call when all parameters are already known.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Create a SizeLimitWrapper instance
-     * 
+     *
      * @param globalLimit The global limit
      * @param hardLimit The hard limit
      * @param softLimit The soft limit
@@ -86,7 +102,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
      * @param prLimit The pr limit
      * @param prTotalLimit The prTotal limit
      */
-    public SizeLimitWrapper( Integer globalLimit, Integer hardLimit, Integer softLimit, Integer uncheckedLimit, 
+    public SizeLimitWrapper( Integer globalLimit, Integer hardLimit, Integer softLimit, Integer uncheckedLimit,
         Integer prLimit, Integer prTotalLimit, boolean noEstimate )
     {
         super( globalLimit, hardLimit, softLimit );
@@ -95,11 +111,15 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
         this.prTotalLimit = prTotalLimit;
         this.noEstimate = noEstimate;
     }
-    
-    
+
+
+    // ── Constructor (String) — Parse the Size-Limit Token String ───────────────
+    // The weapons officer reads the raw olcLimits size-limit substring, splits
+    // it on spaces, and delegates each "size..." token to parseLimit.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Create a SizeLimitWrapper instance from a String. 
-     * 
+     * Create a SizeLimitWrapper instance from a String.
+     *
      * @param sizeLimitStr The String that contain the value
      */
     public SizeLimitWrapper( String sizeLimitStr )
@@ -108,12 +128,12 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
         {
             // use a lowercase version of the string
             String lowerCaseSizeLimitStr = sizeLimitStr.toLowerCase();
-            
+
             SizeLimitWrapper tmp = new SizeLimitWrapper();
-            
+
             // Split the strings
             String[] limits = lowerCaseSizeLimitStr.split( " " );
-            
+
             if ( limits != null )
             {
                 // Parse each limit
@@ -121,7 +141,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                 {
                     tmp.clear();
                     boolean result = parseLimit( tmp, limit );
-                    
+
                     if ( !result )
                     {
                         // No need to continue if the value is wrong
@@ -146,7 +166,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                                 if ( tmp.softLimit != null )
                                 {
                                     softLimit = tmp.softLimit;
-                                    
+
                                     if ( ( hardLimit != null ) && ( hardLimit.equals( HARD_SOFT ) || hardLimit.equals( softLimit ) ) )
                                     {
                                         // Special case : we have had a size.hard=soft before,
@@ -172,22 +192,22 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                                     }
                                 }
                             }
-                            
+
                             // Deal with the unchecked parameter
                             if ( tmp.uncheckedLimit != null )
                             {
                                 uncheckedLimit = tmp.uncheckedLimit;
                             }
-                            
+
                             // Deal with the PR limit
                             if ( tmp.prLimit != null )
                             {
                                 prLimit = tmp.prLimit;
                             }
-                            
+
                             // Special case for noEstimate
                             noEstimate = tmp.noEstimate;
-                            
+
                             // Last, not least, prTotalLimit
                             if ( tmp.prTotalLimit != null )
                             {
@@ -207,8 +227,12 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
             isValid = true;
         }
     }
-    
-    
+
+
+    // ── clear — Reset All Six Limits to Null ──────────────────────────────────
+    // The weapons officer clears all parameters back to their unset state so
+    // a temporary instance can be reused across multiple parse iterations.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Clear the SizeLimitWrapper (reset all the values to null)
      */
@@ -221,8 +245,12 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
         prTotalLimit = null;
         noEstimate = false;
     }
-    
-    
+
+
+    // ── parseLimit (private static) — Parse One "size..." Token ───────────────
+    // The weapons officer reads one space-delimited token (e.g. "size.pr=100")
+    // and sets the corresponding field in the temporary SizeLimitWrapper.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Parse a single limit :
      * <pre>
@@ -241,18 +269,18 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     private static boolean parseLimit( SizeLimitWrapper slw, String limitStr )
     {
         int pos = 0;
-        
+
         // The sizelimit always starts with a "size"
         if ( limitStr.startsWith( "size" ) )
         {
             pos += 4;
-            
+
             // A global or hard/soft/pr/prtotal ?
             if ( limitStr.startsWith( "=", pos ) )
             {
                 // Global : get the limit
                 pos++;
-                
+
                 if ( limitStr.startsWith( UNLIMITED_STR, pos ) )
                 {
                     pos += 9;
@@ -266,15 +294,15 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                 else
                 {
                     String integer = getInteger( limitStr, pos );
-                    
+
                     if ( integer != null )
                     {
                         pos += integer.length();
-                        
+
                         try
-                        { 
+                        {
                             Integer value = Integer.valueOf( integer );
-                            
+
                             if ( value > UNLIMITED )
                             {
                                 slw.globalLimit = value;
@@ -299,17 +327,17 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
             {
                 // Hard limit : get the hard limit
                 pos += 6;
-                
+
                 if ( limitStr.startsWith( UNLIMITED_STR, pos ) )
                 {
                     pos += 9;
-                    
+
                     slw.hardLimit = UNLIMITED;
                 }
                 else if ( limitStr.startsWith( NONE_STR, pos ) )
                 {
                     pos += 4;
-                    
+
                     slw.hardLimit = UNLIMITED;
                 }
                 else if ( limitStr.startsWith( SOFT_STR, pos ) )
@@ -320,16 +348,16 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                 else
                 {
                     String integer = getInteger( limitStr, pos );
-                    
+
                     if ( integer != null )
                     {
                         pos += integer.length();
-                        
+
                         try
-                        
+
                         {
                             Integer value =  Integer.valueOf( integer );
-                            
+
                             if ( value >= UNLIMITED )
                             {
                                 slw.hardLimit = value;
@@ -354,26 +382,26 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                 if ( limitStr.startsWith( UNLIMITED_STR, pos ) )
                 {
                     pos += 9;
-                    
+
                     slw.softLimit = UNLIMITED;
                 }
                 else if ( limitStr.startsWith( NONE_STR, pos ) )
                 {
                     pos += 4;
-                    
+
                     slw.softLimit = UNLIMITED;
                 }
                 else
                 {
                     String integer = getInteger( limitStr, pos );
-                    
+
                     if ( integer != null )
                     {
                         try
                         {
                             pos += integer.length();
                             Integer value = Integer.valueOf( integer );
-    
+
                             if ( value > UNLIMITED )
                             {
                                 slw.softLimit = value;
@@ -402,32 +430,32 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                 if ( limitStr.startsWith( UNLIMITED_STR, pos ) )
                 {
                     pos += 9;
-                    
+
                     slw.uncheckedLimit = UNLIMITED;
                 }
                 else if ( limitStr.startsWith( NONE_STR, pos ) )
                 {
                     pos += 4;
-                    
+
                     slw.uncheckedLimit = UNLIMITED;
                 }
                 else if ( limitStr.startsWith( DISABLED_STR, pos ) )
                 {
                     pos += 8;
-                    
+
                     slw.uncheckedLimit = UC_DISABLED;
                 }
                 else
                 {
                     String integer = getInteger( limitStr, pos );
-                    
+
                     if ( integer != null )
                     {
                         try
                         {
                             pos += integer.length();
                             Integer value = Integer.valueOf( integer );
-    
+
                             if ( value > UNLIMITED )
                             {
                                 slw.uncheckedLimit = value;
@@ -456,38 +484,38 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                 if ( limitStr.startsWith( UNLIMITED_STR, pos ) )
                 {
                     pos += 9;
-                    
+
                     slw.prLimit = UNLIMITED;
                 }
                 else if ( limitStr.startsWith( NONE_STR, pos ) )
                 {
                     pos += 4;
-                    
+
                     slw.prLimit = UNLIMITED;
                 }
                 else if ( limitStr.startsWith( "noestimate", pos ) )
                 {
                     pos += 10;
-                    
+
                     slw.noEstimate = true;
                 }
                 else if ( limitStr.startsWith( DISABLED_STR, pos ) )
                 {
                     pos += 8;
-                    
+
                     slw.prLimit = PR_DISABLED;
                 }
                 else
                 {
                     String integer = getInteger( limitStr, pos );
-                    
+
                     if ( integer != null )
                     {
                         try
                         {
                             pos += integer.length();
                             Integer value = Integer.valueOf( integer );
-    
+
                             if ( value > UNLIMITED )
                             {
                                 slw.prLimit = value;
@@ -516,38 +544,38 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                 if ( limitStr.startsWith( UNLIMITED_STR, pos ) )
                 {
                     pos += 9;
-                    
+
                     slw.prTotalLimit = UNLIMITED;
                 }
                 else if ( limitStr.startsWith( NONE_STR, pos ) )
                 {
                     pos += 4;
-                    
+
                     slw.prTotalLimit = UNLIMITED;
                 }
                 else if ( limitStr.startsWith( DISABLED_STR, pos ) )
                 {
                     pos += 8;
-                    
+
                     slw.prTotalLimit = PR_DISABLED;
                 }
                 else if ( limitStr.startsWith( HARD_STR, pos ) )
                 {
                     pos += 4;
-                    
+
                     slw.prTotalLimit = PR_HARD;
                 }
                 else
                 {
                     String integer = getInteger( limitStr, pos );
-                    
+
                     if ( integer != null )
                     {
                         try
                         {
                             pos += integer.length();
                             Integer value = Integer.valueOf( integer );
-    
+
                             if ( value > UNLIMITED )
                             {
                                 slw.prTotalLimit = value;
@@ -579,12 +607,13 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
             // This is wrong
             return false;
         }
-        
+
         // last check : the pos should be equal to the limitStr length
         return ( pos == limitStr.length() );
     }
-    
-    
+
+
+    // ── getPrLimit — Return the Paged-Results Limit ────────────────────────────
     /**
      * @return the prLimit
      */
@@ -594,6 +623,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     }
 
 
+    // ── setPrLimit — Update the Paged-Results Limit ───────────────────────────
     /**
      * @param prLimit the prLimit to set
      */
@@ -603,6 +633,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     }
 
 
+    // ── getPrTotalLimit — Return the Paged-Results Total Limit ────────────────
     /**
      * @return the prTotalLimit
      */
@@ -612,6 +643,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     }
 
 
+    // ── setPrTotalLimit — Update the Paged-Results Total Limit ───────────────
     /**
      * @param prTotalLimit the prTotalLimit to set
      */
@@ -621,6 +653,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     }
 
 
+    // ── getUncheckedLimit — Return the Unchecked-Expansion Limit ─────────────
     /**
      * @return the uncheckedLimit
      */
@@ -630,6 +663,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     }
 
 
+    // ── setUncheckedLimit — Update the Unchecked-Expansion Limit ─────────────
     /**
      * @param uncheckedLimit the uncheckedLimit to set
      */
@@ -637,7 +671,9 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     {
         this.uncheckedLimit = uncheckedLimit;
     }
-    
+
+
+    // ── isNoEstimate — Check Whether the noEstimate Flag Is Set ───────────────
     /**
      * @return the noEstimate
      */
@@ -647,6 +683,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     }
 
 
+    // ── setNoEstimate — Set the noEstimate Flag ────────────────────────────────
     /**
      * @param noEstimate the noEstimate to set
      */
@@ -654,8 +691,9 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     {
         this.noEstimate = noEstimate;
     }
-    
-    
+
+
+    // ── getType — Identify This Limit as a Size Limit ─────────────────────────
     /**
      * @return The Limit's type
      */
@@ -665,6 +703,10 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     }
 
 
+    // ── toString — Serialize All Configured Size-Limit Tokens ─────────────────
+    // The weapons officer writes out the base size string from AbstractLimitWrapper,
+    // then appends unchecked, pr, prtotal, and noEstimate tokens as needed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * @see Object#toString()
      */
@@ -672,7 +714,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
     public String toString()
     {
         StringBuilder sb = new StringBuilder();
-        
+
         sb.append( super.toString() );
 
         // process the unchecked limit
@@ -683,9 +725,9 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
             {
                 sb.append( ' ' );
             }
-            
+
             sb.append( "size.unchecked=" );
-            
+
             if ( uncheckedLimit.equals( UNLIMITED ) )
             {
                 sb.append( UNLIMITED_STR );
@@ -699,7 +741,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                 sb.append( uncheckedLimit );
             }
         }
-        
+
         // Process the pr limit
         if ( prLimit != null )
         {
@@ -708,10 +750,10 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
             {
                 sb.append( ' ' );
             }
-            
-            
+
+
             sb.append( "size.pr=" );
-            
+
             if ( prLimit.equals( UNLIMITED ) )
             {
                 sb.append( UNLIMITED_STR );
@@ -730,9 +772,9 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
             {
                 sb.append( ' ' );
             }
-            
+
             sb.append( "size.prtotal=" );
-            
+
             if ( prTotalLimit.equals( UNLIMITED ) )
             {
                 sb.append( UNLIMITED_STR );
@@ -750,7 +792,7 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
                 sb.append( prTotalLimit );
             }
         }
-        
+
         // Last, not least, the noEstimate flag
         if ( noEstimate )
         {
@@ -759,10 +801,10 @@ public class SizeLimitWrapper extends AbstractLimitWrapper
             {
                 sb.append( ' ' );
             }
-            
+
             sb.append( "size.pr=noEstimate" );
         }
-        
+
         return sb.toString();
     }
 }

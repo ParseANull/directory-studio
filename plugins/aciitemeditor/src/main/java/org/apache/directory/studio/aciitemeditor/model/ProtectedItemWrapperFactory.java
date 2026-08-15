@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.model;
 
@@ -41,19 +41,45 @@ import org.apache.directory.studio.valueeditors.TextValueEditor;
 import org.apache.directory.studio.valueeditors.integer.IntegerValueEditor;
 
 
+// ── CLASS: ProtectedItemWrapperFactory — THE ISB MANIFEST PRINT SHOP ──────────
+// Before an ISB officer can review a clearance manifest, the print shop
+// pre-prints one row for every possible resource category, leaving the
+// value fields blank ready for the officer to fill in.
+// This factory is that print shop: it stamps out all 12 protected-item rows
+// with their correct editors pre-wired.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The ProtectedItemWrapperFactory creates the ProtectedItemWrappers, ready to
- * be used in the protected item table.
+ * Factory that creates the full set of {@link ProtectedItemWrapper} instances for
+ * the protected-items table viewer.
+ * Produces one wrapper per ACI protected-item category (12 in total), each
+ * pre-wired with the appropriate value editor so the table is ready to use.
+ * Think of this class as the ISB manifest print shop: it stamps out every
+ * resource-category row before the officer sits down to tick and configure them.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public final class ProtectedItemWrapperFactory
 {
 
+    // ── STAMP OUT ALL 12 MANIFEST ROWS ───────────────────────────────────────
+    // The print shop runs through the full list of resource categories — entry,
+    // allUserAttributeTypes, attributeType, etc. — and produces one pre-printed
+    // row for each, binding the correct value editor to rows that need one.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the protected item wrappers.
-     * 
-     * @return the protected item wrapper[]
+     * Creates and returns all 12 {@link ProtectedItemWrapper} instances, one for
+     * each ACI protected-item category, ready to be fed to the protected-items
+     * table viewer.
+     * Each wrapper has its value editor (or {@code null} for categories with no
+     * configurable value) and its ACI prefix/suffix already set.
+     *
+     * <p>For example — the table gets its rows during dialog initialisation:</p>
+     * <pre>
+     *   ProtectedItemWrapper[] rows = ProtectedItemWrapperFactory.createProtectedItemWrappers();
+     *   tableViewer.setInput(rows);
+     * </pre>
+     *
+     * @return an array of 12 {@link ProtectedItemWrapper} objects in canonical ACI order
      */
     public static ProtectedItemWrapper[] createProtectedItemWrappers()
     {
@@ -117,7 +143,7 @@ public final class ProtectedItemWrapperFactory
                 // classes and : { item: xyz , or:{item:X,item:Y}   }
                 new ProtectedItemWrapper( ClassesItem.class, false, "", //$NON-NLS-1$
                     "", //$NON-NLS-1$
-                    new TextValueEditor() // TODO: RefinementValueEditor 
+                    new TextValueEditor() // TODO: RefinementValueEditor
                 ),
 
         };

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -79,6 +79,26 @@ import org.eclipse.ui.dialogs.SaveAsDialog;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 
 
+// ── CLASS: BatchOperationWizard — LUKE'S JOURNEY FROM TATOOINE TO THRONE ROOM ─
+// Luke doesn't just wander — his journey has stages: choose the target (applyOn),
+// pick the weapon (type), craft the LDIF or modify fragment, set execution options
+// (finish), and then act. The BatchOperationWizard is that five-stage journey
+// applied to LDAP: it guides the user from "which entries?" through "what
+// operation?" to "where should the result go?" and finally executes it.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Multi-step wizard that applies a single LDAP modification (modify, delete, or
+ * execute-LDIF) to a batch of directory entries.
+ * The wizard has five pages: ApplyOn (pick the entry set), Type (choose the
+ * operation), Ldif (write a raw LDIF fragment), Modify (use the attribute GUI),
+ * and Finish (choose how to execute the result). Not all pages are shown for
+ * every operation type — the {@link #getNextPage} logic skips pages that don't
+ * apply to the chosen operation.
+ * Think of Luke's hero journey: each wizard page is a stage, and {@code performFinish}
+ * is the moment Luke fires the proton torpedo into the exhaust port.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class BatchOperationWizard extends Wizard implements INewWizard
 {
     /** The connection */
@@ -92,8 +112,13 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     private BatchOperationFinishWizardPage finishPage;
 
 
+    // ── Luke Prepares for the Journey ────────────────────────────────────────────
+    // Luke sets the window title and confirms he'll need a progress monitor —
+    // the operation may take time as it touches many entries.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BatchOperationWizard.
+     * Creates a new BatchOperationWizard, setting the window title and enabling
+     * the progress monitor so long-running operations don't freeze the UI.
      */
     public BatchOperationWizard()
     {
@@ -102,10 +127,15 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Luke Looks Up His Starting Point ─────────────────────────────────────────
+    // Luke needs to know which mission he's been given before the journey starts.
+    // We return the Eclipse wizard ID that identifies this wizard in the registry.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the id.
+     * Returns the Eclipse wizard ID for the batch operation wizard.
+     * Used by action handlers that open this wizard programmatically.
      *
-     * @return the id
+     * @return  the wizard ID string from {@link BrowserUIConstants}.
      */
     public static String getId()
     {
@@ -113,8 +143,19 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Luke Receives the Mission Brief ──────────────────────────────────────────
+    // The Rebel briefing room shows Luke his target; we receive the workbench
+    // and selection context — but the real setup happens in addPages().
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Called by Eclipse when the wizard is opened from a menu or action.
+     * The actual page setup happens in {@link #addPages()} where we can
+     * inspect the current workbench selection.
+     *
+     * @param workbench   the current workbench.
+     * @param selection   the current structured selection (unused here).
      */
     public void init( IWorkbench workbench, IStructuredSelection selection )
     {
@@ -122,8 +163,20 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Luke Charts the Course ───────────────────────────────────────────────────
+    // Before launching, Luke checks whether there's a valid target: an open
+    // connection or selected entries. If there's nothing to operate on, we add a
+    // dummy page that explains why the wizard can't proceed.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Inspects the current workbench selection and adds wizard pages accordingly.
+     * If at least one connected connection or one selected entry/search/bookmark
+     * is present, the full five-page flow is added. Otherwise a single DummyWizardPage
+     * is shown explaining that no connection is selected.
+     * We also derive the {@code connection} from the selection so {@link #performFinish}
+     * knows which server to run the operation against.
      */
     public void addPages()
     {
@@ -173,8 +226,17 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Luke Briefs the Crew ─────────────────────────────────────────────────────
+    // After the page controls are built, Luke registers the help context so
+    // pressing F1 on any page opens the right documentation.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Wires up the Eclipse help context for every page after the SWT controls
+     * are created, so F1 on any page opens the batch operation wizard help article.
+     *
+     * @param pageContainer  the wizard's page container composite.
      */
     public void createPageControls( Composite pageContainer )
     {
@@ -193,6 +255,12 @@ public class BatchOperationWizard extends Wizard implements INewWizard
             BrowserUIConstants.PLUGIN_ID + "." + "tools_batchoperation_wizard" ); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
+    // ── Luke's Journey Has a Branching Path ──────────────────────────────────────
+    // Luke's path doesn't always go through the same rooms: if the type page
+    // says "LDIF", skip Modify; if it says "Modify", skip LDIF; if "Delete",
+    // skip both and jump straight to Finish.
+    // ────────────────────────────────────────────────────────────────────────────
+
     /**
      * This private class implements a dummy wizard page that is displayed when no connection is selected.
      *
@@ -200,8 +268,14 @@ public class BatchOperationWizard extends Wizard implements INewWizard
      */
     class DummyWizardPage extends WizardPage
     {
+        // ── Luke Has No Mission to Run ────────────────────────────────────────────
+        // The Rebel briefing room is empty — no target, no mission. We show the
+        // user a polite explanation rather than letting the wizard sit blank.
+        // ────────────────────────────────────────────────────────────────────────
         /**
-         * Creates a new instance of DummyWizardPage.
+         * Creates a DummyWizardPage shown when no connected connection is selected.
+         * The page is immediately complete (the user can't do anything else) but
+         * explains that they need to select an open connection first.
          */
         protected DummyWizardPage()
         {
@@ -213,8 +287,16 @@ public class BatchOperationWizard extends Wizard implements INewWizard
         }
 
 
+        // ── Luke Looks at an Empty Briefing Room ──────────────────────────────────
+        // Nothing to show, just an empty composite — the message is in the title.
+        // ────────────────────────────────────────────────────────────────────────
         /**
          * {@inheritDoc}
+         *
+         * Creates an empty composite — the page's title and description carry
+         * the full message; no additional widgets are needed.
+         *
+         * @param parent  the parent composite.
          */
         public void createControl( Composite parent )
         {
@@ -228,8 +310,26 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Luke Navigates the Branching Path ────────────────────────────────────────
+    // At each junction Luke checks the type-page decision: LDIF → go to ldifPage,
+    // Modify → go to modifyPage, Delete → jump to finishPage.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Returns the next wizard page based on the current page and the selected
+     * operation type. The routing logic is:
+     * <ul>
+     *   <li>applyOnPage → typePage (always)</li>
+     *   <li>typePage + CREATE_LDIF → ldifPage</li>
+     *   <li>typePage + MODIFY → modifyPage</li>
+     *   <li>typePage + DELETE → finishPage (no modification input needed)</li>
+     *   <li>modifyPage → finishPage</li>
+     *   <li>ldifPage → finishPage</li>
+     * </ul>
+     *
+     * @param page  the page the user is currently on.
+     * @return      the next page to show, or {@code null} at the end.
      */
     public IWizardPage getNextPage( IWizardPage page )
     {
@@ -271,8 +371,18 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Luke Checks Whether All Stages Are Complete ───────────────────────────────
+    // The proton torpedo can only be fired when every stage of the journey is
+    // done: the target chosen, the weapon loaded, the execution method set.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Returns {@code true} only when every relevant page reports complete.
+     * We skip the LDIF or Modify page depending on the chosen operation type
+     * so the Finish button activates as soon as all required pages are filled.
+     *
+     * @return  {@code true} if the wizard is ready to execute.
      */
     public boolean canFinish()
     {
@@ -308,8 +418,16 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Luke Cancels the Mission ─────────────────────────────────────────────────
+    // Sometimes the mission is aborted — the Death Star plans were already
+    // delivered and there's no need to fire. We always allow cancel.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Always returns {@code true} — cancelling the wizard is always safe.
+     *
+     * @return  {@code true}.
      */
     public boolean performCancel()
     {
@@ -317,8 +435,26 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Luke Fires the Proton Torpedo ────────────────────────────────────────────
+    // The targeting computer locks on, Luke trusts the Force, and the torpedo
+    // flies into the exhaust port. This method assembles the full LDIF for all
+    // target DNs and either executes it on the server, saves it to a file,
+    // opens it in the LDIF editor, or copies it to the clipboard.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Assembles the complete LDIF change record for every target DN, then
+     * delivers it according to the finish page's chosen execution method:
+     * <ul>
+     *   <li>Execute on connection — runs {@link ExecuteLdifRunnable} against the server.</li>
+     *   <li>LDIF editor — opens the generated LDIF in the workspace LDIF editor.</li>
+     *   <li>LDIF file — saves the generated LDIF to a file chosen by the user.</li>
+     *   <li>Clipboard — copies the generated LDIF to the system clipboard.</li>
+     * </ul>
+     * If the applyOn page chose a search, we run the search first to resolve the DNs.
+     *
+     * @return  {@code true} if the operation was completed successfully; {@code false} otherwise.
      */
     public boolean performFinish()
     {
@@ -536,10 +672,16 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Luke Checks the Type Page ─────────────────────────────────────────────────
+    // The type page tells Luke which weapon to use — modify, delete, or LDIF.
+    // Other pages query this to know what to show.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the type of the page.
+     * Returns the type wizard page so other pages can query the chosen operation type.
+     * The LDIF page and Modify page each check the type to decide whether they're
+     * relevant for the current {@link #isPageComplete} evaluation.
      *
-     * @return the type of the page
+     * @return  the {@link BatchOperationTypeWizardPage}.
      */
     public BatchOperationTypeWizardPage getTypePage()
     {
@@ -547,10 +689,14 @@ public class BatchOperationWizard extends Wizard implements INewWizard
     }
 
 
+    // ── Luke Knows His Server ─────────────────────────────────────────────────────
+    // Luke knows which base to attack — the connection is the target server.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the connection.
+     * Returns the browser connection that the batch operation will run against.
+     * Derived from the workbench selection when the wizard was opened.
      *
-     * @return the connection
+     * @return  the target {@link IBrowserConnection}.
      */
     public IBrowserConnection getConnection()
     {

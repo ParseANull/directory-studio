@@ -37,8 +37,22 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: OpenEntryEditorRunnable — CLONE TROOPERS EXECUTING ORDER 66 ───────
+// When Palpatine says "Execute Order 66," clone troopers spring into action:
+// each squad receives its target Jedi, confirms the target is in range, selects
+// the right weapon, and fires — all in one coordinated burst.
+// This runnable does the same thing for editors: given an entry/search/bookmark,
+// it identifies the target, ensures attributes are loaded, picks the right editor
+// extension, builds the input, and fires open the editor on the UI thread.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to open an entry editor. 
+ * A background job runnable that opens the correct entry editor for a given
+ * LDAP entry, search result, or bookmark.
+ * We run in a StudioBrowserJob so attribute initialisation can happen off the UI
+ * thread; the actual {@code openEditor()} call is then dispatched back to the
+ * UI thread via {@link Display#syncExec}.
+ * Think of the clone troopers: the planning (which target, which weapon) happens
+ * in the field; the final trigger pull happens at the target's location.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -47,27 +61,34 @@ public class OpenEntryEditorRunnable extends StudioConnectionRunnableWithProgres
 {
     /** The entries */
     private IEntry[] entries;
-    
+
     /** The entries found in a search operation */
     private ISearchResult[] searchResults;
 
     /** The bookmarked elements */
     private IBookmark[] bookmarks;
-    
+
     /** The extensions, if any */
     private EntryEditorExtension extension;
 
 
+    // ── The Clone Trooper Squad Receives Its Briefing ───────────────────────────
+    // The order arrives: here is your target (entry, search result, or bookmark),
+    // here is the weapon to use (extension), and here are your squad mates.
+    // We record all that information here so {@code run()} can execute without
+    // needing to ask questions.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of OpenEntryEditorRunnable.
-     * <p>
-     * Opens an entry editor with the given entry editor extension and one of 
-     * the given entries, search results or bookmarks.
-     * 
-     * @param extension the entry editor extension
-     * @param entries an array of entries
-     * @param searchResults an array of search results
-     * @param bookmarks an arrays of bookmarks
+     * Creates a new runnable that will open an entry editor when executed.
+     * Exactly one of {@code entries}, {@code searchResults}, or {@code bookmarks}
+     * should have a single element; the others should be empty arrays.
+     * If {@code extension} is {@code null} we will pick the best available editor
+     * automatically during {@link #run}.
+     *
+     * @param extension     the editor extension to use, or {@code null} to auto-select
+     * @param entries       array of entries to open (usually length 0 or 1)
+     * @param searchResults array of search results to open (usually length 0 or 1)
+     * @param bookmarks     array of bookmarks to open (usually length 0 or 1)
      */
     public OpenEntryEditorRunnable( EntryEditorExtension extension, IEntry[] entries, ISearchResult[] searchResults,
         IBookmark[] bookmarks )
@@ -80,8 +101,15 @@ public class OpenEntryEditorRunnable extends StudioConnectionRunnableWithProgres
     }
 
 
+    // ── The Squad Leader Announces the Operation Code Name ──────────────────────
+    // Every Order 66 squad has a designation announced on the comms channel so the
+    // progress system knows which operation is running.
+    // We return a localised "Open Entry Editor" label for the job progress UI.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the display name of this job, shown in the Eclipse progress view.
+     *
+     * @return  a localised "Open Entry Editor" label string
      */
     public String getName()
     {
@@ -89,8 +117,17 @@ public class OpenEntryEditorRunnable extends StudioConnectionRunnableWithProgres
     }
 
 
+    // ── Identifying Which Jedi Is the Target (Lock Acquired) ────────────────────
+    // Before firing, the clone trooper locks onto the specific Jedi — the object
+    // that must be exclusively accessed during the operation.
+    // We return the underlying IEntry so the job framework can hold the right lock.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the objects that must be locked during this job's execution.
+     * We lock the specific entry so no other job modifies it while we're loading
+     * attributes and opening the editor.
+     *
+     * @return  a one-element array with the target entry, or an empty array if nothing to lock
      */
     public Object[] getLockedObjects()
     {
@@ -116,8 +153,17 @@ public class OpenEntryEditorRunnable extends StudioConnectionRunnableWithProgres
     }
 
 
+    // ── Confirming Which Sector the Target Is In ─────────────────────────────────
+    // The clone squad checks which planet the Jedi is on — the connection tells the
+    // job framework which server we're talking to so it can route correctly.
+    // We return the {@link Connection} for the target entry.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the LDAP connections involved in this operation.
+     * The job framework uses this to associate the job with the right connection
+     * in the progress and error-reporting infrastructure.
+     *
+     * @return  a one-element array with the target entry's connection, or empty if none found
      */
     public Connection[] getConnections()
     {
@@ -143,8 +189,20 @@ public class OpenEntryEditorRunnable extends StudioConnectionRunnableWithProgres
     }
 
 
+    // ── The Clone Trooper Executes Order 66: Find, Prepare, Fire ────────────────
+    // Order received. Step 1: identify the Jedi (resolve the entry). Step 2: confirm
+    // they're in range (ensure attributes are loaded). Step 3: select the right weapon
+    // (pick the editor extension). Step 4: pull the trigger (open the editor on the
+    // UI thread via syncExec). Execute.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Runs the open-editor sequence on a background thread.
+     * We resolve which entry to open, ensure its attributes are initialised (blocking
+     * briefly if needed), auto-select an editor extension if none was provided, build
+     * the appropriate {@link EntryEditorInput}, and then switch to the UI thread to
+     * call {@link org.eclipse.ui.IWorkbenchPage#openEditor}.
+     *
+     * @param monitor  the progress monitor we report into; we set a task name but don't subdivide work
      */
     public void run( StudioProgressMonitor monitor )
     {
@@ -171,7 +229,7 @@ public class OpenEntryEditorRunnable extends StudioConnectionRunnableWithProgres
             if ( entry instanceof IContinuation )
             {
                 IContinuation continuation = ( IContinuation ) entry;
-                
+
                 if ( continuation.getState() == State.UNRESOLVED )
                 {
                     continuation.resolve();
@@ -206,7 +264,7 @@ public class OpenEntryEditorRunnable extends StudioConnectionRunnableWithProgres
         // Getting the editor's ID and creating the proper editor input
         final String editorId = extension.getEditorId();
         final EntryEditorInput editorInput;
-        
+
         if ( entries.length == 1 )
         {
             editorInput = new EntryEditorInput( entries[0], extension );
@@ -243,8 +301,15 @@ public class OpenEntryEditorRunnable extends StudioConnectionRunnableWithProgres
     }
 
 
+    // ── The Squad Checks In After the Operation ─────────────────────────────────
+    // After Order 66 executes, the clone squad sends a status ping back to command.
+    // In our case there's nothing to report — the editor open is a fire-and-forget.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called after {@link #run} completes to send any post-execution notifications.
+     * We have nothing to notify here — the editor opening is self-contained.
+     *
+     * @param monitor  the progress monitor (unused in this implementation)
      */
     public void runNotification( StudioProgressMonitor monitor )
     {

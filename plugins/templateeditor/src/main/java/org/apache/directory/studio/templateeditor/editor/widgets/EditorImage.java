@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.editor.widgets;
 
@@ -53,8 +53,22 @@ import org.apache.directory.studio.templateeditor.model.widgets.TemplateImage;
 import org.apache.directory.studio.templateeditor.model.widgets.TemplateWidget;
 
 
+// ── CLASS: EditorImage — THE TANTIVE IV VISUAL DISPLAY PANEL ─────────────────────
+// On the Tantive IV, the visual display panel shows whatever image is stored on the
+// ship's data cartridge — a star chart, an ID photo, a technical schematic.
+// Operators can save a copy to their own data cartridge, clear the displayed image,
+// or browse to load a new one. If the stored image is larger than the panel's
+// physical size (400x300), it's automatically scaled down to fit without distortion.
+// This class is that display panel: it renders the binary LDAP attribute as a scaled
+// SWT {@link Image} in a label, with optional Save As, Clear, and Browse toolbar
+// actions for managing the image data.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an editor image.
+ * An image display widget bound to a single binary LDAP attribute. Reads image
+ * bytes from the attribute (or from a Base64 template value), scales the image
+ * to fit the configured or default (400×300) bounds while preserving aspect ratio,
+ * and displays it in an SWT {@link Label}. Optionally provides Save As, Clear, and
+ * Browse toolbar buttons. Think of this as the Tantive IV visual display panel.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -88,15 +102,17 @@ public class EditorImage extends EditorWidget<TemplateImage>
     private static int DEFAULT_HEIGHT = 300;
 
 
+    // ── CONSTRUCTOR: INSTALL THE VISUAL DISPLAY PANEL ─────────────────────────────
+    // The technician installs the image display panel, binding it to the template
+    // model that specifies which LDAP attribute holds the image bytes and which
+    // toolbar actions should be available.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EditorImage.
-     * 
-     * @param editor
-     *      the associated editor
-     * @param templateImage
-     *      the associated template image
-     * @param toolkit
-     *      the associated toolkit
+     * Creates a new {@code EditorImage} bound to the given template image model.
+     *
+     * @param editor         the owning entry editor
+     * @param templateImage  the template model specifying attribute type, image size constraints, and button visibility
+     * @param toolkit        the form toolkit
      */
     public EditorImage( IEntryEditor editor, TemplateImage templateImage, FormToolkit toolkit )
     {
@@ -104,8 +120,13 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── CREATE WIDGET: BUILD THE DISPLAY PANEL ───────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the image label and optional toolbar, loads and scales the image
+     * from the LDAP attribute, and attaches toolbar listeners.
+     *
+     * @param parent  the parent composite
+     * @return the image widget composite
      */
     public Composite createWidget( Composite parent )
     {
@@ -122,13 +143,17 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── INIT WIDGET: CREATE THE LABEL AND TOOLBAR ────────────────────────────────
+    // We build a composite with 1 column (image only) or 2 columns (image + toolbar).
+    // The imageLabel will hold the rendered image. The toolbar adds Save As / Clear /
+    // Browse buttons in a vertical strip to the right of the image.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and initializes the widget UI.
+     * Creates the composite, image label, and optional vertical toolbar with Save As,
+     * Clear, and Browse buttons per the template model's configuration.
      *
-     * @param parent
-     *      the parent composite
-     * @return
-     *      the associated composite
+     * @param parent  the parent composite
+     * @return the image widget composite
      */
     private Composite initWidget( Composite parent )
     {
@@ -183,12 +208,12 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── NEEDS TOOLBAR: CHECK IF ANY BUTTONS ARE CONFIGURED ───────────────────────
     /**
-     * Indicates if the widget needs a toolbar for actions.
+     * Returns {@code true} if at least one toolbar action button is configured in
+     * the template model.
      *
-     * @return
-     *      <code>true</code> if the widget needs a toolbar for actions,
-     *      <code>false</code> if not
+     * @return {@code true} if a toolbar should be created
      */
     private boolean needsToolbar()
     {
@@ -196,8 +221,10 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── UPDATE WIDGET: REFRESH THE DISPLAYED IMAGE ───────────────────────────────
     /**
-     * Updates the widget's content.
+     * Re-reads the image bytes from the LDAP attribute, re-scales and re-renders
+     * the image, then updates the toolbar button states.
      */
     private void updateWidget()
     {
@@ -212,8 +239,15 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── INIT IMAGE BYTES FROM ENTRY: LOAD IMAGE DATA ──────────────────────────────
+    // We check whether the template has an attributeType set. If so, we pull the
+    // binary value from the live LDAP entry. If not, we decode the static Base64
+    // image string embedded in the template itself (useful for decorative images).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the image bytes from the given entry.
+     * Loads image bytes either from the binary LDAP attribute (when an attribute type
+     * is configured) or from a static Base64 string embedded in the template. Sets
+     * {@code imageBytes} to {@code null} if no data is available.
      */
     private void initImageBytesFromEntry()
     {
@@ -245,15 +279,13 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── GET IMAGE DATA (bytes): DECODE BYTES INTO IMAGE DATA ──────────────────────
     /**
-     * Returns an {@link ImageData} constructed from an array of bytes.
+     * Decodes the given byte array into an SWT {@link ImageData} object.
      *
-     * @param imageBytes
-     *      the array of bytes
-     * @return
-     *      the corresponding {@link ImageData}
-     * @throws SWTException
-     *      if an error occurs when constructing the {@link ImageData}
+     * @param imageBytes  the raw image bytes (JPEG, PNG, GIF, etc.)
+     * @return the decoded {@link ImageData}, or {@code null} if bytes are empty
+     * @throws SWTException if the bytes cannot be decoded as a supported image format
      */
     private ImageData getImageData( byte[] imageBytes ) throws SWTException
     {
@@ -268,11 +300,15 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── GET IMAGE DATA (no-arg): GET CURRENT IMAGE DATA OR PLACEHOLDER ────────────
+    // If we have image bytes, decode them. If decoding fails (corrupt data) or bytes
+    // are null, fall back to the "no image" placeholder icon from the plugin registry.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the {@link ImageData} associated with the current image bytes.
+     * Returns the {@link ImageData} for the current image bytes. Falls back to a
+     * "no image" placeholder if the bytes are null or cannot be decoded.
      *
-     * @return
-     *      the {@link ImageData} associated with the current image bytes.
+     * @return the current {@link ImageData} or a placeholder
      */
     private ImageData getImageData()
     {
@@ -294,8 +330,16 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── CONSTRAIN AND DISPLAY IMAGE: SCALE AND RENDER ────────────────────────────
+    // Like fitting a star chart on the display panel: if the template specifies
+    // exact dimensions we use them; if not we check whether the image is larger than
+    // 400×300 and scale it down while preserving aspect ratio. Then we create the
+    // SWT Image and push it to the imageLabel.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Constrains and displays the image.
+     * Scales the current image to fit the template-configured or default (400×300)
+     * bounds, preserving aspect ratio. Creates a new SWT {@link Image} and assigns
+     * it to the image label.
      */
     private void constrainAndDisplayImage()
     {
@@ -342,19 +386,20 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── GET SCALED IMAGE DATA: ASPECT-RATIO-PRESERVING RESIZE ────────────────────
+    // We support three modes: scale to a given width (computing height from the
+    // aspect ratio), scale to a given height (computing width), or scale to exact
+    // width and height. If both dimensions are DEFAULT_SIZE, no scaling is applied.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns a scaled copy of the given data scaled to the given dimensions, 
-     * or the original image data if scaling is not needed.
+     * Returns a scaled copy of {@code imageData} to the given dimensions, preserving
+     * aspect ratio when only one dimension is specified. Pass
+     * {@link TemplateWidget#DEFAULT_SIZE} for a dimension to let us compute it.
      *
-     * @param imageData
-     *      the image data
-     * @param width
-     *      the preferred width
-     * @param height
-     *      the preferred height
-     * @return
-     *      a scaled copy of the given data scaled to the given dimensions, 
-     *      or the original image data if scaling is not needed.
+     * @param imageData  the source image data
+     * @param width      the target width, or {@link TemplateWidget#DEFAULT_SIZE} to compute from height
+     * @param height     the target height, or {@link TemplateWidget#DEFAULT_SIZE} to compute from width
+     * @return the scaled {@link ImageData}
      */
     private ImageData getScaledImageData( ImageData imageData, int width, int height )
     {
@@ -394,8 +439,10 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── ADD LISTENERS: WIRE ALL TOOLBAR BUTTON HANDLERS ──────────────────────────
     /**
-     * Adds the listeners.
+     * Attaches selection listeners to the Save As, Clear, and Browse toolbar
+     * buttons (if present).
      */
     private void addListeners()
     {
@@ -437,8 +484,10 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── SAVE AS TOOL ITEM ACTION: SAVE IMAGE TO DISK ──────────────────────────────
     /**
-     * This method is called when the 'Save As...' toolbar item is clicked.
+     * Opens a Save file dialog and writes the current {@code imageBytes} to the
+     * selected path. Shows an error dialog if writing fails.
      */
     private void saveAsToolItemAction()
     {
@@ -474,8 +523,10 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── CLEAR TOOL ITEM ACTION: REMOVE THE DISPLAYED IMAGE ───────────────────────
     /**
-     * This method is called when the 'Clear...' toolbar item is clicked.
+     * Asks for confirmation, then clears the image bytes, shows the placeholder
+     * image, updates button states, and removes the value from the LDAP attribute.
      */
     private void clearToolItemAction()
     {
@@ -501,27 +552,29 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── BROWSE TOOL ITEM ACTION: LOAD AN IMAGE FROM DISK ─────────────────────────
     /**
-     * This method is called when the 'Browse...' toolbar item is clicked.
+     * Opens an Open file dialog, reads the selected image file into {@code imageBytes},
+     * re-scales and displays it, updates button states, and writes to the LDAP attribute.
      */
     private void browseToolItemAction()
     {
         // Launching a FileDialog to select the file to load
         FileDialog fd = new FileDialog( PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), SWT.OPEN );
         String selected = fd.open();
-        
+
         if ( selected != null )
         {
             // Getting the selected file
             File selectedFile = new File( selected );
-            
+
             if ( ( selectedFile.exists() ) && ( selectedFile.canRead() ) )
             {
                 try
                 {
                     FileInputStream fis = null;
                     ByteArrayOutputStream baos = null;
-                    
+
                     try
                     {
                         fis = new FileInputStream( selectedFile );
@@ -532,7 +585,7 @@ public class EditorImage extends EditorWidget<TemplateImage>
                         {
                             baos.write( buf, 0, len );
                         }
-        
+
                         imageBytes = baos.toByteArray();
                     }
                     finally
@@ -541,7 +594,7 @@ public class EditorImage extends EditorWidget<TemplateImage>
                         {
                             fis.close();
                         }
-                        
+
                         if ( baos != null )
                         {
                             baos.close();
@@ -592,8 +645,10 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── UPDATE BUTTONS STATES: ENABLE/DISABLE BASED ON DATA PRESENCE ─────────────
     /**
-     * Updates the states of the buttons.
+     * Enables Save As and Clear buttons when image bytes are present; disables them
+     * when the display shows only the placeholder. Browse is always enabled.
      */
     private void updateButtonsStates()
     {
@@ -634,8 +689,9 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── UPDATE: REFRESH THE DISPLAYED IMAGE ──────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Refreshes the widget from the current LDAP attribute value.
      */
     public void update()
     {
@@ -643,8 +699,10 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── DISPOSE: RELEASE THE SWT IMAGE ───────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Disposes the SWT {@link Image} created during rendering. Failing to call this
+     * would leak a native OS graphics handle.
      */
     public void dispose()
     {
@@ -652,8 +710,10 @@ public class EditorImage extends EditorWidget<TemplateImage>
     }
 
 
+    // ── UPDATE ENTRY: WRITE IMAGE BYTES TO THE LDAP ATTRIBUTE ────────────────────
     /**
-     * This method is called when the entry has been updated in the UI.
+     * Writes the current {@code imageBytes} to the LDAP attribute. Creates, modifies,
+     * or deletes the attribute based on whether bytes are present.
      */
     private void updateEntry()
     {

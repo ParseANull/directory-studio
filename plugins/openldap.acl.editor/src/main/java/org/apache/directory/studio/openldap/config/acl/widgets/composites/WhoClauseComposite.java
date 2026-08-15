@@ -23,9 +23,23 @@ package org.apache.directory.studio.openldap.config.acl.widgets.composites;
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClause;
 
 
+// ── CLASS: WhoClauseComposite — WHO CLAUSE DIRECTIVE FORM CONTRACT ────────────
+// Grand Moff Tarkin issues a specialised contract for all who-clause directive
+// forms. It extends the base ClauseComposite contract but carries the generic
+// who-clause type parameter so the type system can distinguish who-clause composites
+// from what-clause composites. Currently the interface adds no extra methods —
+// the type parameter alone is its distinguishing feature.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This interface defines a clause composite for who clauses.
- * 
+ * Marker interface for who-clause composites. Extends {@link ClauseComposite}
+ * with a who-clause type parameter so the widget system can distinguish
+ * who-clause panels from what-clause panels at compile time.
+ *
+ * <p>Think of this interface as Grand Moff Tarkin's specialised who-clause
+ * directive form contract — the type parameter alone marks a composite as
+ * belonging to the "who" side of an ACL rule.</p>
+ *
+ * @param <C>  The concrete who-clause type (must extend {@link AclWhoClause}).
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public interface WhoClauseComposite<C extends AclWhoClause> extends ClauseComposite

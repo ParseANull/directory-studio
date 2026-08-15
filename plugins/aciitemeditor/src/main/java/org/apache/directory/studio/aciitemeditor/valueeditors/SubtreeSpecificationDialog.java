@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.valueeditors;
 
@@ -64,8 +64,22 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: SubtreeSpecificationDialog — ISB SECURE-ZONE CONFIGURATION TERMINAL ─
+// A subtree specification pins an ACI item to a precise slice of the directory
+// tree: a base DN, depth limits, a list of exclusions, and an optional filter.
+// The ISB terminal for this row is the most complex editor in the plugin — it
+// renders the full specification as a structured form so the officer can adjust
+// each axis independently.
+// SubtreeSpecificationDialog is that terminal.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class provides a dialog to enter the Subtree Specification value.
+ * JFace {@link Dialog} for editing a complete {@link SubtreeSpecification}.
+ * Used by {@link SubtreeValueEditor} when the user edits the
+ * {@code subtreeSpecification} protected item.
+ * Presents fields for the base DN, minimum and maximum depth, a list of
+ * chopBefore/chopAfter exclusions, and an optional refinement or filter.
+ * Think of this as the ISB secure-zone editor: base, depth, exclusions,
+ * filter — every axis of the subtree in one structured form.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -108,21 +122,32 @@ class SubtreeSpecificationDialog extends Dialog
     private FilterWidget filterWidget;
 
 
+    // ── PARSE THE INITIAL SUBTREE SPECIFICATION ───────────────────────────────
+    // The ISB terminal opens pre-filled by parsing the current subtree
+    // specification string.  Chopbefore and chopAfter exclusions are extracted
+    // into the mutable list so the table viewer can manage them.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SubtreeSpecificationDialog.
+     * Creates a new {@code SubtreeSpecificationDialog}, parsing
+     * {@code initialSubtreeSpecification} to pre-fill all fields.
      *
-     * @param shell
-     *      the shell to use
-     * @param connection
-     *      the connection to use
-     * @param subentryDn
-     *      the subentry's Dn
-     * @param initialSubtreeSpecification
-     *      the initial SubtreeSpecification
-     * @param refinementOrFilterVisible
-     *      true if the refinement of filter widget should be visible
-     * @param useLocalName 
-     *      true to use local name for the base
+     * <p>For example — opening for an existing subtree spec:</p>
+     * <pre>
+     *   SubtreeSpecificationDialog dlg = new SubtreeSpecificationDialog(
+     *       shell, connection, subentryDn,
+     *       "{ base \"ou=people\", minimum 1, maximum 3 }",
+     *       true, false);
+     *   if (dlg.open() == Dialog.OK) {
+     *     String spec = dlg.getSubtreeSpecificationValue();
+     *   }
+     * </pre>
+     *
+     * @param shell                       the parent SWT shell
+     * @param connection                  the browser connection for DN browsing
+     * @param subentryDn                  the subentry's DN (used as suffix context)
+     * @param initialSubtreeSpecification the existing spec string to pre-parse
+     * @param refinementOrFilterVisible   {@code true} to show the refinement/filter panel
+     * @param useLocalName                {@code true} to use local-name form for the base
      */
     SubtreeSpecificationDialog( Shell shell, IBrowserConnection connection, Dn subentryDn,
         String initialSubtreeSpecification, boolean refinementOrFilterVisible, boolean useLocalName )
@@ -166,6 +191,7 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── SET TITLE AND ICON ────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -177,6 +203,10 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── COMMIT THE FULL SPECIFICATION ─────────────────────────────────────────
+    // Grand Moff confirms the zone configuration; we serialise the current
+    // subtreeSpecification object to a string and save history before closing.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -199,6 +229,11 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── BUILD THE COMPLETE FORM ───────────────────────────────────────────────
+    // The orderly lays out: base DN entry widget, minimum spinner, maximum
+    // spinner, exclusions table with Add/Edit/Delete buttons, and optionally
+    // the refinement/filter panel.  Validation runs after every change.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -215,12 +250,12 @@ class SubtreeSpecificationDialog extends Dialog
 
         Dn base = subtreeSpecification.getBase();
         Dn suffix = null;
-        
-        if ( subentryDn != null ) 
+
+        if ( subentryDn != null )
         {
             suffix = subentryDn.getParent();
         }
-        
+
         entryWidget = new EntryWidget( connection, base, suffix, useLocalName );
         entryWidget.createWidget( composite );
         entryWidget.addWidgetModifyListener( new WidgetModifyListener()
@@ -287,11 +322,14 @@ class SubtreeSpecificationDialog extends Dialog
         return outer;
     }
 
+    // ── BUILD THE EXCLUSIONS TABLE ────────────────────────────────────────────
+    // The exclusions table viewer lists all chopBefore/chopAfter entries with
+    // Add, Edit, and Delete buttons to manage the list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Exclusions Table.
+     * Creates the exclusions table viewer and its Add / Edit / Delete buttons.
      *
-     * @param composite
-     *      the composite
+     * @param composite  the three-column parent composite
      */
     private void createExclusionsTable( Composite composite )
     {
@@ -381,11 +419,15 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── BUILD THE REFINEMENT OR FILTER PANEL ──────────────────────────────────
+    // The refinement/filter panel shows two mutually exclusive options:
+    // a multi-line text field for an LDAP refinement expression, or a
+    // FilterWidget for a standard LDAP search filter.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the refinement or filter widgets
+     * Creates the refinement/filter radio buttons and associated input widgets.
      *
-     * @param composite
-     *      the composite
+     * @param parent  the parent composite (three-column layout)
      */
     private void createRefinementOrFilterWidgets( Composite parent )
     {
@@ -479,8 +521,13 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── VALIDATE THE COMPOSED SPECIFICATION ───────────────────────────────────
+    // We build the spec string from current widget state and re-parse it;
+    // if it parses cleanly we re-enable the OK button.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Validates if the composed subtree specification is valid.
+     * Validates the currently composed subtree specification by re-parsing it.
+     * Enables the OK button only when the specification parses cleanly.
      */
     private void validate()
     {
@@ -514,6 +561,13 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── BUILD THE SPEC STRING FROM WIDGET STATE ───────────────────────────────
+    /**
+     * Assembles the subtree specification string from the current widget state
+     * (base DN, minimum, maximum, exclusions, refinement/filter).
+     *
+     * @return the assembled subtree specification string
+     */
     private String buildSubreeSpecification()
     {
         // build subtree specification tree
@@ -522,7 +576,7 @@ class SubtreeSpecificationDialog extends Dialog
 
         // Adding base
         Dn base = entryWidget.getDn();
-        
+
         if ( ( base != null ) && !SubtreeValueEditor.EMPTY.equals( base.toString() ) )
         {
             sb.append( " base \"" );
@@ -532,7 +586,7 @@ class SubtreeSpecificationDialog extends Dialog
 
         // Adding Minimum
         int minimum = minimumSpinner.getSelection();
-        
+
         if ( minimum != 0 )
         {
             sb.append( " minimum " ).append( minimum ).append( ',' ); //$NON-NLS-1$ //$NON-NLS-2$
@@ -540,7 +594,7 @@ class SubtreeSpecificationDialog extends Dialog
 
         // Adding Maximum
         int maximum = maximumSpinner.getSelection();
-        
+
         if ( maximum != 0 )
         {
             sb.append( " maximum " ).append( maximum ).append( ',' ); //$NON-NLS-1$ //$NON-NLS-2$
@@ -552,7 +606,7 @@ class SubtreeSpecificationDialog extends Dialog
             sb.append( " specificExclusions {" ); //$NON-NLS-1$
 
             boolean isFirst = true;
-            
+
             for ( String exclusion : exclusions )
             {
                 if ( isFirst )
@@ -563,7 +617,7 @@ class SubtreeSpecificationDialog extends Dialog
                 {
                     sb.append( ',' );
                 }
-                
+
                 sb.append( ' ' ).append( exclusion ); //$NON-NLS-1$
             }
 
@@ -604,9 +658,10 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── REACT TO EXCLUSION TABLE SELECTION ────────────────────────────────────
     /**
-     * Called when value is selected in Exclusions table viewer.
-     * Updates the enabled/disabled state of the buttons.
+     * Updates the Edit and Delete button states when the selection in the
+     * exclusions table viewer changes.
      */
     private void valueSelectedExclusionsTable()
     {
@@ -625,11 +680,12 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── GET THE SELECTED EXCLUSION ────────────────────────────────────────────
     /**
-     * Retuns the current selection in the Exclusions table viewer.
+     * Returns the exclusion string currently selected in the table viewer,
+     * or {@code null} if nothing is selected.
      *
-     * @return
-     *      the value that is selected in the Exclusions table viewer, or null.
+     * @return the selected exclusion string, or {@code null}
      */
     private String getSelectedValueExclusionsTable()
     {
@@ -649,8 +705,10 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── ADD A NEW EXCLUSION ───────────────────────────────────────────────────
     /**
-     * Opens the editor and adds the new Exclusion value to the list.
+     * Opens an {@link ExclusionDialog} to compose a new exclusion and adds it
+     * to the list if the user confirms with non-empty type and DN.
      */
     private void addValueExclusionsTable()
     {
@@ -668,7 +726,7 @@ class SubtreeSpecificationDialog extends Dialog
                 }
                 catch ( LdapInvalidDnException lide )
                 {
-                    // Do nothing 
+                    // Do nothing
                 }
             }
         }
@@ -686,9 +744,10 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── EDIT THE SELECTED EXCLUSION ───────────────────────────────────────────
     /**
-     * Opens the editor with the currently selected Exclusion
-     * value and puts the modified value into the list.
+     * Opens an {@link ExclusionDialog} pre-filled with the currently selected
+     * exclusion and replaces the old value with the confirmed new value.
      */
     private void editValueExclusionsTable()
     {
@@ -709,7 +768,7 @@ class SubtreeSpecificationDialog extends Dialog
                     }
                     catch ( LdapInvalidDnException lide )
                     {
-                        // Do nothing 
+                        // Do nothing
                     }
 
                 }
@@ -730,8 +789,10 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── DELETE THE SELECTED EXCLUSION ─────────────────────────────────────────
     /**
-     * Deletes the currently selected Exclusion value from list.
+     * Removes the currently selected exclusion from the list without
+     * prompting for confirmation.
      */
     private void deleteValueExclusionsTable()
     {
@@ -745,10 +806,12 @@ class SubtreeSpecificationDialog extends Dialog
     }
 
 
+    // ── RETURN THE COMMITTED SPECIFICATION ────────────────────────────────────
     /**
-     * Gets the subtree specification value or null if canceled.
+     * Returns the serialised subtree specification confirmed by the user, or
+     * {@code null} if the dialog was cancelled.
      *
-     * @return the subtree specification value or null if canceled
+     * @return the subtree specification string, or {@code null}
      */
     public String getSubtreeSpecificationValue()
     {

@@ -20,9 +20,22 @@
 package org.apache.directory.studio.openldap.config.acl.model;
 
 
+// ── CLASS: AclWhatClauseFilter — DEATH STAR MANIFEST: FILTERED TARGET SET ────
+// Tarkin's manifest doesn't always target entries by DN. Sometimes he writes
+// a search filter — "protect all entries where (objectClass=inetOrgPerson)."
+// That is the LDAP filter what-clause: you give an LDAP search expression and
+// OpenLDAP applies the rule to all entries that match it. This class stores
+// that filter string.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The Acl what-filter clause. It stores a Ldap Filter.
- * 
+ * A concrete what-clause that targets entries matching an LDAP search filter.
+ * Written as {@code filter=(objectClass=inetOrgPerson)}, the filter is a
+ * standard LDAP search filter expression applied to every entry to decide
+ * if this rule's access controls apply.
+ * Think of this class as a smart selector on Tarkin's manifest — instead of
+ * naming every individual entry, you write a query and protect everything
+ * that the query matches.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class AclWhatClauseFilter extends AclWhatClause
@@ -31,10 +44,22 @@ public class AclWhatClauseFilter extends AclWhatClause
     private String filter;
 
 
+    // ── Reading the Filter Expression ─────────────────────────────────────────
+    // Tarkin's adjutant reads the search expression back from the manifest so
+    // the UI can display it in the filter text box for editing.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the filter.
+     * Returns the LDAP search filter string stored in this what-clause.
+     * This is the raw filter expression, for example {@code (objectClass=person)},
+     * exactly as it should appear in the ACL text.
      *
-     * @return the filter
+     * <p>For example — reading Tarkin's query back from the manifest:</p>
+     * <pre>
+     *   String f = clause.getFilter();
+     *   // f == "(objectClass=inetOrgPerson)"
+     * </pre>
+     *
+     * @return  The LDAP filter expression string; may be {@code null} if not set.
      */
     public String getFilter()
     {
@@ -42,10 +67,23 @@ public class AclWhatClauseFilter extends AclWhatClause
     }
 
 
+    // ── Writing the Filter Expression ─────────────────────────────────────────
+    // Tarkin stamps the new search expression onto the manifest entry —
+    // either from the parser reading an existing ACL or from the UI when
+    // the user types a new filter.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the filter.
+     * Sets the LDAP search filter expression for this what-clause. Called by the
+     * ANTLR parser when it finds a {@code filter=} token, and by the UI when the
+     * user edits the filter text field.
      *
-     * @param filter the filter to set
+     * <p>For example — stamping a new filter expression onto the manifest:</p>
+     * <pre>
+     *   clause.setFilter("(objectClass=groupOfNames)");
+     *   clause.toString(); // → "filter=(objectClass=groupOfNames)"
+     * </pre>
+     *
+     * @param filter  The LDAP filter expression to store.
      */
     public void setFilter( String filter )
     {
@@ -53,8 +91,21 @@ public class AclWhatClauseFilter extends AclWhatClause
     }
 
 
+    // ── Rendering the Filter Clause as ACL Text ────────────────────────────────
+    // The adjutant writes "filter=" followed by the expression, which is exactly
+    // what OpenLDAP needs to see in the ACL rule text.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Serialises this clause to its OpenLDAP wire-format string: {@code filter=EXPR}
+     * where EXPR is the stored LDAP search filter expression.
+     *
+     * <p>For example — serialising to ACL text:</p>
+     * <pre>
+     *   clause.setFilter("(uid=luke)");
+     *   clause.toString(); // → "filter=(uid=luke)"
+     * </pre>
+     *
+     * @return  The ACL text fragment for this filter what-clause.
      */
     public String toString()
     {

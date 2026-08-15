@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.editor.widgets;
 
@@ -46,8 +46,22 @@ import org.apache.directory.studio.templateeditor.EntryTemplatePluginConstants;
 import org.apache.directory.studio.templateeditor.model.widgets.TemplateDate;
 
 
+// ── CLASS: EditorDate — THE TANTIVE IV CHRONOMETER PANEL ─────────────────────────
+// The Tantive IV's chronometer displays the current stardate in a human-readable
+// format — not raw Imperial ticks, but something the crew can actually read.
+// LDAP stores dates in GeneralizedTime format (e.g. "20260101120000Z") which is
+// machine-friendly but unpleasant for humans. This widget reads that raw value,
+// converts it to a user-configured display format (e.g. "January 1, 2026"), and
+// displays it as a read-only text. An optional "Edit..." toolbar button opens the
+// GeneralizedTimeValueDialog so the operator can pick a new date from a calendar.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an editor date.
+ * A date display and editor widget bound to a single LDAP attribute that contains
+ * a GeneralizedTime string. Displays the date in a human-readable format (configured
+ * via the template's format string), and optionally provides an "Edit..." toolbar
+ * button that opens a {@link GeneralizedTimeValueDialog} calendar dialog.
+ * Think of this as the Tantive IV chronometer panel — converts raw ticks to a
+ * date the crew can actually read.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -63,15 +77,17 @@ public class EditorDate extends EditorWidget<TemplateDate>
     private ToolItem editToolItem;
 
 
+    // ── CONSTRUCTOR: INSTALL THE CHRONOMETER ─────────────────────────────────────
+    // The technician installs the chronometer panel. It will read from the LDAP
+    // attribute type declared in templateDate and display the value using the
+    // format string defined there.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EditorLabel.
-     * 
-     * @param editor
-     *      the associated editor
-     * @param templateDate
-     *      the associated template label
-     * @param toolkit
-     *      the associated toolkit
+     * Creates a new {@code EditorDate} bound to the given template date model.
+     *
+     * @param editor        the owning entry editor
+     * @param templateDate  the template model specifying attribute type, display format, etc.
+     * @param toolkit       the form toolkit
      */
     public EditorDate( IEntryEditor editor, TemplateDate templateDate, FormToolkit toolkit )
     {
@@ -79,8 +95,14 @@ public class EditorDate extends EditorWidget<TemplateDate>
     }
 
 
+    // ── CREATE WIDGET: POWER UP THE CHRONOMETER ───────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the composite with the read-only date text and optional "Edit..."
+     * toolbar button, fills it with the current LDAP attribute value, and attaches
+     * the toolbar listener.
+     *
+     * @param parent  the parent composite
+     * @return the widget composite
      */
     public Composite createWidget( Composite parent )
     {
@@ -97,13 +119,17 @@ public class EditorDate extends EditorWidget<TemplateDate>
     }
 
 
+    // ── INIT WIDGET: BUILD THE DISPLAY AND TOOLBAR ────────────────────────────────
+    // We create a composite with 1 or 2 columns depending on whether the "Edit..."
+    // button is configured. The read-only Text displays the formatted date, and the
+    // optional toolbar button triggers the calendar dialog.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and initializes the widget UI.
+     * Builds the composite containing the read-only date text and the optional
+     * "Edit…" toolbar button.
      *
-     * @param parent
-     *      the parent composite
-     * @return
-     *      the associated composite
+     * @param parent  the parent composite
+     * @return the parent composite
      */
     private Composite initWidget( Composite parent )
     {
@@ -145,14 +171,19 @@ public class EditorDate extends EditorWidget<TemplateDate>
     }
 
 
+    // ── CONVERT DATE: DECODE GENERALIZEDTIME TO HUMAN FORMAT ─────────────────────
+    // LDAP GeneralizedTime strings look like "20260101120000Z". We parse them to a
+    // Java Date, apply the template's SimpleDateFormat pattern (or a default if none
+    // is set), and return the formatted string. If parsing fails, we return the raw
+    // string so the operator can at least see something.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Converts the given GeneralizedTime string representation of the date into 
-     * the desired string format.
+     * Converts a GeneralizedTime string to a human-readable date string using the
+     * template's configured format pattern. Falls back to the raw string if parsing
+     * fails.
      *
-     * @param dateString
-     *      the GeneralizedTime string representation of the date
-     * @return
-     *      the given date in the desired string format
+     * @param dateString  the LDAP GeneralizedTime string (e.g. "20260101120000Z")
+     * @return the formatted date string, or the raw input if parsing fails
      */
     private String convertDate( String dateString )
     {
@@ -183,8 +214,10 @@ public class EditorDate extends EditorWidget<TemplateDate>
     }
 
 
+    // ── ADD LISTENERS: WIRE THE EDIT BUTTON ──────────────────────────────────────
     /**
-     * Adds the listeners.
+     * Attaches a selection listener to the "Edit…" toolbar button (if present) so
+     * clicking it opens the {@link GeneralizedTimeValueDialog}.
      */
     private void addListeners()
     {
@@ -202,8 +235,15 @@ public class EditorDate extends EditorWidget<TemplateDate>
     }
 
 
+    // ── EDIT TOOL ITEM ACTION: OPEN THE CALENDAR DIALOG ──────────────────────────
+    // The operator clicks "Edit..." and a calendar dialog pops up. If they pick a
+    // date and click OK, we write the new GeneralizedTime string back to the LDAP
+    // attribute's working copy.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the 'Edit...' toolbar item is clicked.
+     * Opens a {@link GeneralizedTimeValueDialog} pre-populated with the current
+     * attribute value. If the user confirms, writes the new GeneralizedTime string
+     * to the LDAP attribute.
      */
     private void editToolItemAction()
     {
@@ -218,11 +258,12 @@ public class EditorDate extends EditorWidget<TemplateDate>
     }
 
 
+    // ── GET GENERALIZED TIME VALUE FROM ATTRIBUTE: DECODE THE RAW DATE ───────────
     /**
-     * Get the Generalized Time associated from the attribute.
+     * Reads the current LDAP attribute value and parses it as a {@link GeneralizedTime}.
+     * Returns {@code null} if the attribute doesn't exist or the value is unparseable.
      *
-     * @return
-     *      the Generalized Time associated from the attribute or <code>null</code>.
+     * @return the parsed {@link GeneralizedTime}, or {@code null}
      */
     private GeneralizedTime getGeneralizedTimeValueFromAttribute()
     {
@@ -243,8 +284,10 @@ public class EditorDate extends EditorWidget<TemplateDate>
     }
 
 
+    // ── UPDATE WIDGET: REFRESH THE CHRONOMETER DISPLAY ───────────────────────────
     /**
-     * Updates the widget's content.
+     * Re-reads the LDAP attribute value, converts it to the display format, and
+     * updates the text widget. Shows "No value" if the attribute is absent.
      */
     private void updateWidget()
     {
@@ -265,8 +308,9 @@ public class EditorDate extends EditorWidget<TemplateDate>
     }
 
 
+    // ── UPDATE: REFRESH THE DISPLAY ──────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Refreshes the date display from the current LDAP working copy.
      */
     public void update()
     {
@@ -274,8 +318,9 @@ public class EditorDate extends EditorWidget<TemplateDate>
     }
 
 
+    // ── DISPOSE: NOTHING EXTRA TO CLEAN UP ───────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — the SWT controls are owned by their parent composite.
      */
     public void dispose()
     {

@@ -19,8 +19,20 @@
  */
 package org.apache.directory.studio.openldap.config.model;
 
+// ── CLASS: OpenLdapConfigFormat — C-3PO Selecting the Right Protocol Dialect ─
+// When C-3PO arrives on Tatooine he quickly recognises whether Jawas are using
+// their guttural native dialect or a trade-pidgin he knows better — and switches
+// modes accordingly so he can actually read what they're saying.
+// OpenLDAP can store its config in two formats: the old flat slapd.conf file
+// (STATIC) or the modern cn=config directory tree (DYNAMIC). This enum lets us
+// declare which dialect we're working with so the I/O layer reads/writes correctly.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The OpenLDAP configuration format : either static (slapd.conf) or dynamic (slapd.d).
+ * Identifies which on-disk format an OpenLDAP configuration uses.
+ * STATIC means the classic single slapd.conf text file; DYNAMIC means the
+ * live cn=config LDAP directory tree (slapd.d).
+ * Think of this as C-3PO checking which protocol dialect is in use before
+ * attempting to read or write the configuration.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */

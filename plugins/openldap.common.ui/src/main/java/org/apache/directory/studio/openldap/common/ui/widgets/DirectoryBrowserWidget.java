@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.common.ui.widgets;
 
@@ -43,9 +43,22 @@ import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 
 
+// ── CLASS: DirectoryBrowserWidget — REBEL PATHFINDER LOCATING HOTH BASES ─────
+// Picture a Rebel pathfinder using a holoprojector to navigate to base
+// locations on ice planets like Hoth. This widget gives the user a combo box
+// with a history of recently visited directory paths, plus a "Browse" button
+// that opens the OS directory chooser so they can scout new locations. Any
+// change to the path fires our change listeners so the parent form stays in
+// sync with where the pathfinder is pointing.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The DirectoryBrowserWidget provides a combo with a history of recently
- * used directory and a browse button to open the directory browser.
+ * We provide a directory-browsing widget consisting of a history combo and a
+ * Browse button. We extend {@link AbstractWidget} so callers can register
+ * change listeners. We persist the visited paths using the plugin's dialog
+ * settings so the history survives restarts.
+ *
+ * <p>The DirectoryBrowserWidget provides a combo with a history of recently
+ * used directory and a browse button to open the directory browser.</p>
  */
 public class DirectoryBrowserWidget extends AbstractWidget
 {
@@ -59,10 +72,14 @@ public class DirectoryBrowserWidget extends AbstractWidget
     protected String title;
 
 
+    // ── CONSTRUCTOR: DirectoryBrowserWidget — BRIEFING THE PATHFINDER ─────────
+    // We record the dialog title that will appear on the OS directory chooser
+    // so users know what kind of base location they are selecting.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DirectoryBrowserWidget.
+     * We create a new {@link DirectoryBrowserWidget} with the given dialog title.
      *
-     * @param title The title
+     * @param title  the title to display on the OS directory chooser dialog
      */
     public DirectoryBrowserWidget( String title )
     {
@@ -70,10 +87,16 @@ public class DirectoryBrowserWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: createWidget(Composite) — DEPLOYING THE PATHFINDER (NO TOOLKIT)
+    // We delegate to the toolkit-aware overload with a {@code null} toolkit so
+    // there is always a single code path to maintain.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
-     * 
-     * @param parent the parent
+     * We create the widget's SWT controls inside the given parent without a
+     * {@link FormToolkit}. Delegates to
+     * {@link #createWidget(Composite, FormToolkit)}.
+     *
+     * @param parent  the parent {@link Composite}
      */
     public void createWidget( Composite parent )
     {
@@ -81,11 +104,18 @@ public class DirectoryBrowserWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: createWidget(Composite, FormToolkit) — DEPLOYING THE PATHFINDER
+    // We build the directory history combo and the Browse button. When Browse
+    // is clicked we open a {@link DirectoryDialog}, let the user pick a path,
+    // and update the combo and the shared recent-file-path dialog setting. We
+    // also attach a ModifyListener to fire change events whenever the text changes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
-     * 
-     * @param parent the parent
-     * @param toolkit the toolkit
+     * We create the directory combo and Browse button inside the given parent,
+     * optionally adapting them with the supplied {@link FormToolkit}.
+     *
+     * @param parent   the parent {@link Composite}
+     * @param toolkit  the form toolkit, or {@code null} for plain SWT
      */
     public void createWidget( Composite parent, FormToolkit toolkit )
     {
@@ -155,10 +185,15 @@ public class DirectoryBrowserWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getDirectoryPath — READING THE PATHFINDER'S CURRENT POSITION ──
+    // We read the combo text and return it if non-empty; otherwise we return
+    // {@code null} to signal "no base location selected yet".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the directory path.
-     * 
-     * @return the directory path or <code>null</code>
+     * We return the currently entered or selected directory path, or {@code null}
+     * if the combo is empty.
+     *
+     * @return the directory path, or {@code null}
      */
     public String getDirectoryPath()
     {
@@ -173,10 +208,15 @@ public class DirectoryBrowserWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: setDirectoryPath — UPDATING THE PATHFINDER'S COORDINATES ──────
+    // We push the given path into the combo, clearing it if the path is
+    // {@code null} so the field shows empty rather than the string "null".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the directory path.
-     * 
-     * @param directoryPath the directory path
+     * We set the combo text to the given directory path. A {@code null} value
+     * clears the combo.
+     *
+     * @param directoryPath  the path to display, or {@code null} to clear
      */
     public void setDirectoryPath( String directoryPath )
     {
@@ -191,13 +231,20 @@ public class DirectoryBrowserWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: loadDialogSettings — RESTORING THE PATHFINDER'S ROUTE LOG ─────
+    // We read the previously visited directory paths from the plugin's dialog
+    // settings and populate the combo's drop-down history so the user can
+    // quickly return to a recently scouted location.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves dialog settings.
+     * We load the directory history from the plugin's dialog settings and
+     * populate the combo's drop-down list. If the settings cannot be read we
+     * fall back to an empty history.
      */
     public void loadDialogSettings()
     {
         String[] history = null;
-    
+
         try
         {
             history = HistoryUtils.load( OpenLdapCommonUiPlugin.getDefault().getDialogSettings(),
@@ -207,28 +254,37 @@ public class DirectoryBrowserWidget extends AbstractWidget
         {
             history = new String[]{};
         }
-        
+
         directoryCombo.setItems( history );
     }
 
 
+    // ── METHOD: saveDialogSettings — SAVING THE PATHFINDER'S ROUTE LOG ────────
+    // We append the current combo text to the plugin's dialog settings so the
+    // pathfinder can find this location again in a future session.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves dialog settings.
+     * We save the current combo text into the plugin's directory history dialog
+     * settings so it persists across Eclipse sessions.
      */
     public void saveDialogSettings()
     {
         OpenLdapCommonUiPlugin plugin = OpenLdapCommonUiPlugin.getDefault();
-        
+
         if ( plugin != null )
-        { 
+        {
             HistoryUtils.save( OpenLdapCommonUiPlugin.getDefault().getDialogSettings(),
                 OpenLdapCommonUiConstants.DIALOGSETTING_KEY_DIRECTORY_HISTORY, directoryCombo.getText() );
         }
     }
 
 
+    // ── METHOD: setFocus — POINTING THE PATHFINDER'S EYES AT THE COMBO ────────
+    // We hand keyboard focus to the combo so the user can immediately start
+    // typing or editing the directory path without an extra click.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the focus.
+     * We move keyboard focus to the directory combo.
      */
     public void setFocus()
     {
@@ -236,10 +292,14 @@ public class DirectoryBrowserWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: setEnabled — ACTIVATING OR GROUNDING THE PATHFINDER ───────────
+    // We enable or disable both the combo and the Browse button together so
+    // the parent form can lock this control when it is not applicable.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Enables or disables the widget.
-     * 
-     * @param b true to enable the widget, false otherwise
+     * We enable or disable both the directory combo and the Browse button.
+     *
+     * @param b  {@code true} to enable the widget, {@code false} to disable it
      */
     public void setEnabled( boolean b )
     {

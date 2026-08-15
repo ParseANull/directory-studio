@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.controller.actions;
 
@@ -40,8 +40,24 @@ import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: NewAttributeTypeAction — ASSEMBLING THE SECOND DEATH STAR ─────────
+// Above Endor, an engineer receives an assignment: fabricate a new component
+// panel and slot it into the superstructure.  First they check which section
+// of the station they're working on, then they fire up the fabrication bay and
+// build the part to spec.
+// We do the same: inspect which schema the user has selected in the tree, then
+// open the New Attribute Type wizard pre-pointed at that schema so the freshly
+// created attribute type lands in exactly the right place.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This action launches the NewAttributeTypeWizard.
+ * An Eclipse action that opens the New Attribute Type wizard, letting users
+ * define a brand-new LDAP attribute type and add it to the currently selected
+ * schema.
+ * We inspect the tree selection before opening the wizard so we can pre-select
+ * the right target schema for the user — they can always change it in the wizard,
+ * but defaulting to what they have highlighted saves clicks.
+ * Think of this class as the fabrication engineer who reads the current work
+ * order (tree selection) before firing up the wizard to build a new part.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -51,8 +67,21 @@ public class NewAttributeTypeAction extends Action implements IWorkbenchWindowAc
     private TreeViewer viewer;
 
 
+    // ── FABRICATION ENGINEER REPORTS FOR DUTY ────────────────────────────────
+    // The engineer arrives at the fabrication bay, checks the duty board,
+    // clips on the correct insignia, and waits — disabled until a work section
+    // is confirmed (the user selects a schema in the tree).
+    // We configure label, tooltip, command ID, icon, and start disabled since
+    // we need a schema selection before the user can meaningfully create an AT.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of NewAttributeTypeAction.
+     * Creates and configures this action, starting it in the disabled state.
+     * We're disabled by default because creating an attribute type only makes
+     * sense once the user has a schema in view — the controller that manages
+     * us will enable us when the selection is appropriate.
+     *
+     * @param viewer  the tree viewer whose selection tells us which schema
+     *                to pre-populate in the wizard
      */
     public NewAttributeTypeAction( TreeViewer viewer )
     {
@@ -66,8 +95,20 @@ public class NewAttributeTypeAction extends Action implements IWorkbenchWindowAc
     }
 
 
+    // ── READING THE WORK ORDER — OPENING THE FABRICATION WIZARD ──────────────
+    // The engineer checks the assignment board — which section of the Death Star
+    // is this part for?  They walk to the right fabrication bay, pre-load the
+    // target section's blueprints, and kick off production.
+    // We read the tree selection to figure out which schema the user is working
+    // in, then open the NewAttributeTypeWizard pre-pointed at that schema.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Runs this action: inspects the current tree selection to determine the
+     * target schema, then creates and opens the {@link NewAttributeTypeWizard}
+     * with that schema pre-selected.
+     * If we can't infer a schema from the selection (e.g. the view is empty or
+     * we're in hierarchical mode) the wizard opens with no pre-selection and the
+     * user picks one manually.
      */
     public void run()
     {
@@ -131,8 +172,15 @@ public class NewAttributeTypeAction extends Action implements IWorkbenchWindowAc
     }
 
 
+    // ── OFFICER PASSES THE ORDER DOWN THE LINE ────────────────────────────────
+    // The deck officer relays the fabrication order verbatim to the engineer
+    // — no extra commentary, clean chain of command.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Delegates to {@link #run()} when Eclipse calls us as an
+     * {@link IWorkbenchWindowActionDelegate}.
+     *
+     * @param action  the proxy action from the workbench; not used here
      */
     public void run( IAction action )
     {
@@ -140,8 +188,14 @@ public class NewAttributeTypeAction extends Action implements IWorkbenchWindowAc
     }
 
 
+    // ── PART FABRICATED — ENGINEER STANDS DOWN ────────────────────────────────
+    // With the new component slotted into the superstructure, the engineer
+    // stows their tools and clears the fabrication bay.
+    // We hold no resources, so nothing to release.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when this action delegate is being disposed.
+     * We hold no resources to release.
      */
     public void dispose()
     {
@@ -149,8 +203,15 @@ public class NewAttributeTypeAction extends Action implements IWorkbenchWindowAc
     }
 
 
+    // ── ENGINEER BRIEFED ON THE CONTROL LAYOUT ───────────────────────────────
+    // Before fabrication starts, the engineer is shown which consoles belong
+    // to which section.  We don't need the workbench window reference here.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when this action delegate is initialized.
+     * We don't need the window reference for our logic.
+     *
+     * @param window  the active workbench window; unused
      */
     public void init( IWorkbenchWindow window )
     {
@@ -158,8 +219,18 @@ public class NewAttributeTypeAction extends Action implements IWorkbenchWindowAc
     }
 
 
+    // ── IGNORING FOOT TRAFFIC IN THE FABRICATION BAY ─────────────────────────
+    // Other crews walk past on their own assignments; the engineer keeps focus
+    // on the part spec in front of them — workbench selection changes that hit
+    // this callback are not ones we need to respond to.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the workbench selection changes.
+     * We don't update our enabled state here — that's handled by the controller
+     * that manages us via a dedicated selection listener.
+     *
+     * @param action     the proxy action; unused
+     * @param selection  the current workbench selection; unused
      */
     public void selectionChanged( IAction action, ISelection selection )
     {

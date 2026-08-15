@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.model.overlay;
 
@@ -26,9 +26,25 @@ import org.apache.directory.api.util.Position;
 import org.apache.directory.api.util.Strings;
 
 
+// ── CLASS: OlcRwmMapValue — C-3PO's Single Phrase-Book Entry ─────────────────
+// C-3PO's translation phrase-book has thousands of entries. Each entry says:
+// "In Gungan, the word for X is Y" — or more precisely, "attribute uid" maps to
+// "login" on the remote side. When C-3PO intercepts an LDAP request, he looks
+// up each attribute or objectclass in his book and applies the translation.
+// OlcRwmMapValue represents a single such entry: the schema element type (ATTRIBUTE
+// or OBJECTCLASS), the local name, and the foreign (remote) name. It also knows how
+// to parse itself from the raw string format OpenLDAP uses in the LDAP attribute
+// (e.g., "attribute uid login").
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents 'olcRwmMap' value.
- * 
+ * Represents a single {@code olcRwmMap} attribute value, which defines one
+ * attribute-type or object-class name mapping for the rwm (rewrite/remap) overlay.
+ * The format is: {@code <type> [<localName>] <foreignName>}
+ * where type is "attribute" or "objectclass", localName is optional (defaults to
+ * the wildcard "*"), and foreignName is the name on the remote schema.
+ * Think of this as C-3PO's single phrase-book entry mapping one schema term
+ * from the local dialect to the remote one.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OlcRwmMapValue
@@ -46,10 +62,20 @@ public class OlcRwmMapValue
     private String foreignName;
 
 
+    // ── getType — C-3PO Checks Which Phrase-Book to Use ───────────────────────────
+    // C-3PO checks the type flag on this entry to know which translation table applies:
+    // attribute names or objectclass names.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the type.
+     * Returns the type discriminator for this mapping entry — either ATTRIBUTE or OBJECTCLASS.
+     * This determines which schema table the rwm overlay applies the mapping to.
      *
-     * @return the type
+     * <p>For example — C-3PO checks the phrase-book type:</p>
+     * <pre>
+     *   OlcRwmMapValueTypeEnum t = mapValue.getType(); // ATTRIBUTE or OBJECTCLASS
+     * </pre>
+     *
+     * @return  the OlcRwmMapValueTypeEnum for this entry
      */
     public OlcRwmMapValueTypeEnum getType()
     {
@@ -57,10 +83,20 @@ public class OlcRwmMapValue
     }
 
 
+    // ── getLocalName — C-3PO Reads the Local Term ─────────────────────────────────
+    // C-3PO reads the local side of the translation — the attribute or objectclass
+    // name as the local LDAP schema knows it.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the local name.
+     * Returns the local schema name (the name as the local side calls it).
+     * May be null or the wildcard "*" when mapping all attributes or objectclasses.
      *
-     * @return the local name
+     * <p>For example — C-3PO reads the local term:</p>
+     * <pre>
+     *   String local = mapValue.getLocalName(); // "uid" or "*"
+     * </pre>
+     *
+     * @return  the local attribute or objectclass name, or null if not set
      */
     public String getLocalName()
     {
@@ -68,10 +104,19 @@ public class OlcRwmMapValue
     }
 
 
+    // ── getForeignName — C-3PO Reads the Remote Term ──────────────────────────────
+    // C-3PO reads the remote side of the translation — what the remote directory
+    // server calls this attribute or objectclass.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the foreign name.
+     * Returns the foreign (remote) schema name — what the remote directory calls this element.
      *
-     * @return the foreign name
+     * <p>For example — C-3PO reads the remote term:</p>
+     * <pre>
+     *   String foreign = mapValue.getForeignName(); // "login" or "*"
+     * </pre>
+     *
+     * @return  the remote attribute or objectclass name
      */
     public String getForeignName()
     {
@@ -79,11 +124,23 @@ public class OlcRwmMapValue
     }
 
 
+    // ── isLocalNameStart — C-3PO Checks for the Wildcard Local Term ──────────────
+    // C-3PO checks whether the local name is the wildcard "*" — meaning "all attributes"
+    // or "all objectclasses" on the local side get this translation treatment.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the local name is the '*' constant.
+     * Returns true if the local name is the wildcard constant "*".
+     * A wildcard local name means the mapping applies to all attributes or objectclasses
+     * on the local side.
      *
-     * @return <code>true</code> if the local name is the '*' constant,
-     *         <code>false</code> if not.
+     * <p>For example — C-3PO checks for a wildcard:</p>
+     * <pre>
+     *   if ( mapValue.isLocalNameStart() ) {
+     *       // applies to all local attribute/objectclass names
+     *   }
+     * </pre>
+     *
+     * @return  true if localName equals "*", false otherwise
      */
     public boolean isLocalNameStart()
     {
@@ -91,11 +148,22 @@ public class OlcRwmMapValue
     }
 
 
+    // ── isLocalForeignStart — C-3PO Checks for the Wildcard Remote Term ──────────
+    // C-3PO checks whether the foreign name is the wildcard "*" — pass-through mode,
+    // where local names are relayed to the remote side unchanged.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the foreign name is the '*' constant.
+     * Returns true if the foreign name is the wildcard constant "*".
+     * A wildcard foreign name means local names are passed through unchanged.
      *
-     * @return <code>true</code> if the foreign name is the '*' constant,
-     *         <code>false</code> if not.
+     * <p>For example — C-3PO checks for a foreign wildcard:</p>
+     * <pre>
+     *   if ( mapValue.isLocalForeignStart() ) {
+     *       // local names pass through to the remote side unchanged
+     *   }
+     * </pre>
+     *
+     * @return  true if foreignName equals "*", false otherwise
      */
     public boolean isLocalForeignStart()
     {
@@ -103,10 +171,19 @@ public class OlcRwmMapValue
     }
 
 
+    // ── setType — C-3PO Marks Which Phrase-Book This Entry Belongs To ─────────────
+    // C-3PO stamps the entry with its type so the lookup engine knows which table
+    // to consult.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the type.
+     * Sets the type discriminator (ATTRIBUTE or OBJECTCLASS) for this mapping entry.
      *
-     * @param type the type
+     * <p>For example — C-3PO marks the entry type:</p>
+     * <pre>
+     *   mapValue.setType( OlcRwmMapValueTypeEnum.ATTRIBUTE );
+     * </pre>
+     *
+     * @param type  the OlcRwmMapValueTypeEnum for this entry
      */
     public void setType( OlcRwmMapValueTypeEnum type )
     {
@@ -114,10 +191,18 @@ public class OlcRwmMapValue
     }
 
 
+    // ── setLocalName — C-3PO Records the Local Term ───────────────────────────────
+    // C-3PO records the local schema name in this phrase-book entry.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the local name.
+     * Sets the local schema name for this mapping entry.
      *
-     * @param localName the local name
+     * <p>For example — C-3PO records the local term:</p>
+     * <pre>
+     *   mapValue.setLocalName( "uid" );
+     * </pre>
+     *
+     * @param localName  the local attribute or objectclass name
      */
     public void setLocalName( String localName )
     {
@@ -125,10 +210,18 @@ public class OlcRwmMapValue
     }
 
 
+    // ── setForeignName — C-3PO Records the Remote Term ───────────────────────────
+    // C-3PO records the remote side of the mapping — what the remote directory calls it.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the foreign name.
+     * Sets the foreign (remote) schema name for this mapping entry.
      *
-     * @param foreignName the foreign name
+     * <p>For example — C-3PO records the remote term:</p>
+     * <pre>
+     *   mapValue.setForeignName( "login" );
+     * </pre>
+     *
+     * @param foreignName  the remote attribute or objectclass name
      */
     public void setForeignName( String foreignName )
     {
@@ -136,8 +229,21 @@ public class OlcRwmMapValue
     }
 
 
+    // ── toString — C-3PO Writes the Entry Back to LDAP Format ────────────────────
+    // C-3PO formats the phrase-book entry back into the compact string form that
+    // the rwm overlay stores in the olcRwmMap LDAP attribute.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the string representation of this mapping entry in the format
+     * expected by the olcRwmMap attribute, e.g., "attribute uid login" or
+     * "objectclass inetOrgPerson person".
+     *
+     * <p>For example — C-3PO writes the entry back:</p>
+     * <pre>
+     *   mapValue.toString(); // "attribute uid login"
+     * </pre>
+     *
+     * @return  the formatted olcRwmMap attribute value string
      */
     public String toString()
     {
@@ -164,14 +270,27 @@ public class OlcRwmMapValue
     }
 
 
+    // ── parse — C-3PO Reads a Raw Phrase-Book Entry from the LDAP Attribute ──────
+    // C-3PO reads a raw olcRwmMap string from the LDAP attribute and parses it into
+    // a structured OlcRwmMapValue object. He handles quoted and unquoted tokens,
+    // optional local names, and validates that the type keyword is recognized.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Parses a OlcValSortValue value.
-     * 
-     * @param s
-     *            the string to be parsed
-     * @return the associated OlcValSortValue object
-     * @throws ParseException
-     *             if there are any recognition errors (bad syntax)
+     * Parses a raw {@code olcRwmMap} attribute value string into an OlcRwmMapValue object.
+     * The format is: {@code <type> [<localName>] <foreignName>}
+     * This method is synchronized because it uses a shared Position object.
+     *
+     * <p>For example — C-3PO parses a raw attribute value:</p>
+     * <pre>
+     *   OlcRwmMapValue mapValue = OlcRwmMapValue.parse( "attribute uid login" );
+     *   mapValue.getType();        // ATTRIBUTE
+     *   mapValue.getLocalName();   // "uid"
+     *   mapValue.getForeignName(); // "login"
+     * </pre>
+     *
+     * @param s  the raw olcRwmMap value string to parse
+     * @return   the parsed OlcRwmMapValue, or null if the string is null
+     * @throws ParseException  if the string doesn't match the expected format
      */
     public static synchronized OlcRwmMapValue parse( String s ) throws ParseException
     {
@@ -197,13 +316,18 @@ public class OlcRwmMapValue
     }
 
 
+    // ── parseInternal — C-3PO's Internal Token Parser ────────────────────────────
+    // C-3PO's internal parsing loop reads tokens one at a time: first the type keyword,
+    // then one or two names. He handles optional local names and validates types.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Parses the given string.
+     * Internal parse implementation. Reads tokens (type, optional localName, foreignName)
+     * from the character array using a Position cursor.
      *
-     * @param chars the characters
-     * @param pos the position
-     * @return the associated OlcValSortValue object
-     * @throws ParseException
+     * @param chars  the character array to parse
+     * @param pos    the current position in the array (mutated in place)
+     * @return       the parsed OlcRwmMapValue, or null if input is empty
+     * @throws ParseException  if any token is missing or unrecognized
      */
     private static OlcRwmMapValue parseInternal( char[] chars, Position pos ) throws ParseException
     {

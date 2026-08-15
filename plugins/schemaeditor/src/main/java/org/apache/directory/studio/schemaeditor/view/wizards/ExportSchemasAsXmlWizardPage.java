@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.wizards;
 
@@ -54,12 +54,19 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: ExportSchemasAsXmlWizardPage — Leia Programs R2's Navigation ──────
+// Crouched in the Tantive IV's corridor, Leia configures R2-D2's mission:
+// which plans to carry, and whether to scatter them across multiple pods or
+// seal them all into one. This page is that configuration moment — the user
+// picks schemas and a destination before we commit to the export.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the WizardPage of the ExportSchemasAsXmlWizard.
- * <p>
- * It is used to let the user enter the informations about the
- * schemas he wants to export and where to export.
- *
+ * The single wizard page inside {@link ExportSchemasAsXmlWizard}.
+ * It presents a checkbox table of available schemas and lets the user choose
+ * whether to write each schema to its own XML file or combine them all into
+ * one big XML file.
+ * Think of this page as Leia's control panel: she selects which Death Star
+ * blueprints to copy and specifies exactly where R2 should deliver them.
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
@@ -87,8 +94,25 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     private Button exportSingleFileButton;
 
 
+    // ── Leia Activates R2's Memory Banks ──────────────────────────────────────
+    // Leia flips open R2-D2's data port panel and initializes the unit with
+    // the mission parameters — title, description, and the wizard's icon.
+    // Our constructor does the same: we tell Eclipse who we are so it can
+    // display us correctly inside the wizard container.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExportSchemasAsXmlWizardPage.
+     * Creates a new instance of this wizard page with title, description, and icon set.
+     * Eclipse's wizard framework needs these right away so it can build the page header
+     * before our content widgets even exist.
+     * We also grab a reference to the {@link SchemaHandler} here so we can populate
+     * the schema list later in {@link #initFields()}.
+     *
+     * <p>For example — Leia boots R2 for the mission:</p>
+     * <pre>
+     *   R2-D2 powers on. "Mission: deliver Death Star plans to Obi-Wan."
+     *   Title, description, and mission icon are all set at startup.
+     *   The SchemaHandler is our manifest of available schematics.
+     * </pre>
      */
     protected ExportSchemasAsXmlWizardPage()
     {
@@ -100,8 +124,29 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Lays Out The Control Panel ───────────────────────────────────────
+    // In the Tantive IV's escape-pod bay, Leia arranges the controls she needs:
+    // a list of blueprint modules to select, and a row of dials pointing to the
+    // destination — scatter across pods or load everything into one.
+    // This method builds all those SWT widgets and wires their listeners, then
+    // runs initFields() to populate the schema list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all the SWT widgets that make up this wizard page's UI.
+     * Eclipse calls this once when the page is about to become visible for
+     * the first time.
+     * We create a checkbox table of schemas (so the user can pick which ones
+     * to export) and two radio-button options: export each schema to its own
+     * file, or combine them all into a single file.
+     *
+     * <p>For example — Leia assembles her mission control panel:</p>
+     * <pre>
+     *   "Schema modules: [x] inetOrgPerson  [ ] cosine  [x] nis"
+     *   "Destination: ( ) separate files  (*) single file: /home/leia/plans.xml"
+     *   Every checkbox and text field is a dial on Leia's control panel.
+     * </pre>
+     *
+     * @param parent  the SWT composite Eclipse provides as our container
      */
     public void createControl( Composite parent )
     {
@@ -275,8 +320,27 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Pre-loads R2's Schema Manifest ───────────────────────────────────
+    // Leia pulls up the list of available blueprint modules on the terminal,
+    // checks the ones she has already prioritized, and locks in the default
+    // delivery mode: separate pods for each blueprint.
+    // We populate the checkbox table from the SchemaHandler, pre-check any
+    // schemas passed in via setSelectedSchemas(), and default to multi-file mode.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the UI Fields.
+     * Seeds the UI with initial values before the page becomes visible.
+     * We load all available schemas into the checkbox table (sorted A–Z),
+     * tick any that were pre-selected, and flip the destination to
+     * "multiple files" mode by default.
+     * Also resets the error message and marks the page as not-yet-complete
+     * so the Finish button stays disabled until the user fills everything in.
+     *
+     * <p>For example — Leia reviews the available blueprints:</p>
+     * <pre>
+     *   The terminal lists: inetOrgPerson, cosine, nis, apache...
+     *   Leia checks the ones she's already flagged as priority.
+     *   Default mode: one pod per schema. She can change that below.
+     * </pre>
      */
     private void initFields()
     {
@@ -308,8 +372,25 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Chooses The Multi-Pod Broadcast ──────────────────────────────────
+    // Leia decides to distribute the plans across multiple escape pods — one
+    // blueprint module per pod — so even if Vader intercepts one, the rest
+    // slip through. Each schema gets its own XML file.
+    // We enable the directory picker and disable the single-file picker.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the exportMultipleFiles radio button is selected.
+     * Switches the UI into "export each schema as a separate file" mode.
+     * Enables the directory path field and Browse button, and disables the
+     * single-file path field and its Browse button.
+     * Called both from the radio-button listener and from {@link #initFields()}
+     * to set the initial state.
+     *
+     * <p>For example — Leia picks the multi-pod strategy:</p>
+     * <pre>
+     *   "One pod per schema," Leia decides.
+     *   The multi-file directory controls light up; the single-file ones go dark.
+     *   Each schema will fly out in its own separate XML file.
+     * </pre>
      */
     private void exportMultipleFilesSelected()
     {
@@ -325,8 +406,23 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Chooses The Single-Capsule Transmission ──────────────────────────
+    // Leia decides to consolidate all plans into one data capsule loaded into
+    // R2 — simpler, and everything arrives together in one XML file.
+    // We enable the single-file picker and disable the directory picker.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the exportSingleFile radio button is selected.
+     * Switches the UI into "export all schemas as a single file" mode.
+     * Disables the directory path field and Browse button, and enables the
+     * single-file path field and its Browse button.
+     * Called from the single-file radio-button listener.
+     *
+     * <p>For example — Leia consolidates everything into one capsule:</p>
+     * <pre>
+     *   "One file to rule them all," Leia decides (wrong franchise, but still).
+     *   The single-file controls activate; the directory controls go dark.
+     *   All selected schemas will be written into one combined XML file.
+     * </pre>
      */
     private void exportSingleFileSelected()
     {
@@ -342,8 +438,24 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Points The Pods At Alderaan ──────────────────────────────────────
+    // Leia punches the destination coordinates for her escape pods into the
+    // navigation computer — she's choosing the folder where the XML files land.
+    // We open a DirectoryDialog so the user can browse to the target folder,
+    // defaulting to the last-used location from preferences.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the exportMultipleFiles 'browse' button is selected.
+     * Opens a folder-browser dialog so the user can pick the export directory.
+     * If the text field is already filled in, we use that as the dialog's
+     * starting path; otherwise we fall back to the preference store's last value.
+     * The chosen path is written back into the text field on success.
+     *
+     * <p>For example — Leia sets the pod coordinates:</p>
+     * <pre>
+     *   The navigation dialog opens: "Choose your destination sector."
+     *   Leia picks /rebel-base/schematics/ and confirms.
+     *   The text field updates with the chosen path.
+     * </pre>
      */
     private void chooseExportDirectory()
     {
@@ -368,8 +480,23 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Loads Everything Into One Pod ────────────────────────────────────
+    // Leia slots a single data capsule into R2, specifying the exact file path
+    // where the consolidated blueprint archive will land.
+    // We open a FileDialog with an *.xml filter so the user can name the file.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the exportSingleFile 'browse' button is selected.
+     * Opens a file-save dialog so the user can specify the single export file path.
+     * We filter for {@code *.xml} files by default.
+     * If the text field already has a path, we use its directory as the starting
+     * location; otherwise we fall back to the preference store.
+     *
+     * <p>For example — Leia names her consolidated data capsule:</p>
+     * <pre>
+     *   The file dialog opens: "Choose output file."
+     *   Leia types: /home/leia/schemas/all-plans.xml
+     *   R2 will deliver one tidy package to Obi-Wan.
+     * </pre>
      */
     private void chooseExportFile()
     {
@@ -399,8 +526,27 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Runs Pre-launch Systems Check ────────────────────────────────────
+    // Before Leia lets the escape pod bay open, she runs through a checklist:
+    // is there a schema project? are any blueprints selected? is the destination
+    // reachable and writable? Only when everything clears does she authorize launch.
+    // This method re-validates the page every time the user changes anything.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the user modifies something in the UI.
+     * Validates the current state of the page and updates the error message.
+     * Called on every UI change — checkbox toggle, text edit, radio selection.
+     * We check: (1) a schema project is open, (2) at least one schema is checked,
+     * (3) the chosen destination is valid and writable.
+     * Passes {@code null} to {@link #displayErrorMessage} when everything looks good,
+     * which clears any previous error and enables the Finish button.
+     *
+     * <p>For example — Leia's pre-launch checklist:</p>
+     * <pre>
+     *   "Schema project loaded? Check."
+     *   "At least one blueprint selected? Check."
+     *   "Destination pod bay clear and writable? Check."
+     *   "All systems go. Authorize launch."
+     * </pre>
      */
     private void dialogChanged()
     {
@@ -474,11 +620,24 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Hands Over The Blueprint Manifest ────────────────────────────────
+    // After Vader's interrogation droid finishes, Leia holds up the list of
+    // blueprints she agreed to hand over — only the ones she checked, nothing
+    // more, nothing less.
+    // We read the checked elements from the table and return them as a Schema[].
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the selected schemas.
+     * Returns the schemas the user has checked in the table.
+     * The wizard's {@link ExportSchemasAsXmlWizard#performFinish()} calls this
+     * to know what to export.
      *
-     * @return
-     *      the selected schemas
+     * <p>For example — Leia identifies the selected blueprints:</p>
+     * <pre>
+     *   "inetOrgPerson: checked. cosine: unchecked. nis: checked."
+     *   Only the checked schemas make it into R2's memory bank.
+     * </pre>
+     *
+     * @return  the schemas the user ticked in the checkbox table, as an array
      */
     public Schema[] getSelectedSchemas()
     {
@@ -494,11 +653,25 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Pre-flags Priority Blueprints ────────────────────────────────────
+    // Before the mission briefing even starts, Leia marks the blueprints she
+    // already knows are critical — so when the list appears, they're already
+    // checked and ready to go.
+    // The wizard calls this right after construction to forward the caller's
+    // pre-selection into the page.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the selected projects.
+     * Pre-selects a set of schemas so they start checked when the page opens.
+     * The wizard calls this right after creating the page, forwarding whatever
+     * was passed to {@link ExportSchemasAsXmlWizard#setSelectedSchemas(Schema[])}.
      *
-     * @param schemas
-     *      the schemas
+     * <p>For example — Leia flags the priority plans in advance:</p>
+     * <pre>
+     *   Leia marks inetOrgPerson and nis on her tablet before R2 boots up.
+     *   When the checklist appears, those two are already ticked.
+     * </pre>
+     *
+     * @param schemas  the schemas to pre-check; stored and applied in {@link #initFields()}
      */
     public void setSelectedSchemas( Schema[] schemas )
     {
@@ -506,13 +679,24 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Checks The Delivery Mode Setting ─────────────────────────────────
+    // Leia glances at the pod-bay controls to confirm whether she set
+    // "scatter to multiple pods" or "load everything into one" — she needs
+    // this to tell the launch crew which procedure to follow.
+    // We return one of our two constants so the wizard knows what to do.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the type of export.
-     * <p>
-     * Values can either EXPORT_MULTIPLE_FILES or EXPORT_SINGLE_FILE.
-     * 
-     * @return
-     *      the type of export
+     * Returns whether the user chose to export schemas as separate files or one combined file.
+     * The wizard reads this in {@link ExportSchemasAsXmlWizard#performFinish()} to decide
+     * which branch of the export logic to run.
+     *
+     * <p>For example — Leia reads the pod-bay mode switch:</p>
+     * <pre>
+     *   "Multi-pod mode selected — each schema gets its own file."
+     *   Returns EXPORT_MULTIPLE_FILES or EXPORT_SINGLE_FILE.
+     * </pre>
+     *
+     * @return  {@link #EXPORT_MULTIPLE_FILES} or {@link #EXPORT_SINGLE_FILE}
      */
     public int getExportType()
     {
@@ -525,16 +709,26 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
             return EXPORT_SINGLE_FILE;
         }
 
-        // Default 
+        // Default
         return EXPORT_MULTIPLE_FILES;
     }
 
 
+    // ── Leia Reads The Destination Sector ─────────────────────────────────────
+    // Leia checks the navigation readout to confirm which sector the pods are
+    // heading to — the directory where the separate XML files will land.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the export directory.
+     * Returns the directory path the user typed or browsed to for multi-file export.
+     * The wizard uses this when {@link #getExportType()} returns {@link #EXPORT_MULTIPLE_FILES}.
      *
-     * @return
-     *      the export directory
+     * <p>For example — Leia confirms the pod-bay destination sector:</p>
+     * <pre>
+     *   "Destination: /rebel-base/schematics/"
+     *   One XML file per schema will land in that directory.
+     * </pre>
+     *
+     * @return  the export directory path as a string
      */
     public String getExportDirectory()
     {
@@ -542,11 +736,21 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Reads The Single-Capsule Destination ─────────────────────────────
+    // Leia checks the coordinates for the single consolidated capsule — the
+    // exact file path where R2's combined payload will be written.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the export file.
+     * Returns the file path the user specified for single-file export.
+     * The wizard uses this when {@link #getExportType()} returns {@link #EXPORT_SINGLE_FILE}.
      *
-     * @return
-     *      the export file
+     * <p>For example — Leia reads R2's capsule coordinates:</p>
+     * <pre>
+     *   "Capsule destination: /home/leia/all-schemas.xml"
+     *   All selected schemas will be serialized into that one file.
+     * </pre>
+     *
+     * @return  the export file path as a string
      */
     public String getExportFile()
     {
@@ -554,8 +758,24 @@ public class ExportSchemasAsXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── Leia Logs The Coordinates For Next Time ───────────────────────────────
+    // After the pods launch, Leia records the destination coordinates in the
+    // ship's log so the next mission can start from the same location without
+    // re-entering everything from scratch.
+    // We persist the chosen directory to the Eclipse preference store.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the dialog settings.
+     * Persists the chosen export path to Eclipse's preference store.
+     * This means the next time the user opens this wizard, the directory
+     * or file path field starts pre-populated with their last choice.
+     * For the single-file option we store the parent directory, not the
+     * full file path, so future sessions open in the same folder.
+     *
+     * <p>For example — Leia logs the sector coordinates:</p>
+     * <pre>
+     *   Mission complete. Leia writes "/rebel-base/schematics/" into the ship's log.
+     *   Next time, the navigation computer will default to that sector.
+     * </pre>
      */
     public void saveDialogSettings()
     {

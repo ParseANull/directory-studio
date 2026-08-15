@@ -11,6 +11,26 @@ import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
 
 import java.util.List;
 
+// ── CLASS: AntlrAclLexerTokenTypes — C-3PO'S VOCABULARY LIST FOR ACL SYNTAX ─
+// Before C-3PO can translate the ACL dialect he needs a complete vocabulary:
+// every keyword, every punctuation mark, every token type numbered and named.
+// This interface is that vocabulary. The ANTLR tool generated these integer
+// constants from Acl.g; the lexer (AntlrAclLexer) and parser (AntlrAclParser)
+// both import this interface so they share the same numeric IDs for every token.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * ANTLR-generated token type constants for the OpenLDAP ACL grammar. Every
+ * keyword, special character, and structural token recognised by the lexer is
+ * assigned a unique integer ID here. Both the lexer and parser reference these
+ * IDs to communicate about token types without using raw magic numbers.
+ * Think of this interface as C-3PO's complete ACL vocabulary list — every word
+ * and symbol in the dialect, numbered for quick lookup.
+ *
+ * <p>This file is auto-generated from {@code Acl.g} by ANTLR 2.7.7. Do not
+ * edit by hand.</p>
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public interface AntlrAclLexerTokenTypes {
 	int EOF = 1;
 	int NULL_TREE_LOOKAHEAD = 3;
