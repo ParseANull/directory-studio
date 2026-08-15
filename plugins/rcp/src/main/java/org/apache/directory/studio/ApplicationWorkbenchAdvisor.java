@@ -26,6 +26,9 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.TrayDialog;
+import org.eclipse.jface.preference.IPreferenceManager;
+import org.eclipse.jface.preference.IPreferenceNode;
+import org.eclipse.jface.preference.PreferenceNode;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.jface.resource.JFaceResources;
@@ -128,6 +131,28 @@ public class ApplicationWorkbenchAdvisor extends WorkbenchAdvisor
     {
         super.postStartup();
         removeDefaultJvmSetting();
+        replaceAppearancePage();
+    }
+
+
+    private void replaceAppearancePage()
+    {
+        IPreferenceManager manager = PlatformUI.getWorkbench().getPreferenceManager();
+        IPreferenceNode general = manager.find( "org.eclipse.ui.preferencePages.Workbench" );
+        if ( general == null )
+        {
+            return;
+        }
+        for ( IPreferenceNode node : general.getSubNodes() )
+        {
+            if ( "org.eclipse.ui.preferencePages.Views".equals( node.getId() ) )
+            {
+                general.remove( node );
+                general.add( new PreferenceNode( "org.eclipse.ui.preferencePages.Views",
+                    new StudioAppearancePage() ) );
+                return;
+            }
+        }
     }
 
 
