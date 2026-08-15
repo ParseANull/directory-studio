@@ -49,6 +49,55 @@
       <themeid refid="org.eclipse.e4.ui.css.theme.e4_default">
       </themeid>
     </stylesheet>
+
+    <!-- Base16 standalone themes (dark) -->
+    <theme id="org.apache.directory.studio.theme.solarized-dark"
+           label="Solarized Dark"
+           basestylesheet="resources/css/themes/solarized-dark.css"/>
+    <theme id="org.apache.directory.studio.theme.monokai"
+           label="Monokai"
+           basestylesheet="resources/css/themes/monokai.css"/>
+    <theme id="org.apache.directory.studio.theme.nord"
+           label="Nord"
+           basestylesheet="resources/css/themes/nord.css"/>
+    <theme id="org.apache.directory.studio.theme.one-dark"
+           label="One Dark"
+           basestylesheet="resources/css/themes/one-dark.css"/>
+    <theme id="org.apache.directory.studio.theme.gruvbox-dark"
+           label="Gruvbox Dark"
+           basestylesheet="resources/css/themes/gruvbox-dark.css"/>
+    <theme id="org.apache.directory.studio.theme.tomorrow-night"
+           label="Tomorrow Night"
+           basestylesheet="resources/css/themes/tomorrow-night.css"/>
+    <theme id="org.apache.directory.studio.theme.dracula"
+           label="Dracula"
+           basestylesheet="resources/css/themes/dracula.css"/>
+    <theme id="org.apache.directory.studio.theme.github-dark"
+           label="GitHub Dark"
+           basestylesheet="resources/css/themes/github-dark.css"/>
+    <theme id="org.apache.directory.studio.theme.catppuccin-mocha"
+           label="Catppuccin Mocha"
+           basestylesheet="resources/css/themes/catppuccin-mocha.css"/>
+    <theme id="org.apache.directory.studio.theme.rose-pine"
+           label="Rosé Pine"
+           basestylesheet="resources/css/themes/rose-pine.css"/>
+    <theme id="org.apache.directory.studio.theme.tokyo-night"
+           label="Tokyo Night"
+           basestylesheet="resources/css/themes/tokyo-night.css"/>
+
+    <!-- Base16 standalone themes (light) -->
+    <theme id="org.apache.directory.studio.theme.solarized-light"
+           label="Solarized Light"
+           basestylesheet="resources/css/themes/solarized-light.css"/>
+    <theme id="org.apache.directory.studio.theme.gruvbox-light"
+           label="Gruvbox Light"
+           basestylesheet="resources/css/themes/gruvbox-light.css"/>
+    <theme id="org.apache.directory.studio.theme.tomorrow"
+           label="Tomorrow"
+           basestylesheet="resources/css/themes/tomorrow.css"/>
+    <theme id="org.apache.directory.studio.theme.github-light"
+           label="GitHub Light"
+           basestylesheet="resources/css/themes/github-light.css"/>
   </extension>
 
 </plugin>

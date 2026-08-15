@@ -1,0 +1,68 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+/* Solarized Dark -- Apache Directory Studio theme (Base16 palette). */
+
+@import url("platform:/plugin/org.eclipse.ui.themes/css/common/e4_globalstyle.css");
+@import url("platform:/plugin/org.eclipse.ui.themes/css/dark/e4-dark_ide_colorextensions.css");
+@import url("platform:/plugin/org.eclipse.ui.themes/css/dark/e4-dark_globalstyle.css");
+@import url("platform:/plugin/org.eclipse.ui.themes/css/dark/e4-dark_partstyle.css");
+@import url("platform:/plugin/org.eclipse.ui.themes/css/dark/e4-dark_tabstyle.css");
+@import url("platform:/plugin/org.eclipse.ui.themes/css/dark/e4-dark-drag-styling.css");
+
+.studio-browser-tree,
+.studio-connection-tree,
+.studio-schema-tree {
+    background-color: #073642;
+    color: #839496;
+}
+
+.studio-entry-tree {
+    background-color: #073642;
+    color: #839496;
+    swt-header-color: #839496;
+    swt-header-background-color: #002B36;
+}
+
+.studio-search-table,
+.MPartStack.active .studio-search-table {
+    background-color: #073642;
+    color: #839496;
+    swt-header-color: #839496;
+    swt-header-background-color: #002B36;
+}
+
+IEclipsePreferences#org-apache-directory-studio-common-ui {
+    preferences:
+        'defaultColor=131,148,150'
+        'disabledColor=88,110,117'
+        'errorColor=220,50,47'
+        'commentColor=88,110,117'
+        'keyword1Color=108,113,196'
+        'keyword2Color=38,139,210'
+        'objectClassColor=181,137,0'
+        'attributeTypeColor=38,139,210'
+        'valueColor=133,153,0'
+        'oidColor=203,75,22'
+        'separatorColor=220,50,47'
+        'addColor=133,153,0'
+        'deleteColor=220,50,47'
+        'modifyColor=181,137,0'
+        'renameColor=38,139,210'
+}
