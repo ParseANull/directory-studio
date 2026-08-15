@@ -4,6 +4,14 @@
   <extension point="org.apache.directory.studio.connectionlistener">
     <connectionListener class="org.apache.directory.studio.scim.ui.ScimBrowserConnectionManager"/>
   </extension>
+  <extension point="org.apache.directory.studio.connection.ui.connectionWizards">
+    <connectionWizard
+        class="org.apache.directory.studio.scim.ui.wizards.NewScimConnectionWizard"
+        icon="resources/icons/scim_connection.gif"
+        id="org.apache.directory.studio.scim.ui.wizards.NewScimConnectionWizard"
+        label="SCIM Connection"/>
+  </extension>
+
   <extension point="org.eclipse.ui.newWizards">
     <wizard category="org.apache.directory.studio"
             class="org.apache.directory.studio.scim.ui.wizards.NewScimConnectionWizard"
