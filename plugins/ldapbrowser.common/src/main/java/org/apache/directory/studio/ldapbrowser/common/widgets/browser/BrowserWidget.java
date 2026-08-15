@@ -160,6 +160,7 @@ public class BrowserWidget extends ViewFormWidget
 
         // create tree widget and viewer
         tree = new Tree( composite, SWT.VIRTUAL | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL | SWT.BORDER );
+        tree.setData( "org.eclipse.e4.ui.css.CssClassName", "studio-browser-tree" );
         GridData data = new GridData( GridData.FILL_BOTH );
         data.widthHint = 450;
         data.heightHint = 250;

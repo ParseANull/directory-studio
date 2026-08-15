@@ -88,6 +88,7 @@ public class EntryEditorWidget extends ViewFormWidget
         // create tree widget and viewer
         tree = new Tree( parent, SWT.VIRTUAL | SWT.MULTI | SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL | SWT.FULL_SELECTION
             | SWT.HIDE_SELECTION );
+        tree.setData( "org.eclipse.e4.ui.css.CssClassName", "studio-entry-tree" );
         GridData data = new GridData( GridData.FILL_BOTH );
         data.widthHint = 450;
         data.heightHint = 250;
