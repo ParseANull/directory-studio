@@ -6,32 +6,39 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.wrappers;
 
-import org.apache.directory.studio.common.ui.TableDecorator;
-import org.apache.directory.studio.openldap.common.ui.model.RestrictOperationEnum;
-import org.apache.directory.studio.openldap.config.editor.dialogs.RestrictOperationDialog;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.widgets.Shell;
-
+// ── CLASS: RestrictOperationDecorator — Darth Vader's Restricted Operations List ─
+// Darth Vader walks the corridors of the Death Star and personally signs the
+// list of operations that no ordinary officer may perform — only he and the
+// Emperor authorize them.  RestrictOperationDecorator manages that list for the
+// olcRestrict table: it wires the table to the RestrictOperationDialog, renders
+// each restricted operation by name, and keeps the list alphabetically sorted.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A decorator for the RestrictOperation table.
- *  
+ * A {@link TableDecorator} for the RestrictOperation table in the Options page.
+ * It connects the table to {@link RestrictOperationDialog} and renders each
+ * {@link RestrictOperationEnum} by its display name, sorted alphabetically.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class RestrictOperationDecorator extends TableDecorator<RestrictOperationEnum>
 {
+    // ── Constructor — Opening the Restricted-Operations Registry ──────────────
+    // Vader's aide opens the registry and connects it to the dialog where
+    // operations can be added to the restrictions list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Create a new instance of RestrictOperationDecorator
      * @param parentShell The parent Shell
@@ -41,9 +48,15 @@ public class RestrictOperationDecorator extends TableDecorator<RestrictOperation
         setDialog( new RestrictOperationDialog( parentShell ) );
     }
 
+
+    // ── getText — Read the Restricted Operation Name ───────────────────────────
+    // Vader's aide reads the operation off the list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Construct the label for an RestrictOperation.
-     * 
+     *
+     * @return the operation's display name, or the default label if the element
+     *         is not a {@link RestrictOperationEnum}
      */
     @Override
     public String getText( Object element )
@@ -57,8 +70,13 @@ public class RestrictOperationDecorator extends TableDecorator<RestrictOperation
     }
 
 
+    // ── getImage — No Icon on the Restrictions List ───────────────────────────
+    // The list is text only — no images.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Get the image. We have none
+     *
+     * @return always {@code null}
      */
     @Override
     public Image getImage( Object element )
@@ -66,7 +84,10 @@ public class RestrictOperationDecorator extends TableDecorator<RestrictOperation
         return null;
     }
 
-    
+
+    // ── compare — Sort Operations Alphabetically ───────────────────────────────
+    // Vader insists the restrictions list stay alphabetical; null entries trail.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */

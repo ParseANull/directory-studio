@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core.model;
@@ -34,433 +34,613 @@ import org.apache.directory.studio.ldapbrowser.core.propertypageproviders.EntryP
 import org.eclipse.core.runtime.IAdaptable;
 
 
+// ── CLASS: IEntry — THE DEATH STAR BLUEPRINT ──────────────────────────────────
+// When R2-D2 finally extracts the Death Star schematics from the Imperial data
+// vault, what he holds is the complete technical blueprint: every sub-system
+// listed by name, every design detail accessible by catalog number, and a
+// hierarchical structure of sections and sub-sections hanging off one root.
+// An IEntry is exactly that: the in-memory blueprint of a single LDAP directory
+// entry.  It knows its DN (catalog number), its attributes (technical specs),
+// its children (sub-section entries), and its connection to the LDAP server.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An IEntry represents an LDAP entry.
+ * Represents a single LDAP directory entry in the browser model.
+ * An entry is identified by a distinguished name (DN), holds named attributes
+ * (each with one or more values), and may have child entries beneath it forming
+ * the directory information tree (DIT).
+ * Think of this as the Death Star blueprint: a self-contained data structure
+ * whose every field, flag, and sub-section is accessible through this interface.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public interface IEntry extends Serializable, IAdaptable, EntryPropertyPageProvider, ConnectionPropertyPageProvider
 {
 
+    // ── R2-D2 Inserts A Sub-Schematic Into The Blueprint ─────────────────────────
+    // The droid slots the reactor-core schematic into the correct section of the
+    // Death Star plans — it's now part of the hierarchy, addressable by its own
+    // catalog number.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the given child to this entry.
-     * 
-     * @param childToAdd
-     *                the child to add
+     * Adds the given child entry under this entry in the in-memory tree.
+     * The child must already know its own DN; we just attach it here so the
+     * browser tree can navigate to it.
+     *
+     * @param childToAdd the child entry to attach; must not be {@code null}.
      */
     void addChild( IEntry childToAdd );
 
 
+    // ── R2-D2 Removes A Sub-Schematic And All Its Pages ──────────────────────────
+    // "Purge section 7G — thermal exhaust port and all dependent schematics."
+    // Deleting a child also removes everything beneath it in the tree.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Deletes the given child and all its children from this entry.
-     * 
-     * @param childToDelete
-     *                the child to delete
+     * Removes the given child entry and all of its descendants from this entry's
+     * in-memory child list.
+     * Does not touch the LDAP server — this is a model-only operation triggered
+     * after a successful server-side delete.
+     *
+     * @param childToDelete the child entry to remove; must not be {@code null}.
      */
     void deleteChild( IEntry childToDelete );
 
 
+    // ── R2-D2 Registers A Technical Spec In The Blueprint ────────────────────────
+    // "Turbolaser array specifications — catalogued under this schematic section."
+    // Each attribute is a named spec; attaching it here makes it part of the entry.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the given attribute to this entry. The attribute's entry must be
-     * this entry.
-     * 
-     * @param attributeToAdd
-     *                the attribute to add
-     * @throws IllegalArgumentException
-     *                 if the attribute is already present in this entry or
-     *                 if the attribute's entry isn't this entry.
+     * Adds the given attribute to this entry's attribute map.
+     * The attribute's {@link IAttribute#getEntry()} must already point to this
+     * entry; we reject it if it belongs to another entry or already exists here.
+     *
+     * @param attributeToAdd the attribute to attach; must not be {@code null}.
+     * @throws IllegalArgumentException if the attribute already exists in this entry
+     *                                  or if the attribute's entry is not this entry.
      */
     void addAttribute( IAttribute attributeToAdd ) throws IllegalArgumentException;
 
 
+    // ── R2-D2 Removes A Technical Spec From The Blueprint ────────────────────────
+    // "Remove the thermal exhaust port spec — we don't want the Rebels finding it."
+    // The attribute is detached from the in-memory model after a successful server
+    // delete.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Deletes the given attribute from this entry.
-     * 
-     * @param attributeToDelete
-     *                the attribute to delete
-     * @throws IllegalArgumentException
-     *                 if the attribute isn't present in this entry.
+     * Removes the given attribute from this entry's attribute map.
+     * Called after a successful LDAP delete-attribute operation so the in-memory
+     * model stays in sync with the server.
+     *
+     * @param attributeToDelete the attribute to remove; must not be {@code null}.
+     * @throws IllegalArgumentException if the attribute is not present in this entry.
      */
     void deleteAttribute( IAttribute attributeToDelete ) throws IllegalArgumentException;
 
 
+    // ── R2-D2 Marks Whether The Blueprint Was Fetched From The Actual Archive ─────
+    // A blueprint is either an official Imperial copy (directoryEntry = true) or
+    // a local mock-up used for testing (directoryEntry = false).  This flag
+    // tells the UI whether the entry is real or a stand-in.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets whether this entry exists in directory.
-     * 
-     * @param isDirectoryEntry
-     *                true if this entry exists in directory.
+     * Sets whether this entry genuinely exists in the LDAP directory.
+     * {@code true} means it was read from or created in the server;
+     * {@code false} means it is a local placeholder (e.g. a dummy root entry).
+     *
+     * @param isDirectoryEntry {@code true} if this is a real directory entry.
      */
     void setDirectoryEntry( boolean isDirectoryEntry );
 
 
+    // ── The Blueprint Notes: This Section Is An Alias ────────────────────────────
+    // Some schematics are just pointers — "See Death Star II plans, section 4."
+    // LDAP alias entries work the same way: they point elsewhere in the DIT.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether this entry is an alias entry.
-     * 
-     * An entry is an alias entry if it has the object class 'alias'.
-     * 
-     * Even if the object class attribute is not initialized an entry
-     * is supposed to be an alias entry if the alias flag is set.
-     * 
-     * @return true, if this entry is an alias entry
+     * Returns {@code true} if this entry is an LDAP alias entry.
+     * An alias entry has the {@code alias} objectClass and its
+     * {@code aliasedObjectName} attribute points to the "real" entry.
+     * The alias flag may be set even before attributes are loaded if it was
+     * signalled during a search.
+     *
+     * @return {@code true} if this entry is an alias.
      */
     boolean isAlias();
 
 
+    // ── R2-D2 Sets The Alias Flag On The Schematic ───────────────────────────────
+    // The droid stamps "ALIAS" on the schematic page when a search tells him
+    // this entry is just a pointer to another section.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a flag whether this entry is an alias entry.
-     * 
-     * This method is called during a search if the initialization
-     * of the alias flag is requested. 
-     * 
-     * @param b the alias flag
+     * Sets the alias hint for this entry.
+     * Called during a search when the server signals that this entry is (or is
+     * not) an alias, even before the entry's full attributes have been loaded.
+     *
+     * @param b {@code true} to mark this entry as an alias.
      */
     void setAlias( boolean b );
 
 
+    // ── The Blueprint Notes: This Section Is A Referral ──────────────────────────
+    // A referral is like a "For full plans, contact the Kuat Drive Yards" note:
+    // the entry says "go elsewhere for the real data."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether this entry is a referral entry.
-     * 
-     * An entry is a referral entry if it has the objectClass 'referral'.
-     * 
-     * Even if the object class attribute is not initialized an entry
-     * is supposed to be a referral entry if the referral flag is set.
-     * 
-     * @return true, if this entry is a referral entry
+     * Returns {@code true} if this entry is an LDAP referral entry.
+     * A referral entry has the {@code referral} objectClass and contains a
+     * {@code ref} attribute pointing to another LDAP URL.
+     *
+     * @return {@code true} if this entry is a referral.
      */
     boolean isReferral();
 
 
+    // ── R2-D2 Stamps The Referral Flag On The Schematic ──────────────────────────
+    // The droid marks "REFERRAL" when the search signals this is a redirect entry.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a flag whether this entry is a referral entry.
-     * 
-     * This method is called during a search if the initialization
-     * fo the referral hint is requested. 
-     * 
-     * @param b the referral flag
+     * Sets the referral hint for this entry.
+     *
+     * @param b {@code true} to mark this entry as a referral.
      */
     void setReferral( boolean b );
 
 
+    // ── The Blueprint Notes: This Section Is A Subentry ──────────────────────────
+    // Subentries are special administrative sections of the DIT — they hold
+    // schema rules and access control policies.  "Classified: Admin Eyes Only."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether this entry is a subentry.
-     * 
-     * An entry is a subentry if it has the objectClass 'subentry'.
-     * 
-     * Even if the object class attribute is not initialized an entry
-     * is supposed to be a subentry if the subentry flag is set.
-     * 
-     * @return true, if this entry is a subentry entry
+     * Returns {@code true} if this entry is an LDAP subentry.
+     * Subentries hold administrative information such as schema or access control
+     * policies and are normally hidden from regular searches.
+     *
+     * @return {@code true} if this entry is a subentry.
      */
     boolean isSubentry();
 
 
+    // ── R2-D2 Stamps The Subentry Flag On The Schematic ──────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a flag whether this entry is a subentry.
-     * 
-     * This method is called during a search if the initialization
-     * fo the subentry is requested. 
-     * 
-     * @param b the subentry flag
+     * Sets the subentry hint for this entry.
+     *
+     * @param b {@code true} to mark this entry as a subentry.
      */
     void setSubentry( boolean b );
 
 
+    // ── R2-D2 Reads The Catalog Number Off The Blueprint Cover ───────────────────
+    // Every Death Star schematic has a catalog number on the cover —
+    // "DS-1 Orbital Battle Station, plan ref: ou=weapons,dc=empire,dc=gov".
+    // That catalog number is the DN; it uniquely identifies the entry in the DIT.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Dn of this entry, never null.
-     * 
-     * @return the Dn of this entry, never null.
+     * Returns the distinguished name (DN) of this entry.
+     * The DN uniquely identifies the entry in the directory information tree.
+     * For example: {@code cn=Han Solo,ou=crew,dc=rebel,dc=org}.
+     *
+     * @return the {@link Dn}; never {@code null}.
      */
     Dn getDn();
 
 
+    // ── R2-D2 Reads The Last Section Identifier ──────────────────────────────────
+    // The RDN (relative distinguished name) is the last component of the DN —
+    // the local name within the parent section: {@code cn=Han Solo}.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Rdn of this entry, never null.
-     * 
-     * @return the Rdn of this entry, never null.
+     * Returns the relative distinguished name (RDN) of this entry.
+     * The RDN is the rightmost component of the DN — the entry's local name
+     * within its parent container.
+     *
+     * @return the {@link Rdn}; never {@code null}.
      */
     Rdn getRdn();
 
 
+    // ── R2-D2 Checks Whether All Tech Specs Have Been Downloaded ─────────────────
+    // The droid can have the blueprint cover page (DN, RDN) without having the
+    // full technical specs yet — he'd need another server read to get those.
+    // This flag tells us whether the attributes have been fetched.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether this entry's attributes are initialized.
-     * 
-     * True means that the entry's attributes are completely initialized
-     * and getAttributes() will return all attributes.
-     * 
-     * False means that the attributes are not or only partially
-     * initialized. The getAttributes() method will return null
-     * or only a part of the entry's attributes.  
-     * 
-     * @return true if this entry's attributes are initialized
+     * Returns {@code true} if this entry's attributes have been fully loaded
+     * from the LDAP server.
+     * {@code false} means the attribute list is empty or only partially populated.
+     * Check this before calling {@link #getAttributes()} if you need complete data.
+     *
+     * @return {@code true} if attributes are initialised.
      */
     boolean isAttributesInitialized();
 
 
+    // ── R2-D2 Stamps "Attributes Loaded" On The Blueprint ────────────────────────
+    // Once all the tech specs arrive from the server, the droid marks the
+    // blueprint as complete so nobody triggers an unnecessary second download.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a flag whether this entry's attributes are initialized.
-     * 
-     * @param b the attributes initialized flag
+     * Sets the attributes-initialised flag.
+     * Called by the {@link org.apache.directory.studio.ldapbrowser.core.jobs.InitializeAttributesRunnable}
+     * after it successfully loads the entry's attributes.
+     *
+     * @param b {@code true} once all attributes have been loaded.
      */
     void setAttributesInitialized( boolean b );
 
 
+    // ── R2-D2 Checks Whether Operational Specs Should Be Fetched ─────────────────
+    // Operational attributes are the "internal maintenance records" — create
+    // timestamps, modify timestamps, subschema locations.  We only fetch them
+    // if the user asked for them.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether this entry's operational attributes should be initialized.
-     * 
-     * @return true if this entry's attributes should be initialized
+     * Returns {@code true} if operational attributes should be loaded for this entry.
+     * Operational attributes (e.g. {@code createTimestamp}, {@code modifyTimestamp})
+     * are fetched from the server only when this flag is set.
+     *
+     * @return {@code true} if operational attributes should be initialised.
      */
     boolean isInitOperationalAttributes();
 
 
+    // ── R2-D2 Toggles The "Fetch Maintenance Records" Switch ─────────────────────
+    // "Load all the internal maintenance data too" — or don't.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a flag whether this entry's operational attributes should be initialized.
-     * 
-     * @param b the initialize operational attributes flag
+     * Sets whether operational attributes should be fetched for this entry.
+     *
+     * @param b {@code true} to request operational attribute initialisation.
      */
     void setInitOperationalAttributes( boolean b );
 
 
+    // ── The Blueprint Decides Whether To Expand Alias Sub-Sections ───────────────
+    // Sometimes you want to follow alias pointers into their target sections;
+    // sometimes you want to see the alias entries as-is.  This flag controls that.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether this entry's alias children should be fetched.
-     * 
-     * @return true if this entry's alias children should be fetched
+     * Returns {@code true} if alias child entries should be fetched when loading
+     * this entry's children.
+     *
+     * @return {@code true} if alias children should be fetched.
      */
     boolean isFetchAliases();
 
 
+    // ── R2-D2 Sets The Alias-Children Switch ─────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a flag whether this entry's alias children should be fetched.
-     * 
-     * @param b the fetch aliases flag
+     * Sets whether alias child entries should be fetched when loading children.
+     *
+     * @param b {@code true} to include alias children.
      */
     void setFetchAliases( boolean b );
 
 
+    // ── The Blueprint Decides Whether To Follow Referral Sub-Sections ─────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether this entry's referral children should be fetched.
-     * 
-     * @return true if this entry's referral children should be fetched
+     * Returns {@code true} if referral child entries should be fetched when loading
+     * this entry's children.
+     *
+     * @return {@code true} if referral children should be fetched.
      */
     boolean isFetchReferrals();
 
 
+    // ── R2-D2 Sets The Referral-Children Switch ───────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a flag whether this entry's referral children should be fetched.
-     * 
-     * @param b the fetch referral flag
+     * Sets whether referral child entries should be fetched when loading children.
+     *
+     * @param b {@code true} to include referral children.
      */
     void setFetchReferrals( boolean b );
 
 
+    // ── The Blueprint Decides Whether To Include Administrative Sub-Entries ───────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether this entry's sub-entries should be fetched.
-     * 
-     * @return true if this entry's sub-entries should be fetched
+     * Returns {@code true} if subentry child entries should be fetched when loading
+     * this entry's children.
+     *
+     * @return {@code true} if subentry children should be fetched.
      */
     boolean isFetchSubentries();
 
 
+    // ── R2-D2 Sets The Sub-Entries Switch ────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a flag whether this entry's sub-entries should be fetched.
-     * 
-     * @param b the fetch sub-entries flag
+     * Sets whether subentry child entries should be fetched when loading children.
+     *
+     * @param b {@code true} to include subentry children.
      */
     void setFetchSubentries( boolean b );
 
 
+    // ── R2-D2 Retrieves All Technical Specs From The Blueprint ───────────────────
+    // Once the full blueprint is downloaded, the droid can hand over all the
+    // technical specifications in one go.  If they haven't been fetched yet,
+    // the result may be null or partial.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the attributes of the entry.
-     * 
-     * If isAttributesInitialized() returns false the returned attributes 
-     * may only be a subset of the attributes in directory.
-     * 
-     * @return The attributes of the entry or null if no attribute was added yet
+     * Returns all attributes of this entry.
+     * If {@link #isAttributesInitialized()} is {@code false}, the returned array
+     * may be {@code null} or contain only a subset of the server-side attributes.
+     *
+     * @return the entry's attributes, or {@code null} if none have been loaded yet.
      */
     IAttribute[] getAttributes();
 
 
+    // ── R2-D2 Looks Up A Single Named Spec In The Blueprint ──────────────────────
+    // "Show me just the turbolaser power requirements" — fetch one named attribute.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the attribute of the entry.
-     * 
-     * @param attributeDescription the attribute description
-     * @return The attributes of the entry or null if the attribute doesn't
-     *         exist or if the attributes aren't initialized
+     * Returns the attribute with the given description, or {@code null} if it
+     * doesn't exist or the attributes haven't been initialised yet.
+     *
+     * @param attributeDescription the attribute name/description (e.g. {@code "mail"}).
+     * @return the matching {@link IAttribute}, or {@code null}.
      */
     IAttribute getAttribute( String attributeDescription );
 
 
+    // ── R2-D2 Retrieves A Spec Family, Including All Sub-Types ───────────────────
+    // Some attribute types have subtypes — e.g. {@code name} covers {@code cn},
+    // {@code sn}, {@code givenName}.  This fetches the whole family.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a AttributeHierachie containing the requested attribute and
-     * all its subtypes.
-     * 
-     * @param attributeDescription the attribute description
-     * @return The attributes of the entry or null if the attribute doesn't
-     *         exist or if the attributes aren't initialized
+     * Returns an {@link AttributeHierarchy} containing the requested attribute
+     * type and all of its sub-types present on this entry.
+     * Useful for editors that need to display a whole attribute family at once.
+     *
+     * @param attributeDescription the attribute description to search for.
+     * @return the hierarchy, or {@code null} if neither the type nor any subtype exists.
      */
     AttributeHierarchy getAttributeWithSubtypes( String attributeDescription );
 
 
+    // ── R2-D2 Checks Whether The Sub-Sections Have Been Explored ─────────────────
+    // The blueprint might list sub-sections by name but not yet contain their
+    // contents.  This flag says "yes, we went in and fetched all child pages."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether the entry's children are initialized.
-     * 
-     * True means that the entry's children are completely initialized
-     * and getChildren() will return all children.
-     * 
-     * False means that the children are not or only partially
-     * initialized. The getChildren() method will return null
-     * or only a part of the entry's children.  
-     * 
-     * @return true if this entry's children are initialized
+     * Returns {@code true} if this entry's children have been fully loaded
+     * from the LDAP server.
+     * {@code false} means the child list is empty or only partially populated —
+     * the tree node will show a "Loading…" placeholder.
+     *
+     * @return {@code true} if children are initialised.
      */
     boolean isChildrenInitialized();
 
 
+    // ── R2-D2 Stamps "Children Loaded" On The Blueprint ──────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a flag whether this entry's children are initialized..
-     * 
-     * @param b the children initialized flag
+     * Sets the children-initialised flag.
+     * Called after the {@link org.apache.directory.studio.ldapbrowser.core.jobs.InitializeChildrenRunnable}
+     * completes successfully.
+     *
+     * @param b {@code true} once all children have been loaded.
      */
     void setChildrenInitialized( boolean b );
 
 
+    // ── The Blueprint Reports Whether Sub-Sections Exist ─────────────────────────
+    // The cover page of the blueprint may say "Sub-sections: yes" without yet
+    // listing them.  This indicates whether children exist at all.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns true if the entry has children.
-     * 
-     * @return true if the entry has children.
+     * Returns {@code true} if this entry has at least one child entry.
+     * May be a hint rather than a guarantee if children haven't been loaded yet.
+     *
+     * @return {@code true} if this entry has children (or is expected to).
      */
     boolean hasChildren();
 
 
+    // ── R2-D2 Sets The "Has Sub-Sections" Hint ────────────────────────────────────
+    // During a search the server can hint that an entry has children via
+    // {@code hasSubordinates} — we store that hint here.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a hint whether this entry has children.
-     * 
-     * @param b the has children hint
+     * Sets a hint about whether this entry has children.
+     * Used to control the expand triangle in the tree without loading children.
+     *
+     * @param b {@code true} if the entry is expected to have children.
      */
     void setHasChildrenHint( boolean b );
 
 
+    // ── R2-D2 Lists All Sub-Sections Of The Blueprint ────────────────────────────
+    // If children are initialised, the full list is here.  Otherwise we may get
+    // {@code null} or a partial list.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the children of the entry.
-     * 
-     * If isChildrenInitialized() returns false the returned children 
-     * may only be a subset of the children in directory.
-     * 
-     * @return The children of the entry or null if no child was added yet.
+     * Returns the child entries of this entry.
+     * If {@link #isChildrenInitialized()} is {@code false}, the result may be
+     * {@code null} or contain only a subset of the server-side children.
+     *
+     * @return the child entries, or {@code null} if none have been loaded yet.
      */
     IEntry[] getChildren();
 
 
+    // ── The Blueprint Reports The Count Of Sub-Sections ──────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the number of children of the entry.
-     * 
-     * @return The number of children of the entry or -1 if no child was added yet
+     * Returns the number of child entries currently loaded in memory.
+     * Returns {@code -1} if no children have been loaded yet.
+     *
+     * @return the child count, or {@code -1} if children haven't been initialised.
      */
     int getChildrenCount();
 
 
+    // ── The Blueprint Reports Whether The Count Was Cut Off ───────────────────────
+    // The server may impose a count or time limit, truncating the child list.
+    // This flag tells the UI to show "more…" and offer a "Next page" button.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether this entry has more children than
-     * getChildrenCount() returns. This occurs if the count or time limit
-     * was exceeded while fetching children.
-     * 
-     * @return true if this entry has (maybe) more children.
+     * Returns {@code true} if the server returned more children than were fetched —
+     * i.e. the count or time limit was hit.
+     * When this is {@code true} the UI typically shows a "More results…" indicator.
+     *
+     * @return {@code true} if there are more children than currently loaded.
      */
     boolean hasMoreChildren();
 
 
+    // ── R2-D2 Flags "Count Limit Hit — More Pages Exist" ─────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets a flag whether this entry more children.
-     * 
-     * @param b the has more children flag
+     * Sets whether there are more children beyond the current page.
+     *
+     * @param b {@code true} if the server has more children than are currently held.
      */
     void setHasMoreChildren( boolean b );
 
 
+    // ── The Blueprint Keeps A Runnable For Fetching The First Page ────────────────
+    // If children are paged (the server uses Paged Results control), we store
+    // the runnable that fetches page one so the UI can trigger it on demand.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the runnable used to fetch the top page of children.
-     * 
-     * @return the runnable used to fetch the top page of children, null if none
+     * Returns the runnable responsible for fetching the first page of children.
+     * {@code null} if no paging runnable has been set.
+     *
+     * @return the top-page runnable, or {@code null}.
      */
     StudioConnectionBulkRunnableWithProgress getTopPageChildrenRunnable();
 
 
+    // ── R2-D2 Stores The First-Page Fetch Runnable ───────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the runnable used to fetch the top page of children.
-     * 
-     * @param moreChildrenRunnable the runnable used to fetch the top page of children
+     * Stores the runnable for fetching the first page of children.
+     * Set by the job that initialises children when paging is in use.
+     *
+     * @param topPageChildrenRunnable the runnable; {@code null} clears it.
      */
     void setTopPageChildrenRunnable( StudioConnectionBulkRunnableWithProgress topPageChildrenRunnable );
 
 
+    // ── The Blueprint Keeps A Runnable For Fetching The Next Page ────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the runnable used to fetch the next page of children.
-     * 
-     * @return the runnable used to fetch the next page of children, null if none
+     * Returns the runnable responsible for fetching the next page of children.
+     * {@code null} if no more pages are available.
+     *
+     * @return the next-page runnable, or {@code null}.
      */
     StudioConnectionBulkRunnableWithProgress getNextPageChildrenRunnable();
 
 
+    // ── R2-D2 Stores The Next-Page Fetch Runnable ────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the runnable used to fetch the next page of children.
-     * 
-     * @param moreChildrenRunnable the runnable used to fetch the next page of children
+     * Stores the runnable for fetching the next page of children.
+     *
+     * @param nextPageChildrenRunnable the runnable; {@code null} clears it.
      */
     void setNextPageChildrenRunnable( StudioConnectionBulkRunnableWithProgress nextPageChildrenRunnable );
 
 
+    // ── The Blueprint Reports Whether It Has A Parent Section ────────────────────
+    // Every section of the Death Star plans except the root cover page belongs
+    // to a parent section.  The root DSE and base DN entries have no parent.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates whether this entry has a parent entry. Each entry except
-     * the root DSE and the base entries should have a parent entry.
-     * 
-     * @return true if the entry has a parent entry.
+     * Returns {@code true} if this entry has a parent entry in the tree.
+     * The root DSE and base DN entries have no parent; all other entries do.
+     *
+     * @return {@code true} if there is a parent entry.
      */
     boolean hasParententry();
 
 
+    // ── R2-D2 Retrieves The Parent Section Of The Blueprint ──────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the parent entry.
-     * 
-     * @return the parent entry or null if this entry hasn't a parent.
+     * Returns the parent entry, or {@code null} if this is a root or base entry.
+     *
+     * @return the parent {@link IEntry}, or {@code null}.
      */
     IEntry getParententry();
 
 
+    // ── The Blueprint Holds A Children Filter For Narrow Views ───────────────────
+    // We can restrict which child entries appear in the tree by applying an
+    // LDAP filter — like filtering the Death Star plans to show only weapon systems.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the children filter or null if none is set
+     * Returns the LDAP filter string applied to this entry's children, or
+     * {@code null} if no filter is set.
+     * When set, only children matching this filter are shown in the browser tree.
      *
-     * @return the children filter or null if none is set
+     * @return the children filter string, or {@code null}.
      */
     String getChildrenFilter();
 
 
+    // ── R2-D2 Sets (Or Clears) The Children Filter ───────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the children filter. Null clears the filter.
-     * 
-     * @param filter the children filter
+     * Sets the children filter for this entry.
+     * Pass {@code null} to clear any existing filter and show all children.
+     *
+     * @param filter the LDAP filter string (e.g. {@code "(objectClass=person)"}),
+     *               or {@code null} to clear.
      */
     void setChildrenFilter( String filter );
 
 
+    // ── R2-D2 Identifies Which Server The Blueprint Came From ────────────────────
+    // The blueprint has a provenance stamp: "Obtained from the Imperial data vault
+    // at ldaps://deathstar.empire.gov:636."  This returns that connection.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the browser connection of this entry.
-     * 
-     * @return the browser connection of this entry, never null.
+     * Returns the browser connection that owns this entry.
+     * Every entry is associated with exactly one connection — the LDAP server
+     * it was read from.
+     *
+     * @return the {@link IBrowserConnection}; never {@code null}.
      */
     IBrowserConnection getBrowserConnection();
 
 
+    // ── R2-D2 Constructs The Full LDAP URL For The Blueprint ─────────────────────
+    // The LDAP URL packages host, port, and DN into a single addressable string:
+    // {@code ldap://host:389/cn=entry,dc=example,dc=com}.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the LDAP URL of this entry.
-     * 
-     * @return the  LDAP URL of this entry
+     * Returns the LDAP URL that addresses this specific entry.
+     * The URL encodes the server host/port and this entry's DN so it can be
+     * shared or bookmarked.
+     *
+     * @return the {@link LdapUrl} for this entry.
      */
     LdapUrl getUrl();
 
 
+    // ── R2-D2 Lists The Blueprint's Object-Class Designations ────────────────────
+    // Every LDAP entry's objectClass attribute defines what type of object it is —
+    // "person", "organizationalUnit", "groupOfNames", etc.  Those schema definitions
+    // are returned here so the UI knows which attributes are mandatory vs optional.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the object class descriptions of this entry.
-     * 
-     * @return the object class descriptions of this entry
+     * Returns the schema objectClass descriptions for this entry.
+     * Derived from the entry's {@code objectClass} attribute values combined with
+     * the server's schema.  Used by the attribute editor to know which attributes
+     * are mandatory, optional, or inherited.
+     *
+     * @return a collection of {@link ObjectClass} definitions; may be empty but never {@code null}.
      */
     Collection<ObjectClass> getObjectClassDescriptions();
 

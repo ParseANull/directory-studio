@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.dialogs;
@@ -41,10 +41,24 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
 
+// ── CLASS: FilterDialog — R2-D2 AT THE DEATH STAR TERMINAL ───────────────────
+// R2-D2 plugs into the Death Star's computer terminal, navigating menus and
+// data streams to find and send the right command.  He has a full text interface
+// — he can read what's on screen, auto-complete known system IDs, and format the
+// command string before firing it at the target system.
+// An LDAP filter is just a command string to the directory server: it tells the
+// server which entries to return.  This dialog gives the user a rich text editor
+// for that filter — syntax highlighting, auto-complete from the schema, and a
+// Format button that pretty-prints the filter so it's easy to read.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Dialog to edit a filter in a text source viewer with syntax highlighting
- * and content assistent. It also provides a button to format the filter.
- * 
+ * A full-featured dialog for editing LDAP search filters.  It hosts a JFace
+ * {@link SourceViewer} with syntax highlighting and content-assist (schema-
+ * aware attribute name completion), plus a Format button that pretty-prints the
+ * filter expression for easier reading.
+ * Think of this class as R2-D2 at the Death Star terminal: full text access,
+ * smart auto-complete, and the ability to clean up a messy command string on demand.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class FilterDialog extends Dialog
@@ -75,13 +89,29 @@ public class FilterDialog extends Dialog
     private String filter;
 
 
+    // ── R2 BOOTS UP AND JACKS IN ─────────────────────────────────────────────
+    // R2-D2 rolls up to the terminal, extends his interface probe, and powers
+    // on — ready to accept the filter command he's been handed.
+    // We capture the initial filter text, the directory connection (for schema-
+    // aware completion), and configure the shell to be resizable so long filter
+    // strings are comfortable to read and edit.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of FilterDialog.
-     * 
-     * @param parentShell the parent shell
-     * @param title the title
-     * @param filter the initial filter
-     * @param brwoserConnection the browser connection
+     * Creates a new FilterDialog, wiring up the initial filter text and the
+     * LDAP connection needed for schema-aware content-assist.  The shell style
+     * is set to resizable so the user can widen the dialog for long filters.
+     *
+     * <p>For example — R2 jacks into the terminal with mission parameters:</p>
+     * <pre>
+     *   FilterDialog dialog = new FilterDialog(shell, "Edit Filter",
+     *       "(&(objectClass=person)(uid=l*))", connection);
+     *   if (dialog.open() == OK) { String result = dialog.getFilter(); }
+     * </pre>
+     *
+     * @param parentShell        the shell that owns this dialog
+     * @param title              dialog title shown in the title bar; if {@code null} we use the default "Filter Editor"
+     * @param filter             the LDAP filter to pre-populate the editor with; may be empty but not {@code null}
+     * @param brwoserConnection  the browser connection used to power schema-aware attribute name completion
      */
     public FilterDialog( Shell parentShell, String title, String filter, IBrowserConnection brwoserConnection )
     {
@@ -94,10 +124,25 @@ public class FilterDialog extends Dialog
     }
 
 
+    // ── R2 HANDS BACK THE FINISHED COMMAND ───────────────────────────────────
+    // The Death Star systems accept the command; R2 extracts the final formatted
+    // string from the terminal and passes it back to Luke and the Rebels.
+    // Callers retrieve the edited, normalised filter string here after the dialog
+    // closes with OK.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the filter.
-     * 
-     * @return the filter
+     * Returns the filter string as it stood when the user last pressed OK.  The
+     * string is normalised by the LDAP filter parser (e.g. extra whitespace is
+     * removed), so it may differ slightly from what the user typed.  Returns the
+     * original filter passed to the constructor if the user cancelled.
+     *
+     * <p>For example — R2 extracts the accepted command string:</p>
+     * <pre>
+     *   String filter = dialog.getFilter();
+     *   // "(&(objectClass=person)(uid=l*))" — ready to send to the server
+     * </pre>
+     *
+     * @return  the edited and normalised LDAP filter string
      */
     public String getFilter()
     {
@@ -105,8 +150,23 @@ public class FilterDialog extends Dialog
     }
 
 
+    // ── R2 LABELS HIS TERMINAL SESSION ───────────────────────────────────────
+    // R2 stamps the session header on the display so any observer can see at a
+    // glance: "This is the filter editor — not the trash compactor controls."
+    // We set the window title and the filter-editor icon.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Applies the title and icon to the dialog shell before it is shown.  We
+     * fall back to the default "Filter Editor" title if the caller passed
+     * {@code null}.
+     *
+     * <p>For example — R2 labels the terminal session:</p>
+     * <pre>
+     *   shell.setText(title != null ? title : "Filter Editor");
+     *   shell.setIcon(FILTER_EDITOR_ICON);
+     * </pre>
+     *
+     * @param newShell  the shell Eclipse hands us to configure
      */
     protected void configureShell( Shell newShell )
     {
@@ -116,8 +176,28 @@ public class FilterDialog extends Dialog
     }
 
 
+    // ── R2 EXECUTES OR PRETTY-PRINTS THE COMMAND ─────────────────────────────
+    // R2 has two jobs at the terminal: send the command for real (OK), or just
+    // reformat it to be easier to read (Format).  He knows which button was
+    // pressed and acts accordingly.
+    // On OK we parse the raw text and normalise it; on Format we reflow the
+    // filter through the content formatter without closing the dialog.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#buttonPressed(int)
+     * Handles button presses.  On OK we parse the editor contents through the
+     * LDAP filter parser and store the normalised filter.  On the Format button
+     * we reformat the current document in-place using the configured content
+     * formatter — the dialog stays open and the user can keep editing.  All
+     * other button IDs (Cancel) are forwarded to the superclass.
+     *
+     * <p>For example — R2 picks the right action for each button:</p>
+     * <pre>
+     *   case OK:     filter = parser.parse(editor.getText()).toString();
+     *   case FORMAT: formatter.format(editor.getDocument());  // stays open
+     *   default:     super.buttonPressed(id);
+     * </pre>
+     *
+     * @param buttonId  the SWT button ID — {@link IDialogConstants#OK_ID}, {@link #FORMAT_BUTTON_ID}, or CANCEL
      */
     protected void buttonPressed( int buttonId )
     {
@@ -137,8 +217,24 @@ public class FilterDialog extends Dialog
     }
 
 
+    // ── R2 ADDS THE FORMAT BUTTON TO HIS CONTROL PANEL ───────────────────────
+    // R2 doesn't just have an execute button — he also has a "pretty-print"
+    // function so any Rebel can read the command at a glance.  He slots it in
+    // next to OK and Cancel on his control panel.
+    // We add the Format button to the standard button bar alongside OK/Cancel.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createButtonBar(org.eclipse.swt.widgets.Composite)
+     * Creates the button bar with an extra Format button appended after OK and
+     * Cancel.  The Format button triggers in-place reformatting of the filter
+     * text without closing the dialog.
+     *
+     * <p>For example — R2 adds the pretty-print button to his panel:</p>
+     * <pre>
+     *   [OK]  [Cancel]  [Format]   ← Format added to the right
+     * </pre>
+     *
+     * @param parent  the composite Eclipse wants us to place the buttons in
+     * @return        the completed button-bar control
      */
     protected Control createButtonBar( Composite parent )
     {
@@ -148,8 +244,32 @@ public class FilterDialog extends Dialog
     }
 
 
+    // ── R2 DISPLAYS THE TERMINAL SCREEN ──────────────────────────────────────
+    // R2 projects the terminal display — the full text interface with scrollbars,
+    // syntax colouring for known command tokens, and a content-assist popup that
+    // suggests valid attribute names from the Death Star's own schema.
+    // We create the SourceViewer, configure it with the LDAP filter language, load
+    // the initial filter text, and immediately run the formatter so the user sees
+    // a nicely indented starting point rather than a wall of brackets.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     * Builds the main content area: a scrollable, syntax-highlighted source
+     * viewer pre-loaded with the initial filter.  We also run the content
+     * formatter immediately so the filter is readable from the first moment the
+     * dialog opens.  Focus is moved to the viewer's text widget so the user can
+     * start typing straight away.
+     *
+     * <p>For example — R2 boots up the full terminal display:</p>
+     * <pre>
+     *   sourceViewer = new SourceViewer(composite, ruler, H_SCROLL | V_SCROLL);
+     *   sourceViewer.configure(filterConfiguration);   // syntax + completion
+     *   sourceViewer.setDocument(new Document(filter));
+     *   formatter.format(document);                    // pre-indent
+     *   sourceViewer.getTextWidget().setFocus();
+     * </pre>
+     *
+     * @param parent  the parent composite Eclipse hands us
+     * @return        the top-level composite containing the source viewer
      */
     protected Control createDialogArea( Composite parent )
     {

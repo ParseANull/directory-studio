@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 
 package org.apache.directory.studio.schemaeditor.view.editors.attributetype;
@@ -79,8 +79,25 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: AttributeTypeEditorOverviewPage — LUKE'S BINARY SUNSET ON TATOOINE ───────
+// Luke Skywalker stands on the Tatooine ridge, watching both suns set over the desert,
+// taking stock of everything at once — the horizon, the future, the full sweep of what
+// he's about to take on.  He's not focused on one detail; he's seeing the whole picture.
+// This page is that moment for an attribute type.  In one scrollable form the user sees
+// every property: aliases, OID, description, schema name, superior type, usage, syntax,
+// length, boolean flags (obsolete / single-value / collective / no-user-modification),
+// and all three matching rules (equality, ordering, substring).  It's the complete view
+// of a single attribute type's identity — everything at a glance, everything editable.
+// ─────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class is the Overview Page of the Attribute Type Editor
+ * The "Overview" tab page of the Attribute Type Editor — the primary editing surface.
+ * It displays and allows editing of all attribute type properties through a JFace Forms
+ * layout with two sections: "General Information" (identity and classification fields)
+ * and "Matching Rules" (equality, ordering, substring comparators).
+ * The page reacts to schema handler events (via an inner SchemaHandlerListener) so
+ * combo boxes stay current when the schema changes while the editor is open.
+ * Think of this as Luke's binary sunset: the full picture of a single attribute type,
+ * all of it visible, all of it yours to work with.
  */
 public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditorPage
 {
@@ -631,11 +648,27 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     };
 
 
+    // ── Luke Steps onto the Ridge and Takes It All In ────────────────────────────────
+    // Luke walks out to the ridge on Tatooine, squints into the twin-sun sunset, and
+    // begins to take stock of everything before him — his path, the schema, the tools
+    // he'll need.  The schemaHandler and the schema listener are his eyes and ears,
+    // keeping this overview page up-to-date as the schema changes around him.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Default constructor.
-     * 
-     * @param editor
-     *      the associated editor
+     * Creates the Overview page and registers a comprehensive schema handler listener
+     * so that every relevant schema change (attribute types, matching rules, syntaxes,
+     * schemas) triggers a UI refresh.
+     * We register the listener here (in the constructor) so it's active before the
+     * form is built; {@link #dispose()} removes it symmetrically.
+     *
+     * <p>For example — Luke takes up his vantage point:</p>
+     * <pre>
+     *   // Constructor runs → register schemaHandlerListener.
+     *   // Future schema events → refreshUI() → combos/fields stay current.
+     * </pre>
+     *
+     * @param editor  the {@link AttributeTypeEditor} that owns this page; provides
+     *                the attribute type objects and dirty-flag management
      */
     public AttributeTypeEditorOverviewPage( AttributeTypeEditor editor )
     {
@@ -645,8 +678,28 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Looks at the Whole Horizon ──────────────────────────────────────────────
+    // Luke takes in the full sunset panorama: he builds out the complete view of the
+    // attribute type — two sections (General Information and Matching Rules), all fields
+    // populated, all listeners wired.  Everything he needs to understand and modify
+    // this attribute type is laid out in front of him.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the Overview page UI inside the given Eclipse managed form.
+     * We create two JFace Forms sections — "General Information" and "Matching Rules" —
+     * populate all fields from the working-copy attribute type, wire all listeners,
+     * and register a dynamic-help context.
+     * Called once by Eclipse when the tab is first displayed.
+     *
+     * <p>For example — Luke sees the whole picture:</p>
+     * <pre>
+     *   createGeneralInformationSection(...);  // aliases, OID, desc, schema, sup, usage, syntax, flags
+     *   createMatchingRulesSection(...);       // equality, ordering, substring combos
+     *   fillInUiFields();                      // populate from the attribute type
+     *   addListeners();                        // wire all event handlers
+     * </pre>
+     *
+     * @param managedForm  the Eclipse-managed form container for this page
      */
     protected void createFormContent( IManagedForm managedForm )
     {
@@ -676,13 +729,22 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Scans the Full Identity Dossier ─────────────────────────────────────────
+    // Luke's mentor Obi-Wan hands him a complete identity file on his heritage: names,
+    // origins, capabilities, flags — everything that defines who he is.  This method
+    // builds the UI for that dossier: aliases, OID, description, schema, superior type,
+    // usage, syntax, length, and four boolean property checkboxes.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the General Information Section.
+     * Creates the "General Information" form section with all identity and classification
+     * fields for the attribute type.
+     * This section contains: Aliases text field + "Edit Aliases" button, OID text field,
+     * Description text area, Schema hyperlink, Superior Type combo, Usage combo, Syntax
+     * combo, Syntax Length text field, and four property checkboxes (Obsolete, Single-Value,
+     * Collective, No-User-Modification).
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the FormToolKit to use
+     * @param parent   the parent SWT composite (the scrolled form body)
+     * @param toolkit  the FormToolkit used to create Forms-styled widgets
      */
     private void createGeneralInformationSection( Composite parent, FormToolkit toolkit )
     {
@@ -802,13 +864,21 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Studies the Matching-Rule Star Charts ───────────────────────────────────
+    // Alongside the identity dossier, Obi-Wan gives Luke star charts that describe how
+    // the Force works for this particular path — the equality, ordering, and substring
+    // matching rules that govern how LDAP searches will compare values of this attribute.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Matching Rules Section.
+     * Creates the "Matching Rules" form section with three combo viewers.
+     * This section contains: Equality combo, Ordering combo, and Substring combo — each
+     * backed by {@link ATEMatchingRulesComboContentProvider} and
+     * {@link ATEMatchingRulesComboLabelProvider}.
+     * Matching rules are LDAP algorithms that define how two attribute values are compared
+     * for equality, less-than ordering, and substring searching.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the FormToolKit to use
+     * @param parent   the parent SWT composite (the scrolled form body)
+     * @param toolkit  the FormToolkit used to create Forms-styled widgets
      */
     private void createMatchingRulesSection( Composite parent, FormToolkit toolkit )
     {
@@ -854,8 +924,18 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Obi-Wan Explains the Four Paths ──────────────────────────────────────────────
+    // Obi-Wan explains to Luke that there are four ways an attribute type can be used:
+    // by directory operations, distributed operations, DSA operations, or user
+    // applications — like four paths leading out from the canyon.  He puts the options
+    // in order and labels each one clearly.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Usage Combo.
+     * Populates the Usage combo with the four LDAP attribute type usage values.
+     * The order matches the {@link UsageEnum} ordinals used in {@link #fillInUiFields}
+     * to select the correct item by index: 0=Directory Operation, 1=Distributed
+     * Operation, 2=DSA Operation, 3=User Applications.
+     * Called once during {@link #createGeneralInformationSection}.
      */
     private void initUsageCombo()
     {
@@ -866,8 +946,21 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Reads All the Instrument Readings at Once ───────────────────────────────
+    // Luke scans the whole horizon and updates every instrument: aliases, OID,
+    // description, schema, superior type, usage, syntax, length, flags, and all three
+    // matching rules.  Every field gets the current value from the working-copy attribute
+    // type pushed into it.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Populates every UI widget on the Overview page from the current working-copy
+     * attribute type.
+     * Called on initial form creation and on every {@link #refreshUI()} cycle (after
+     * listeners are removed and before they are re-added).
+     * The method delegates the more complex combo-fill logic to private helper methods
+     * ({@link #fillSupCombo()}, {@link #fillInUsageCombo()}, {@link #fillSyntaxCombo()},
+     * {@link #fillEqualityCombo()}, {@link #fillOrderingCombo()}, {@link #fillSubstringCombo()})
+     * to keep this method readable.
      */
     protected void fillInUiFields()
     {
@@ -939,8 +1032,20 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Sets the Superior-Type Bearing ──────────────────────────────────────────
+    // Luke checks the star charts and finds the bearing for the superior type — where
+    // does this attribute type get its properties from?  If the superior type is unknown
+    // (referenced but not in the schema), he adds a phantom entry so the bearing can
+    // still be displayed.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills the the Sup Combo with the correct value.
+     * Populates the "Superior Type" combo and selects the correct entry.
+     * If the working-copy attribute type has no superior (null OID), we select "(None)".
+     * If it has a superior that resolves to a real AttributeType, we select that.
+     * If it references an unresolvable name, we add a NonExistingAttributeType to the
+     * combo input and select it — this preserves the reference visually.
+     * We always create a fresh ATESuperiorComboInput keyed to the original attribute
+     * type (to get the correct sub-type filter).
      */
     private void fillSupCombo()
     {
@@ -974,8 +1079,16 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Sets the Usage Dial ──────────────────────────────────────────────────────
+    // Luke finds the usage dial and rotates it to the correct setting — one of four
+    // positions depending on how this attribute type is categorised in the LDAP schema.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills the Usage Combo from the attribute type value
+     * Selects the correct Usage combo item based on the working-copy attribute type's
+     * usage value.
+     * The combo items are at fixed indices (0-3) matching the order populated by
+     * {@link #initUsageCombo()}: 0=Directory Operation, 1=Distributed Operation,
+     * 2=DSA Operation, 3=User Applications.
      */
     private void fillInUsageCombo()
     {
@@ -999,8 +1112,16 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Tunes the Syntax Scanner ────────────────────────────────────────────────
+    // Luke tunes the scanner to the right syntax — the data format this attribute type
+    // expects values to conform to.  If the syntax OID isn't in the schema, he creates
+    // a phantom entry so the scanner still shows something useful.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills the the Syntax Combo with the correct value.
+     * Populates the Syntax combo and selects the correct entry.
+     * Same pattern as {@link #fillSupCombo()}: null OID → "(None)", known OID → select
+     * the real LdapSyntax, unknown OID → inject a NonExistingSyntax placeholder and
+     * select it.
      */
     private void fillSyntaxCombo()
     {
@@ -1034,8 +1155,14 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Calibrates the Equality Sensor ──────────────────────────────────────────
+    // Luke calibrates the equality sensor — how does the LDAP directory decide whether
+    // two values of this attribute are equal?  If the referenced rule isn't in the
+    // schema, he injects a phantom entry so the sensor shows the stored name.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills the the Equality Combo with the correct value.
+     * Populates the Equality matching-rule combo and selects the correct entry.
+     * Same null/resolve/placeholder pattern as the Syntax and Superior combos.
      */
     private void fillEqualityCombo()
     {
@@ -1069,8 +1196,13 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Calibrates the Ordering Sensor ──────────────────────────────────────────
+    // Luke calibrates the ordering sensor — how does the LDAP directory sort and compare
+    // values less-than/greater-than?  Phantom entry injected if the rule is missing.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills the the Ordering Combo with the correct value.
+     * Populates the Ordering matching-rule combo and selects the correct entry.
+     * Identical pattern to {@link #fillEqualityCombo()} — null/resolve/placeholder.
      */
     private void fillOrderingCombo()
     {
@@ -1105,8 +1237,13 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Calibrates the Substring Sensor ─────────────────────────────────────────
+    // Luke calibrates the substring sensor — how does the LDAP directory handle wildcard
+    // searches like "Luke*" or "*walker"?  Phantom entry injected if the rule is missing.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills the the Substring Combo with the correct value.
+     * Populates the Substring matching-rule combo and selects the correct entry.
+     * Identical pattern to {@link #fillEqualityCombo()} — null/resolve/placeholder.
      */
     private void fillSubstringCombo()
     {
@@ -1140,8 +1277,18 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Arms Every Sensor on the Ridge ──────────────────────────────────────────
+    // Luke activates every sensor array on the Tatooine ridge — text fields, combo
+    // selectors, checkboxes, hyperlinks, mouse-wheel filters — so that any change he
+    // makes is immediately captured and reflected in the attribute type model.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Attaches all event listeners to all UI widgets on the Overview page.
+     * Called after {@link #fillInUiFields()} in the refresh cycle so that programmatic
+     * field updates don't fire user-edit events.
+     * We also install a display-level mouse-wheel filter to prevent scroll-wheel events
+     * from changing combo values accidentally — a common usability issue with read-only
+     * SWT combos.
      */
     protected void addListeners()
     {
@@ -1169,8 +1316,15 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Powers Down the Sensor Array ────────────────────────────────────────────
+    // Before a refresh or shutdown, Luke powers down all sensors so no spurious events
+    // fire while the instrumentation is being recalibrated.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Detaches all event listeners from all UI widgets on the Overview page.
+     * Called before {@link #fillInUiFields()} in the refresh cycle so that programmatic
+     * field updates don't trigger user-edit handlers.
+     * We also remove the display-level mouse-wheel filter symmetrically.
      */
     protected void removeListeners()
     {
@@ -1198,8 +1352,16 @@ public class AttributeTypeEditorOverviewPage extends AbstractAttributeTypeEditor
     }
 
 
+    // ── Luke Leaves the Ridge and Powers Down ────────────────────────────────────────
+    // Luke's vigil is over; he powers down the sensor array and deregisters from the
+    // schema monitoring system before leaving the ridge for the last time.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Cleans up on page disposal: removes the schema handler listener (symmetrically
+     * matching the registration done in the constructor) and delegates to the parent
+     * dispose for SWT resource cleanup.
+     * Always deregister the listener before calling super.dispose() to prevent callbacks
+     * on disposed widgets.
      */
     public void dispose()
     {

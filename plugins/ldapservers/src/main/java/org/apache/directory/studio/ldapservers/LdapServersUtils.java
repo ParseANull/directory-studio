@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapservers;
@@ -49,8 +49,25 @@ import org.eclipse.ui.console.MessageConsoleStream;
 import org.osgi.framework.Bundle;
 
 
+// ── CLASS: LdapServersUtils — THE REBEL ENGINEER'S TOOLKIT ──────────────────────────────
+// Rebel engineers share a toolkit of utility functions: a watchdog that watches a port until
+// the Falcon's hyperdrive comes online, a console printer that tails the Falcon's flight log
+// and streams it to Cassian's intercept station, a library copier that ensures the right
+// JAR files are in the right bay before takeoff, and a terminate routine that cuts the engine.
+// This class is that toolkit: static helper methods shared across the server start/stop jobs.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 /**
- * The helper class defines various utility methods for the LDAP Servers plugin.
+ * Static utility methods shared across the LDAP server start/stop job infrastructure.
+ * <ul>
+ *   <li>{@link #runStartupListenerWatchdog} — polls a TCP port until the server reports STARTED.</li>
+ *   <li>{@link #startTerminateListenerThread} — listens for the Eclipse debug TERMINATE event.</li>
+ *   <li>{@link #startConsolePrinterThread} — tails the server's log file to the console.</li>
+ *   <li>{@link #stopConsolePrinterThread} — stops the log tailer.</li>
+ *   <li>{@link #terminateLaunchConfiguration} — terminates the OS-level server process.</li>
+ *   <li>{@link #verifyAndCopyLibraries} — copies JAR files to the server's lib folder if stale.</li>
+ *   <li>{@link #copyResource} / {@code copyFile} — low-level stream copy helpers.</li>
+ * </ul>
+ * Think of it as the Rebel engineer's shared toolkit.
  */
 public class LdapServersUtils
 {
@@ -61,14 +78,28 @@ public class LdapServersUtils
     public static final String CONSOLE_PRINTER_CUSTOM_OBJECT = "consolePrinter"; //$NON-NLS-1$
 
 
+    // ── Watchdog: Poll The Port Until The Ship's Drive Comes Online ────────────────────────────
+    // After the Falcon's crew fires the hyperdrive, a watchdog checks the port every second.
+    // If the port becomes occupied within 3 minutes, the server is STARTED.
+    // If the watchdog timer expires with the server still in STARTING state, we declare it STOPPED.
+    // If port is 0 (no protocol enabled), skip the check and let the adapter declare STARTED itself.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Runs the startup listener watchdog.
+     * Polls {@code port} once per second for up to 3 minutes until the server either opens the port
+     * (→ sets status STARTED) or the status changes away from STARTING externally.
+     * If the watchdog expires with status still STARTING, sets status to STOPPED.
+     * If {@code port} is 0, returns immediately (caller handles STARTED status directly).
      *
-     * @param server
-     *      the server
-     * @param port
-     *      the port
-     * @throws Exception
+     * <p>For example — waiting for the Falcon's hyperdrive to engage:</p>
+     * <pre>
+     *   runStartupListenerWatchdog(server, 10389)
+     *   // polls port 10389 every 1 s for up to 180 s
+     *   // port no longer available → server.setStatus(STARTED) → return
+     * </pre>
+     *
+     * @param server  the server whose status we're watching
+     * @param port    the TCP port to poll; 0 to skip polling entirely
+     * @throws Exception if the thread is interrupted unexpectedly
      */
     public static void runStartupListenerWatchdog( LdapServer server, int port ) throws Exception
     {
@@ -122,13 +153,25 @@ public class LdapServersUtils
     }
 
 
+    // ── Thread: Watch For The OS Process To Terminate ─────────────────────────────────────────
+    // After the launch is created, we start a background thread that listens for Eclipse's
+    // DebugPlugin TERMINATE event.  When the OS process dies (crash or clean shutdown),
+    // we mark the server STOPPED and unregister ourselves.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Starting the "terminate" listener thread.
-     * 
-     * @param server 
-     *      the server
-     * @param launch 
-     *      the launch
+     * Starts a background thread that registers an {@link IDebugEventSetListener} on
+     * {@link DebugPlugin} and waits for a {@link DebugEvent#TERMINATE} event matching
+     * the given {@code launch}.
+     * On termination, sets the server's status to STOPPED and removes the listener.
+     *
+     * <p>For example — the sensor watches the hangar until the Falcon's engines go quiet:</p>
+     * <pre>
+     *   startTerminateListenerThread(server, launch)
+     *   // OS process exits → TERMINATE event → server.setStatus(STOPPED)
+     * </pre>
+     *
+     * @param server  the server to set STOPPED when the process terminates
+     * @param launch  the Eclipse debug launch representing the running OS process
      */
     public static void startTerminateListenerThread( final LdapServer server, final ILaunch launch )
     {
@@ -182,13 +225,20 @@ public class LdapServersUtils
     }
 
 
+    // ── Starting The Console Printer: Tailing The Server's Log File ──────────────────────────
+    // Cassian's intercept station needs the Falcon's transmission log in real time.
+    // We create a Tailer (a commons-io utility that tails a file like "tail -f") starting from
+    // the end of the file, and stream each new line to the server's Eclipse console.
+    // The Tailer is stored as a custom object on the server so we can stop it later.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Starts the console printer thread.
+     * Starts an Apache Commons IO {@link Tailer} that reads new lines from {@code serverLogsFile}
+     * every 1 second (starting from the end of the file) and prints them to the server's
+     * Eclipse Message Console via {@link ConsolesManager}.
+     * The Tailer is stored as {@link #CONSOLE_PRINTER_CUSTOM_OBJECT} on the server.
      *
-     * @param server
-     *      the server
-     * @param serverLogsFile
-     *       the server logs file
+     * @param server          the server whose console should receive the log output
+     * @param serverLogsFile  the log file to tail
      */
     public static void startConsolePrinterThread( LdapServer server, File serverLogsFile )
     {
@@ -213,11 +263,15 @@ public class LdapServersUtils
     }
 
 
+    // ── Stopping The Console Printer ──────────────────────────────────────────────────────────
+    // When the server stops, we don't need the log tailer any more.
+    // We pull it from the server's custom objects and tell it to stop.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Stops the tailer thread.
+     * Stops the {@link Tailer} stored under {@link #CONSOLE_PRINTER_CUSTOM_OBJECT} on the server.
+     * Does nothing if no tailer was stored (e.g., the server was never started).
      *
-     * @param server
-     *      the server
+     * @param server  the server whose log tailer should be stopped
      */
     public static void stopConsolePrinterThread( LdapServer server )
     {
@@ -232,12 +286,19 @@ public class LdapServersUtils
     }
 
 
+    // ── Terminating The OS-Level Server Process ───────────────────────────────────────────────
+    // When we stop the server, we need to terminate the OS process backing it.
+    // We retrieve the stored ILaunch, check it isn't already terminated, and terminate it.
+    // If no launch is found, we throw an exception — something went wrong with startup.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Terminates the launch configuration.
+     * Terminates the OS-level server process by calling {@link ILaunch#terminate()} on the
+     * launch stored as {@link #LAUNCH_CONFIGURATION_CUSTOM_OBJECT} on the server.
+     * Throws an {@link Exception} if no launch object is found — indicating the server was
+     * never properly started or the launch reference was lost.
      *
-     * @param server
-     *      the server
-     * @throws Exception
+     * @param server  the server whose OS process should be terminated
+     * @throws Exception if the launch cannot be found or the terminate call fails
      */
     public static void terminateLaunchConfiguration( LdapServer server ) throws Exception
     {
@@ -259,18 +320,20 @@ public class LdapServersUtils
     }
 
 
+    // ── Private: Verify And Copy Libraries Without Progress Monitor ───────────────────────────
+    // The internal version of the library copier — no progress-monitor scaffolding.
+    // Checks each JAR file: if it doesn't exist or the bundle is newer, we copy it from the
+    // bundle's source path to the destination.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Verifies that the libraries folder exists and contains the jar files 
-     * needed to launch the server.
+     * Checks each library in {@code libraries} and copies it from the bundle to the destination
+     * folder if the destination file is absent or older than the bundle's last-modified time.
+     * Shows an error dialog (non-fatal) if any individual copy fails.
      *
-     * @param bundle
-     *      the bundle
-     * @param sourceLibrariesPath
-     *      the path to the source libraries
-     * @param destinationLibrariesPath
-     *      the path to the destination libraries
-     * @param libraries
-     *      the names of the libraries
+     * @param bundle                    the OSGi bundle containing the source libraries
+     * @param sourceLibrariesPath       the path within the bundle where the JARs live
+     * @param destinationLibrariesPath  the on-disk folder to copy into (created if absent)
+     * @param libraries                 array of JAR file names to verify and copy
      */
     private static void verifyAndCopyLibraries( Bundle bundle, IPath sourceLibrariesPath,
         IPath destinationLibrariesPath, String[] libraries )
@@ -305,20 +368,27 @@ public class LdapServersUtils
     }
 
 
+    // ── Public: Verify And Copy Libraries With Progress Monitor ──────────────────────────────
+    // The public-facing overload used by server adapter plugins during the start job.
+    // Sets a sub-task description on the monitor before delegating to the private version.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Verifies that the libraries folder exists and contains the jar files 
-     * needed to launch the server.
+     * Verifies and copies all required JAR libraries for a server, reporting progress.
+     * Sets a sub-task description on {@code monitor}, then delegates to the private
+     * {@link #verifyAndCopyLibraries(Bundle, IPath, IPath, String[])} overload.
      *
-     * @param bundle
-     *      the bundle
-     * @param sourceLibrariesPath
-     *      the path to the source libraries
-     * @param destinationLibrariesPath
-     *      the path to the destination libraries
-     * @param libraries
-     *      the names of the libraries
-     * @param monitor the monitor
-     * @param monitorTaskName the name of the task for the monitor
+     * <p>For example — copying ApacheDS JARs before starting the server:</p>
+     * <pre>
+     *   verifyAndCopyLibraries(bundle, "/lib", serverLibPath, libNames, monitor, "Copying libraries...")
+     *   // each JAR is checked and copied if needed
+     * </pre>
+     *
+     * @param bundle                    the OSGi bundle containing the source libraries
+     * @param sourceLibrariesPath       the path within the bundle where the JARs live
+     * @param destinationLibrariesPath  the on-disk folder to copy into
+     * @param libraries                 array of JAR file names to verify and copy
+     * @param monitor                   the progress monitor to report to
+     * @param monitorTaskName           the sub-task name to display in the progress dialog
      */
     public static void verifyAndCopyLibraries( Bundle bundle, IPath sourceLibrariesPath,
         IPath destinationLibrariesPath, String[] libraries, StudioProgressMonitor monitor, String monitorTaskName )
@@ -331,18 +401,20 @@ public class LdapServersUtils
     }
 
 
+    // ── Copying A Single Resource From The Bundle ─────────────────────────────────────────────
+    // We locate the resource inside the bundle via FileLocator, open input/output streams,
+    // copy the bytes, and close everything.  Throws IOException if the copy fails.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-    * Copy the given resource.
-    *
-    * @param bundle
-    *       the bundle
-    * @param resource
-    *      the path of the resource
-    * @param destination
-    *      the destination
-    * @throws IOException
-    *      if an error occurs when copying the jar file
-    */
+     * Copies a single resource file from within an OSGi {@link Bundle} to a file on disk.
+     * Uses {@link FileLocator#find} to resolve the bundle-relative path to a URL,
+     * then copies the bytes via {@link #copyFile}.
+     *
+     * @param bundle       the OSGi bundle containing the resource
+     * @param resource     the bundle-relative path to the resource file
+     * @param destination  the destination file on disk
+     * @throws IOException if the resource cannot be found or the copy fails
+     */
     public static void copyResource( Bundle bundle, IPath resource, File destination ) throws IOException
     {
         // Getting he URL of the resource within the bundle
@@ -361,15 +433,17 @@ public class LdapServersUtils
     }
 
 
+    // ── Low-Level Byte-by-Byte Stream Copy ────────────────────────────────────────────────────
+    // Reads 1 KB chunks from the input and writes them to the output.
+    // Used by copyResource() to move JAR files from the bundle to the server's lib folder.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Copies a file from the given streams.
+     * Copies all bytes from {@code inputStream} to {@code outputStream} using a 1 KB buffer.
+     * Neither stream is closed by this method — the caller is responsible for closing them.
      *
-     * @param inputStream
-     *      the input stream
-     * @param outputStream
-     *      the output stream
-     * @throws IOException
-     *      if an error occurs when copying the file
+     * @param inputStream   the source stream
+     * @param outputStream  the destination stream
+     * @throws IOException if reading or writing fails
      */
     private static void copyFile( InputStream inputStream, OutputStream outputStream ) throws IOException
     {

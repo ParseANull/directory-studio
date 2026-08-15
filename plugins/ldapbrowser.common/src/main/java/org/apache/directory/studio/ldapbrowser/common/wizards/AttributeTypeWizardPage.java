@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.wizards;
@@ -49,9 +49,23 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: AttributeTypeWizardPage — YODA QUIZZES LUKE ON THE NATURE OF THE FORCE
+// Deep in the Dagobah swamp, Yoda fires a question at Luke: "Name the Force,
+// can you?  And which kind — the kind your entry's schema allows, hmm?"
+// Luke has to pick the right answer from the list Yoda offers, filter out
+// the noise with two checkboxes, and confirm his choice in the preview.
+// This wizard page is that quiz: a combo to select an LDAP attribute type,
+// two filter checkboxes to narrow the list, and a read-only preview field
+// that shows the full attribute description as Luke builds it.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The AttributeTypeWizardPage provides a combo to select the attribute type,
- * some filter and a preview field.
+ * The first page of {@link AttributeWizard} — lets the user choose an LDAP
+ * attribute type from a filterable combo box.
+ * Two checkboxes let the user narrow the list to schema-allowed types only,
+ * and optionally hide types that already exist on the entry.
+ * A preview field at the bottom shows the current attribute description
+ * so the user can see how their choices translate in real time.
+ * Think of this page as Yoda's pop quiz on the Dagobah training grounds.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -92,15 +106,38 @@ public class AttributeTypeWizardPage extends WizardPage
     private Text previewText;
 
 
+    // ── Yoda Prepares Luke's Pop Quiz on Dagobah ─────────────────────────────
+    // Yoda gathers all the relevant Force knowledge into three scrolls — every
+    // known attribute type, only the ones the entry's schema allows, and that
+    // same set minus the attributes Luke has already learned.
+    // He also reads Luke's previous answer from the description string, ready
+    // to pre-fill the combo when the lesson begins.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AttributeTypeWizardPage.
-     * 
-     * @param pageName the page name
-     * @param initialEntry the initial entry
-     * @param initialAttributeDescription the initial attribute description
-     * @param initialShowSubschemaAttributesOnly the initial show subschema attributes only
-     * @param initialHideExistingAttributes the initial hide existing attributes
-     * @param wizard the wizard
+     * Creates a new {@code AttributeTypeWizardPage} and pre-computes the three
+     * attribute-type lists used by the filter checkboxes.
+     * We also parse the initial attribute description to pre-select the right
+     * type in the combo when the page first becomes visible.
+     *
+     * <p>For example — Yoda assembles three training scrolls for Luke:</p>
+     * <pre>
+     *   // scroll 1: all known attribute types (global schema)
+     *   // scroll 2: only types the entry's object classes allow
+     *   // scroll 3: scroll 2 minus types already on the entry
+     * </pre>
+     *
+     * @param pageName                          Internal wizard page identifier.
+     * @param initialEntry                      The LDAP entry we're adding to;
+     *                                          used for schema and existing-attribute lookups.
+     * @param initialAttributeDescription       The attribute description to start from
+     *                                          (e.g. {@code cn;lang-de}); the type part
+     *                                          is parsed out and pre-selected in the combo.
+     * @param initialShowSubschemaAttributesOnly When {@code true}, the schema-only
+     *                                          filter checkbox starts checked.
+     * @param initialHideExistingAttributes     When {@code true}, the hide-existing
+     *                                          checkbox starts checked.
+     * @param wizard                            The parent {@link AttributeWizard} that
+     *                                          coordinates both pages.
      */
     public AttributeTypeWizardPage( String pageName, IEntry initialEntry, String initialAttributeDescription,
         boolean initialShowSubschemaAttributesOnly, boolean initialHideExistingAttributes, AttributeWizard wizard )
@@ -144,8 +181,21 @@ public class AttributeTypeWizardPage extends WizardPage
     }
 
 
+    // ── Yoda Checks Whether Luke Answered Correctly ───────────────────────────
+    // Yoda listens to Luke's answer, glances at the preview board to confirm
+    // it reflects what Luke said, then marks the lesson complete or incomplete.
+    // If Luke left the combo empty, the lesson isn't done — Yoda waits.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Validates this page.
+     * Refreshes the preview text and enables or disables the Next button based
+     * on whether an attribute type has been entered.
+     * An empty combo means the page is incomplete; any non-empty value marks it done.
+     *
+     * <p>For example — Yoda checks whether Luke actually named the Force correctly:</p>
+     * <pre>
+     *   previewText.setText( wizard.getAttributeDescription() );
+     *   setPageComplete( !"".equals( attributeTypeCombo.getText() ) );
+     * </pre>
      */
     private void validate()
     {
@@ -154,8 +204,22 @@ public class AttributeTypeWizardPage extends WizardPage
     }
 
 
+    // ── Luke Steps Up to the Training Station — Lesson Begins ────────────────
+    // Yoda gestures for Luke to approach the podium; as Luke steps forward,
+    // Yoda runs a quick re-check of the current answer so the preview stays fresh.
+    // When Luke steps back (page hidden), nothing special happens.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by the wizard dialog whenever this page is shown or hidden.
+     * When the page becomes visible we re-validate so the preview and Next-button
+     * state are current — important when the user navigates back and returns.
+     *
+     * <p>For example — Luke approaches Yoda's podium; Yoda re-reads the current answer:</p>
+     * <pre>
+     *   if ( visible ) { validate(); }
+     * </pre>
+     *
+     * @param visible  {@code true} when this page is being shown, {@code false} when hidden.
      */
     @Override
     public void setVisible( boolean visible )
@@ -169,8 +233,28 @@ public class AttributeTypeWizardPage extends WizardPage
     }
 
 
+    // ── Yoda Draws the Quiz Layout on a Clearing ─────────────────────────────
+    // Yoda scratches a grid into the Dagobah mud: combo box up top for the answer,
+    // two checkboxes on the left to filter the question scope, a spacer for
+    // breathing room, and a preview slate at the bottom to show what Luke wrote.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the SWT controls for this wizard page.
+     * Lays out an attribute-type combo with auto-complete, two filter checkboxes
+     * (schema-only and hide-existing), and a read-only preview text field.
+     * Listeners on every control call {@link #validate()} so the preview and
+     * Next button stay in sync as the user types.
+     *
+     * <p>For example — Yoda scratches the quiz layout into the training clearing:</p>
+     * <pre>
+     *   [ AttributeType: [combo▼]                    ]
+     *   [   ☑ Show subschema attributes only          ]
+     *   [   ☑ Hide existing attributes                ]
+     *   [                                             ]
+     *   [ Preview: [readonly text]                   ]
+     * </pre>
+     *
+     * @param parent  The parent composite supplied by the wizard dialog.
      */
     @Override
     public void createControl( Composite parent )
@@ -242,8 +326,25 @@ public class AttributeTypeWizardPage extends WizardPage
     }
 
 
+    // ── Yoda Narrows the Question Scope for Luke ──────────────────────────────
+    // Depending on Luke's current level, Yoda restricts the question pool:
+    // if the schema-only flag is on, only schema-allowed types appear; if
+    // hide-existing is also on, types Luke already mastered are removed too.
+    // Yoda also greys out the hide-existing checkbox when schema-only is off —
+    // there's no point filtering within an unconstrained list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the filter.
+     * Refreshes the combo items and enables or disables the filter checkboxes
+     * based on the current filter selections.
+     * If the schema-only list is empty we force that checkbox off (there is
+     * nothing to filter to); similarly for the hide-existing checkbox.
+     *
+     * <p>For example — Yoda adjusts which questions Luke sees based on his level:</p>
+     * <pre>
+     *   if ( hideExisting &amp;&amp; subschemaOnly ) → show possibleAttributeTypesSubschemaOnlyAndExistingHidden
+     *   if ( subschemaOnly only            ) → show possibleAttributeTypesSubschemaOnly
+     *   else                                 → show all possibleAttributeTypes
+     * </pre>
      */
     private void updateFilter()
     {
@@ -278,10 +379,24 @@ public class AttributeTypeWizardPage extends WizardPage
     }
 
 
+    // ── Yoda Retrieves Luke's Final Answer ────────────────────────────────────
+    // Yoda checks the answer slate — whatever Luke wrote in the combo, that is
+    // the attribute type he chose.  If the combo is gone (wizard disposed), we
+    // return an empty string rather than throwing a widget-is-disposed exception.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the attribute type.
-     * 
-     * @return the attribute type
+     * Returns the attribute type currently entered in the combo box.
+     * This is the raw text from the combo — not validated against the schema —
+     * so callers should treat it as user input.
+     * Returns an empty string if the combo has been disposed.
+     *
+     * <p>For example — Yoda reads back whatever Luke typed on his answer slate:</p>
+     * <pre>
+     *   String type = typePage.getAttributeType(); // e.g. "cn" or "jpegPhoto"
+     *   // combined with options page: "cn;lang-de"
+     * </pre>
+     *
+     * @return  The selected attribute type string, or {@code ""} if disposed.
      */
     String getAttributeType()
     {

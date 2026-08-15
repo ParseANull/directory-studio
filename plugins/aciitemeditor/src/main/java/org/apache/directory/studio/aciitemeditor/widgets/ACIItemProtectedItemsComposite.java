@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.widgets;
 
@@ -60,8 +60,20 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Table;
 
 
+// ── CLASS: ACIItemProtectedItemsComposite — ISB RESOURCE-CATEGORY TABLE ───────
+// The ISB itemFirst directive lists which resource categories are protected
+// (entry, allUserAttributeTypes, attributeType, etc.).  The officer checks
+// the applicable rows, then optionally clicks Edit to supply per-category values.
+// ACIItemProtectedItemsComposite is that table: 12 possible rows, checkbox,
+// and an Edit button for multi-valued categories.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This composite contains GUI elements to edit ACI item protected items.
+ * SWT {@link Composite} presenting a fixed list of twelve
+ * {@link ProtectedItemWrapper} rows as a checkbox table.
+ * Checked rows are included in the ACI item; editable rows open a
+ * {@link MultiValuedDialog} (or a single-value cell editor) via the Edit button.
+ * Think of this as the ISB resource-category table: check the categories,
+ * fill in the values, the directive collects them all.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -83,11 +95,14 @@ public class ACIItemProtectedItemsComposite extends Composite
     private ProtectedItemWrapper[] protectedItemWrappers = ProtectedItemWrapperFactory.createProtectedItemWrappers();
 
 
+    // ── CONSTRUCT THE PROTECTED-ITEMS TABLE ───────────────────────────────────
     /**
-     * Creates a new instance of ACIItemProtectedItemsComposite.
+     * Creates a new {@code ACIItemProtectedItemsComposite}.
+     * Builds the checkbox table and the Edit / Select All / Deselect All /
+     * Reverse Selection button panel.
      *
-     * @param parent
-     * @param style
+     * @param parent  the parent composite
+     * @param style   SWT style bits
      */
     public ACIItemProtectedItemsComposite( Composite parent, int style )
     {
@@ -110,9 +125,10 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── BUILD THE INNER COMPOSITE ─────────────────────────────────────────────
     /**
-     * This method initializes composite
-     *
+     * Creates the two-column inner composite, label, checkbox table viewer,
+     * and button panel.
      */
     private void createComposite()
     {
@@ -147,9 +163,11 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── BUILD THE CHECKBOX TABLE VIEWER ───────────────────────────────────────
     /**
-     * This method initializes table and table viewer
-     *
+     * Creates and configures the {@link CheckboxTableViewer} displaying all
+     * protected-item categories and wires selection, check-state, and
+     * double-click listeners.
      */
     private void createTable()
     {
@@ -195,9 +213,10 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── BUILD THE BUTTON PANEL ────────────────────────────────────────────────
     /**
-     * This method initializes buttons
-     *
+     * Creates the Edit, Select All, Deselect All, and Reverse Selection buttons.
+     * Edit is disabled until an editable row is selected.
      */
     private void createButtonComposite()
     {
@@ -291,8 +310,13 @@ public class ACIItemProtectedItemsComposite extends Composite
 
     }
 
+    // ── CLASS: ProtectedItemsLabelProvider — ERROR-ICON LABEL PROVIDER ────────
+    // If a row is checked but its value is invalid the label provider shows
+    // an error icon so the officer knows which rows need attention.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * The label provider used for this table viewer.
+     * {@link LabelProvider} that shows an error icon for checked rows whose
+     * protected item fails to parse, and no icon otherwise.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -301,10 +325,9 @@ public class ACIItemProtectedItemsComposite extends Composite
 
         /**
          * Returns the error icon if the protected item is checked and invalid.
-         * 
-         * @param element the element
-         * 
-         * @return the image
+         *
+         * @param element  the element
+         * @return         the error icon, or {@code null}
          */
         public Image getImage( Object element )
         {
@@ -330,10 +353,11 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── INJECT THE CONNECTION CONTEXT ─────────────────────────────────────────
     /**
-     * Sets the context.
-     * 
-     * @param context the context
+     * Stores the connection context for use by value editors opened via Edit.
+     *
+     * @param context  the value context
      */
     public void setContext( ACIItemValueWithContext context )
     {
@@ -341,10 +365,12 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── POPULATE THE TABLE ────────────────────────────────────────────────────
     /**
-     * Sets the protected items. 
+     * Resets all checkboxes, then checks the rows corresponding to
+     * {@code protectedItems} and populates their values.
      *
-     * @param protectedItems
+     * @param protectedItems  the protected items to display
      */
     public void setProtectedItems( Collection<ProtectedItem> protectedItems )
     {
@@ -370,11 +396,13 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── COLLECT CHECKED PROTECTED ITEMS ───────────────────────────────────────
     /**
-     * Returns the protected items as selected by the user.
+     * Returns the collection of {@link ProtectedItem} objects corresponding to
+     * the currently checked rows.
      *
-     * @return the protected items
-     * @throws ParseException if the protected items or its values are not valid.
+     * @return the checked protected items
+     * @throws ParseException  if any checked wrapper's value fails to parse
      */
     public Collection<ProtectedItem> getProtectedItems() throws ParseException
     {
@@ -394,10 +422,11 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── SHOW / HIDE THIS COMPOSITE ────────────────────────────────────────────
     /**
-     * Shows or hides this composite.
-     * 
-     * @param visible true if visible
+     * Shows or hides this composite by adjusting its {@code GridData.heightHint}.
+     *
+     * @param visible  {@code true} to show, {@code false} to hide
      */
     public void setVisible( boolean visible )
     {
@@ -406,9 +435,12 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── GET THE SELECTED WRAPPER ──────────────────────────────────────────────
     /**
-     * 
-     * @return the protected item that is selected in the table viewer, or null.
+     * Returns the {@link ProtectedItemWrapper} currently selected in the table
+     * viewer, or {@code null} if nothing is selected.
+     *
+     * @return the selected wrapper, or {@code null}
      */
     private ProtectedItemWrapper getSelectedProtectedItemWrapper()
     {
@@ -428,10 +460,10 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── REACT TO SELECTION CHANGES ────────────────────────────────────────────
     /**
-     * Called, when a protected item is selected in the table viewer.
-     * - enables/disables the edit button
-     *
+     * Enables or disables the Edit button based on whether the selected row
+     * is editable.
      */
     private void protectedItemSelected()
     {
@@ -448,8 +480,9 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── REACT TO CHECK-STATE CHANGES ──────────────────────────────────────────
     /**
-     * Called, when a protected item checkbox is checked or unchecked.
+     * Refreshes the table when a checkbox is toggled (to update error icons).
      */
     private void protectedItemChecked()
     {
@@ -457,9 +490,10 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── OPEN THE VALUE EDITOR ─────────────────────────────────────────────────
     /**
-     * Called, when pushing the edit button. Opens the text editor.
-     *
+     * Opens the appropriate value editor (multi-valued dialog or single-value
+     * cell editor) for the selected protected item wrapper, then refreshes the table.
      */
     private void editProtectedItem()
     {
@@ -506,8 +540,10 @@ public class ACIItemProtectedItemsComposite extends Composite
     }
 
 
+    // ── REFRESH THE TABLE ─────────────────────────────────────────────────────
     /**
-     * Refreshes the table viewer.
+     * Refreshes the table viewer, causing labels (including error icons) to
+     * be recomputed.
      */
     private void refreshTable()
     {

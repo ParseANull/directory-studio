@@ -25,18 +25,43 @@ import org.apache.directory.studio.openldap.config.acl.OpenLdapAclValueWithConte
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseUsers;
 
 
+// ── CLASS: WhoClauseUsersComposite — TARKIN GRANTING ACCESS TO ALL USERS ─────
+// Grand Moff Tarkin permits all authenticated users ("users") to be matched by
+// this who-clause. No additional configuration is needed — the keyword "users"
+// alone identifies the subject class. This composite is a no-op leaf.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * 
+ * A clause composite for the {@code users} who-clause. No SWT controls are
+ * required — this is a no-op leaf that stores the clause reference only.
+ *
+ * <p>Think of this class as Grand Moff Tarkin matching all authenticated
+ * users — no further configuration needed beyond the keyword.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class WhoClauseUsersComposite extends AbstractWhoClauseComposite<AclWhoClauseUsers>
 {
+    // ── Constructor With Explicit Clause ──────────────────────────────────────
+    /**
+     * Creates a new users who-clause composite with an explicit clause.
+     *
+     * @param context               The ACL context.
+     * @param clause                The users clause to store.
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhoClauseUsersComposite( OpenLdapAclValueWithContext context, AclWhoClauseUsers clause, Composite visualEditorComposite )
     {
         super( context, clause, visualEditorComposite );
     }
 
 
+    // ── Constructor Without Explicit Clause ───────────────────────────────────
+    /**
+     * Creates a new users who-clause composite with a default {@link AclWhoClauseUsers} instance.
+     *
+     * @param context               The ACL context.
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhoClauseUsersComposite( OpenLdapAclValueWithContext context, Composite visualEditorComposite )
     {
         super( context, new AclWhoClauseUsers(), visualEditorComposite );

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.ui.preferences;
@@ -59,31 +59,85 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: PasswordsKeystorePreferencePage — THE REBEL BASE VAULT MANAGER ────────
+// The Rebel Alliance stores connection bind passwords in an encrypted JKS keystore
+// protected by a master password.  This preference page is the vault management
+// terminal.  You can:
+//   • Enable the vault for the first time (SetupPasswordDialog)
+//   • Disable it — choose to either discard stored passwords or keep them by
+//     re-hydrating them into the connection bean (after verifying the master
+//     password via PasswordDialog)
+//   • Change the master password (ResetPasswordDialog)
+//
+// All of this happens against a TEMPORARY copy of the keystore so that pressing
+// "Cancel" leaves the live keystore untouched.  On performOk() we atomically
+// overwrite the live keystore with the temp copy.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * The passwords keystore preference page contains the settings for keystore 
- * where we store the connections passwords.
+ * Preference page for the passwords keystore — an encrypted JKS file that stores
+ * connection bind passwords keyed by connection ID.
+ *
+ * <p><b>How it works</b>: on {@link #init} we copy the live keystore to a temporary
+ * file.  All enable/disable/change-password operations in the page run against that
+ * temporary copy.  On {@link #performOk} the temporary file is saved and copied over
+ * the live keystore; on {@link #performCancel} the temporary file is simply deleted.</p>
+ *
+ * <p>User flows:</p>
+ * <ul>
+ *   <li><b>Enable</b>: opens {@link SetupPasswordDialog}, loads the temp keystore
+ *       with the chosen master password, migrates all existing bind passwords into it,
+ *       clears the bind-password field on each connection bean.</li>
+ *   <li><b>Disable (keep passwords)</b>: verifies master password via
+ *       {@link PasswordDialog}, reads passwords back from the keystore into a backup
+ *       map, then deletes the temp keystore file.</li>
+ *   <li><b>Disable (discard passwords)</b>: deletes the temp keystore file; backup
+ *       map stays empty.</li>
+ *   <li><b>Change master password</b>: opens {@link ResetPasswordDialog}, verifies
+ *       the current password, sets the new one, and saves the temp keystore.</li>
+ * </ul>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class PasswordsKeystorePreferencePage extends PreferencePage implements IWorkbenchPreferencePage
 {
-    /** The filename for the temporary keystore */
+    // ── CONSTANTS ─────────────────────────────────────────────────────────────────
+
+    /** Filename of the temporary keystore used for in-progress preference changes. */
     private static final String TEMPORARY_KEYSTORE_FILENAME = "passwords-prefs-temp.jks"; //$NON-NLS-1$
 
-    /** The passwords keystore manager */
+
+    // ── FIELDS ────────────────────────────────────────────────────────────────────
+
+    /** Temporary keystore manager — all changes happen here until OK is pressed. */
     private PasswordsKeyStoreManager passwordsKeyStoreManager;
 
-    /** The map used to backup connections passwords */
+    /**
+     * Backup of connection bind passwords loaded from the keystore when the user
+     * chooses to disable the keystore but keep the passwords.  Applied back to the
+     * connection beans on {@link #performOk}.
+     */
     private Map<String, String> connectionsPasswordsBackup = new ConcurrentHashMap<>();
 
-    /** The connection manager */
+    /** The connection manager — needed to iterate connections for password migration. */
     private ConnectionManager connectionManager;
 
-    // UI Widgets
+
+    // ── UI WIDGETS ────────────────────────────────────────────────────────────────
+
+    /** Master "Enable passwords keystore" checkbox. */
     private Button enableKeystoreCheckbox;
+
+    /** "Change Master Password…" button — enabled only when the keystore is enabled. */
     private Button changeMasterPasswordButton;
 
-    // Listeners
+
+    // ── LISTENERS ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Listener for the enable/disable checkbox.  Calls either
+     * {@link #enablePasswordsKeystore()} or {@link #disablePasswordsKeystore()} and
+     * rolls back the checkbox state if the operation fails or is cancelled.
+     */
     private SelectionListener enableKeystoreCheckboxListener = new SelectionAdapter()
     {
         /**
@@ -124,7 +178,10 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
         }
     };
 
-    
+    /**
+     * Listener for the "Change Master Password" button.  Delegates to
+     * {@link #changeMasterPassword()}.
+     */
     private SelectionListener changeMasterPasswordButtonListener = new SelectionAdapter()
     {
         /**
@@ -138,8 +195,12 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     };
 
 
+    // ── CONSTRUCTOR ───────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PasswordsKeyStorePreferencePage.
+     * Creates a new {@link PasswordsKeystorePreferencePage}.
+     *
+     * <p>Initialises the temporary {@link PasswordsKeyStoreManager} and obtains
+     * a reference to the global {@link ConnectionManager}.</p>
      */
     public PasswordsKeystorePreferencePage()
     {
@@ -153,20 +214,24 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── INIT ──────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>If the live keystore file already exists, we copy it to the temporary
+     * location so all subsequent changes are made against the copy.</p>
      */
     public void init( IWorkbench workbench )
     {
-        // Getting the keystore file
+        // ── COPY LIVE KEYSTORE TO TEMP ────────────────────────────────────────────
+        // We operate on the copy; if the user cancels, the live file is untouched.
+        // ──────────────────────────────────────────────────────────────────────────
         File keystoreFile = ConnectionCorePlugin.getDefault().getPasswordsKeyStoreManager().getKeyStoreFile();
 
-        // If the keystore file exists, let's create a copy of it
         if ( keystoreFile.exists() )
         {
             try
             {
-                // Copying the file
                 Files.copy( keystoreFile.toPath(), getTemporaryKeystoreFile().toPath() );
             }
             catch ( IOException e )
@@ -182,10 +247,12 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── GET TEMPORARY KEYSTORE FILE ───────────────────────────────────────────────
     /**
-     * Gets the file for the temporary keystore.
+     * Returns the {@link File} handle for the temporary keystore file located in
+     * the plugin's state-location directory.
      *
-     * @return the  file for the temporary keystore
+     * @return The temporary keystore {@link File}.
      */
     private File getTemporaryKeystoreFile()
     {
@@ -193,16 +260,21 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── CONTRIBUTE BUTTONS ────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Adds the "Change Master Password…" button to the button bar, then updates
+     * its enabled state to match the current checkbox selection.</p>
      */
     @Override
     protected void contributeButtons( Composite parent )
     {
-        // Increasing the number of columns on the parent layout
+        // ── ADD "CHANGE MASTER PASSWORD" BUTTON ───────────────────────────────────
+        // We need an extra column on the parent's GridLayout to hold our button.
+        // ──────────────────────────────────────────────────────────────────────────
         ( ( GridLayout ) parent.getLayout() ).numColumns++;
 
-        // Change Master Password Button
         changeMasterPasswordButton = BaseWidgetUtils.createButton( parent,
             Messages.getString( "PasswordsKeystorePreferencePage.ChangeMasterPasswordEllipsis" ), 1 ); //$NON-NLS-1$
         changeMasterPasswordButton.setLayoutData( new GridData( SWT.BEGINNING, SWT.CENTER, false, false ) );
@@ -212,21 +284,27 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── CREATE CONTENTS ───────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Builds the preference page body: an enable/disable checkbox with a
+     * warning label below it.  The checkbox is wired via {@link #addListeners()}.</p>
      */
     protected Control createContents( Composite parent )
     {
         Composite composite = BaseWidgetUtils.createColumnContainer( parent, 2, 1 );
 
-        // Enable Keystore Checkbox
+        // ── ENABLE KEYSTORE CHECKBOX ──────────────────────────────────────────────
         enableKeystoreCheckbox = new Button( composite, SWT.CHECK | SWT.WRAP );
         enableKeystoreCheckbox
             .setText( Messages
                 .getString( "PasswordsKeystorePreferencePage.StoreConnectionsPasswordsInPasswordProtectedKeystore" ) ); //$NON-NLS-1$
         enableKeystoreCheckbox.setLayoutData( new GridData( SWT.BEGINNING, SWT.CENTER, false, false, 2, 1 ) );
 
-        // Warning Label
+        // ── WARNING LABEL ─────────────────────────────────────────────────────────
+        // The keystore requires a master password — forgetting it means no passwords.
+        // ──────────────────────────────────────────────────────────────────────────
         BaseWidgetUtils.createRadioIndent( composite, 1 );
         BaseWidgetUtils
             .createWrappedLabel(
@@ -241,8 +319,9 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── INIT UI ───────────────────────────────────────────────────────────────────
     /**
-     * Initializes the UI.
+     * Reads the current keystore preference value and sets the checkbox accordingly.
      */
     private void initUI()
     {
@@ -260,8 +339,9 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── ADD LISTENERS ─────────────────────────────────────────────────────────────
     /**
-     * Adds the listeners.
+     * Adds the enable/disable checkbox listener.
      */
     private void addListeners()
     {
@@ -269,8 +349,10 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── REMOVE LISTENERS ──────────────────────────────────────────────────────────
     /**
-     * Removes the listeners.
+     * Removes the enable/disable checkbox listener (needed before programmatic
+     * changes so we don't fire the listener mid-operation).
      */
     private void removeListeners()
     {
@@ -278,8 +360,10 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── UPDATE BUTTONS ENABLED STATE ──────────────────────────────────────────────
     /**
-     * Updates the buttons enabled state.
+     * Enables or disables the "Change Master Password" button based on whether
+     * the keystore is currently enabled (checkbox checked).
      */
     private void updateButtonsEnabledState()
     {
@@ -287,8 +371,13 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── PERFORM DEFAULTS ──────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Resets the keystore enable/disable setting to its platform default.
+     * Listeners are temporarily removed to avoid triggering enable/disable flows
+     * during the programmatic checkbox change.</p>
      */
     @Override
     protected void performDefaults()
@@ -315,8 +404,22 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── PERFORM OK ────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Atomically commits all in-progress changes to the live keystore:</p>
+     * <ul>
+     *   <li>If <em>enabling</em>: saves the temp keystore, copies it over the live
+     *       file, reloads the global manager, clears bind-password fields on all
+     *       connections, saves connections, and records the ON preference.</li>
+     *   <li>If <em>disabling</em>: resets the global manager, restores any backed-up
+     *       passwords to connection beans, saves connections, and records the OFF
+     *       preference.</li>
+     * </ul>
+     * Always deletes the temporary keystore file when done.
+     *
+     * @return Always {@code true}.
      */
     public boolean performOk()
     {
@@ -327,7 +430,7 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
         {
             if ( passwordsKeyStoreManager.isLoaded() )
             {
-                // First, let's save the temporary keystore manager
+                // ── SAVE TEMP KEYSTORE ────────────────────────────────────────────
                 try
                 {
                     passwordsKeyStoreManager.save();
@@ -342,7 +445,7 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
                                 "Couldn't save the temporary password keystore.", e ) ); //$NON-NLS-1$
                 }
 
-                // Now, let's copy the temporary keystore as the global keystore
+                // ── COPY TEMP → LIVE ──────────────────────────────────────────────
                 try
                 {
                     Files.copy( getTemporaryKeystoreFile().toPath(), ConnectionCorePlugin.getDefault()
@@ -358,7 +461,7 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
                                 "Couldn't copy the temporary keystore as the global keystore.", e ) ); //$NON-NLS-1$
                 }
 
-                // Finally lets reload the global keystore
+                // ── RELOAD GLOBAL KEYSTORE ────────────────────────────────────────
                 try
                 {
                     globalPasswordsKeyStoreManager.reload( passwordsKeyStoreManager.getMasterPassword() );
@@ -373,16 +476,17 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
                                 "Couldn't reload the global keystore file.", e ) ); //$NON-NLS-1$
                 }
 
-                // Clearing each connection password
+                // ── CLEAR PLAIN-TEXT PASSWORDS FROM CONNECTION BEANS ──────────────
+                // Now that they are safe in the keystore, we remove them from the
+                // serialised connection parameters.
+                // ──────────────────────────────────────────────────────────────────
                 for ( Connection connection : connectionManager.getConnections() )
                 {
                     connection.getConnectionParameter().setBindPassword( null );
                 }
 
-                // Saving the connections
                 ConnectionCorePlugin.getDefault().getConnectionManager().saveConnections();
 
-                // Saving the value to the preferences
                 ConnectionCorePlugin.getDefault().getPluginPreferences()
                     .setValue( ConnectionCoreConstants.PREFERENCE_CONNECTIONS_PASSWORDS_KEYSTORE,
                         ConnectionCoreConstants.PREFERENCE_CONNECTIONS_PASSWORDS_KEYSTORE_ON );
@@ -390,29 +494,25 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
         }
         else
         {
-            // Reseting the global passwords keystore
+            // ── DISABLE: RESET GLOBAL KEYSTORE ────────────────────────────────────
             globalPasswordsKeyStoreManager.reset();
 
-            // Looking for connections passwords in the list
+            // ── RESTORE BACKED-UP PASSWORDS ───────────────────────────────────────
             if ( !connectionsPasswordsBackup.isEmpty() )
             {
-                // Adding them to the keystore
-                for ( Map.Entry<String, String> entry : connectionsPasswordsBackup.entrySet() ) 
+                for ( Map.Entry<String, String> entry : connectionsPasswordsBackup.entrySet() )
                 {
                     Connection connection = connectionManager.getConnectionById( entry.getKey() );
 
                     if ( connection != null )
                     {
-                        connection.getConnectionParameter().setBindPassword(
-                            entry.getValue() );
+                        connection.getConnectionParameter().setBindPassword( entry.getValue() );
                     }
                 }
 
-                // Saving the connections
                 ConnectionCorePlugin.getDefault().getConnectionManager().saveConnections();
             }
 
-            // Saving the value to the preferences
             ConnectionCorePlugin.getDefault().getPluginPreferences()
                 .setValue( ConnectionCoreConstants.PREFERENCE_CONNECTIONS_PASSWORDS_KEYSTORE,
                     ConnectionCoreConstants.PREFERENCE_CONNECTIONS_PASSWORDS_KEYSTORE_OFF );
@@ -425,8 +525,13 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── PERFORM CANCEL ────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Deletes the temporary keystore file so no partial changes linger on disk.</p>
+     *
+     * @return Always {@code true}.
      */
     public boolean performCancel()
     {
@@ -435,33 +540,41 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── DELETE TEMPORARY KEYSTORE ─────────────────────────────────────────────────
     /**
-     * Deletes the temporary keystore (if it exists)
+     * Deletes the temporary keystore file if it exists.
+     *
+     * <p>Called from both {@link #performOk} and {@link #performCancel} to ensure
+     * the temp file is cleaned up regardless of how the page is closed.</p>
      */
     private void deleteTemporaryKeystore()
     {
-        // Getting the temporary keystore file
         File temporaryKeystoreFile = getTemporaryKeystoreFile();
 
-        // If the temporary keystore file exists, we need to remove it
         if ( temporaryKeystoreFile.exists() )
         {
-            // Deleting the file
             FileUtils.deleteQuietly( temporaryKeystoreFile );
         }
     }
 
 
+    // ── ENABLE PASSWORDS KEYSTORE ─────────────────────────────────────────────────
     /**
-     * Enables the passwords keystore.
+     * Runs the enable-keystore flow:
+     * <ol>
+     *   <li>Opens {@link SetupPasswordDialog} to get a new master password.</li>
+     *   <li>Loads the temporary keystore with that password.</li>
+     *   <li>Migrates all existing bind passwords from connection beans into the keystore.</li>
+     *   <li>Saves the temp keystore to disk.</li>
+     * </ol>
      *
-     * @return <code>true</code> if the passwords keystore was successfully enabled,
-     *         <code>false</code> if not.
-     * @throws KeyStoreException 
+     * @return {@code true} if the keystore was successfully enabled;
+     *         {@code false} if the user cancelled.
+     * @throws KeyStoreException If the keystore could not be loaded or saved.
      */
     private boolean enablePasswordsKeystore() throws KeyStoreException
     {
-        // Asking the user for a password
+        // ── PROMPT FOR MASTER PASSWORD ────────────────────────────────────────────
         SetupPasswordDialog setupPasswordDialog = new SetupPasswordDialog(
             enableKeystoreCheckbox.getShell(),
             Messages.getString( "PasswordsKeystorePreferencePage.SetupMasterPassword" ), //$NON-NLS-1$
@@ -470,13 +583,12 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
 
         if ( setupPasswordDialog.open() == SetupPasswordDialog.OK )
         {
-            // Getting the master password
             String masterPassword = setupPasswordDialog.getPassword();
 
-            // Loading the keystore
+            // Load the temp keystore with the new master password
             passwordsKeyStoreManager.load( masterPassword );
 
-            // Storing each connection password in the keystore
+            // ── MIGRATE EXISTING PASSWORDS ────────────────────────────────────────
             for ( Connection connection : connectionManager.getConnections() )
             {
                 String connectionPassword = connection.getBindPassword();
@@ -487,7 +599,6 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
                 }
             }
 
-            // Saving the keystore on disk
             passwordsKeyStoreManager.save();
 
             return true;
@@ -497,15 +608,22 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
     }
 
 
+    // ── DISABLE PASSWORDS KEYSTORE ────────────────────────────────────────────────
     /**
-     * Disables the passwords keystore.
+     * Runs the disable-keystore flow:
+     * <ol>
+     *   <li>Asks the user whether to keep their stored passwords.</li>
+     *   <li>If keeping: prompts for the master password (with retry loop) and
+     *       populates {@link #connectionsPasswordsBackup}.</li>
+     *   <li>Deletes the temp keystore file regardless.</li>
+     * </ol>
      *
-     * @return <code>true</code> if the passwords keystore was successfully disabled,
-     *         <code>false</code> if not.
+     * @return {@code true} if the keystore was successfully disabled;
+     *         {@code false} if the user cancelled.
      */
     private boolean disablePasswordsKeystore()
     {
-        // Asking the user if he wants to keep its connections passwords
+        // ── ASK: KEEP OR DISCARD STORED PASSWORDS? ────────────────────────────────
         MessageDialog keepConnectionsPasswordsDialog = new MessageDialog(
             enableKeystoreCheckbox.getShell(),
             Messages.getString( "PasswordsKeystorePreferencePage.KeepConnectionsPasswords" ), //$NON-NLS-1$
@@ -518,35 +636,32 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
 
         if ( keepConnectionsPasswordsValue == 1 )
         {
-            // The user chose NOT to keep the connections passwords
+            // ── DISCARD: delete the keystore without extracting passwords ─────────
             connectionsPasswordsBackup.clear();
             passwordsKeyStoreManager.deleteKeystoreFile();
             return true;
         }
         else if ( keepConnectionsPasswordsValue == 0 )
         {
-            // The user chose to keep the connections passwords
+            // ── KEEP: verify master password then extract passwords ────────────────
             connectionsPasswordsBackup.clear();
 
             while ( true )
             {
-                // We ask the user for the keystore password
                 PasswordDialog passwordDialog = new PasswordDialog(
                     enableKeystoreCheckbox.getShell(),
-                    Messages.getString( "PasswordsKeystorePreferencePage.VerifyMasterPassword" ), Messages.getString( "PasswordsKeystorePreferencePage.PleaseEnterYourMasterPassword" ), //$NON-NLS-1$ //$NON-NLS-2$
+                    Messages.getString( "PasswordsKeystorePreferencePage.VerifyMasterPassword" ), //$NON-NLS-1$
+                    Messages.getString( "PasswordsKeystorePreferencePage.PleaseEnterYourMasterPassword" ), //$NON-NLS-1$
                     null );
 
                 if ( passwordDialog.open() == PasswordDialog.CANCEL )
                 {
-                    // The user cancelled the action
                     return false;
                 }
 
-                // Getting the password
                 String password = passwordDialog.getPassword();
-
-                // Checking the password
                 Exception checkPasswordException = null;
+
                 try
                 {
                     if ( passwordsKeyStoreManager.checkMasterPassword( password ) )
@@ -559,40 +674,29 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
                     checkPasswordException = e;
                 }
 
-                // Creating the message
-                String message = null;
-
-                if ( checkPasswordException == null )
-                {
-                    message = Messages.getString( "PasswordsKeystorePreferencePage.MasterPasswordVerificationFailed" ); //$NON-NLS-1$
-                }
-                else
-                {
-                    message = Messages
-                        .getString( "PasswordsKeystorePreferencePage.MasterPasswordVerificationFailedWithException" ) //$NON-NLS-1$
+                // ── WRONG PASSWORD: offer retry or cancel ─────────────────────────
+                String message = ( checkPasswordException == null )
+                    ? Messages.getString( "PasswordsKeystorePreferencePage.MasterPasswordVerificationFailed" ) //$NON-NLS-1$
+                    : Messages.getString( "PasswordsKeystorePreferencePage.MasterPasswordVerificationFailedWithException" ) //$NON-NLS-1$
                         + checkPasswordException.getMessage();
-                }
 
-                // We ask the user if he wants to retry to unlock the passwords keystore
                 MessageDialog errorDialog = new MessageDialog(
                     enableKeystoreCheckbox.getShell(),
-                    Messages.getString( "PasswordsKeystorePreferencePage.VerifyMasterPasswordFailed" ), null, message, MessageDialog.ERROR, new String[] //$NON-NLS-1$
-                        { IDialogConstants.RETRY_LABEL,
-                            IDialogConstants.CANCEL_LABEL }, 0 );
+                    Messages.getString( "PasswordsKeystorePreferencePage.VerifyMasterPasswordFailed" ), //$NON-NLS-1$
+                    null, message, MessageDialog.ERROR, new String[]
+                        { IDialogConstants.RETRY_LABEL, IDialogConstants.CANCEL_LABEL }, 0 );
 
                 if ( errorDialog.open() == MessageDialog.CANCEL )
                 {
-                    // The user cancelled the action
                     return false;
                 }
             }
 
-            // Getting the connection IDs having their passwords saved in the keystore
+            // ── POPULATE BACKUP MAP ───────────────────────────────────────────────
             String[] connectionIds = passwordsKeyStoreManager.getConnectionIds();
 
             if ( connectionIds != null )
             {
-                // Adding the passwords to the backup map
                 for ( String connectionId : connectionIds )
                 {
                     String password = passwordsKeyStoreManager.getConnectionPassword( connectionId );
@@ -610,17 +714,23 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
         }
         else
         {
-            // The user cancelled the action
+            // ── CANCELLED ────────────────────────────────────────────────────────
             return false;
         }
     }
 
 
+    // ── CHANGE MASTER PASSWORD ────────────────────────────────────────────────────
     /**
-     * Changes the master password.
+     * Runs the change-master-password flow:
+     * <ol>
+     *   <li>Opens {@link ResetPasswordDialog} for current + new password.</li>
+     *   <li>Verifies the current password against the temp keystore (with retry loop).</li>
+     *   <li>Sets the new master password on the temp keystore and saves it.</li>
+     * </ol>
      *
-     * @return <code>true</code> if the master password was successfully changed,
-     *         <code>false</code> if not.
+     * <p>Returns silently (no return value) — success is implied if the dialog
+     * completes without cancellation or error.</p>
      */
     private void changeMasterPassword()
     {
@@ -628,18 +738,19 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
 
         while ( true )
         {
-            // We ask the user to reset his master password
-            ResetPasswordDialog resetPasswordDialog = new ResetPasswordDialog( changeMasterPasswordButton.getShell(),
-                StringUtils.EMPTY, null, null ); //$NON-NLS-1$
+            // ── PROMPT FOR CURRENT + NEW PASSWORD ─────────────────────────────────
+            ResetPasswordDialog resetPasswordDialog = new ResetPasswordDialog(
+                changeMasterPasswordButton.getShell(),
+                StringUtils.EMPTY, null, null );
 
             if ( resetPasswordDialog.open() != ResetPasswordDialog.OK )
             {
-                // The user cancelled the action
                 return;
             }
 
-            // Checking the password
+            // ── VERIFY CURRENT PASSWORD ───────────────────────────────────────────
             Exception checkPasswordException = null;
+
             try
             {
                 if ( passwordsKeyStoreManager.checkMasterPassword( resetPasswordDialog.getCurrentPassword() ) )
@@ -653,30 +764,20 @@ public class PasswordsKeystorePreferencePage extends PreferencePage implements I
                 checkPasswordException = e;
             }
 
-            // Creating the message
-            String message = null;
-
-            if ( checkPasswordException == null )
-            {
-                message = Messages.getString( "PasswordsKeystorePreferencePage.MasterPasswordVerificationFailed" ); //$NON-NLS-1$
-            }
-            else
-            {
-                message = Messages
-                    .getString( "PasswordsKeystorePreferencePage.MasterPasswordVerificationFailedWithException" ) //$NON-NLS-1$
+            // ── WRONG PASSWORD: offer retry or cancel ─────────────────────────────
+            String message = ( checkPasswordException == null )
+                ? Messages.getString( "PasswordsKeystorePreferencePage.MasterPasswordVerificationFailed" ) //$NON-NLS-1$
+                : Messages.getString( "PasswordsKeystorePreferencePage.MasterPasswordVerificationFailedWithException" ) //$NON-NLS-1$
                     + checkPasswordException.getMessage();
-            }
 
-            // We ask the user if he wants to retry to unlock the passwords keystore
             MessageDialog errorDialog = new MessageDialog(
                 enableKeystoreCheckbox.getShell(),
-                Messages.getString( "PasswordsKeystorePreferencePage.VerifyMasterPasswordFailed" ), null, message, MessageDialog.ERROR, new String[] //$NON-NLS-1$
-                    { IDialogConstants.RETRY_LABEL,
-                        IDialogConstants.CANCEL_LABEL }, 0 );
+                Messages.getString( "PasswordsKeystorePreferencePage.VerifyMasterPasswordFailed" ), //$NON-NLS-1$
+                null, message, MessageDialog.ERROR, new String[]
+                    { IDialogConstants.RETRY_LABEL, IDialogConstants.CANCEL_LABEL }, 0 );
 
             if ( errorDialog.open() == MessageDialog.CANCEL )
             {
-                // The user cancelled the action
                 return;
             }
         }

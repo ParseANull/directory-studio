@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -39,10 +39,17 @@ import org.eclipse.swt.widgets.Text;
 import org.apache.directory.studio.openldap.config.editor.wrappers.ServerIdWrapper;
 
 
+// Like Princess Leia transmitting the Rebellion's server identification
+// coordinates — a numeric ID plus an optional LDAP URL — we present
+// a focused dialog where the operator enters both fields and sees
+// the composed result in real time before confirming.
 /**
- * The ServerIdDialog is used to edit a ServerID, which can be an integer, an hexadecimal number,
- * optionally followed by an URL. The dialog overlay is like :
- * 
+ * A dialog for editing a ServerID entry, which consists of a numeric ID
+ * (0-4095) and an optional LDAP URL. We validate the ID as the operator
+ * types, turn the result text red for invalid input, and disable the OK
+ * button until both fields are valid.
+ *
+ * <p>The dialog layout looks like this:
  * <pre>
  * +---------------------------------------+
  * |  ServerID Input                       |
@@ -56,9 +63,8 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.ServerIdWrapp
  * |                                       |
  * |  (cancel)                       (OK)  |
  * +---------------------------------------+
- * 
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
@@ -66,26 +72,32 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
     // UI widgets
     /** The ID Text */
     private Text idText;
-    
+
     /** The URL text */
     private Text urlText;
-    
+
     /** The resulting serverID Text, or an error message */
     private Text serverIdText;
 
 
+    // Like Leia setting up the hologram projector with the RESIZE flag
+    // so the operators on the other end can expand the window for readability,
+    // we create the dialog with resizable shell style so field content
+    // is never clipped.
     /**
-     * Create a new instance of the ServerIdDialog
-     * 
-     * @param parentShell The parent Shell
+     * Creates a new ServerIdDialog attached to the given parent shell.
+     * We apply the RESIZE style so the operator can widen the dialog
+     * to fit long LDAP URLs.
+     *
+     * @param parentShell the parent shell this dialog belongs to
      */
     public ServerIdDialog( Shell parentShell )
     {
         super( parentShell );
         super.setShellStyle( super.getShellStyle() | SWT.RESIZE );
     }
-    
-    
+
+
     /**
      * The listener for the ID Text
      */
@@ -93,7 +105,7 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
         {
             Display display = serverIdText.getDisplay();
             Button okButton = getButton( IDialogConstants.OK_ID );
-            
+
             // This button might be null when the dialog is called.
             if ( okButton == null )
             {
@@ -110,7 +122,7 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
                 {
                     serverIdText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                     okButton.setEnabled( false );
-                    
+
                     return;
                 }
                 else
@@ -122,12 +134,12 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
                         {
                             serverIdText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
                             okButton.setEnabled( false );
-                            
+
                             return;
                         }
                     }
                 }
-                
+
                 serverIdText.setText( idText.getText() + ' ' + urlText.getText() );
                 serverIdText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getEditedElement().setServerId( idValue );
@@ -141,8 +153,8 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
                 okButton.setEnabled( false );
             }
         };
-    
-    
+
+
     /**
      * The listener for the URL Text
      */
@@ -150,8 +162,8 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
         {
             Display display = serverIdText.getDisplay();
             Button okButton = getButton( IDialogConstants.OK_ID );
-            
-            
+
+
             // This button might be null when the dialog is called.
             if ( okButton == null )
             {
@@ -174,10 +186,15 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
                 okButton.setEnabled( false );
             }
         };
-            
 
+
+    // Like labeling the hologram recording with the "ServerId" identifier
+    // so operators know exactly which server parameter they're editing,
+    // we stamp the dialog shell with the "ServerId" title.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to "ServerId".
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -187,8 +204,14 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
     }
 
 
+    // Like Leia's hologram projecting both the editable ID/URL inputs
+    // and a live result display below so operators see exactly what they're
+    // creating, we build two groups: the input panel and the read-only
+    // server ID result panel.
     /**
-     * Create the Dialog for ServerID :
+     * Builds the dialog content area with an ID/URL input group and a
+     * read-only result group that shows the composed ServerID string.
+     *
      * <pre>
      * +---------------------------------------+
      * |  ServerID                             |
@@ -202,7 +225,10 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
      * |                                       |
      * |  (cancel)                       (OK)  |
      * +---------------------------------------+
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     * </pre>
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -218,15 +244,19 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
         addListeners();
 
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // Like assembling the server identification panel with both an ID
+    // field and a URL field so the operator can enter both parts of
+    // the ServerID, we create the input group with labeled text fields
+    // for ID and URL.
     /**
-     * Creates the ServerID input group. This is the part of the dialog
-     * where one can insert the ServerID values:
-     * 
+     * Builds the ServerID input group with labeled text fields for
+     * the numeric ID and the optional LDAP URL.
+     *
      * <pre>
      * ServerID Input
      * .-----------------------------------.
@@ -234,7 +264,8 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
      * | URL : [                         ] |
      * '-----------------------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent the parent composite to attach the input group to
      */
     private void createServerIdEditGroup( Composite parent )
     {
@@ -256,17 +287,21 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
     }
 
 
+    // Like adding a status display panel to the operations room so
+    // the operator always sees the composed ServerID string — including
+    // any error state — without having to mentally combine the fields,
+    // we create a read-only result text box below the inputs.
     /**
-     * Creates the ServerID show group. This is the part of the dialog
-     * where the real ServerID is shown, or an error message if the ServerID
-     * is invalid.
-     * 
+     * Builds the read-only ServerID display group, showing the composed
+     * ServerID string (or an error indicator in red) as the operator types.
+     *
      * <pre>
      * .-----------------------------------.
      * | ServerID  : <///////////////////> |
      * '-----------------------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent the parent composite to attach the display group to
      */
     private void createServerIdShowGroup( Composite parent )
     {
@@ -282,19 +317,25 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
     }
 
 
+    // Like loading the current server identification data into the hologram
+    // before the operator opens it, we pre-populate the ID and URL fields
+    // from the existing ServerIdWrapper so the operator starts from the
+    // right baseline.
     /**
-     * Initializes the UI from the ServerId
+     * Initializes the ID and URL text fields from the current {@link ServerIdWrapper},
+     * pre-populating them with the existing values so the operator sees
+     * what's already configured.
      */
     protected void initDialog()
     {
         ServerIdWrapper editedElement = getEditedElement();
-        
+
         if ( editedElement != null )
         {
             idText.setText( Integer.toString( editedElement.getServerId() ) );
-            
+
             String url = editedElement.getUrl();
-            
+
             if ( url == null )
             {
                 urlText.setText( "" );
@@ -307,8 +348,12 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
     }
 
 
+    // Like Leia starting a brand-new transmission from a blank server
+    // identity template, we seed the dialog with an empty ServerIdWrapper
+    // so the operator fills in a completely fresh entry.
     /**
-     * Add a new Element that will be edited
+     * Seeds the dialog with a new empty {@link ServerIdWrapper} when the
+     * operator is adding a brand-new server ID entry.
      */
     public void addNewElement()
     {
@@ -316,16 +361,30 @@ public class ServerIdDialog extends AddEditDialog<ServerIdWrapper>
     }
 
 
+    // Like handing the operator a copy of an existing server identity
+    // record to edit, we clone the given wrapper and set the clone as
+    // the edited element so changes don't touch the original.
+    /**
+     * Seeds the dialog with a clone of the given {@link ServerIdWrapper}
+     * so the operator's edits don't affect the original until confirmed.
+     *
+     * @param editedElement the existing server ID wrapper to clone
+     */
     public void addNewElement( ServerIdWrapper editedElement )
     {
         ServerIdWrapper newElement = editedElement.clone();
         setEditedElement( newElement );
-        
+
     }
 
-    
+
+    // Like wiring the hologram's input sensors to the live display so
+    // every change the operator makes shows up in the result panel
+    // immediately, we attach the modify listeners to the ID and URL
+    // text fields.
     /**
-     * Adds listeners.
+     * Attaches modify listeners to the ID and URL text fields so the
+     * dialog validates input and updates the result display on every keystroke.
      */
     private void addListeners()
     {

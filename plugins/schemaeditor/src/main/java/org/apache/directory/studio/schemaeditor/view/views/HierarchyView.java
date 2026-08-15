@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.views;
 
@@ -41,8 +41,25 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
 
 
+// ── CLASS: HierarchyView — The Rebel Briefing Room Hologram of Yavin ─────────
+// In the Yavin briefing room, Mon Mothma and General Dodonna project a glowing
+// 3D hologram of the Death Star above the table — everyone can see the whole
+// structure, how the trenches connect to the exhaust port, where the turrets are,
+// how the attack runs relate to each other. It's a tree of spatial relationships
+// rendered as a navigable visual.
+// HierarchyView does the same thing for LDAP schema types: it projects a glowing
+// tree of parent/child inheritance relationships — "inetOrgPerson extends
+// organizationalPerson extends person extends top" — so you can navigate the
+// inheritance chain and understand how types relate.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Hierarchy View.
+ * The Hierarchy View — an Eclipse ViewPart that shows the inheritance hierarchy of
+ * a selected attribute type or object class. LDAP schema types form an inheritance
+ * tree (similar to Java class hierarchies), and this view lets you navigate up to
+ * ancestors and down to subtypes in a single tree widget. It also displays a one-line
+ * summary above the tree showing the selected type's name, OID, and schema. Think of
+ * it as the Rebel briefing room hologram: the full structure made visible and
+ * navigable at once.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -61,9 +78,33 @@ public class HierarchyView extends ViewPart
     private Label overviewLabel;
 
 
+    // ── The Briefing Room Opens for Business ─────────────────────────────────
+    // The lights dim, the holographic projector hums to life, and Mon Mothma
+    // steps to the front. The room is configured — labels at the top, separator,
+    // hologram in the center — before the first word is spoken.
+    // createPartControl does the same: zero-margin layout, overview label, separator,
+    // tree viewer, controller — all initialized in order so the view is immediately
+    // useful the moment Eclipse shows it.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the Hierarchy View UI — called by Eclipse when this view is first shown.
+     * We use a zero-margin GridLayout so the tree fills the view edge-to-edge, add
+     * a wrapping overview label (the selected type's name, OID, and schema), a visual
+     * separator, then the tree viewer. Finally we install the {@link HierarchyViewController}
+     * which wires up the selection listener that populates the tree when the user picks
+     * a type in another view.
+     *
+     * <p>For example — the briefing room goes live:</p>
+     * <pre>
+     *   createPartControl(parent)
+     *     → overviewLabel.setText("")  // blank until a type is selected
+     *     → initViewer(parent)         // holographic projector online
+     *     → new HierarchyViewController(this)  // Mon Mothma takes the stage
+     * </pre>
+     *
+     * @param parent  the SWT composite that Eclipse gives us to draw into
      */
+    @Override
     public void createPartControl( Composite parent )
     {
         GridLayout gridLayout = new GridLayout();
@@ -95,15 +136,34 @@ public class HierarchyView extends ViewPart
     }
 
 
+    // ── The Holographic Projector Is Powered Up ──────────────────────────────
+    // Before any hologram can appear, the projector needs to be calibrated:
+    // the right content provider (knows what to show for each node), the right
+    // label provider (knows how to render each node), and the rendering surface
+    // itself — the TreeViewer widget with its CSS class name for styling.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Viewer
+     * Creates and configures the {@link TreeViewer} for the inheritance tree.
+     * We attach {@link HierarchyViewContentProvider} to supply parent/child relationships
+     * and a {@link DecoratingLabelProvider} wrapping {@link HierarchyViewLabelProvider}
+     * so Eclipse decorators can add overlays (error badges etc.) on top of our icons.
+     * The tree starts disabled — it has no content yet, and the controller will enable
+     * it once a valid schema type is selected.
      *
-     * @param parent
-     *      the parent Composite
+     * <p>For example — powering up the projector:</p>
+     * <pre>
+     *   viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+     *   viewer.setContentProvider(new HierarchyViewContentProvider())
+     *   viewer.setLabelProvider(new DecoratingLabelProvider(...))
+     *   viewer.getTree().setEnabled(false)  // nothing to show yet
+     * </pre>
+     *
+     * @param parent  the SWT composite to embed the tree into
      */
     private void initViewer( Composite parent )
     {
         viewer = new TreeViewer( parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL );
+        viewer.getTree().setData( "org.eclipse.e4.ui.css.CssClassName", "studio-schema-tree" );
         viewer.setContentProvider( new HierarchyViewContentProvider() );
         viewer.setLabelProvider( new DecoratingLabelProvider( new HierarchyViewLabelProvider( viewer ), Activator
             .getDefault().getWorkbench().getDecoratorManager().getLabelDecorator() ) );
@@ -112,20 +172,36 @@ public class HierarchyView extends ViewPart
     }
 
 
+    // ── Everyone's Eyes on the Hologram ──────────────────────────────────────
+    // When the briefing starts, Dodonna points at the hologram and the room's
+    // attention snaps to it. "Setfocus" is the UI equivalent: keyboard input
+    // goes to our tree so the user can navigate it immediately.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Gives keyboard focus to the hierarchy tree widget.
+     * Eclipse calls this whenever the user activates our view's tab. Routing focus
+     * to the tree means arrow keys and Enter immediately navigate the hierarchy.
+     *
+     * @see org.eclipse.ui.part.WorkbenchPart#setFocus()
      */
+    @Override
     public void setFocus()
     {
         viewer.getControl().setFocus();
     }
 
 
+    // ── The Hologram Console Is Accessible ───────────────────────────────────
+    // Other Rebel operatives need access to the projector console — to point it
+    // at a new target, to expand it, to refresh the display. The controller gets
+    // the viewer reference so it can drive the tree programmatically.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the TreeViewer
+     * Returns the underlying {@link TreeViewer} for this view.
+     * The {@link HierarchyViewController} uses this to set new inputs, trigger
+     * refreshes, and respond to selection events from other views.
      *
-     * @return
-     *      the TreeViewer
+     * @return  the {@link TreeViewer} showing the type hierarchy
      */
     public TreeViewer getViewer()
     {
@@ -133,8 +209,15 @@ public class HierarchyView extends ViewPart
     }
 
 
+    // ── The Hologram Refreshes with New Data ─────────────────────────────────
+    // Mid-briefing, new reconnaissance data comes in and Dodonna updates the
+    // projection — same structure, but the details have changed. The hologram
+    // refreshes in place, then expands so everyone can see every node.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes the viewer.
+     * Refreshes the tree viewer and expands all nodes so the full hierarchy is visible.
+     * Call this after schema changes that may have affected the currently displayed
+     * type's ancestors or descendants.
      */
     public void refresh()
     {
@@ -143,6 +226,29 @@ public class HierarchyView extends ViewPart
     }
 
 
+    // ── The Hologram Switches to a New Target ────────────────────────────────
+    // "Change target from the exhaust port to the reactor core." Dodonna updates
+    // the hologram's subject, expands the new view, and the overview label at the
+    // top of the room changes to name the new target. setInput does this: it
+    // replaces the tree's content and rebuilds the overview label for the new type.
+    // ────────────────────────────────────────────────────────────────────────
+    /**
+     * Replaces the tree's content with the hierarchy for the given schema object,
+     * expands all nodes, and updates the overview label.
+     * Pass {@code null} to clear the view (e.g., when the user deselects everything).
+     * The input can be an {@link AttributeType} or an {@link ObjectClass} — we dispatch
+     * to the appropriate overview-label builder for each.
+     *
+     * <p>For example — switching target:</p>
+     * <pre>
+     *   setInput(inetOrgPersonObjectClass)
+     *     → viewer.setInput(inetOrgPersonObjectClass)
+     *     → viewer.expandAll()
+     *     → overviewLabel = "inetOrgPerson (OID: 2.16.840.1.113730.3.2.2) [inetorgperson]"
+     * </pre>
+     *
+     * @param input  the {@link AttributeType}, {@link ObjectClass}, or {@code null} to clear
+     */
     public void setInput( Object input )
     {
         viewer.setInput( input );
@@ -169,11 +275,25 @@ public class HierarchyView extends ViewPart
     }
 
 
+    // ── The Briefing Header Names the Target ─────────────────────────────────
+    // Every Rebel briefing starts with a header: "The target is the Death Star,
+    // OID: DS-1, schema: Imperial." It names what we're looking at before we
+    // dive into the detail. The overview label does exactly that — it identifies
+    // the schema object by its aliases, OID, and schema name.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Set the overview label for the given schema object.
+     * Builds and sets the overview label text for the given schema object.
+     * The label shows the type's human-readable name (or "(None)" if it has no
+     * aliases), its OID, and the name of the schema it belongs to. This is a private
+     * helper shared by both the AttributeType and ObjectClass paths in {@link #setInput(Object)}.
      *
-     * @param object
-     *      the schema object
+     * <p>For example — the briefing header:</p>
+     * <pre>
+     *   object = "cn" (OID: 2.5.4.3, schema: system)
+     *   → overviewLabel = "cn (OID: 2.5.4.3) [system]"
+     * </pre>
+     *
+     * @param object  the schema object whose details should appear in the overview label
      */
     private void setOverviewLabel( SchemaObject object )
     {
@@ -195,9 +315,20 @@ public class HierarchyView extends ViewPart
     }
 
 
+    // ── The Briefing Room Stands Down ────────────────────────────────────────
+    // The mission is complete or cancelled. The hologram powers down, the room
+    // is cleared, and the controller releases everything it was holding — listeners,
+    // references, subscriptions. We call super.dispose() to let the ViewPart clean up too.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the view is being closed or the workbench is shutting down.
+     * We delegate to the controller's {@code dispose()} to unregister event listeners,
+     * then call {@code super.dispose()} to let the base {@link ViewPart} clean up.
+     * Skipping either step would cause listener leaks or resource leaks.
+     *
+     * @see org.eclipse.ui.part.WorkbenchPart#dispose()
      */
+    @Override
     public void dispose()
     {
         controller.dispose();

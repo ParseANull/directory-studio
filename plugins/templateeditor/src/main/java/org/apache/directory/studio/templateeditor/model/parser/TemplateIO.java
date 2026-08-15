@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.model.parser;
 
@@ -64,8 +64,24 @@ import org.apache.directory.studio.templateeditor.model.widgets.WidgetAlignment;
 import org.apache.directory.studio.templateeditor.view.preferences.PreferencesFileTemplate;
 
 
+// ── CLASS: TemplateIO — C-3PO READING AND WRITING JAWA DIALECT ───────────────────
+// On Tatooine, C-3PO is the only protocol droid fluent in Jawa trade talk. When
+// Luke needs a pair of droids, C-3PO translates the Jawas' cryptic squeaks into
+// understandable descriptions of each unit's capabilities — and when Luke speaks,
+// C-3PO encodes his reply back into Jawa. This class is C-3PO doing exactly that:
+// it translates between XML (the Jawa dialect — terse, attribute-heavy, not quite
+// human-readable) and our Java template model objects (Imperial Basic — structured,
+// typed, easy for the rest of the app to reason about). Every read*() method
+// decodes one XML element into a model object; every write*() method encodes a
+// model object back into XML. The process is strict: a malformed dialect throws
+// a {@link TemplateIOException} immediately rather than guessing at the meaning.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to read/write the 'connections.xml' file.
+ * Static XML serialization/deserialization for {@link Template} objects. Reads
+ * template XML from an {@link InputStream} and hydrates a Java template model
+ * tree; writes a template model tree out to an {@link OutputStream} as
+ * pretty-printed UTF-8 XML. Uses dom4j for XML parsing and generation.
+ * Think of this as C-3PO translating Jawa dialect.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -157,15 +173,17 @@ public class TemplateIO
     private static final String VALUE_TRUE = "true"; //$NON-NLS-1$
 
 
+    // ── READ AS FILE TEMPLATE: DECODE JAWA DIALECT INTO A FILE TEMPLATE ───────────
+    // C-3PO listens to the XML squeak and translates it into a FileTemplate —
+    // the kind that lives on the filesystem, not in a plugin.xml.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the input stream as a file template
+     * Parses the given XML input stream as a {@link FileTemplate}. Creates a new
+     * empty {@link FileTemplate}, fills it from the XML, and returns it.
      *
-     * @param is
-     *      the input stream
-     * @return
-     *      the template
-     * @throws TemplateIOException 
-     *      if an error occurs when converting the document
+     * @param is  the XML input stream to parse
+     * @return the hydrated {@link FileTemplate}
+     * @throws TemplateIOException if the XML is malformed or missing required elements
      */
     public static FileTemplate readAsFileTemplate( InputStream is ) throws TemplateIOException
     {
@@ -180,15 +198,15 @@ public class TemplateIO
     }
 
 
+    // ── READ AS PREFERENCES FILE TEMPLATE: DECODE FOR THE PREFERENCES STORE ───────
     /**
-     * Reads the input stream as a preferences file template
+     * Parses the given XML input stream as a {@link PreferencesFileTemplate}. Used
+     * when loading templates managed by the Preferences page rather than the main
+     * template manager.
      *
-     * @param is
-     *      the input stream
-     * @return
-     *      the template
-     * @throws TemplateIOException 
-     *      if an error occurs when converting the document
+     * @param is  the XML input stream to parse
+     * @return the hydrated {@link PreferencesFileTemplate}
+     * @throws TemplateIOException if the XML is malformed or missing required elements
      */
     public static PreferencesFileTemplate readAsPreferencesFileTemplate( InputStream is ) throws TemplateIOException
     {
@@ -203,15 +221,14 @@ public class TemplateIO
     }
 
 
+    // ── READ AS EXTENSION POINT TEMPLATE: DECODE A PLUGIN.XML CONTRIBUTION ────────
     /**
-     * Reads the input stream as a file template
+     * Parses the given XML input stream as an {@link ExtensionPointTemplate}. Used
+     * when loading templates contributed via Eclipse extension points.
      *
-     * @param is
-     *      the input stream
-     * @return
-     *      the template
-     * @throws TemplateIOException 
-     *      if an error occurs when converting the document
+     * @param is  the XML input stream to parse
+     * @return the hydrated {@link ExtensionPointTemplate}
+     * @throws TemplateIOException if the XML is malformed or missing required elements
      */
     public static ExtensionPointTemplate readAsExtensionPointTemplate( InputStream is ) throws TemplateIOException
     {
@@ -226,16 +243,20 @@ public class TemplateIO
     }
 
 
+    // ── READ TEMPLATE (stream): PARSE XML INTO ANY TEMPLATE TYPE ─────────────────
+    // C-3PO opens the scroll, parses the top-level structure, and fills in the
+    // template fields. This method is the common entry point for all three public
+    // read* variants.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the input stream as a file template
-    *
-    * @param is
-    *      the input stream
-    * @return
-    *      the template
-    * @throws TemplateIOException 
-    *      if an error occurs when converting the document
-    */
+     * Parses the XML input stream and fills the given {@link Template} in place.
+     * Useful when the caller has already created the template instance and just
+     * needs to populate it.
+     *
+     * @param is        the XML input stream
+     * @param template  the template to fill
+     * @throws TemplateIOException if the XML is malformed or missing required elements
+     */
     public static void readTemplate( InputStream is, Template template ) throws TemplateIOException
     {
         // Getting the document
@@ -246,13 +267,13 @@ public class TemplateIO
     }
 
 
+    // ── GET DOCUMENT: PARSE THE XML STREAM WITH SAX ──────────────────────────────
     /**
-     * Gets the document associated with the input stream.
+     * Parses the input stream into a dom4j {@link Document} using a {@link SAXReader}.
      *
-     * @param stream
-     *      the input stream
-     * @return
-     * @throws TemplateIOException
+     * @param is  the XML input stream
+     * @return the parsed document
+     * @throws TemplateIOException if the XML cannot be parsed
      */
     private static Document getDocument( InputStream is ) throws TemplateIOException
     {
@@ -267,13 +288,20 @@ public class TemplateIO
     }
 
 
+    // ── READ TEMPLATE (element): FILL TEMPLATE FROM ROOT XML ELEMENT ──────────────
+    // C-3PO reads the root <template> element and extracts the ID, title, object
+    // classes, and form. If any mandatory piece is missing or invalid, he raises
+    // his hands and throws a TemplateIOException.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the template.
+     * Fills the given {@link Template} from the root XML element. Validates the
+     * element name, reads the {@code id} and {@code title} attributes, delegates
+     * object class reading to {@link #readObjectClasses}, and form reading to
+     * {@link #readForm}.
      *
-     * @param rootElement
-     *      the root element
-     * @param template
-     *      the template
+     * @param rootElement  the root DOM element (must be named "template")
+     * @param template     the template to fill
+     * @throws TemplateIOException if required attributes or elements are missing
      */
     private static void readTemplate( Element rootElement, Template template ) throws TemplateIOException
     {
@@ -334,14 +362,14 @@ public class TemplateIO
     }
 
 
+    // ── READ OBJECT CLASSES: DECODE STRUCTURAL AND AUXILIARY LDAP TYPES ──────────
     /**
-     * Reads the object classes for the template.
+     * Reads the {@code <objectClasses>} element, extracting the structural object
+     * class and any auxiliary object classes, and sets them on the template.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element   the parent element containing {@code <objectClasses>}
+     * @param template  the template to update
+     * @throws TemplateIOException if the {@code <objectClasses>} or {@code <structural>} element is missing
      */
     private static void readObjectClasses( Element element, Template template ) throws TemplateIOException
     {
@@ -391,14 +419,19 @@ public class TemplateIO
     }
 
 
+    // ── READ FORM: DECODE THE ROOT UI LAYOUT ─────────────────────────────────────
+    // C-3PO reads the <form> element and builds the TemplateForm that sits at the
+    // root of the UI widget tree. Only <section> and <composite> children are
+    // allowed at the top level — anything else triggers an exception.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the form for the template.
+     * Reads the {@code <form>} element and builds the root {@link TemplateForm}.
+     * Only {@code <section>} and {@code <composite>} child elements are valid at
+     * the top level. Throws if no children are found.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element   the parent element containing {@code <form>}
+     * @param template  the template to set the form on
+     * @throws TemplateIOException if the form element is missing, contains invalid children, or is empty
      */
     private static void readForm( Element element, Template template ) throws TemplateIOException
     {
@@ -452,14 +485,18 @@ public class TemplateIO
     }
 
 
+    // ── READ WIDGET: DISPATCH ELEMENT TO THE CORRECT WIDGET READER ───────────────
+    // C-3PO recognizes the widget type by the element name and dispatches to the
+    // appropriate specialist reader. Unknown element names throw an exception.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads a widget.
+     * Reads a single widget XML element and creates the corresponding
+     * {@link TemplateWidget}, attaching it to {@code parent}. Dispatches by
+     * element name to the specific read* method for each widget type.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the XML element describing the widget
+     * @param parent   the parent widget to attach the new widget to
+     * @throws TemplateIOException if the element name doesn't match any known widget type
      */
     private static void readWidget( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -532,27 +569,29 @@ public class TemplateIO
     }
 
 
+    // ── READ WIDGET COMMON PROPERTIES: DECODE SHARED LAYOUT ATTRIBUTES ───────────
+    // Every widget shares a set of layout attributes: attributeType, alignment,
+    // spacing, and size. C-3PO reads them all here and sets them on the widget.
+    // If attributeType is mandatory and missing, he throws immediately.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the widget common properties like 'attributeType' and all position related properties.
+     * Reads the attributes common to every {@link TemplateWidget}: {@code attributeType},
+     * {@code horizontalAlignment}, {@code verticalAlignment}, {@code grabExcessHorizontalSpace},
+     * {@code grabExcessVerticalSpace}, {@code horizontalSpan}, {@code verticalSpan},
+     * {@code width}, and {@code height}.
      *
-     * @param element
-     *      the element to read from
-     * @param widget
-     *      the associated widget
-     * @param throwExceptionIfMissingAttributeType
-     *      <code>true</code> if the method should throw an exception if the 'attributeType' value is missing,
-     *      <code>false</code> if not
-     * @param widgetElementName
-     *      the name of the XML element of the widget (for debug purposes)
-     * @throws TemplateIOException
-     *      if the mandatory 'attributeType' value is missing
+     * @param element                              the XML element to read from
+     * @param widget                               the widget to populate
+     * @param throwExceptionIfMissingAttributeType {@code true} to throw if {@code attributeType} is absent
+     * @param widgetElementName                    the element name (for error messages)
+     * @throws TemplateIOException if {@code throwExceptionIfMissingAttributeType} is true and the attribute is missing
      */
     private static void readWidgetCommonProperties( Element element, TemplateWidget widget,
         boolean throwExceptionIfMissingAttributeType, String widgetElementName ) throws TemplateIOException
     {
         // Reading the 'attributeType' attribute
         boolean foundAttributeTypeAttribute = readAttributeTypeAttribute( element, widget );
-        // If the 'attributeType' attribute does not exist, we throw an 
+        // If the 'attributeType' attribute does not exist, we throw an
         // exception
         if ( throwExceptionIfMissingAttributeType && !foundAttributeTypeAttribute )
         {
@@ -619,11 +658,15 @@ public class TemplateIO
     }
 
 
+    // ── READ WIDGET ALIGNMENT VALUE: CONVERT TEXT TO ENUM ────────────────────────
     /**
-     * Reads a widget alignment value.
+     * Converts an alignment string ({@code "none"}, {@code "beginning"},
+     * {@code "center"}, {@code "end"}, {@code "fill"}) into the corresponding
+     * {@link WidgetAlignment} enum value.
      *
-     * @param text
-     *      the widget alignment value
+     * @param text  the alignment string from the XML
+     * @return the corresponding {@link WidgetAlignment}
+     * @throws TemplateIOException if the string doesn't match any known alignment value
      */
     private static WidgetAlignment readWidgetAlignmentValue( String text ) throws TemplateIOException
     {
@@ -658,16 +701,13 @@ public class TemplateIO
     }
 
 
+    // ── READ ATTRIBUTE TYPE ATTRIBUTE: DECODE THE LDAP ATTRIBUTE BINDING ─────────
     /**
-     * Reads the attribute type attribute.
+     * Reads the {@code attributeType} XML attribute and sets it on the widget.
      *
-     * @param element
-     *      the element to read from
-     * @param widget
-     *      the associated widget
-     * @return
-     *      <code>true</code> if the attribute type attribute has been found,
-     *      <code>false</code> if not
+     * @param element  the XML element to read from
+     * @param widget   the widget to update
+     * @return {@code true} if the attribute was found and set; {@code false} otherwise
      */
     private static boolean readAttributeTypeAttribute( Element element, TemplateWidget widget )
     {
@@ -683,14 +723,14 @@ public class TemplateIO
     }
 
 
+    // ── READ CHECKBOX: DECODE A CHECKBOX WIDGET ───────────────────────────────────
     /**
-     * Reads a checkbox widget.
+     * Reads a {@code <checkbox>} element, creates a {@link TemplateCheckbox}, and
+     * attaches it to {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <checkbox>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readCheckbox( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -732,14 +772,14 @@ public class TemplateIO
     }
 
 
+    // ── READ COMPOSITE: DECODE A COMPOSITE WIDGET ─────────────────────────────────
     /**
-     * Reads a composite widget.
+     * Reads a {@code <composite>} element, creates a {@link TemplateComposite}, reads
+     * its column/equal-column settings, and recursively reads all child widgets.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <composite>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readComposite( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -774,14 +814,14 @@ public class TemplateIO
     }
 
 
+    // ── READ DATE: DECODE A DATE PICKER WIDGET ────────────────────────────────────
     /**
-     * Reads a date widget.
+     * Reads a {@code <date>} element, creates a {@link TemplateDate}, and attaches
+     * it to {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <date>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readDate( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -809,14 +849,15 @@ public class TemplateIO
     }
 
 
+    // ── READ FILE CHOOSER: DECODE A FILE CHOOSER WIDGET ──────────────────────────
     /**
-     * Reads a file chooser widget.
+     * Reads a {@code <fileChooser>} element, creates a {@link TemplateFileChooser},
+     * reads its button visibility, extension list, and icon, and attaches it to
+     * {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <fileChooser>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readFileChooser( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -872,13 +913,13 @@ public class TemplateIO
     }
 
 
+    // ── READ FILE CHOOSER EXTENSIONS: SPLIT COMMA-DELIMITED EXTENSION LIST ────────
     /**
-     * Reads the extensions of a file chooser widget.
+     * Parses the comma-delimited {@code extensions} attribute value and adds each
+     * extension to the {@link TemplateFileChooser}.
      *
-     * @param extensionsAttribute
-     *      the attribute
-     * @param fileChooser
-     *      the file chooser
+     * @param extensionsAttribute  the {@code extensions} attribute
+     * @param fileChooser          the file chooser to update
      */
     private static void readFileChooserExtensions( Attribute extensionsAttribute, TemplateFileChooser fileChooser )
     {
@@ -893,14 +934,15 @@ public class TemplateIO
     }
 
 
+    // ── READ IMAGE: DECODE AN IMAGE DISPLAY WIDGET ────────────────────────────────
     /**
-     * Reads an image widget.
+     * Reads an {@code <image>} element, creates a {@link TemplateImage}, reads its
+     * button visibility, size constraints, and optional embedded Base64 data, and
+     * attaches it to {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <image>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readImage( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -956,14 +998,14 @@ public class TemplateIO
     }
 
 
+    // ── READ LABEL: DECODE A LABEL DISPLAY WIDGET ─────────────────────────────────
     /**
-     * Reads a label widget.
+     * Reads a {@code <label>} element, creates a {@link TemplateLabel}, reads its
+     * static value and row settings, and attaches it to {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <label>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readLabel( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -998,14 +1040,14 @@ public class TemplateIO
     }
 
 
+    // ── READ LINK: DECODE A HYPERLINK DISPLAY WIDGET ──────────────────────────────
     /**
-     * Reads a link widget.
+     * Reads a {@code <link>} element, creates a {@link TemplateLink}, reads its
+     * optional static value, and attaches it to {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <link>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readLink( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -1026,14 +1068,14 @@ public class TemplateIO
     }
 
 
+    // ── READ LISTBOX: DECODE A LIST BOX WIDGET ────────────────────────────────────
     /**
-     * Reads a listbox widget.
+     * Reads a {@code <listbox>} element, creates a {@link TemplateListbox}, reads
+     * its item list and selection mode, and attaches it to {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <listbox>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if the item list is missing or empty
      */
     private static void readListbox( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -1085,13 +1127,13 @@ public class TemplateIO
     }
 
 
+    // ── READ VALUE ITEM: DECODE A LABEL/VALUE PAIR ────────────────────────────────
     /**
-     * Reads the value item.
+     * Reads an {@code <item>} or {@code <button>} element and returns a
+     * {@link ValueItem} containing the display label and stored value.
      *
-     * @param extensionsAttribute
-     *      the attribute
-     * @param fileChooser
-     *      the file chooser
+     * @param element  the XML element containing {@code <label>} and {@code <value>} children
+     * @return the decoded {@link ValueItem}
      */
     private static ValueItem readValueItem( Element element )
     {
@@ -1115,14 +1157,15 @@ public class TemplateIO
     }
 
 
+    // ── READ SECTION: DECODE A COLLAPSIBLE SECTION WIDGET ────────────────────────
     /**
-     * Reads a section widget.
+     * Reads a {@code <section>} element, creates a {@link TemplateSection}, reads
+     * its title, description, column layout, expand settings, and recursively reads
+     * all child widgets.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <section>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readSection( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -1185,14 +1228,14 @@ public class TemplateIO
     }
 
 
+    // ── READ PASSWORD: DECODE A PASSWORD WIDGET ───────────────────────────────────
     /**
-     * Reads a password widget.
+     * Reads a {@code <password>} element, creates a {@link TemplatePassword}, and
+     * attaches it to {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <password>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readPassword( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -1227,14 +1270,14 @@ public class TemplateIO
     }
 
 
+    // ── READ RADIO BUTTONS: DECODE A RADIO BUTTON GROUP WIDGET ───────────────────
     /**
-     * Reads a radio buttons widget.
+     * Reads a {@code <radiobuttons>} element, creates a {@link TemplateRadioButtons},
+     * reads the button list, and attaches it to {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <radiobuttons>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if the button list is missing or empty
      */
     private static void readRadioButtons( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -1279,14 +1322,14 @@ public class TemplateIO
     }
 
 
+    // ── READ SPINNER: DECODE A NUMERIC SPINNER WIDGET ────────────────────────────
     /**
-     * Reads a spinner widget.
+     * Reads a {@code <spinner>} element, creates a {@link TemplateSpinner}, reads
+     * its numeric range and step settings, and attaches it to {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <spinner>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readSpinner( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -1335,14 +1378,14 @@ public class TemplateIO
     }
 
 
+    // ── READ TABLE: DECODE A MULTI-VALUE TABLE WIDGET ─────────────────────────────
     /**
-     * Reads a table widget.
+     * Reads a {@code <table>} element, creates a {@link TemplateTable}, reads its
+     * Add/Edit/Delete button visibility, and attaches it to {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <table>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readTable( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -1377,14 +1420,15 @@ public class TemplateIO
     }
 
 
+    // ── READ TEXTFIELD: DECODE A TEXT INPUT WIDGET ────────────────────────────────
     /**
-     * Reads a text field widget.
+     * Reads a {@code <textfield>} element, creates a {@link TemplateTextField}, reads
+     * its row count, character limit, and newline settings, and attaches it to
+     * {@code parent}.
      *
-     * @param element
-     *      the element
-     * @param template
-     *      the template
-     * @throws TemplateIOException
+     * @param element  the {@code <textfield>} XML element
+     * @param parent   the parent widget
+     * @throws TemplateIOException if required attributes are missing
      */
     private static void readTextfield( Element element, TemplateWidget parent ) throws TemplateIOException
     {
@@ -1419,11 +1463,14 @@ public class TemplateIO
     }
 
 
+    // ── READ BOOLEAN: CONVERT "true"/"false" TO boolean ──────────────────────────
     /**
-     * Reads a boolean.
+     * Converts the string {@code "true"} or {@code "false"} (case-insensitive) to
+     * a Java {@code boolean}.
      *
-     * @param text
-     *      the boolean as a string
+     * @param text  the XML attribute value to convert
+     * @return {@code true} or {@code false}
+     * @throws TemplateIOException if the string is neither "true" nor "false"
      */
     private static boolean readBoolean( String text ) throws TemplateIOException
     {
@@ -1446,11 +1493,13 @@ public class TemplateIO
     }
 
 
+    // ── READ INTEGER: PARSE A STRING AS AN INT ────────────────────────────────────
     /**
-     * Reads an integer.
+     * Parses the given string as a Java {@code int}.
      *
-     * @param text
-     *      the integer as a string
+     * @param text  the XML attribute value to parse
+     * @return the parsed integer
+     * @throws TemplateIOException if the string is not a valid integer
      */
     private static int readInteger( String text ) throws TemplateIOException
     {
@@ -1467,15 +1516,18 @@ public class TemplateIO
     }
 
 
+    // ── SAVE: ENCODE THE TEMPLATE MODEL AS XML AND WRITE TO STREAM ───────────────
+    // C-3PO translates the Java model back into Jawa dialect — encoding the entire
+    // template tree as pretty-printed UTF-8 XML and writing it to the output stream.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the template using the writer.
+     * Serializes the given {@link Template} to pretty-printed UTF-8 XML and writes
+     * it to {@code stream}. Creates a dom4j {@link Document}, builds the XML tree
+     * from the model, then flushes via a {@link XMLWriter}.
      *
-     * @param template
-     *      the connections
-     * @param stream
-     *      the OutputStream
-     * @throws IOException
-     *      if an I/O error occurs
+     * @param template  the template to serialize
+     * @param stream    the output stream to write to
+     * @throws IOException if an I/O error occurs during writing
      */
     public static void save( Template template, OutputStream stream ) throws IOException
     {
@@ -1494,13 +1546,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE TEMPLATE: ENCODE THE ROOT TEMPLATE ELEMENT ──────────────────────────
     /**
-     * Writes the template.
+     * Creates the root {@code <template>} element in the document and writes the
+     * {@code id}, {@code title}, object classes, and form.
      *
-     * @param document
-     *      the document to write into
-     * @param template
-     *      the template
+     * @param document  the dom4j document to write into
+     * @param template  the template to encode
      */
     private static void writeTemplate( Document document, Template template )
     {
@@ -1521,13 +1573,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE OBJECT CLASSES: ENCODE STRUCTURAL AND AUXILIARY CLASSES ─────────────
     /**
-     * Writes the object classes.
+     * Creates the {@code <objectClasses>} element with a {@code <structural>} child
+     * and optional {@code <auxiliaries>/<auxiliary>} children.
      *
-     * @param element
-     *      the parent element
-     * @param template
-     *      the template
+     * @param element   the parent element
+     * @param template  the template to read object classes from
      */
     private static void writeObjectClasses( Element element, Template template )
     {
@@ -1552,13 +1604,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE FORM: ENCODE THE ROOT UI LAYOUT ────────────────────────────────────
     /**
-     * Writes the form.
+     * Creates the {@code <form>} element and recursively encodes all top-level
+     * child widgets.
      *
-     * @param element
-     *      the parent element
-     * @param template
-     *      the template
+     * @param element   the parent element
+     * @param template  the template whose form to encode
      */
     private static void writeForm( Element element, Template template )
     {
@@ -1576,13 +1628,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE WIDGET: DISPATCH TO THE CORRECT WIDGET ENCODER ─────────────────────
     /**
-     * Writes a widget.
+     * Dispatches the given {@link TemplateWidget} to the correct write* method
+     * based on its runtime type. Unknown types are silently skipped.
      *
-     * @param element
-     *      the parent element
-     * @param widget
-     *      the widget
+     * @param element  the parent XML element
+     * @param widget   the widget to encode
      */
     private static void writeWidget( Element element, TemplateWidget widget )
     {
@@ -1651,13 +1703,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE WIDGET COMMON PROPERTIES: ENCODE SHARED LAYOUT ATTRIBUTES ───────────
     /**
-     * Writes the widget's common properties like 'attributeType' and all position related properties.
+     * Writes the attributes common to every {@link TemplateWidget} — only emitting
+     * non-default values to keep the XML compact.
      *
-     * @param element
-     *      the element
-     * @param widget
-     *      the widget
+     * @param element  the XML element to write attributes into
+     * @param widget   the widget to read values from
      */
     private static void writeWidgetCommonProperties( Element element, TemplateWidget widget )
     {
@@ -1716,13 +1768,14 @@ public class TemplateIO
     }
 
 
+    // ── GET WIDGET ALIGNMENT VALUE: CONVERT ENUM TO STRING ───────────────────────
     /**
-     * Gets the String value associated with the given widget alignment.
+     * Converts a {@link WidgetAlignment} enum value to the corresponding XML string
+     * ({@code "none"}, {@code "beginning"}, {@code "center"}, {@code "end"}, or
+     * {@code "fill"}).
      *
-     * @param alignment
-     *      the widget alignment
-     * @return
-     *      the String value associated with the given widget alignment
+     * @param alignment  the alignment to convert
+     * @return the XML string representation
      */
     private static String getWidgetAlignmentValue( WidgetAlignment alignment )
     {
@@ -1744,13 +1797,12 @@ public class TemplateIO
     }
 
 
+    // ── WRITE ATTRIBUTE TYPE ATTRIBUTE: ENCODE THE LDAP ATTRIBUTE BINDING ─────────
     /**
-     * Writes the attribute type attribute of a widget.
+     * Writes the {@code attributeType} XML attribute for the widget, if one is set.
      *
-     * @param element
-     *      the element
-     * @param widget
-     *      the widget
+     * @param element  the XML element to add the attribute to
+     * @param widget   the widget to read the attribute type from
      */
     private static void writeAttributeTypeAttribute( Element element, TemplateWidget widget )
     {
@@ -1762,13 +1814,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE CHECKBOX: ENCODE A CHECKBOX WIDGET ──────────────────────────────────
     /**
-     * Writes a checkbox widget.
+     * Creates a {@code <checkbox>} element with label, enabled, checkedValue, and
+     * uncheckedValue (non-default values only).
      *
-     * @param element
-     *      the parent element
-     * @param checkbox
-     *      the checkbox widget
+     * @param element   the parent element
+     * @param checkbox  the checkbox widget to encode
      */
     private static void writeCheckbox( Element element, TemplateCheckbox checkbox )
     {
@@ -1809,13 +1861,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE COMPOSITE: ENCODE A COMPOSITE WIDGET ────────────────────────────────
     /**
-     * Writes a composite widget.
+     * Creates a {@code <composite>} element with column layout settings and
+     * recursively encodes all child widgets.
      *
-     * @param element
-     *      the parent element
-     * @param composite
-     *      the composite widget
+     * @param element    the parent element
+     * @param composite  the composite widget to encode
      */
     private static void writeComposite( Element element, TemplateComposite composite )
     {
@@ -1849,13 +1901,12 @@ public class TemplateIO
     }
 
 
+    // ── WRITE DATE: ENCODE A DATE PICKER WIDGET ───────────────────────────────────
     /**
-     * Writes a date widget.
+     * Creates a {@code <date>} element with format and edit-button settings.
      *
-     * @param element
-     *      the parent element
-     * @param date
-     *      the date widget
+     * @param element  the parent element
+     * @param date     the date widget to encode
      */
     private static void writeDate( Element element, TemplateDate date )
     {
@@ -1880,13 +1931,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE FILE CHOOSER: ENCODE A FILE CHOOSER WIDGET ─────────────────────────
     /**
-     * Writes a file chooser widget.
+     * Creates a {@code <fileChooser>} element with extension list, button visibility,
+     * and optional icon element.
      *
-     * @param element
-     *      the parent element
-     * @param fileChooser
-     *      the file chooser widget
+     * @param element      the parent element
+     * @param fileChooser  the file chooser widget to encode
      */
     private static void writeFileChooser( Element element, TemplateFileChooser fileChooser )
     {
@@ -1900,8 +1951,8 @@ public class TemplateIO
         Set<String> extensions = fileChooser.getExtensions();
         if ( ( extensions != null ) && ( extensions.size() > 0 ) )
         {
-            // Creating the string containing the extensions value (all the 
-            // extensions are concatenated and split with a ',' character). 
+            // Creating the string containing the extensions value (all the
+            // extensions are concatenated and split with a ',' character).
             StringBuilder sb = new StringBuilder();
             for ( String extension : extensions )
             {
@@ -1951,13 +2002,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE IMAGE: ENCODE AN IMAGE DISPLAY WIDGET ───────────────────────────────
     /**
-     * Writes an image widget.
+     * Creates an {@code <image>} element with button visibility, size constraints,
+     * and optional embedded Base64 image data.
      *
-     * @param element
-     *      the parent element
-     * @param image
-     *      the image widget
+     * @param element  the parent element
+     * @param image    the image widget to encode
      */
     private static void writeImage( Element element, TemplateImage image )
     {
@@ -2006,13 +2057,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE LABEL: ENCODE A LABEL DISPLAY WIDGET ────────────────────────────────
     /**
-     * Writes a label widget.
+     * Creates a {@code <label>} element with optional static value, row count, and
+     * dollar-sign newline settings.
      *
-     * @param element
-     *      the parent element
-     * @param label
-     *      the label widget
+     * @param element  the parent element
+     * @param label    the label widget to encode
      */
     private static void writeLabel( Element element, TemplateLabel label )
     {
@@ -2043,13 +2094,12 @@ public class TemplateIO
     }
 
 
+    // ── WRITE LINK: ENCODE A HYPERLINK WIDGET ─────────────────────────────────────
     /**
-     * Writes a link widget.
+     * Creates a {@code <link>} element with optional static value.
      *
-     * @param element
-     *      the parent element
-     * @param link
-     *      the link widget
+     * @param element  the parent element
+     * @param link     the link widget to encode
      */
     private static void writeLink( Element element, TemplateLink link )
     {
@@ -2068,12 +2118,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE LISTBOX: ENCODE A LIST BOX WIDGET ───────────────────────────────────
     /**
-     * Writes a lisbox widget.
+     * Creates a {@code <listbox>} element with enabled/multiple-selection flags and
+     * an {@code <items>} child containing all {@link ValueItem} entries.
      *
-     * @param element
-     *      the parent element
-     * @param listbox
+     * @param element  the parent element
+     * @param listbox  the listbox widget to encode
      */
     private static void writeListbox( Element element, TemplateListbox listbox )
     {
@@ -2111,13 +2162,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE VALUE ITEM: ENCODE A LABEL/VALUE PAIR ───────────────────────────────
     /**
-     * Writes a value item.
+     * Writes a {@link ValueItem} as {@code <label>} and {@code <value>} child
+     * elements inside the given parent element.
      *
-     * @param element
-     *      the parent element
-     * @param item
-     *      the value item
+     * @param element  the parent XML element (e.g. {@code <item>} or {@code <button>})
+     * @param item     the value item to encode
      */
     private static void writeValueItem( Element element, ValueItem item )
     {
@@ -2137,13 +2188,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE PASSWORD: ENCODE A PASSWORD WIDGET ──────────────────────────────────
     /**
-     * Writes a password widget.
+     * Creates a {@code <password>} element with hidden, edit-button, and
+     * show-password-checkbox flags.
      *
-     * @param element
-     *      the parent element
-     * @param password
-     *      the password widget
+     * @param element   the parent element
+     * @param password  the password widget to encode
      */
     private static void writePassword( Element element, TemplatePassword password )
     {
@@ -2174,13 +2225,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE RADIO BUTTONS: ENCODE A RADIO BUTTON GROUP WIDGET ──────────────────
     /**
-     * Writes a radio buttons widget.
+     * Creates a {@code <radiobuttons>} element with enabled flag and a
+     * {@code <buttons>} child containing all {@link ValueItem} buttons.
      *
-     * @param element
-     *      the parent element
-     * @param radioButtons
-     *      the radio buttons widget
+     * @param element       the parent element
+     * @param radioButtons  the radio buttons widget to encode
      */
     private static void writeRadioButtons( Element element, TemplateRadioButtons radioButtons )
     {
@@ -2211,13 +2262,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE SECTION: ENCODE A COLLAPSIBLE SECTION WIDGET ───────────────────────
     /**
-     * Writes a section widget.
+     * Creates a {@code <section>} element with title, description, column layout,
+     * expand settings, and recursively encoded child widgets.
      *
-     * @param element
-     *      the parent element
-     * @param section
-     *      the section widget
+     * @param element  the parent element
+     * @param section  the section widget to encode
      */
     private static void writeSection( Element element, TemplateSection section )
     {
@@ -2277,13 +2328,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE SPINNER: ENCODE A NUMERIC SPINNER WIDGET ───────────────────────────
     /**
-     * Writes a spinner widget.
+     * Creates a {@code <spinner>} element with minimum, maximum, increment, page
+     * increment, and digits settings.
      *
-     * @param element
-     *      the parent element
-     * @param spinner
-     *      the spinner widget
+     * @param element  the parent element
+     * @param spinner  the spinner widget to encode
      */
     private static void writeSpinner( Element element, TemplateSpinner spinner )
     {
@@ -2325,13 +2376,12 @@ public class TemplateIO
     }
 
 
+    // ── WRITE TABLE: ENCODE A MULTI-VALUE TABLE WIDGET ────────────────────────────
     /**
-     * Writes the table widget.
+     * Creates a {@code <table>} element with Add/Edit/Delete button visibility flags.
      *
-     * @param element
-     *      the parent element
-     * @param table
-     *      the table widget
+     * @param element  the parent element
+     * @param table    the table widget to encode
      */
     private static void writeTable( Element element, TemplateTable table )
     {
@@ -2361,13 +2411,13 @@ public class TemplateIO
     }
 
 
+    // ── WRITE TEXTFIELD: ENCODE A TEXT INPUT WIDGET ───────────────────────────────
     /**
-     * Writes a text field widget.
+     * Creates a {@code <textfield>} element with row count, character limit, and
+     * dollar-sign newline settings.
      *
-     * @param element
-     *      the parent element
-     * @param textField
-     *      the text field widget
+     * @param element    the parent element
+     * @param textField  the text field widget to encode
      */
     private static void writeTextfield( Element element, TemplateTextField textField )
     {
@@ -2397,13 +2447,13 @@ public class TemplateIO
     }
 
 
+    // ── CONVERT: ENCODE A BOOLEAN AS "true" OR "false" ───────────────────────────
     /**
-     * Converts a boolean.
+     * Converts a Java {@code boolean} to its XML string representation
+     * ({@code "true"} or {@code "false"}).
      *
-     * @param bool
-     *      the boolean
-     * @return
-     *      its String representation
+     * @param bool  the boolean to convert
+     * @return {@code "true"} or {@code "false"}
      */
     private static String convert( boolean bool )
     {

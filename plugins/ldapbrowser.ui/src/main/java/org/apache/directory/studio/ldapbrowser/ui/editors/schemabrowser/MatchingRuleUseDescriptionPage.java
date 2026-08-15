@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.schemabrowser;
@@ -34,20 +34,31 @@ import org.eclipse.jface.viewers.ViewerSorter;
 import org.eclipse.swt.graphics.Image;
 
 
+// ── CLASS: MatchingRuleUseDescriptionPage — Death Star Blueprints, MR-Use ──────
+// R2-D2 opens the "Matching Rule Use" appendix — a narrower section that tells
+// which attribute types each matching rule is actually applied to on this specific
+// installation.  It is the cross-reference table that links abstract algorithms
+// to the concrete fields that use them.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The MatchingRuleUseDescriptionPage displays a list with all
- * matching rule use descriptions and hosts the detail page.
+ * The schema browser tab that lists all matching rule use descriptions from the
+ * selected connection's schema.
+ * Selecting an entry shows its details in {@link MatchingRuleUseDescriptionDetailsPage}.
+ * Think of this class as R2's matching-rule-use appendix: the cross-reference
+ * table that says "caseExactMatch applies to these attributes on this server."
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class MatchingRuleUseDescriptionPage extends SchemaPage
 {
 
+    // ── R2 Attaches The Matching-Rule-Use Appendix ────────────────────────────────
+    // R2 links his matching-rule-use cross-reference section to the parent browser.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * 
-     * Creates a new instance of MatchingRuleUseDescriptionPage.
+     * Creates a new matching rule use description page linked to the given schema browser.
      *
-     * @param schemaBrowser the schema browser
+     * @param schemaBrowser  the schema browser editor that hosts this tab
      */
     public MatchingRuleUseDescriptionPage( SchemaBrowser schemaBrowser )
     {
@@ -56,8 +67,11 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
 
 
     /**
-     * {@inheritDoc}
+     * Returns the localised title for this page.
+     *
+     * @return the page title, e.g. "Matching Rule Use"
      */
+    @Override
     protected String getTitle()
     {
         return Messages.getString( "MatchingRuleUseDescriptionPage.MatchingRule" ); //$NON-NLS-1$
@@ -65,8 +79,11 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
 
 
     /**
-     * {@inheritDoc}
+     * Returns the localised description shown below the section title.
+     *
+     * @return the filter description, e.g. "Select a matching rule use"
      */
+    @Override
     protected String getFilterDescription()
     {
         return Messages.getString( "MatchingRuleUseDescriptionPage.SelectMatchingRule" ); //$NON-NLS-1$
@@ -74,8 +91,11 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
 
 
     /**
-     * {@inheritDoc}
+     * Returns the content provider that extracts all matching rule use descriptions.
+     *
+     * @return an {@link MRUDContentProvider} instance
      */
+    @Override
     protected IStructuredContentProvider getContentProvider()
     {
         return new MRUDContentProvider();
@@ -83,8 +103,11 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
 
 
     /**
-     * {@inheritDoc}
+     * Returns the label provider that renders each matching rule use as a display string.
+     *
+     * @return an {@link MRUDLabelProvider} instance
      */
+    @Override
     protected ITableLabelProvider getLabelProvider()
     {
         return new MRUDLabelProvider();
@@ -92,8 +115,11 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
 
 
     /**
-     * {@inheritDoc}
+     * Returns the sorter that orders matching rule use descriptions alphabetically.
+     *
+     * @return an {@link MRUDViewerSorter} instance
      */
+    @Override
     protected ViewerSorter getSorter()
     {
         return new MRUDViewerSorter();
@@ -101,8 +127,11 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
 
 
     /**
-     * {@inheritDoc}
+     * Returns the filter that hides non-matching entries.
+     *
+     * @return an {@link MRUDViewerFilter} instance
      */
+    @Override
     protected ViewerFilter getFilter()
     {
         return new MRUDViewerFilter();
@@ -110,22 +139,32 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
 
 
     /**
-     * {@inheritDoc}
+     * Creates and returns the details page for the selected matching rule use.
+     *
+     * @return a new {@link MatchingRuleUseDescriptionDetailsPage}
      */
+    @Override
     protected SchemaDetailsPage getDetailsPage()
     {
         return new MatchingRuleUseDescriptionDetailsPage( this, this.toolkit );
     }
 
     /**
-     * The content provider used by the viewer.
+     * Supplies the table viewer with matching rule use descriptions from the schema.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
     class MRUDContentProvider implements IStructuredContentProvider
     {
+        // ── R2 Pulls The Matching-Rule-Use Cross-Reference From Storage ────────────
+        // R2 reads every matching-rule-use entry from the schema and returns them
+        // as an array for the table viewer.
+        // ──────────────────────────────────────────────────────────────────────────
         /**
-         * {@inheritDoc}
+         * Returns all matching rule use descriptions from the given schema input.
+         *
+         * @param inputElement  the Schema object; other types yield an empty array
+         * @return              array of {@link MatchingRuleUse} objects, or empty array
          */
         public Object[] getElements( Object inputElement )
         {
@@ -141,31 +180,31 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
         }
 
 
-        /**
-         * {@inheritDoc}
-         */
+        /** No-op. */
         public void dispose()
         {
         }
 
 
-        /**
-         * {@inheritDoc}
-         */
+        /** No-op. */
         public void inputChanged( Viewer viewer, Object oldInput, Object newInput )
         {
         }
     }
 
     /**
-     * The label provider used by the viewer.
+     * Renders each matching rule use as a display string.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
     class MRUDLabelProvider extends LabelProvider implements ITableLabelProvider
     {
         /**
-         * {@inheritDoc}
+         * Returns the display text for the given matching rule use.
+         *
+         * @param obj    expected to be a {@link MatchingRuleUse}
+         * @param index  column index (always 0)
+         * @return       formatted name, or fallback toString
          */
         public String getColumnText( Object obj, int index )
         {
@@ -177,9 +216,7 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
         }
 
 
-        /**
-         * {@inheritDoc}
-         */
+        /** Returns null; text-only rows. */
         public Image getColumnImage( Object obj, int index )
         {
             return null;
@@ -187,14 +224,19 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
     }
 
     /**
-     * The sorter used by the viewer.
+     * Sorts matching rule use descriptions alphabetically by display name.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
     class MRUDViewerSorter extends ViewerSorter
     {
         /**
-         * {@inheritDoc}
+         * Compares two matching rule use descriptions by formatted display name.
+         *
+         * @param viewer  the viewer (not used)
+         * @param e1      first element
+         * @param e2      second element
+         * @return        negative, zero, or positive ordering
          */
         public int compare( Viewer viewer, Object e1, Object e2 )
         {
@@ -211,14 +253,20 @@ public class MatchingRuleUseDescriptionPage extends SchemaPage
     }
 
     /**
-     * The filter used by the viewer.
+     * Hides matching rule use descriptions that do not match the filter text
+     * (name or OID, case-insensitive).
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
     class MRUDViewerFilter extends ViewerFilter
     {
         /**
-         * {@inheritDoc}
+         * Returns true if the given matching rule use matches the filter text.
+         *
+         * @param viewer         the viewer (not used)
+         * @param parentElement  the parent element (not used)
+         * @param element        the schema element to test
+         * @return               true to show, false to hide
          */
         public boolean select( Viewer viewer, Object parentElement, Object element )
         {

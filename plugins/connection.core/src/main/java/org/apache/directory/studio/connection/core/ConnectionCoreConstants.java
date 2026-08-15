@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.connection.core;
 
@@ -23,18 +23,33 @@ package org.apache.directory.studio.connection.core;
 import java.util.TimeZone;
 
 
+// ── CLASS: ConnectionCoreConstants — THE FALCON'S NAVIGATION CODE DICTIONARY ──
+// Chewie keeps a laminated reference card taped to the nav console:
+// plugin IDs, preference key strings, date formats — every constant the crew
+// might need to look up so they're never hard-coded all over the codebase.
+// This non-instantiable class is that reference card.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Constants for the connection core plugin.
+ * Holds all compile-time constants for the connection.core plugin.
+ * We centralize magic strings (plugin ID, preference keys) here so any change
+ * only needs to happen in one place.
+ * Think of this class as Chewie's laminated nav-console reference card:
+ * every key string the crew needs is written on it.
  * Final reference -> class shouldn't be extended
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public final class ConnectionCoreConstants
 {
+    // ── PRIVATE CONSTRUCTOR — THE REFERENCE CARD CAN'T BE PHOTOCOPIED ────────────
+    // Chewie's reference card is not for reproduction — it's stuck to the console.
+    // We prevent instantiation because all members are static constants.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     *  Ensures no construction of this class, also ensures there is no need for final keyword above
-     *  (Implicit super constructor is not visible for default constructor),
-     *  but is still self documenting.
+     * Private constructor — this class is a constants holder, not an object.
+     * Ensures no construction of this class, also ensures there is no need for final keyword above
+     * (Implicit super constructor is not visible for default constructor),
+     * but is still self documenting.
      */
     private ConnectionCoreConstants()
     {

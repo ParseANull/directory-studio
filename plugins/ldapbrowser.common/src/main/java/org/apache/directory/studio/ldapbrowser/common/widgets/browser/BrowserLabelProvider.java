@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.widgets.browser;
@@ -54,9 +54,23 @@ import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: BrowserLabelProvider — C-3PO TRANSLATING FOR THE REBEL CREW ────────
+// C-3PO stands in the Rebel briefing room. As each data packet arrives —
+// a droid report, a Wookiee cry, a Huttese contract — he translates it into
+// clear Basic for the crew: a text label and the right icon so everyone
+// instantly recognizes what kind of thing they're looking at.
+// BrowserLabelProvider does exactly this for the browser tree: given any
+// model object (IEntry, ISearch, IBookmark, BrowserEntryPage, etc.), it
+// produces the text and icon for that tree row, respecting user preferences
+// for how labels should be displayed (full DN, RDN, or RDN value).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The BrowserLabelProvider implements the label provider for
- * the browser widget.
+ * The JFace label provider for the LDAP browser tree widget.
+ * For every possible node type in the tree, this class provides the display text
+ * and the icon image to show. It also implements {@link IFontProvider} and
+ * {@link IColorProvider} — though those currently return null (default styling).
+ * Think of this class as C-3PO in the Rebel briefing room: every strange object
+ * gets translated into something the human crew can read at a glance.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -67,10 +81,24 @@ public class BrowserLabelProvider extends LabelProvider implements IFontProvider
     private BrowserPreferences preferences;
 
 
+    // ── C-3PO RECEIVES HIS TRANSLATION PREFERENCES ───────────────────────────
+    // Before C-3PO starts translating in the Rebel briefing room, Leia hands him
+    // a settings card: "Show full diplomatic titles, abbreviate when over 20 chars,
+    // put the most important details first." He keeps this card throughout the session.
+    // We receive the BrowserPreferences and store them — every getText() call
+    // will consult them to decide how to format labels.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BrowserLabelProvider.
+     * Creates a new label provider configured with the given display preferences.
+     * The preferences control things like: show full DN vs. just the RDN, abbreviate
+     * long labels, show the children count suffix, etc.
      *
-     * @param preferences the preferences
+     * <p>For example — Leia hands C-3PO his translation preferences card:</p>
+     * <pre>
+     *   C3PO.setPreferences(showFullDiplomaticTitle=true, maxLength=30);
+     * </pre>
+     *
+     * @param preferences   the browser display preferences — never null
      */
     public BrowserLabelProvider( BrowserPreferences preferences )
     {
@@ -78,8 +106,30 @@ public class BrowserLabelProvider extends LabelProvider implements IFontProvider
     }
 
 
+    // ── C-3PO TRANSLATES EACH OBJECT INTO READABLE TEXT ──────────────────────
+    // An entry arrives: C-3PO reads its LDAP type, checks the translation settings,
+    // and produces the right text. An IEntry might become "cn=Luke Skywalker (3)",
+    // a BrowserEntryPage becomes "[1...50]", an ISearch becomes "My Search (42 results)".
+    // JFace calls this for every visible row in the tree.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the display text for a tree node.
+     * We handle every possible node type differently. For entries, we respect the
+     * user's label preference (full DN, RDN, or RDN value) and append a children
+     * count like "(5)" if children are loaded. For pages, we show the range "[1...50]".
+     * For searches, we append the result count. Strings are abbreviated if the user
+     * has set an abbreviation limit.
+     *
+     * <p>For example — C-3PO translates a Rebel entry into readable Basic:</p>
+     * <pre>
+     *   getText(lukeEntry);        // "Skywalker (3)" — RDN value + child count
+     *   getText(entryPage);        // "[51...100]"
+     *   getText(mySearch);         // "Jedi Search (7)"
+     *   getText(bookmarkNode);     // "Luke's home planet"
+     * </pre>
+     *
+     * @param obj   the tree node object to translate into text
+     * @return the display string; empty string for null input
      */
     public String getText( Object obj )
     {
@@ -272,8 +322,30 @@ public class BrowserLabelProvider extends LabelProvider implements IFontProvider
     }
 
 
+    // ── C-3PO HANDS THE CREW THE RIGHT ID BADGE ICON ─────────────────────────
+    // C-3PO has a badge printer that produces the correct icon for each visitor:
+    // a Jedi badge for Luke, an Imperial crest for Vader, a folder icon for a
+    // section directory. For LDAP entries, he picks the icon by checking what
+    // objectClasses the entry has — a "person" gets a person icon, a group gets
+    // a group icon.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the icon image for a tree node.
+     * Each node type gets its own icon. For LDAP entries we pick the icon based
+     * on the entry's structural objectClass (by weight-scoring configured pairs).
+     * The special "Root DSE" gets a root icon, schema entries get a schema icon,
+     * page nodes get a folder icon, and so on.
+     *
+     * <p>For example — C-3PO prints the right ID badge for each Rebel visitor:</p>
+     * <pre>
+     *   getImage(lukeEntry);        // person icon (structural objectClass = inetOrgPerson)
+     *   getImage(rebelGroupEntry);  // group icon (structural objectClass = groupOfNames)
+     *   getImage(entryPage);        // folder icon
+     *   getImage(bookmarkNode);     // bookmark icon
+     * </pre>
+     *
+     * @param obj   the tree node object that needs an icon
+     * @return the SWT {@link Image} to display, or null for unknown types
      */
     public Image getImage( Object obj )
     {
@@ -398,14 +470,31 @@ public class BrowserLabelProvider extends LabelProvider implements IFontProvider
     }
 
 
+    // ── C-3PO PICKS THE CORRECT BADGE BY RANK AND AFFILIATION ────────────────
+    // C-3PO consults the Rebel insignia guide: if the visitor is a Jedi Master
+    // (structural AUXILIARY + weight 3) they get the highest-weight badge. If they're
+    // just a Padawan (structural STRUCTURAL + weight 2) they get a different one.
+    // We score each objectClass pair against the entry's objectClasses and pick
+    // the icon pair with the highest score — this gives "inetOrgPerson" priority
+    // over "top" for person entries, for example.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the image associated with the entry based 
-     * on the value of its 'objectClass' attribute.
+     * Selects and returns the icon for an LDAP entry based on its objectClass attribute.
+     * We compare the entry's objectClass OIDs against a user-configured list of
+     * objectClass-to-icon mappings (configured in Directory Studio preferences).
+     * Each matching structural objectClass scores 3 points, each auxiliary scores 2.
+     * The mapping with the highest total score wins and provides the icon.
+     * Falls back to the generic entry icon if no configured mapping matches.
      *
-     * @param entry
-     *      the entry
-     * @return
-     *      the image associated with then entry
+     * <p>For example — C-3PO picks the right Rebel badge by checking rank and affiliation:</p>
+     * <pre>
+     *   int jediScore = countMatchingOCs(entry, JEDI_OCS);   // 5 — Jedi Master
+     *   int rebelScore = countMatchingOCs(entry, REBEL_OCS); // 3 — Alliance member
+     *   return jediScore > rebelScore ? JEDI_BADGE : REBEL_BADGE;
+     * </pre>
+     *
+     * @param entry   the LDAP entry whose objectClass should determine the icon
+     * @return the best-matching icon image, or the generic entry icon if none match
      */
     public static Image getImageByObjectClass( IEntry entry )
     {
@@ -453,8 +542,24 @@ public class BrowserLabelProvider extends LabelProvider implements IFontProvider
     }
 
 
+    // ── C-3PO REPORTS: NO SPECIAL FONT FOR THIS ONE ──────────────────────────
+    // A Rebel officer asks C-3PO if this particular visitor should be displayed
+    // in bold or italic — C-3PO checks his notes and shakes his head: "Standard
+    // formatting will do for everyone, sir."
+    // We return null, which tells JFace to use the tree's default font.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns null to use the tree's default font for all nodes.
+     * We implement {@link IFontProvider} but don't currently differentiate nodes
+     * by font. Returning null tells JFace to use its default.
+     *
+     * <p>For example — C-3PO advises standard formatting for all Rebel personnel:</p>
+     * <pre>
+     *   Font font = C3PO.getFont(lukeEntry); // null — standard formatting
+     * </pre>
+     *
+     * @param element   the tree node (unused)
+     * @return always null
      */
     public Font getFont( Object element )
     {
@@ -462,8 +567,21 @@ public class BrowserLabelProvider extends LabelProvider implements IFontProvider
     }
 
 
+    // ── C-3PO REPORTS: NO SPECIAL TEXT COLOR FOR THIS ONE ────────────────────
+    // The same officer asks about foreground color — C-3PO again shakes his
+    // head: "All entries display in the standard color, sir."
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns null to use the tree's default foreground (text) color for all nodes.
+     * We implement {@link IColorProvider} but don't currently apply custom colors.
+     *
+     * <p>For example — C-3PO advises standard text color for all entries:</p>
+     * <pre>
+     *   Color fg = C3PO.getForeground(lukeEntry); // null — default color
+     * </pre>
+     *
+     * @param element   the tree node (unused)
+     * @return always null
      */
     public Color getForeground( Object element )
     {
@@ -471,8 +589,20 @@ public class BrowserLabelProvider extends LabelProvider implements IFontProvider
     }
 
 
+    // ── C-3PO REPORTS: NO SPECIAL BACKGROUND COLOR FOR THIS ONE ─────────────
+    // And the background color? "Standard, sir. We don't highlight individuals."
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns null to use the tree's default background color for all nodes.
+     * We implement {@link IColorProvider} but don't currently apply custom backgrounds.
+     *
+     * <p>For example — C-3PO confirms standard background for all entries:</p>
+     * <pre>
+     *   Color bg = C3PO.getBackground(lukeEntry); // null — default background
+     * </pre>
+     *
+     * @param element   the tree node (unused)
+     * @return always null
      */
     public Color getBackground( Object element )
     {

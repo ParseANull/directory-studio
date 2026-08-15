@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.dialogs.preferences;
@@ -41,8 +41,20 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: AttributesPreferencePage — MON MOTHMA ISSUES STANDING ORDERS ──────
+// Mon Mothma sits at the head of the briefing table on Home One, quietly issuing
+// standing orders that govern how every unit in the Alliance presents itself —
+// which color insignia for command staff, which font weight for field operatives,
+// whether values are shown decorated (with context) or raw (just the numbers).
+// Every Rebel follows these orders until Mon Mothma changes them.  This preference
+// page works the same way: it sets the colors, fonts, and decoration rules that
+// govern how LDAP attributes are rendered throughout the entire browser.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The AttributesPreferencePage contains general settings for attributes.
+ * The Eclipse preference page that controls the visual appearance of LDAP
+ * attributes in the browser — colors, bold/italic styles, and whether attribute
+ * values are shown in decorated or raw form.
+ * Think of this class as Mon Mothma's standing orders for the LDAP browser UI.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -73,8 +85,24 @@ public class AttributesPreferencePage extends PreferencePage implements IWorkben
     private Button[] attributeItalicButtons = new Button[ATTRIBUTE_TYPES.length];
 
 
+    // ── MON MOTHMA OPENS THE STANDING-ORDERS BRIEFING ────────────────────────────
+    // Mon Mothma calls the briefing to order, names the topic ("Attributes"), and
+    // reads out the general agenda ("General settings for how attributes appear").
+    // She also points everyone to the right preference store so changes land in
+    // the correct configuration file — not the wrong one.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AttributesPreferencePage.
+     * Constructs the AttributesPreferencePage with its title and description,
+     * and wires it to the correct preference store so our saved values end up
+     * in the right place.  Eclipse calls this when the user opens the preference
+     * tree and selects the Attributes node.
+     *
+     * <p>For example — Mon Mothma opens the session:</p>
+     * <pre>
+     *   title       = "Attributes"
+     *   description = "General settings for attribute display"
+     *   store       = BrowserCommonActivator preference store
+     * </pre>
      */
     public AttributesPreferencePage()
     {
@@ -84,16 +112,47 @@ public class AttributesPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── MON MOTHMA ACKNOWLEDGES THE WORKBENCH ─────────────────────────────────────
+    // A brief nod to the Eclipse workbench — Mon Mothma acknowledges the presence
+    // of the platform framework.  We don't need anything from it here, but the
+    // interface contract requires we implement init().
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the workbench initialises this preference page.
+     * We don't need the workbench reference for anything, so this is intentionally
+     * empty — we just satisfy the {@link IWorkbenchPreferencePage} contract.
+     *
+     * @param workbench  The Eclipse workbench instance — not used here.
      */
     public void init( IWorkbench workbench )
     {
     }
 
 
+    // ── MON MOTHMA POSTS THE STANDING ORDERS ON THE BRIEFING BOARD ───────────────
+    // Mon Mothma pins four rows of orders to the briefing board — one row per rank
+    // category (objectClass, must, may, operational) — each row showing the unit
+    // color swatch, a bold toggle, and an italic toggle.  She also posts the
+    // "show decorated values" toggle at the top for everyone to see.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all the widgets on the preference page: the decorated-values checkbox
+     * at the top, then a group of four rows (one per attribute category) where the
+     * user can set color, bold, and italic for each category.
+     * This is what the user actually sees and interacts with.
+     *
+     * <p>For example — Mon Mothma's briefing board:</p>
+     * <pre>
+     *   [x] Show decorated values
+     *   ---Attribute Colors and Fonts---
+     *   ObjectClass  [color] [x] Bold  [ ] Italic
+     *   Must         [color] [ ] Bold  [ ] Italic
+     *   May          [color] [ ] Bold  [x] Italic
+     *   Operational  [color] [ ] Bold  [x] Italic
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse.
+     * @return        The composite containing all our preference widgets.
      */
     protected Control createContents( Composite parent )
     {
@@ -201,8 +260,24 @@ public class AttributesPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── MON MOTHMA COUNTERSIGNS AND DISPATCHES THE ORDERS ────────────────────────
+    // Mon Mothma reviews the briefing board one last time, countersigns each order,
+    // and sends them to the logistics office.  Every color, font weight, and
+    // decoration preference gets written to the store here so it persists across
+    // Eclipse restarts.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves all the user's choices to the preference store when they click OK or
+     * Apply.  We write the decorated-values flag and then loop through all four
+     * attribute categories to persist their color and font settings.
+     *
+     * <p>For example — Mon Mothma signs off the orders:</p>
+     * <pre>
+     *   store.setValue(SHOW_RAW_VALUES, !showDecoratedValues);
+     *   for each category: store color + font (bold/italic flags)
+     * </pre>
+     *
+     * @return  Always true — we have no validation that could prevent saving.
      */
     public boolean performOk()
     {
@@ -225,8 +300,24 @@ public class AttributesPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── MON MOTHMA REVERTS TO THE ORIGINAL STANDING ORDERS ───────────────────────
+    // Mon Mothma pulls out the original Alliance charter and restores every order
+    // to its factory-issue wording — the defaults set when the plugin was first
+    // installed.  She tears down today's customizations and posts the originals.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Resets all widgets on this page to the plugin's default preference values.
+     * Eclipse calls this when the user clicks "Restore Defaults."  We read the
+     * defaults from the preference store (not the current values) and repopulate
+     * every control so the UI reflects what will be saved.
+     *
+     * <p>For example — Mon Mothma reinstates the original charter:</p>
+     * <pre>
+     *   showDecoratedValues = default (true)
+     *   objectClass color   = default blue
+     *   must font           = default bold
+     *   // ... and so on for each category
+     * </pre>
      */
     protected void performDefaults()
     {

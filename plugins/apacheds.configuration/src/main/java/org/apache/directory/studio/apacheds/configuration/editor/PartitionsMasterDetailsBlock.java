@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration.editor;
 
@@ -59,8 +59,22 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: PartitionsMasterDetailsBlock — Imperial Vault Registry ─────────
+// In the Death Star's vault wing, there is a central registry room: on the left
+// wall hangs the complete roster of all data vaults, and when you tap one, the
+// right side of the room fills with that vault's full configuration dossier.
+// This class is that registry room — the Eclipse MasterDetailsBlock that splits
+// the Partitions tab into a master list on the left and a details panel on the
+// right, with Add and Delete buttons to manage the registry.
+// ─────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Partitions Master/Details Block used in the Partitions Page.
+ * The master/details block displayed on the Partitions configuration page.
+ * Extends Eclipse Forms' {@link MasterDetailsBlock} to provide a scrollable
+ * partition list on the left and a {@link PartitionDetailsPage} on the right
+ * that updates whenever the user clicks a different partition in the list.
+ * Think of this class as the Imperial vault registry room: one wall shows the
+ * complete vault roster, and the opposite wall shows all the details for
+ * whichever vault the registry master has selected.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -83,11 +97,23 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     private Button deleteButton;
 
 
+    // ── Registry Master Opens the Vault Wing for Business ────────────────────
+    // The registry master arrives at the vault wing entrance, badge in hand,
+    // and takes their seat behind the master roster. They need to know which
+    // Partitions page they report to so they can escalate dirty notifications.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PartitionsMasterDetailsBlock.
+     * Constructs a new {@code PartitionsMasterDetailsBlock} linked to the given page.
+     * Stores the page reference so we can access the config bean and notify the
+     * editor when changes occur.
      *
-     * @param page
-     *      the associated page
+     * <p>For example — the registry master takes their post:</p>
+     * <pre>
+     *   Registry master arrives, checks which Partitions page they answer to,
+     *   and sits down at the master roster desk ready to manage vault records.
+     * </pre>
+     *
+     * @param page  the {@link PartitionsPage} that hosts this master/details block
      */
     public PartitionsMasterDetailsBlock( PartitionsPage page )
     {
@@ -95,8 +121,30 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Master Roster Board Built on the Left Wall ────────────────────────────
+    // The registry master supervises the construction of the roster display:
+    // a scrollable table of vault names on the left, with Add and Delete buttons
+    // beneath it, and the section part wired into the managed form so selection
+    // events fire to the right-hand details panel.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the master (left-side) panel containing the partition list and buttons.
+     * Creates a titled Section, a table viewer showing all partitions, and Add/Delete
+     * buttons. Wires the table viewer's selection to the managed form so that picking
+     * a partition automatically updates the right-side details panel.
+     * Calls {@link #initFromInput()} and {@link #addListeners()} to finish setup.
+     *
+     * <p>For example — the roster board goes up:</p>
+     * <pre>
+     *   Section title: "All Partitions"
+     *   Table: | system        |
+     *          | example       |   [Add]
+     *          | ...           |   [Delete]
+     *   Selecting a row fires a managed form selection event to the details panel.
+     * </pre>
+     *
+     * @param managedForm  the managed form that coordinates master/details communication
+     * @param parent       the left-side composite to place the section inside
      */
     protected void createMasterPart( final IManagedForm managedForm, Composite parent )
     {
@@ -151,8 +199,16 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Roster Board Loaded from the Config Bean ──────────────────────────────
+    // The registry master clears the current roster, walks to the master config
+    // archive, reads out every registered partition, and posts each name on the
+    // board wrapped in its own protective cover (PartitionWrapper).
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the page with the Editor input.
+     * Populates the partition list from the current configuration bean.
+     * Clears {@link #partitionWrappers}, creates a new {@link PartitionWrapper}
+     * for each {@link PartitionBean} in the directory service, and feeds the
+     * updated list into the table viewer.
      */
     private void initFromInput()
     {
@@ -167,8 +223,16 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Registry Master Refreshes the Roster Board ───────────────────────────
+    // A signal comes in that the underlying config has changed — perhaps a
+    // partition was added or removed programmatically. The master clears and
+    // reloads the board from scratch, then asks the table to repaint.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes the UI.
+     * Reloads the partition list from the configuration bean and refreshes
+     * the table viewer.
+     * Delegates to {@link #initFromInput()} for the data load, then calls
+     * {@code viewer.refresh()} to repaint the table.
      */
     public void refreshUI()
     {
@@ -177,8 +241,17 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Guards and Clerks Posted at the Roster Controls ──────────────────────
+    // The registry master assigns clerks to watch the table and the two buttons.
+    // The table clerk enables the Delete button when a vault is selected (and
+    // disables it again if the system partition is selected — that one is
+    // protected). The Add clerk creates a new vault; the Delete clerk removes one.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Add listeners to UI fields.
+     * Wires the selection, Add, and Delete listeners to the master-list UI controls.
+     * The table selection listener manages Delete button state and protects the system
+     * partition from deletion. The Add button listener calls {@link #addNewPartition()};
+     * the Delete button listener calls {@link #deleteSelectedPartition()}.
      */
     private void addListeners()
     {
@@ -224,8 +297,17 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── New Vault Registered with Default Spec Sheet ──────────────────────────
+    // A new vault is being commissioned: the registry master generates a unique
+    // call sign, writes up a standard JDBM spec sheet with sensible defaults and
+    // a full set of starter indexes, and posts the new entry on the roster board.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the 'Add' button is clicked.
+     * Creates a new JDBM partition with default settings and adds it to the roster.
+     * Generates a unique ID via {@link #getNewId()}, sets a default suffix DN, cache size,
+     * sync-on-write, context entry LDIF, and a standard set of search indexes.
+     * Wraps it in a {@link PartitionWrapper}, adds it to the list, refreshes the viewer,
+     * selects the new row, and marks the editor dirty.
      */
     private void addNewPartition()
     {
@@ -272,11 +354,23 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Unique Call Sign Generated for the New Vault ─────────────────────────
+    // The new vault needs a call sign that nobody else in the registry is using.
+    // We start with the base template name and append an incrementing counter
+    // until we find one that isn't already taken on the current roster.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a new ID for a new Partition.
+     * Generates a unique partition ID for a newly added partition.
+     * Starts with the base template name and appends an incrementing counter
+     * until the result doesn't collide with any existing partition ID (case-insensitive).
      *
-     * @return 
-     *      a new ID for a new Partition
+     * <p>For example — the registry master finds an open call sign:</p>
+     * <pre>
+     *   "NewPartition1" is taken → try "NewPartition2" → also taken
+     *   → "NewPartition3" is free → return "NewPartition3"
+     * </pre>
+     *
+     * @return  a partition ID string that is not already in use
      */
     private String getNewId()
     {
@@ -303,11 +397,27 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Vault's Founding LDIF Document Generated from Its DN ─────────────────
+    // Every new vault needs a founding document — the LDIF string that describes
+    // the root entry anchoring the whole LDAP subtree. We derive it automatically
+    // from the vault's suffix DN using standard schema constants.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the context entry for the partition.
-     * 
-     * @param dn the dn
-     * @return the LDIF representation of the context entry
+     * Generates the LDIF string for a partition's context (root) entry from its suffix DN.
+     * Builds a {@link DefaultEntry} with {@code objectClass: domain} and {@code objectClass: top},
+     * adds {@code extensibleObject} if the RDN type is not {@code dc}, then serializes to LDIF.
+     * Returns {@code null} if anything goes wrong during construction.
+     *
+     * <p>For example — the vault's founding charter drawn up:</p>
+     * <pre>
+     *   dn: dc=example,dc=com
+     *   objectClass: domain
+     *   objectClass: top
+     *   dc: example
+     * </pre>
+     *
+     * @param dn  the suffix DN to base the context entry on
+     * @return    the LDIF string for the context entry, or {@code null} on error
      */
     public static String getContextEntryLdif( Dn dn )
     {
@@ -339,8 +449,16 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Selected Vault Decommissioned After Confirmation ─────────────────────
+    // The registry master selects a vault from the roster, confirms the deletion
+    // request with the officer (a dialog box that asks "are you sure?"), and
+    // removes it from the working list if approved. The system vault is immune.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the 'Delete' button is clicked.
+     * Removes the currently selected partition from the working list after confirmation.
+     * Shows a confirmation dialog with the partition's ID and suffix before deleting.
+     * Refuses to delete the system partition even if selected.
+     * Marks the editor dirty if the user confirms the deletion.
      */
     private void deleteSelectedPartition()
     {
@@ -370,11 +488,18 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Standard JDBM Index Entry Created ────────────────────────────────────
+    // When we commission a new vault, it needs a set of pre-built index entries
+    // to get it operational. Each index is a simple JDBM bean with an attribute
+    // ID and a cache size — we stamp them out here like Imperial-standard parts.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Create a JDBM Index with the given index attribute id and cache size.
+     * Creates a configured {@link JdbmIndexBean} with the given attribute ID and cache size.
+     * Used when provisioning a new partition with its standard set of starter indexes.
      *
-     * @param indexAttributeId the attribute id
-     * @param indexCacheSize the cache size
+     * @param indexAttributeId  the LDAP attribute name to index (e.g., {@code "objectClass"})
+     * @param indexCacheSize    the number of entries to keep in the index cache
+     * @return                  a fully configured {@link JdbmIndexBean}
      */
     private JdbmIndexBean createJdbmIndex( String indexAttributeId, int indexCacheSize )
     {
@@ -387,8 +512,16 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Editor Flagged as Having Unsaved Changes ──────────────────────────────
+    // Something on the roster or in the vault dossier has been modified.
+    // We signal the Eclipse editor framework so the Save button lights up,
+    // commit the details page to capture any in-flight edits, and refresh the table.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the Editor as dirty.
+     * Marks the parent editor as dirty, commits the details page, and refreshes
+     * the master list table.
+     * Call this whenever a partition is added, deleted, or its properties change,
+     * so the Eclipse framework knows unsaved changes exist.
      */
     public void setEditorDirty()
     {
@@ -398,8 +531,18 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Details Panel Registered for Partition Wrappers ──────────────────────
+    // The Eclipse Forms framework needs to know which details panel to show on
+    // the right when the user clicks a PartitionWrapper in the master list.
+    // We create our PartitionDetailsPage and register it for that class.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Registers the {@link PartitionDetailsPage} as the details panel for
+     * {@link PartitionWrapper} objects in the master list.
+     * Called by the Eclipse Forms framework during initialization of the
+     * master/details block.
+     *
+     * @param detailsPart  the Eclipse Forms {@link DetailsPart} to register pages with
      */
     protected void registerPages( DetailsPart detailsPart )
     {
@@ -408,8 +551,17 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Toolbar Actions Stub — Nothing Deployed Yet ───────────────────────────
+    // The toolbar above the master/details block is currently empty — no
+    // filter, sort, or view-mode buttons have been commissioned yet.
+    // This is a placeholder that the Eclipse Forms framework requires us to provide.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Hook for adding toolbar actions to the managed form's toolbar.
+     * Currently a no-op — no toolbar actions have been implemented for the
+     * Partitions master/details block.
+     *
+     * @param managedForm  the managed form whose toolbar we could populate
      */
     protected void createToolBarActions( IManagedForm managedForm )
     {
@@ -418,20 +570,36 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
     }
 
 
+    // ── Registry Master Hands Back the Parent Page Reference ─────────────────
+    // The vault chief or other collaborators sometimes need to get back to the
+    // containing Partitions page — for example, to access the config bean or
+    // the Eclipse editor instance. This method hands out that reference.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the associated editor page.
-     * 
-     * @return the associated editor page
+     * Returns the {@link PartitionsPage} that hosts this master/details block.
+     * Useful for collaborators (e.g., {@link PartitionDetailsPage}) that need
+     * access to the editor or the configuration bean.
+     *
+     * @return  the owning {@link PartitionsPage}
      */
     public PartitionsPage getPage()
     {
         return page;
     }
 
-    
 
+    // ── Vault Registry Filed Away into the Official Config Archive ────────────
+    // Save time: the registry master tells the vault chief to file their latest
+    // edits, then sweeps through the entire working roster and copies every
+    // PartitionBean back into the authoritative DirectoryServiceBean record.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the necessary elements to the input model.
+     * Saves all partition data from the working list back into the configuration model.
+     * Commits the details page first to capture any unsaved in-flight edits,
+     * then builds a fresh partition list from the current {@link PartitionWrapper}
+     * instances and pushes it to the {@link DirectoryServiceBean}.
+     *
+     * @param monitor  the progress monitor (not used here, but required by the signature)
      */
     public void doSave( IProgressMonitor monitor )
     {
@@ -443,13 +611,13 @@ public class PartitionsMasterDetailsBlock extends MasterDetailsBlock
 
         // Creating a new list of partitions
         List<PartitionBean> newPartitions = new ArrayList<PartitionBean>();
-        
+
         // Saving the partitions
         for ( PartitionWrapper partitionWrapper : partitionWrappers )
         {
             newPartitions.add( partitionWrapper.getPartition() );
         }
-        
+
         directoryServiceBean.setPartitions( newPartitions );
     }
 }

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs.overlays;
 
@@ -30,9 +30,21 @@ import org.apache.directory.studio.openldap.config.editor.dialogs.OverlayDialog;
 import org.apache.directory.studio.openldap.config.model.overlay.OlcSyncProvConfig;
 
 
+// Like the Imperial construction crews assembling the SyncProv replication
+// module onto the second Death Star — setting the checkpoint threshold so
+// the station's ledger is flushed after N operations or M minutes, sizing
+// the session log to hold enough history for consumer catch-up, and toggling
+// the "skip present phase" and "honor reload hint" switches — we build the
+// SyncProv overlay configuration block that governs how provider-side
+// replication behaves.
 /**
- * This class implements a block for the configuration of the Audit Log overlay.
- * 
+ * This class implements the configuration block for the SyncProv overlay.
+ * We present text fields for checkpoint operations count and checkpoint
+ * interval minutes, a session log operations count, and two boolean
+ * checkboxes (skip present phase, honor reload hint flag), and we
+ * read/write all of these to and from the {@link OlcSyncProvConfig} model
+ * object on refresh and save.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SyncProvOverlayConfigurationBlock extends AbstractOverlayDialogConfigurationBlock<OlcSyncProvConfig>
@@ -45,6 +57,15 @@ public class SyncProvOverlayConfigurationBlock extends AbstractOverlayDialogConf
     private Button honorReloadHintFlagButton;
 
 
+    // Like the construction crew initializing a fresh SyncProv module with
+    // no prior replication settings, we create the block with a new empty
+    // OlcSyncProvConfig so there is always a non-null overlay to populate.
+    /**
+     * Creates a new SyncProvOverlayConfigurationBlock with a fresh, empty
+     * {@link OlcSyncProvConfig} as the backing model.
+     *
+     * @param dialog the parent OverlayDialog that hosts this block
+     */
     public SyncProvOverlayConfigurationBlock( OverlayDialog dialog )
     {
         super( dialog );
@@ -52,10 +73,21 @@ public class SyncProvOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew slotting a pre-configured SyncProv module into the
+    // station's infrastructure, we accept an existing OlcSyncProvConfig
+    // and store it — defaulting to a fresh one if null was passed.
+    /**
+     * Creates a new SyncProvOverlayConfigurationBlock backed by the given
+     * {@link OlcSyncProvConfig}. If {@code overlay} is {@code null} we
+     * create a fresh default config instead.
+     *
+     * @param dialog the parent OverlayDialog that hosts this block
+     * @param overlay the existing SyncProv overlay config to edit, or {@code null}
+     */
     public SyncProvOverlayConfigurationBlock( OverlayDialog dialog, OlcSyncProvConfig overlay )
     {
         super( dialog );
-        
+
         if ( overlay == null )
         {
             setOverlay( new OlcSyncProvConfig() );
@@ -67,8 +99,16 @@ public class SyncProvOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the construction crew installing the SyncProv control panel
+    // with its checkpoint configuration row, session log row, and the
+    // two behavioral toggle switches, we create all the block content
+    // widgets here.
     /**
-     * {@inheritDoc}
+     * Creates the block content area with a checkpoint row (operations count
+     * and minutes), a session log operations text field, a "Skip Present Phase"
+     * checkbox, and an "Honor Reload Hint flag" checkbox.
+     *
+     * @param parent the parent composite to attach our content to
      */
     public void createBlockContent( Composite parent )
     {
@@ -96,21 +136,26 @@ public class SyncProvOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew fabricating a numeric input panel that automatically
+    // rejects non-digit characters so the operator can't accidentally enter
+    // letters where an operation count or minute value is required, we create
+    // an integer-only text widget with a verify listener and a fixed width.
     /**
-     * Create a Text widget only accepting integers.
+     * Creates a text widget that only accepts digit characters, with a fixed
+     * 40-pixel width hint, suitable for numeric count and interval fields.
      *
-     * @param parent the parent
-     * @param text the initial text
-     * @param span the horizontal span
-     * @return a Text widget only accepting integers
+     * @param parent the parent composite
+     * @param text the initial text to display
+     * @param span the horizontal span in the parent's grid layout
+     * @return a new integer-only text widget
      */
     private Text createIntegerText( Composite parent, String text, int span )
     {
         Text integerText = BaseWidgetUtils.createText( parent, text, span );
 
-        integerText.addVerifyListener(  event ->
+        integerText.addVerifyListener( event ->
             {
-                if ( !event.text.matches( "[0-9]*" ) ) //$NON-NLS-1$
+                if ( !event.text.matches( "[0-9]*" ) )
                 {
                     event.doit = false;
                 }
@@ -124,8 +169,15 @@ public class SyncProvOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew reading the station's current SyncProv settings out of
+    // the configuration record and displaying them in the control panel so
+    // the administrator can see what's already set, we push each overlay
+    // field value into the corresponding UI widget.
     /**
-     * {@inheritDoc}
+     * Refreshes the block widgets from the current {@link OlcSyncProvConfig},
+     * populating the checkpoint operation count, checkpoint minutes, session
+     * log operations count, and the two boolean checkboxes from the overlay.
+     * Text fields are cleared when the corresponding overlay value is absent.
      */
     public void refresh()
     {
@@ -202,8 +254,14 @@ public class SyncProvOverlayConfigurationBlock extends AbstractOverlayDialogConf
     }
 
 
+    // Like the crew copying the updated SyncProv settings from the control
+    // panel back into the station's configuration record so they take effect,
+    // we read each widget value and write it into the OlcSyncProvConfig model
+    // — clearing fields that the operator left blank.
     /**
-     * {@inheritDoc}
+     * Saves the current widget values back into the {@link OlcSyncProvConfig},
+     * writing the checkpoint string (if both fields are non-empty), the session
+     * log operations count, and the two boolean flags.
      */
     public void save()
     {

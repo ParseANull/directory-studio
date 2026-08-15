@@ -26,6 +26,7 @@
             id="org.apache.directory.studio.StudioPreferencePage"
             name="%Pref_StudioPage_name">
       </page>
+
    </extension>
    <extension
          point="org.eclipse.core.runtime.preferences">
@@ -43,6 +44,55 @@
       <themeid refid="org.eclipse.e4.ui.css.theme.e4_default">
       </themeid>
     </stylesheet>
+
+    <!-- Base16 standalone themes (dark) -->
+    <theme id="org.apache.directory.studio.theme.solarized-dark"
+           label="Solarized Dark"
+           basestylesheeturi="resources/css/themes/solarized-dark.css"/>
+    <theme id="org.apache.directory.studio.theme.monokai"
+           label="Monokai"
+           basestylesheeturi="resources/css/themes/monokai.css"/>
+    <theme id="org.apache.directory.studio.theme.nord"
+           label="Nord"
+           basestylesheeturi="resources/css/themes/nord.css"/>
+    <theme id="org.apache.directory.studio.theme.one-dark"
+           label="One Dark"
+           basestylesheeturi="resources/css/themes/one-dark.css"/>
+    <theme id="org.apache.directory.studio.theme.gruvbox-dark"
+           label="Gruvbox Dark"
+           basestylesheeturi="resources/css/themes/gruvbox-dark.css"/>
+    <theme id="org.apache.directory.studio.theme.tomorrow-night"
+           label="Tomorrow Night"
+           basestylesheeturi="resources/css/themes/tomorrow-night.css"/>
+    <theme id="org.apache.directory.studio.theme.dracula"
+           label="Dracula"
+           basestylesheeturi="resources/css/themes/dracula.css"/>
+    <theme id="org.apache.directory.studio.theme.github-dark"
+           label="GitHub Dark"
+           basestylesheeturi="resources/css/themes/github-dark.css"/>
+    <theme id="org.apache.directory.studio.theme.catppuccin-mocha"
+           label="Catppuccin Mocha"
+           basestylesheeturi="resources/css/themes/catppuccin-mocha.css"/>
+    <theme id="org.apache.directory.studio.theme.rose-pine"
+           label="Rosé Pine"
+           basestylesheeturi="resources/css/themes/rose-pine.css"/>
+    <theme id="org.apache.directory.studio.theme.tokyo-night"
+           label="Tokyo Night"
+           basestylesheeturi="resources/css/themes/tokyo-night.css"/>
+
+    <!-- Base16 standalone themes (light) -->
+    <theme id="org.apache.directory.studio.theme.solarized-light"
+           label="Solarized Light"
+           basestylesheeturi="resources/css/themes/solarized-light.css"/>
+    <theme id="org.apache.directory.studio.theme.gruvbox-light"
+           label="Gruvbox Light"
+           basestylesheeturi="resources/css/themes/gruvbox-light.css"/>
+    <theme id="org.apache.directory.studio.theme.tomorrow"
+           label="Tomorrow"
+           basestylesheeturi="resources/css/themes/tomorrow.css"/>
+    <theme id="org.apache.directory.studio.theme.github-light"
+           label="GitHub Light"
+           basestylesheeturi="resources/css/themes/github-light.css"/>
   </extension>
 
 </plugin>

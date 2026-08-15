@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 package org.apache.directory.studio.schemaeditor.controller.actions;
 
@@ -44,8 +44,19 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 
 
+// ── CLASS: RenameSchemaElementAction — Clone Troopers Reassigning Imperial Records ──────────
+// Order 66 doesn't just mean "eliminate" — it also means updating the Imperial registry
+// with the new official designation after the fact. A clone trooper receives the command,
+// confirms exactly one target is selected, then issues the rename through the proper channels.
+// We save dirty editors first so no stale data conflicts with the rename.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This action launches a rename dialog for schema elements (schema, attribute type and object class).
+ * An action that opens a rename dialog for whichever schema element (schema, attribute type,
+ * or object class) is currently selected in the tree viewer.
+ * It's the single entry point for all "rename" operations in the schema editor, routing
+ * to the appropriate dialog based on the type of the selected element.
+ * Think of this class as a clone trooper that receives an Order 66 variant: confirm the
+ * target, open the rename channel, and commit the updated designation to the Imperial registry.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -55,11 +66,27 @@ public class RenameSchemaElementAction extends Action implements IWorkbenchWindo
     private TreeViewer viewer;
 
 
+    // ── Trooper Receives Rename Orders, Locks On Target ──────────────────────────────────────
+    // A clone trooper stands at attention as Order 66 reaches his comlink — but this variant
+    // says "rename, don't remove."  He wires up a selection listener so the action stays
+    // disabled until exactly one renameable element is highlighted in the roster.
+    // "One target, Commander. Standing by."
+    // ─────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of RenameProjectAction.
+     * Creates a new instance of RenameSchemaElementAction, wired to the given tree viewer.
+     * We register a selection listener immediately so the action's enabled state tracks
+     * the selection — only single selections of a schema, attribute type, or object class
+     * will enable the action.
      *
-     * @param viewer
-     *      the associated viewer
+     * <p>For example — a trooper monitors the target roster:</p>
+     * <pre>
+     *   Trooper: "Order received. Rename protocol active."
+     *   Selection changes → trooper checks: exactly one renameable target?
+     *   If yes: "Ready to rename, sir." (action enabled)
+     *   If no: "No valid target. Standing down." (action disabled)
+     * </pre>
+     *
+     * @param viewer  the tree viewer whose selection determines which element gets renamed
      */
     public RenameSchemaElementAction( TreeViewer viewer )
     {
@@ -84,8 +111,24 @@ public class RenameSchemaElementAction extends Action implements IWorkbenchWindo
     }
 
 
+    // ── Trooper Executes Rename On Confirmed Target ───────────────────────────────────────────
+    // The trooper strides toward the confirmed target, datapad in hand.  First he ensures
+    // all dirty editors are saved — no half-written Imperial memos allowed before the
+    // official rename is filed.  Then he routes to the correct rename dialog based on
+    // whether the target is a schema, attribute type, or object class.
+    // ─────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Executes the rename — saves dirty editors, then opens the appropriate rename dialog
+     * depending on whether the selected element is a schema, attribute type, or object class.
+     * If the user confirms the dialog, we push the new name into the schema handler.
+     * Nothing happens if the selection is empty or multi-element.
+     *
+     * <p>For example — the trooper files the rename across three possible registries:</p>
+     * <pre>
+     *   Target is a Schema    → open RenameSchemaDialog, update schemaHandler
+     *   Target is AttributeType → open RenameAttributeTypeDialog, clone + modify
+     *   Target is ObjectClass → open RenameObjectClassDialog, clone + modify
+     * </pre>
      */
     public void run()
     {
@@ -141,8 +184,15 @@ public class RenameSchemaElementAction extends Action implements IWorkbenchWindo
     }
 
 
+    // ── Trooper Relays Command Through Workbench Delegate ─────────────────────────────────────
+    // When Eclipse routes the action through the IWorkbenchWindowActionDelegate path,
+    // the trooper simply passes the relay baton to the main run() method — same order, same result.
+    // ─────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Delegates to {@link #run()} when this action is invoked via the workbench action delegate path.
+     * We don't use the {@code action} parameter — it's just Eclipse's wrapper; the real work is in run().
+     *
+     * @param action  the workbench action proxy; we ignore it and call our own run() directly
      */
     public void run( IAction action )
     {
@@ -150,8 +200,13 @@ public class RenameSchemaElementAction extends Action implements IWorkbenchWindo
     }
 
 
+    // ── Trooper Stands Down, No Cleanup Required ──────────────────────────────────────────────
+    // The mission is complete; the trooper is dismissed.  We hold no resources that need
+    // explicit disposal, so the method body stays empty — a clean stand-down.
+    // ─────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Disposes this action's resources when the workbench is done with it.
+     * We don't allocate anything that needs explicit cleanup, so this is intentionally empty.
      */
     public void dispose()
     {
@@ -159,8 +214,15 @@ public class RenameSchemaElementAction extends Action implements IWorkbenchWindo
     }
 
 
+    // ── Trooper Reports In But Has Nothing To Set Up ──────────────────────────────────────────
+    // The trooper acknowledges the window assignment but needs no briefing — all context
+    // is already wired through the constructor.
+    // ─────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when this action is bound to a workbench window.
+     * We get everything we need from the constructor, so there's nothing to initialise here.
+     *
+     * @param window  the workbench window this action is associated with; unused
      */
     public void init( IWorkbenchWindow window )
     {
@@ -168,8 +230,17 @@ public class RenameSchemaElementAction extends Action implements IWorkbenchWindo
     }
 
 
+    // ── Trooper Ignores Workbench Selection Signals ───────────────────────────────────────────
+    // The trooper already has a selection listener wired directly to the TreeViewer, so the
+    // workbench-level selection signal is redundant — he keeps his own watch.
+    // ─────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the workbench selection changes.
+     * We handle selection changes via our own listener registered in the constructor, so
+     * this workbench-level callback is intentionally unused.
+     *
+     * @param action     the workbench action proxy; unused
+     * @param selection  the current workbench selection; unused
      */
     public void selectionChanged( IAction action, ISelection selection )
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.ui.actions;
@@ -37,21 +37,41 @@ import org.eclipse.ui.IWorkbenchCommandConstants;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: PasteAction — HAN UNLOADS CARGO FROM THE TRANSMISSION ──────────────────
+// When the Rebel Alliance receives a transmitted ship manifest (from CopyAction),
+// someone has to unload the cargo and add each ship to the local fleet.
+// PasteAction does that: it reads Connection and ConnectionFolder objects from the
+// clipboard's ConnectionTransfer, clones each one (so the copy is independent of
+// the original), and registers the clones with the connection manager and the
+// target folder.
+// The target folder is determined by the current selection: the first selected
+// folder wins; if no folder is selected, the parent of the first selected
+// connection; if nothing is selected, the root folder.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Paste Action.
+ * Pastes {@link Connection} and {@link ConnectionFolder} objects from the clipboard
+ * into the Connections view.
+ *
+ * <p>Reads the clipboard via {@link ConnectionTransfer}, clones each object to make
+ * the pasted copy independent, registers it with the appropriate manager, and
+ * inserts it into the target folder (determined by the current selection).</p>
+ *
+ * <p>Only enabled when the clipboard contains data in {@link ConnectionTransfer} format.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class PasteAction extends StudioAction
 {
+    // ── GET TEXT — CONTEXT-SENSITIVE LABEL ────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Returns a singular/plural label based on the type and count of clipboard content.
      */
     public String getText()
     {
         List<Connection> connections = getConnectionsToPaste();
         List<ConnectionFolder> connectionFolders = getConnectionFoldersToPaste();
-        
+
         if ( !connections.isEmpty() && connectionFolders.isEmpty() )
         {
             if ( connections.size() > 1 )
@@ -71,7 +91,7 @@ public class PasteAction extends StudioAction
             }
             else
             {
-                return  Messages.getString( "PasteAction.PasteConnectionFolder" ); //$NON-NLS-1$ //$NON-NLS-2$
+                return Messages.getString( "PasteAction.PasteConnectionFolder" ); //$NON-NLS-1$ //$NON-NLS-2$
             }
         }
         else
@@ -81,6 +101,7 @@ public class PasteAction extends StudioAction
     }
 
 
+    // ── GET IMAGE DESCRIPTOR — ECLIPSE SHARED PASTE ICON ──────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -90,6 +111,7 @@ public class PasteAction extends StudioAction
     }
 
 
+    // ── GET COMMAND ID — MAPS TO EDIT > PASTE ─────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -99,8 +121,10 @@ public class PasteAction extends StudioAction
     }
 
 
+    // ── IS ENABLED — CLIPBOARD HAS CONNECTION TRANSFER DATA ───────────────────────
     /**
      * {@inheritDoc}
+     * Returns {@code true} if the clipboard contains data in {@link ConnectionTransfer} format.
      */
     public boolean isEnabled()
     {
@@ -108,8 +132,11 @@ public class PasteAction extends StudioAction
     }
 
 
+    // ── RUN — CLONE AND REGISTER CLIPBOARD CONTENT ────────────────────────────────
     /**
      * {@inheritDoc}
+     * Clones each clipboard connection and folder, adds them to the appropriate
+     * manager, and inserts them into the target folder.
      */
     public void run()
     {
@@ -117,10 +144,14 @@ public class PasteAction extends StudioAction
             .getConnectionFolderManager();
         ConnectionManager connectionManager = ConnectionCorePlugin.getDefault().getConnectionManager();
 
+        // ── DETERMINE THE TARGET FOLDER ────────────────────────────────────────────
+        // First selected folder wins; then parent of first selected connection;
+        // then fall back to the root folder.
+        // ──────────────────────────────────────────────────────────────────────────
         ConnectionFolder[] selectedFolders = getSelectedConnectionFolders();
         Connection[] selectedConnections = getSelectedConnections();
         ConnectionFolder targetFolder = null;
-        
+
         if ( selectedFolders.length > 0 )
         {
             targetFolder = selectedFolders[0];
@@ -129,15 +160,15 @@ public class PasteAction extends StudioAction
         {
             targetFolder = connectionFolderManager.getParentConnectionFolder( selectedConnections[0] );
         }
-        
+
         if ( targetFolder == null )
         {
             targetFolder = connectionFolderManager.getRootConnectionFolder();
         }
 
-        // connections
+        // ── PASTE CONNECTIONS ──────────────────────────────────────────────────────
         List<Connection> connections = getConnectionsToPaste();
-        
+
         for ( Connection connection : connections )
         {
             Connection newConnection = ( Connection ) connection.clone();
@@ -145,9 +176,9 @@ public class PasteAction extends StudioAction
             targetFolder.addConnectionId( newConnection.getId() );
         }
 
-        // connection folders
+        // ── PASTE CONNECTION FOLDERS ───────────────────────────────────────────────
         List<ConnectionFolder> connectionFolders = getConnectionFoldersToPaste();
-        
+
         for ( ConnectionFolder connectionFolder : connectionFolders )
         {
             ConnectionFolder newConnectionFolder = ( ConnectionFolder ) connectionFolder.clone();
@@ -157,10 +188,11 @@ public class PasteAction extends StudioAction
     }
 
 
+    // ── GET CONNECTIONS TO PASTE — READ CONNECTION OBJECTS FROM CLIPBOARD ──────────
     /**
-     * Condition: there are connections in clipboard
-     * 
-     * @return the connections to paste
+     * Returns the {@link Connection} objects currently in the clipboard.
+     *
+     * @return  A list of connections from the clipboard; possibly empty.
      */
     private List<Connection> getConnectionsToPaste()
     {
@@ -170,7 +202,7 @@ public class PasteAction extends StudioAction
 
         if ( content instanceof Object[] )
         {
-            for ( Object object : ( Object[] )content )
+            for ( Object object : ( Object[] ) content )
             {
                 if ( object instanceof Connection )
                 {
@@ -183,10 +215,11 @@ public class PasteAction extends StudioAction
     }
 
 
+    // ── GET CONNECTION FOLDERS TO PASTE — READ FOLDER OBJECTS FROM CLIPBOARD ───────
     /**
-     * Condition: there are connection folders in clipboard
-     * 
-     * @return the connection folders to paste
+     * Returns the {@link ConnectionFolder} objects currently in the clipboard.
+     *
+     * @return  A list of folders from the clipboard; possibly empty.
      */
     private List<ConnectionFolder> getConnectionFoldersToPaste()
     {

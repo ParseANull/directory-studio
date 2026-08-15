@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -33,8 +33,19 @@ import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.widgets.Composite;
 
 
+// ── CLASS: ImportConnectionsWizardPage — HAN READS THE CARGO MANIFEST ────────
+// Han stands at the docking bay entrance: "Which archive are we unloading?"
+// This page asks for the source .lbc archive to import. Unlike the export page,
+// there's no overwrite checkbox — importing always adds new connections to the
+// existing set (duplicate detection happens in the wizard's performFinish).
+// Validation checks that the file exists, is a file (not a directory),
+// and is readable.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the page used to select the data to export to LDIF.
+ * The single wizard page for the import connections wizard.
+ * Shows a FileBrowserWidget for picking a source .lbc archive (TYPE_OPEN).
+ * Validates in real time: errors if blank, if the file doesn't exist, if it's
+ * a directory, or if it's not readable.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -43,6 +54,15 @@ public class ImportConnectionsWizardPage extends WizardPage
     private FileBrowserWidget fileBrowserWidget;
 
 
+    // ── Han Opens the Cargo Bay Manifest ─────────────────────────────────────────
+    // Title, description, and wizard icon set. Page starts incomplete — no file
+    // chosen yet.
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * Creates a new ImportConnectionsWizardPage with title, description, and
+     * the import-connections wizard icon. Starts incomplete — the user must pick
+     * a source archive before the Finish button enables.
+     */
     protected ImportConnectionsWizardPage()
     {
         super( ImportConnectionsWizardPage.class.getName() );
@@ -54,6 +74,19 @@ public class ImportConnectionsWizardPage extends WizardPage
     }
 
 
+    // ── Han Lays Out the Source File Panel ────────────────────────────────────────
+    // A three-column grid with a label and a file-open browser widget.
+    // No overwrite checkbox since importing adds to the set, not replaces it.
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * Builds the page UI: a three-column grid with a "From File" label and a
+     * {@link FileBrowserWidget} pre-filtered to *.lbc archives (TYPE_OPEN mode).
+     * Change events trigger validation so the Finish button tracks live state.
+     *
+     * @param parent  the parent composite.
+     */
     public void createControl( Composite parent )
     {
         // Main Composite
@@ -78,7 +111,7 @@ public class ImportConnectionsWizardPage extends WizardPage
 
 
     /**
-     * Validates this page. This method is responsible for displaying errors, 
+     * Validates this page. This method is responsible for displaying errors,
      * as well as enabling/disabling the "Finish" button
      */
     private void validate()
@@ -115,11 +148,15 @@ public class ImportConnectionsWizardPage extends WizardPage
     }
 
 
+    // ── Han Reads the Chosen Archive Path ────────────────────────────────────────
+    // The wizard needs the path to open the ZipFile in performFinish().
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the export file name.
-     * 
-     * @return
-     *      the export file name
+     * Returns the source archive file path chosen by the user.
+     * Used by {@link ImportConnectionsWizard#performFinish()} to open the
+     * ZIP archive.
+     *
+     * @return  the selected source file path.
      */
     public String getImportFileName()
     {
@@ -127,8 +164,12 @@ public class ImportConnectionsWizardPage extends WizardPage
     }
 
 
+    // ── Han Logs the Source for Next Time ────────────────────────────────────────
+    // The file browser remembers the last directory so next import starts nearby.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the dialog settings.
+     * Persists the FileBrowserWidget's current directory to dialog settings
+     * so the file browser opens in the same location next time.
      */
     public void saveDialogSettings()
     {

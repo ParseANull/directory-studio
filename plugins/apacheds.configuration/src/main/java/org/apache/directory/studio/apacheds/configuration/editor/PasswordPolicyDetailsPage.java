@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration.editor;
 
@@ -50,9 +50,21 @@ import org.eclipse.ui.forms.widgets.TableWrapData;
 import org.eclipse.ui.forms.widgets.TableWrapLayout;
 
 
+// ── CLASS: PasswordPolicyDetailsPage — THE IMPERIAL SECURITY OFFICER'S BRIEFING PANEL ───
+// An Imperial security officer sits down at the right-hand panel of the registry console
+// and opens the full dossier for whichever clearance rule was just selected on the roster.
+// She can tweak every setting — lockout durations, password quality rules, expiry windows —
+// and her edits flow straight back into the in-memory configuration model.
+// ─────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Details Page of the Server Configuration Editor for the Password Policy type
- * 
+ * The details panel shown on the right side of the Password Policies master/details view.
+ * It renders every configurable field of a single {@link PasswordPolicyBean} — identity,
+ * quality rules, expiration settings, behaviour options, and lockout parameters — and
+ * commits user edits back to the bean on every change.
+ * Think of this class as the Imperial security officer's editing station: she picks a
+ * policy from the roster on the left and this panel opens its full dossier for inspection
+ * and amendment.
+ *
  * <pre>
  * .-------------------------------------------.
  * | Password Policy Details                   |
@@ -61,47 +73,10 @@ import org.eclipse.ui.forms.widgets.TableWrapLayout;
  * |  [X] Enabled                              |
  * |  ID :          [//////////]               |
  * |  Description : [////////////////////////] |
- * |  Attribute   : [////////////////////////] |
  * .-------------------------------------------.
- * | Quality                                   |
+ * | Quality / Expiration / Options / Lockout  |
  * +-------------------------------------------+
- * | Check quality : [=======================] |
- * | Validator :     [///////////////////////] |
- * | [X] Enable Minimum Length                 |
- * |   Number of chars : [NNN]                 |
- * | [X] Enable Maximum Length                 |
- * |   Number of chars : [NNN]                 |
- * .-------------------------------------------.
- * | Expiration                                |
- * +-------------------------------------------+
- * | Minimum age (seconds): [NNN]              |
- * | Maximum age (seconds): [NNN]              |
- * | [X] Enable Expire Warning                 |
- * |   Number of seconds  : [NNN]              |
- * | [X] Enable Grace Authentication Limit     |
- * |   Number of times    : [NNN]              |
- * | [X] Enable Grace Expire                   |
- * |   Interval (seconds) : [NNN]              |
- * .-------------------------------------------.
- * | Options                                   |
- * +-------------------------------------------+
- * | [X] Enable Must Change                    |
- * | [X] Enable Allow User Change              |
- * | [X] Enable Safe Modify                    |
- * .-------------------------------------------.
- * | Lockout                                   |
- * +-------------------------------------------+
- * | [X] Enable Lockout                        |
- * |   Lockout duration (seconds)   : [NNN]    |
- * |   Maximum Consecutive Failures : [NNN]    |
- * |   Failure Count Interval       : [NNN]    |
- * | [X] Enable Maximum Idle                   |
- * |   Intervals                    : [NNN]    |
- * | [X] Enable In History                     |
- * |   Used passwords stored in Hist: [NNN]    |
- * | [X] Delay                                 |
- * |   Minimum delay (seconds)      : [NNN]    |
- * |   Maximum delay (seconds)      : [NNN]    |
+ * |   ... (full layout in source comments)    |
  * +-------------------------------------------+
  * </pre>
  *
@@ -298,11 +273,24 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     };
 
 
+    // ── Plugging Into The Master Details Block ────────────────────────────────────────────
+    // A freshly assigned Imperial security officer walks into the briefing station and
+    // registers herself with the registry's master board so it knows where to send
+    // selection events when a policy row is clicked.
+    // We store the master block reference so we can later notify it when edits happen.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PartitionDetailsPage.
+     * Creates a new PasswordPolicyDetailsPage and links it to its parent master/details block.
+     * The block reference is used to call {@code setEditorDirty()} whenever the officer
+     * commits a change to the policy bean.
      *
-     * @param pmdb
-     *      the associated Master Details Block
+     * <p>For example — the Imperial security officer reports for duty at the briefing station:</p>
+     * <pre>
+     *   She checks in with the registry's master block, which hands her its ID.
+     *   Now whenever she edits a field she can ping the block to mark the file as modified.
+     * </pre>
+     *
+     * @param pmdb  the {@link PasswordPoliciesMasterDetailsBlock} that owns this details page
      */
     public PasswordPolicyDetailsPage( PasswordPoliciesMasterDetailsBlock pmdb )
     {
@@ -310,8 +298,26 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Assembling The Full Briefing Panel ────────────────────────────────────────────────
+    // The Imperial security officer sits down and lays out five specialised sub-panels on
+    // her briefing station: identity, quality checks, expiration rules, options, and lockout.
+    // Each sub-panel handles a different dimension of the password policy dossier.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all five visual sections of the details panel inside the given parent composite.
+     * This is the main layout method called once by Eclipse when the detail page is first
+     * shown; it delegates each section to its own {@code create*Section} method.
+     *
+     * <p>For example — the officer lays out her briefing station with five dedicated zones:</p>
+     * <pre>
+     *   Zone 1: identity (ID, description, enabled flag).
+     *   Zone 2: quality (check level, validator, min/max length).
+     *   Zone 3: expiration (min/max age, expire warning, grace periods).
+     *   Zone 4: options (must change, allow user change, safe modify).
+     *   Zone 5: lockout (lockout duration, failure count, history, delays).
+     * </pre>
+     *
+     * @param parent  the SWT composite to build the sections inside
      */
     public void createContents( Composite parent )
     {
@@ -325,7 +331,7 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
 
         // Depending on if the PP is enabled or disabled, we will
         // expose the configuration
-        
+
         createDetailsSection( toolkit, parent );
         createQualitySection( toolkit, parent );
         createExpirationSection( toolkit, parent );
@@ -334,13 +340,24 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Building The Identity Zone ────────────────────────────────────────────────────────
+    // The top zone of the briefing station shows the basic identity fields: an enabled
+    // toggle, the policy's unique ID, and a plain-English description.
+    // These are the fields Vader would check first to confirm a policy's credentials.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Details Section
+     * Creates the "Password Policy Details" section — the top block of the details panel —
+     * containing the Enabled checkbox, the ID field, and the Description field.
+     * The ID and Description fields are disabled for the default policy (it can't be renamed).
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the toolkit to use
+     * <p>For example — Vader checks the identity panel on a clearance dossier:</p>
+     * <pre>
+     *   He reads: Enabled = checked, ID = "strictPolicy", Description = "VIP access rules".
+     *   If it were the default policy those two fields would be greyed out — untouchable.
+     * </pre>
+     *
+     * @param toolkit  the Eclipse Forms toolkit used to create styled widgets
+     * @param parent   the parent composite to attach this section to
      */
     private void createDetailsSection( FormToolkit toolkit, Composite parent )
     {
@@ -354,7 +371,7 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
         section.setLayoutData( td );
         Composite client = toolkit.createComposite( section );
         toolkit.paintBordersFor( client );
-        
+
         GridLayout glayout = new GridLayout( 2, false );
         client.setLayout( glayout );
         section.setClient( client );
@@ -375,11 +392,25 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Building The Password Quality Zone ────────────────────────────────────────────────
+    // The quality zone is where the Empire's password standards are enforced: how strictly
+    // should quality be checked, what validator runs, and what are the min/max length limits?
+    // Disabling quality checking greys out the length fields — no point configuring them.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Quality section.
+     * Creates the "Quality" section of the details panel, covering the check-quality level
+     * (disabled / relaxed / strict), a custom validator class name, and optional minimum
+     * and maximum password-length constraints.
+     * When quality checking is disabled, the length fields are automatically greyed out.
      *
-     * @param toolkit the toolkit to use
-     * @param parent the parent composite
+     * <p>For example — an Imperial quality inspector configures acceptable password strength:</p>
+     * <pre>
+     *   She sets quality to "Strict", points to a custom validator, and requires 8–20 chars.
+     *   If she switches quality to "Disabled" the length fields dim — they'd be ignored anyway.
+     * </pre>
+     *
+     * @param toolkit  the Eclipse Forms toolkit
+     * @param parent   the parent composite
      */
     private void createQualitySection( FormToolkit toolkit, Composite parent )
     {
@@ -429,11 +460,27 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Building The Expiration Zone ──────────────────────────────────────────────────────
+    // Password expiration is like the Empire's clearance badge renewal cycle — badges
+    // expire after a maximum age, can't be changed too soon (minimum age), and owners get
+    // a warning before expiry plus a grace window after it.
+    // This section builds all those time-based controls.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Expiration section.
+     * Creates the "Expiration" section covering minimum and maximum password age, an
+     * optional expiry-warning period, an optional grace authentication limit, and an
+     * optional grace-expire interval.
+     * Controls whose checkbox is unchecked are greyed out automatically.
      *
-     * @param toolkit the toolkit to use
-     * @param parent the parent composite
+     * <p>For example — an Imperial timekeeper sets the clearance-badge renewal schedule:</p>
+     * <pre>
+     *   Badges can't be renewed until 86400 seconds have passed (min age).
+     *   They expire after 2592000 seconds (max age = 30 days).
+     *   Officers get a 600-second warning before expiry and 5 grace logins after.
+     * </pre>
+     *
+     * @param toolkit  the Eclipse Forms toolkit
+     * @param parent   the parent composite
      */
     private void createExpirationSection( FormToolkit toolkit, Composite parent )
     {
@@ -488,11 +535,25 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Building The Behaviour Options Zone ───────────────────────────────────────────────
+    // This zone is like the Empire's policy handbook annex — three quick on/off toggles
+    // that govern how users interact with their own passwords: are they forced to change
+    // on first login, can they change at will, and must they supply the old password first?
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Options section.
+     * Creates the "Options" section with three boolean flags: "Must Change" (force a change
+     * on next login), "Allow User Change" (let users change their own password), and
+     * "Safe Modify" (require the current password when changing).
      *
-     * @param toolkit the toolkit to use
-     * @param parent the parent composite
+     * <p>For example — the Empire's handbook annex defines self-service password rules:</p>
+     * <pre>
+     *   New recruits must change their password on first login (Must Change = on).
+     *   Veterans can change theirs any time (Allow User Change = on).
+     *   Everyone must prove they know the old one first (Safe Modify = on).
+     * </pre>
+     *
+     * @param toolkit  the Eclipse Forms toolkit
+     * @param parent   the parent composite
      */
     private void createOptionsSection( FormToolkit toolkit, Composite parent )
     {
@@ -524,11 +585,27 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Building The Lockout Zone ──────────────────────────────────────────────────────────
+    // The lockout zone is the Empire's brig — too many failed login attempts and the account
+    // goes into lockout for a configurable duration.  We also configure history (can't reuse
+    // old passwords), idle timeout, and login-attempt delays.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Lockout section.
+     * Creates the "Lockout" section covering account lockout (duration, max failures, failure
+     * count window), maximum idle time, password history depth, and minimum/maximum login-retry
+     * delays.
+     * This is the most widget-dense section — it governs what happens when authentication
+     * goes wrong repeatedly.
      *
-     * @param toolkit the toolkit to use
-     * @param parent the parent composite
+     * <p>For example — the Empire's brig administrator sets the detention schedule:</p>
+     * <pre>
+     *   Five consecutive failures lock the account for 0 seconds (permanent until admin reset).
+     *   The failure counter resets after 30 seconds of inactivity.
+     *   The last 5 passwords are remembered — recycling old ones is treason.
+     * </pre>
+     *
+     * @param toolkit  the Eclipse Forms toolkit
+     * @param parent   the parent composite
      */
     private void createLockoutSection( FormToolkit toolkit, Composite parent )
     {
@@ -580,7 +657,7 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
             "Used passwords stored in history:" );
         inHistoryText = toolkit.createText( inHistoryRadioIndentComposite, "" );
         inHistoryText.setLayoutData( new GridData( SWT.FILL, SWT.CENTER, true, false ) );
-        
+
         // Minimum delay (pwdMinDelay)
         toolkit.createLabel( composite, "Minimum Delay (seconds):" );
         minimumDelayText = toolkit.createText( composite, "" );
@@ -593,12 +670,27 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Building An Indented Sub-Control Row ──────────────────────────────────────────────
+    // When a checkbox enables an optional numeric field, we indent the field visually to
+    // show that it belongs to the checkbox — like a sub-item in an Imperial form.
+    // This helper creates that indented three-column composite with a spacer and a label.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a radio indented composite.
+     * Creates a small indented composite that holds a spacer, a label, and space for a
+     * caller-supplied text field — used to visually subordinate numeric inputs under their
+     * controlling checkbox.
+     * Returns the composite so the caller can add its text widget into it.
      *
-     * @param toolkit the toolkit
-     * @param parent the parent composite
-     * @return a radio indented composite
+     * <p>For example — an Imperial form designer indents the "Number of characters" field:</p>
+     * <pre>
+     *   [X] Enable Minimum Length
+     *       Number of characters: [____]   ← this indented row is what we build here
+     * </pre>
+     *
+     * @param toolkit  the Eclipse Forms toolkit
+     * @param parent   the composite to attach the indented row to
+     * @param text     the label text to show next to the indented control
+     * @return         the indented composite (caller appends the actual input widget)
      */
     private Composite createRadioIndentComposite( FormToolkit toolkit, Composite parent, String text )
     {
@@ -615,8 +707,24 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Arming Every Control On The Briefing Panel ────────────────────────────────────────
+    // The Imperial technician runs a cable from every widget on the panel to the central
+    // commit-and-dirty pipeline, so that any change — a keystroke, a checkbox tick, a
+    // combo selection — immediately feeds back into the config model and lights up the
+    // editor's save button.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds listeners to UI fields.
+     * Attaches all the event listeners (modify, selection, verify) to every widget on the
+     * details panel.
+     * Called at the end of {@link #refresh()} after we've populated the widgets from the
+     * model, so listeners don't fire spuriously during the population phase.
+     *
+     * <p>For example — the technician wires every panel control to the command pipeline:</p>
+     * <pre>
+     *   Every text field gets a ModifyListener that commits and marks dirty on each keystroke.
+     *   Every checkbox gets a SelectionListener that does the same on toggle.
+     *   Numeric fields also get a VerifyListener that blocks non-digit input.
+     * </pre>
      */
     private void addListeners()
     {
@@ -675,8 +783,23 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Disarming Every Control Before A Data Reload ──────────────────────────────────────
+    // Before we repopulate the widgets from a newly selected policy, we cut all the listener
+    // wires — otherwise every setText() and setSelection() call would trigger a commit,
+    // writing half-formed data back into the model before we've finished loading.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes listeners to UI fields.
+     * Detaches all event listeners from every widget on the panel.
+     * Must be called at the start of {@link #refresh()} before we push new model data into
+     * the widgets — otherwise the modify/selection listeners would fire on every
+     * {@code setText()} and incorrectly commit partial data back to the bean.
+     *
+     * <p>For example — the technician cuts all cables before swapping the briefing dossier:</p>
+     * <pre>
+     *   She disconnects the commit pipeline so that loading new values into the widgets
+     *   doesn't accidentally write those same values back into the model mid-load.
+     *   Once loading is done, addListeners() re-arms everything.
+     * </pre>
      */
     private void removeListeners()
     {
@@ -735,8 +858,25 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Receiving A New Policy Selection ──────────────────────────────────────────────────
+    // The officer on the master roster taps a different policy row and the briefing panel
+    // gets the news: "here is the new dossier, get ready to display it."
+    // We extract the bean from the selection and call refresh() to repaint the panel.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by the Eclipse forms framework when the master-list selection changes.
+     * We extract the newly selected {@link PasswordPolicyBean} (or set it to {@code null}
+     * for an empty/multi selection), then call {@link #refresh()} to repopulate the panel.
+     *
+     * <p>For example — the officer swaps the open dossier on her station:</p>
+     * <pre>
+     *   She clicks "strictPolicy" on the roster; the selection event fires.
+     *   We pull out the strictPolicy bean and refresh the panel to show its fields.
+     *   If nothing is selected we clear the panel by setting the bean to null.
+     * </pre>
+     *
+     * @param part       the form part that fired the event (unused here)
+     * @param selection  the new selection from the master table viewer
      */
     public void selectionChanged( IFormPart part, ISelection selection )
     {
@@ -753,8 +893,27 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Flushing The Panel Values Back Into The Model ─────────────────────────────────────
+    // The officer finishes editing and presses Save — at that moment every value shown on
+    // screen needs to be written back into the underlying PasswordPolicyBean so the config
+    // model reflects what the user actually typed.
+    // We read each widget and push its value to the bean, guarding against parse failures.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reads every widget on the panel and pushes its current value into the in-memory
+     * {@link PasswordPolicyBean}.
+     * Called on every user interaction (via the modify/selection listeners) so the model
+     * stays in sync with the UI at all times, not just at explicit save.
+     *
+     * <p>For example — the officer logs every field from the briefing panel into the dossier:</p>
+     * <pre>
+     *   She reads the Enabled checkbox, the ID text, the quality combo, the lockout duration...
+     *   Each value goes straight into the corresponding setter on the policy bean.
+     *   Unparseable numeric fields safely default to 0 rather than crashing.
+     * </pre>
+     *
+     * @param onSave  {@code true} when called as part of an explicit editor save operation,
+     *                {@code false} for live incremental updates
      */
     public void commit( boolean onSave )
     {
@@ -981,10 +1140,24 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Reading The Quality Combo Selection ───────────────────────────────────────────────
+    // The combo viewer holds DISABLED / RELAXED / STRICT; we translate the currently
+    // selected enum constant into its integer representation (0, 1, or 2) for the bean.
+    // If nothing is selected we default to DISABLED (0) — the safest fallback.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the password policy check quality.
+     * Reads the current selection from the check-quality combo and returns its integer value.
+     * Returns {@link CheckQuality#DISABLED} (0) if the combo has no selection — this
+     * prevents a null-pointer situation during commit.
      *
-     * @return the password policy check quality
+     * <p>For example — the officer checks which quality level the combo is dialled to:</p>
+     * <pre>
+     *   Combo shows "Strict" → returns 2.
+     *   Combo shows "Relaxed" → returns 1.
+     *   Combo is empty (shouldn't happen, but) → returns 0 (Disabled).
+     * </pre>
+     *
+     * @return  the integer value of the currently selected {@link CheckQuality} (0, 1, or 2)
      */
     private int getPwdCheckQuality()
     {
@@ -1001,16 +1174,32 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Cleaning Up When The Panel Closes ─────────────────────────────────────────────────
+    // When the officer's station is decommissioned, it shuts itself down cleanly.
+    // We have nothing to dispose of in this implementation, but the interface requires it.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Lifecycle method called when this details page is disposed.
+     * We have no resources to clean up here, so this is intentionally empty.
+     *
+     * @see IDetailsPage#dispose()
      */
     public void dispose()
     {
     }
 
 
+    // ── Registering The Managed Form ──────────────────────────────────────────────────────
+    // Before any widgets can be built, the Eclipse forms framework hands us the managed
+    // form that owns the toolkit and lifecycle.  We store it for use in createContents().
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Stores the {@link IManagedForm} reference so we can access the toolkit when building
+     * the panel's widgets in {@link #createContents(Composite)}.
+     * Eclipse calls this before calling {@code createContents}, so the form is always
+     * available by the time we need it.
+     *
+     * @param form  the managed form that owns this details page
      */
     public void initialize( IManagedForm form )
     {
@@ -1018,8 +1207,15 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Reporting Dirty State ─────────────────────────────────────────────────────────────
+    // The panel itself never reports dirty — it delegates that responsibility to the master
+    // block's setEditorDirty() call, which updates the top-level editor's save state.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Always returns {@code false} because this details page does not maintain its own dirty
+     * state — dirtiness is tracked at the editor level via {@code setEditorDirty()}.
+     *
+     * @return  {@code false} always
      */
     public boolean isDirty()
     {
@@ -1027,8 +1223,15 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Reporting Staleness ───────────────────────────────────────────────────────────────
+    // The panel doesn't track whether it has fallen out of sync with the model independently;
+    // the master/details framework handles that through selection change events.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Always returns {@code false} because staleness is handled by the selection-change flow
+     * rather than by this page tracking model version numbers.
+     *
+     * @return  {@code false} always
      */
     public boolean isStale()
     {
@@ -1036,8 +1239,23 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Repainting The Briefing Panel ─────────────────────────────────────────────────────
+    // The officer opens a new policy dossier and the briefing panel repaints to show its
+    // contents: first cutting the listener cables, then loading every field from the bean,
+    // then re-arming the cables so future edits are captured.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reloads all widgets from the currently selected {@link PasswordPolicyBean}.
+     * The sequence is always: remove listeners → populate widgets → add listeners, to
+     * avoid spurious commits during the population phase.
+     * If the current policy is the default one, the ID and Description fields are disabled.
+     *
+     * <p>For example — the officer opens a freshly selected clearance dossier:</p>
+     * <pre>
+     *   She cuts the commit pipeline, then reads each field from the bean into the widget.
+     *   Numeric fields with value 0 show checkboxes as unchecked (feature = disabled).
+     *   When done she re-arms the pipeline so future edits flow back to the model.
+     * </pre>
      */
     public void refresh()
     {
@@ -1159,8 +1377,14 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Directing Keyboard Focus ───────────────────────────────────────────────────────────
+    // When the panel becomes active, keyboard focus should land somewhere sensible so the
+    // officer can start typing immediately — currently this is a no-op placeholder.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Sets keyboard focus when this details page becomes active.
+     * Currently a no-op — the commented-out call shows the original intent was to focus
+     * the ID text field.
      */
     public void setFocus()
     {
@@ -1168,16 +1392,34 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
     }
 
 
+    // ── Refusing External Form Input ──────────────────────────────────────────────────────
+    // If someone tries to push an external object into this form panel, we politely decline.
+    // The panel only cares about the selection coming from its own master list.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Always returns {@code false} because this details page does not accept externally
+     * pushed form input — it only reacts to master-list selections.
+     *
+     * @param input  the input object being offered (ignored)
+     * @return       {@code false} always
      */
     public boolean setFormInput( Object input )
     {
         return false;
     }
 
+    // ── CLASS: CheckQuality — THE IMPERIAL QUALITY CLEARANCE LEVEL ────────────────────────
+    // Vader's security division uses three tiers for password quality enforcement: off,
+    // relaxed (check but accept unknown), and strict (reject anything that fails).
+    // This enum maps those three tiers to the integer values the LDAP ppolicy attribute
+    // pwdCheckQuality actually stores in the directory.
+    // ─────────────────────────────────────────────────────────────────────────────────────
     /**
-     * This enum is used for the check quality value.
+     * Enum representing the three possible values of the LDAP {@code pwdCheckQuality} attribute.
+     * Each constant wraps the integer value that ApacheDS stores in the config XML, and
+     * provides a friendly display string for the combo viewer.
+     * Think of this enum as Vader's three-tier quality enforcement scale: off, lenient, or
+     * ruthlessly strict.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -1191,10 +1433,19 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
         private int value;
 
 
+        // ── Storing The Quality Integer Value ─────────────────────────────────────────────
+        // Each tier is backed by an integer (0, 1, 2) that gets persisted to the config file.
+        // The constructor just stashes that integer for later retrieval.
+        // ─────────────────────────────────────────────────────────────────────────────────
         /**
-         * Creates a new instance of CheckQuality.
+         * Creates a new {@link CheckQuality} constant backed by the given integer value.
          *
-         * @param value the value
+         * <p>For example — the Empire stamps a tier number on each quality level badge:</p>
+         * <pre>
+         *   DISABLED gets stamp "0", RELAXED "1", STRICT "2".
+         * </pre>
+         *
+         * @param value  the integer value as stored in the ApacheDS config file
          */
         private CheckQuality( int value )
         {
@@ -1202,10 +1453,14 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
         }
 
 
+        // ── Exposing The Integer Value ────────────────────────────────────────────────────
+        // The commit method needs the integer to push into the bean; this getter exposes it.
+        // ─────────────────────────────────────────────────────────────────────────────────
         /**
-         * Gets the value.
+         * Returns the integer representation of this quality level for use in the
+         * {@link PasswordPolicyBean#setPwdCheckQuality(int)} setter.
          *
-         * @return the value
+         * @return  0 for DISABLED, 1 for RELAXED, 2 for STRICT
          */
         public int getValue()
         {
@@ -1213,6 +1468,26 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
         }
 
 
+        // ── Looking Up A Quality Constant By Integer ──────────────────────────────────────
+        // During refresh() we read an integer from the bean and need to find the matching
+        // enum constant so we can set the combo selection correctly.
+        // We scan all constants and throw if nothing matches — an unknown integer is a bug.
+        // ─────────────────────────────────────────────────────────────────────────────────
+        /**
+         * Looks up the {@link CheckQuality} constant whose integer value matches {@code value}.
+         * Throws {@link IllegalArgumentException} if no constant matches — this indicates a
+         * corrupt or unknown config value.
+         *
+         * <p>For example — the officer looks up which quality tier corresponds to value 2:</p>
+         * <pre>
+         *   She scans the tier register; value 2 matches STRICT.
+         *   An unrecognised value triggers an alarm — something in the config is wrong.
+         * </pre>
+         *
+         * @param value  the integer to look up (expected: 0, 1, or 2)
+         * @return       the matching {@link CheckQuality} constant
+         * @throws IllegalArgumentException  if no constant has that integer value
+         */
         public static CheckQuality valueOf( int value )
         {
             for ( CheckQuality checkQuality : CheckQuality.class.getEnumConstants() )
@@ -1227,8 +1502,15 @@ public class PasswordPolicyDetailsPage implements IDetailsPage
         }
 
 
+        // ── Producing A Human-Readable Name ──────────────────────────────────────────────
+        // The combo viewer calls toString() to show a label for each constant.
+        // We return a capitalised plain-English name rather than the raw enum identifier.
+        // ─────────────────────────────────────────────────────────────────────────────────
         /**
-         * {@inheritDoc}
+         * Returns a user-friendly display name for the quality level, suitable for showing
+         * in the combo viewer dropdown.
+         *
+         * @return  "Disabled", "Relaxed", or "Strict"
          */
         public String toString()
         {

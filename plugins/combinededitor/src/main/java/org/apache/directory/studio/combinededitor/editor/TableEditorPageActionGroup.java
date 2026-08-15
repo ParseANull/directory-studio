@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.combinededitor.editor;
@@ -64,8 +64,23 @@ import org.eclipse.ui.actions.ContributionItemFactory;
 import org.apache.directory.studio.templateeditor.actions.EditorPagePropertiesAction;
 
 
+// ── CLASS: TableEditorPageActionGroup — The Tantive IV Tactical Officer's Toolkit ─
+// Every crew station on the Tantive IV bridge has a dedicated toolkit: the
+// weapons officer knows which button fires the turbolasers, which copies a
+// target's coordinates, and which opens a schema data-card on the target.
+// Antilles briefs each officer before the mission and assigns their commands.
+// TableEditorPageActionGroup is that briefing: it instantiates every action the
+// Table Editor tab needs (new attribute, delete, copy DN, open schema browser,
+// refresh, etc.) and distributes them into the toolbar, dropdown menu, and
+// right-click context menu so the user has the right tool always within reach.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The EntryEditorWidgetActionGroup manages all actions of the entry editor.
+ * Manages all actions available in the Table Editor page of the combined entry editor.
+ * We extend {@link EntryEditorWidgetActionGroup} and add the extra actions specific
+ * to the combined editor context: copy DN/URL, schema browser submenu, search filter
+ * copy, delete all values, fetch operational attributes, and entry properties.
+ * Think of this as the Tantive IV weapons/tactical officer's toolkit — every button,
+ * menu item, and keyboard shortcut the Table tab can offer, all assembled here.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -162,12 +177,22 @@ public class TableEditorPageActionGroup extends EntryEditorWidgetActionGroup
     private static final String fetchOperationalAttributesAction = "fetchOperationalAttributesAction"; //$NON-NLS-1$
 
 
+    // ── Antilles Briefs the Tactical Officer Before the Mission ───────────────
+    // Antilles walks the tactical officer through every action in their toolkit:
+    // what button fires the turbolasers (new attribute), what copies the target DN,
+    // what opens the schema browser, and where the refresh key is.  By the time
+    // the constructor finishes every action is registered and ready.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of TableEditorPageActionGroup.
-     * @param editor 
-     * 
-     * @param entryEditor the entry editor
-     * @param configuration the configuration
+     * Creates all actions for the Table Editor page and stores them in the action map.
+     * We delegate to the parent class for the common set and then add the extra
+     * actions this page needs: copy DN/URL, schema browser submenus, search filter
+     * copying, delete-all-values, and fetch-operational-attributes.
+     *
+     * @param entryEditor   the entry editor that owns this page — used by the
+     *                      properties action.
+     * @param mainWidget    the entry editor widget whose viewer the actions operate on.
+     * @param configuration the widget configuration — provides the value editor manager.
      */
     public TableEditorPageActionGroup( IEntryEditor entryEditor, EntryEditorWidget mainWidget,
         EntryEditorWidgetConfiguration configuration )
@@ -247,8 +272,17 @@ public class TableEditorPageActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── The Mission is Over — Decommission the Toolkit ───────────────────────
+    // When the Tantive IV docks and the mission ends Antilles decommissions
+    // the tactical toolkit: all action proxies are disposed, the expand/collapse
+    // actions are shut down, and the global action handlers are deactivated so
+    // they don't interfere with other editors.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Disposes all actions managed by this group.
+     * We deactivate global action handlers first to remove our keyboard bindings,
+     * then dispose the extra proxies and actions we created before delegating
+     * to the parent class.
      */
     public void dispose()
     {
@@ -269,8 +303,17 @@ public class TableEditorPageActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── Load the Toolbar with the Most-Used Controls ──────────────────────────
+    // Antilles pins the most-used buttons to the tactical console's front panel:
+    // new value, new attribute, delete, delete-all, refresh, expand, collapse,
+    // and the quick filter toggle.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Populates the Table Editor tab's toolbar.
+     * We add the frequently used actions as toolbar buttons with separators
+     * between logical groups (create / delete / refresh / expand-collapse / filter).
+     *
+     * @param toolBarManager  the toolbar manager for the entry editor widget.
      */
     public void fillToolBar( IToolBarManager toolBarManager )
     {
@@ -291,8 +334,17 @@ public class TableEditorPageActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── Dropdown Menu — Configure the Tactical Display ────────────────────────
+    // The tactical officer's settings menu lets her configure the display mode:
+    // sort order, decorated vs. raw values, and a shortcut to the preferences page.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Populates the Table Editor tab's dropdown menu.
+     * We add sort, decorated-values toggle, and a shortcut to the entry editor
+     * preference page.  The decorated-values checkbox is refreshed just before
+     * the menu opens so it always reflects the current preference.
+     *
+     * @param menuManager  the dropdown menu manager for the entry editor widget.
      */
     public void fillMenu( IMenuManager menuManager )
     {
@@ -313,8 +365,19 @@ public class TableEditorPageActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── Right-Click Context Menu — Full Tactical Options ──────────────────────
+    // When the officer right-clicks a row the full tactical options appear:
+    // create, navigate (locate in DIT, open schema browser, show in view),
+    // copy/paste/delete, advanced copy options, edit inline, refresh, and
+    // entry properties at the bottom — the complete toolkit for any situation.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Populates the right-click context menu for the table viewer.
+     * We lay out the items in standard Eclipse convention: create actions at top,
+     * navigation submenu, clipboard actions in the middle, edit actions, refresh
+     * at the bottom, and properties last.
+     *
+     * @param menuManager  the context menu manager — populated just before display.
      */
     protected void contextMenuAboutToShow( IMenuManager menuManager )
     {
@@ -392,8 +455,16 @@ public class TableEditorPageActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── The Officer Takes the Helm — Register Global Action Handlers ──────────
+    // When the tactical console gains focus it registers its keyboard shortcuts
+    // (Refresh, New Attribute, Locate DN, Edit Attribute) as global handlers so
+    // the user's keystrokes are routed here rather than to the previous console.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Activates global action handlers (keyboard shortcuts) for this page.
+     * We register the Refresh key and the extra actions unique to this page
+     * (New Attribute, Locate DN, Edit Attribute Description, Open Entry Value
+     * Editor) so they work from the keyboard when this tab is active.
      */
     public void activateGlobalActionHandlers()
     {
@@ -415,8 +486,15 @@ public class TableEditorPageActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── Console Loses Focus — Deregister Global Action Handlers ──────────────
+    // When the user switches to a different tab the tactical console politely
+    // removes its keyboard shortcuts from the global handler list so the next
+    // console can register its own without conflict.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Deactivates global action handlers when this tab loses focus.
+     * We remove the Refresh key registration and deactivate the extra action
+     * handlers registered in {@link #activateGlobalActionHandlers()}.
      */
     public void deactivateGlobalActionHandlers()
     {

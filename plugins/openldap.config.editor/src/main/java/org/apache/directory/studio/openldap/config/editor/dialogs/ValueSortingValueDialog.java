@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -51,9 +51,18 @@ import org.apache.directory.studio.openldap.config.model.overlay.OlcValSortMetho
 import org.apache.directory.studio.openldap.config.model.overlay.OlcValSortValue;
 
 
+// Like Princess Leia's hologram delivering a precise value-sorting directive —
+// specifying which attribute to sort, the base DN scope, and whether to sort
+// alphabetically, numerically, or by weight — we present a focused dialog
+// where the administrator configures one value-sorting rule for the ValSort
+// overlay, complete with an optional secondary sort method when weighted
+// sorting is selected.
 /**
- * The ValueSortingValueDialog is used to edit a value from the Value Sorting overlay configuration.
- * 
+ * The ValueSortingValueDialog is used to edit a single value from the Value
+ * Sorting overlay configuration. We present combos for attribute, base DN,
+ * sort method, and (when weighted) secondary sort method, pulling attribute
+ * type suggestions from the connected directory's schema.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ValueSortingValueDialog extends Dialog
@@ -61,7 +70,7 @@ public class ValueSortingValueDialog extends Dialog
     /** The 'weighted' combo viewer option */
     private static final String WEIGHTED_OPTION = "Weighted";
 
-    /** The '<none>' combo viewer option */
+    /** The '&lt;none&gt;' combo viewer option */
     private static final String NONE_OPTION = "<none>";
 
     /** The connection's attribute types */
@@ -102,12 +111,17 @@ public class ValueSortingValueDialog extends Dialog
         };
 
 
+    // Like Leia loading a pre-existing value-sorting rule into the hologram
+    // so the operator can review and revise it, we parse the provided value
+    // string into an OlcValSortValue and pull the attribute type list from
+    // the directory schema before opening.
     /**
-     * Creates a new instance of ValueSortingValueDialog.
-     * 
+     * Creates a new ValueSortingValueDialog pre-populated from the given
+     * value string. If the string cannot be parsed we start from an empty value.
+     *
      * @param parentShell the parent shell
-     * @param browserConnection the connection
-     * @param value the value
+     * @param browserConnection the connection used for schema lookups
+     * @param value the existing value-sorting rule string to edit
      */
     public ValueSortingValueDialog( Shell parentShell, IBrowserConnection browserConnection, String value )
     {
@@ -134,11 +148,15 @@ public class ValueSortingValueDialog extends Dialog
     }
 
 
+    // Like Leia spinning up a new value-sorting briefing from scratch when
+    // no prior rule exists, we create the dialog with an empty OlcValSortValue
+    // and load the schema attribute type list for combo suggestions.
     /**
-     * Creates a new instance of ValueSortingValueDialog.
-     * 
+     * Creates a new ValueSortingValueDialog with no pre-existing value,
+     * ready for the operator to define a brand-new value-sorting rule.
+     *
      * @param parentShell the parent shell
-     * @param browserConnection the connection
+     * @param browserConnection the connection used for schema lookups
      */
     public ValueSortingValueDialog( Shell parentShell, IBrowserConnection browserConnection )
     {
@@ -152,8 +170,14 @@ public class ValueSortingValueDialog extends Dialog
     }
 
 
+    // Like Leia's intelligence analyst pulling the directory's complete
+    // attribute type catalog so the operator can pick from a sorted list
+    // rather than typing attribute names blind, we collect all attribute type
+    // names from the schema and sort them case-insensitively.
     /**
-     * Initializes the list of attribute types.
+     * Populates the {@code connectionAttributeTypes} list from the connected
+     * directory's schema, sorted case-insensitively. If no connection is
+     * available, the list is left empty.
      */
     private void initAttributeTypesList()
     {
@@ -178,8 +202,13 @@ public class ValueSortingValueDialog extends Dialog
     }
 
 
+    // Like labeling the hologram channel "Value Sort" so the operator
+    // knows they're defining a value-sorting rule, we stamp the shell
+    // title before the dialog opens.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to "Value Sort".
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -189,8 +218,15 @@ public class ValueSortingValueDialog extends Dialog
     }
 
 
+    // Like the hologram crew equipping the briefing with an OK button that
+    // stays disabled until the required attribute and base DN fields are
+    // filled in, we create the button bar and immediately check the enable state.
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createButtonsForButtonBar(org.eclipse.swt.widgets.Composite)
+     * Creates the dialog button bar with OK and Cancel buttons, then
+     * immediately evaluates whether the OK button should be enabled
+     * based on the current field values.
+     *
+     * @param parent the parent composite to attach the button bar to
      */
     @Override
     protected void createButtonsForButtonBar( Composite parent )
@@ -202,8 +238,14 @@ public class ValueSortingValueDialog extends Dialog
     }
 
 
+    // Like Leia finalizing the value-sorting directive and committing it
+    // to the configuration file before transmitting it to the overlay,
+    // we read attribute, base DN, and sort method from the UI and write
+    // them into the value object before closing.
     /**
-     * {@inheritDoc}
+     * Reads attribute, base DN, sort method, and (if weighted) secondary sort
+     * method from the UI and stores them in the {@link OlcValSortValue}, then
+     * delegates to the superclass {@code okPressed()} to close the dialog.
      */
     @Override
     protected void okPressed()
@@ -242,8 +284,17 @@ public class ValueSortingValueDialog extends Dialog
     }
 
 
+    // Like Leia's hologram projecting the full value-sorting briefing with
+    // attribute, base DN, sort method, and secondary sort method fields
+    // so the operator can configure the complete rule in one view, we build
+    // the dialog content area and wire up the listeners.
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     * Builds the dialog content area with combos for attribute, base DN,
+     * sort method, and secondary sort method, initializes them from the
+     * current value, and attaches listeners.
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -252,7 +303,6 @@ public class ValueSortingValueDialog extends Dialog
         Composite dialogComposite = ( Composite ) super.createDialogArea( parent );
         GridData gridData = new GridData( SWT.FILL, SWT.FILL, true, true );
         gridData.widthHint = convertHorizontalDLUsToPixels( IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH );
-        //        gridData.heightHint = convertVerticalDLUsToPixels( IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH ) * 4 / 3;
         dialogComposite.setLayoutData( gridData );
         Composite composite = BaseWidgetUtils.createColumnContainer( dialogComposite, 2, 1 );
 
@@ -311,8 +361,13 @@ public class ValueSortingValueDialog extends Dialog
     }
 
 
+    // Like wiring the hologram's control panel so every field change triggers
+    // an immediate OK-button eligibility check, we attach listeners to the
+    // attribute combo, base DN widget, and sort method selector.
     /**
-     * Adds listeners to UI widgets.
+     * Attaches modify and selection listeners to the attribute combo, base DN
+     * widget, and sort method combo so the OK button state updates whenever
+     * the operator makes any change.
      */
     private void addListeners()
     {
@@ -322,8 +377,16 @@ public class ValueSortingValueDialog extends Dialog
     }
 
 
+    // Like loading the existing value-sorting rule data into the hologram
+    // display before opening it so the operator sees the current values,
+    // we read attribute, base DN, and sort method out of the value object
+    // and set the corresponding UI widgets — enabling the secondary sort
+    // method combo only when weighted is selected.
     /**
-     * Inits the UI from the value.
+     * Initializes the attribute combo, base DN widget, sort method combo,
+     * and secondary sort method combo from the current {@link OlcValSortValue}.
+     * Enables the secondary sort method combo only when the weighted sort method
+     * is selected.
      */
     private void initFromValue()
     {
@@ -393,44 +456,13 @@ public class ValueSortingValueDialog extends Dialog
     }
 
 
+    // Like checking whether both the target attribute and the base DN
+    // are specified before the hologram operator is allowed to finalize
+    // and transmit the directive, we evaluate those two required fields
+    // and enable or disable the OK button accordingly.
     /**
-     * Gets the selected sort method.
-     *
-     * @return the selected sort method
-     */
-    private Object getSelectedSortMethod()
-    {
-        StructuredSelection selection = ( StructuredSelection ) sortMethodComboViewer.getSelection();
-
-        if ( !selection.isEmpty() )
-        {
-            return selection.getFirstElement();
-        }
-
-        return null;
-    }
-
-
-    /**
-     * Gets the selected secondary sort method.
-     *
-     * @return the selected secondary sort method
-     */
-    private Object getSelectedSecondarySortMethod()
-    {
-        StructuredSelection selection = ( StructuredSelection ) secondarySortMethodComboViewer.getSelection();
-
-        if ( !selection.isEmpty() )
-        {
-            return selection.getFirstElement();
-        }
-
-        return null;
-    }
-
-
-    /**
-     * Checks and updates the OK button 'enable' state.
+     * Evaluates whether the OK button should be enabled. We require a
+     * non-empty attribute name and a non-null, non-empty base DN.
      */
     private void checkAndUpdateOkButtonEnableState()
     {
@@ -459,21 +491,87 @@ public class ValueSortingValueDialog extends Dialog
     }
 
 
+    // Like reading which sort method the operator highlighted on the briefing
+    // form so the rest of the logic knows how to order the attribute values,
+    // we return the currently selected sort method object from the combo.
     /**
-     * Gets the value.
+     * Returns the currently selected sort method object from the primary sort
+     * method combo — either a {@link OlcValSortMethodEnum} constant or the
+     * {@code WEIGHTED_OPTION} string — or {@code null} if nothing is selected.
      *
-     * @return the value
+     * @return the selected sort method object, or {@code null}
+     */
+    private Object getSelectedSortMethod()
+    {
+        StructuredSelection selection = ( StructuredSelection ) sortMethodComboViewer.getSelection();
+
+        if ( !selection.isEmpty() )
+        {
+            return selection.getFirstElement();
+        }
+
+        return null;
+    }
+
+
+    // Like reading the secondary sort method from the briefing form when
+    // weighted sorting is in play so the caller knows which fallback method
+    // to apply, we return the current secondary combo selection.
+    /**
+     * Returns the currently selected secondary sort method object from the
+     * secondary sort method combo — either a {@link OlcValSortMethodEnum}
+     * constant or the {@code NONE_OPTION} string — or {@code null} if
+     * nothing is selected.
+     *
+     * @return the selected secondary sort method object, or {@code null}
+     */
+    private Object getSelectedSecondarySortMethod()
+    {
+        StructuredSelection selection = ( StructuredSelection ) secondarySortMethodComboViewer.getSelection();
+
+        if ( !selection.isEmpty() )
+        {
+            return selection.getFirstElement();
+        }
+
+        return null;
+    }
+
+
+    // Like handing the completed value-sorting directive back to the overlay
+    // editor so it can be stored in the configuration, we return the final
+    // string representation of the edited value.
+    /**
+     * Returns the string representation of the edited value-sorting rule,
+     * as produced by {@link OlcValSortValue#toString()}.
+     *
+     * @return the value-sorting rule string
      */
     public String getValue()
     {
         return value.toString();
     }
 
+    // Like a Rebellion translator who knows the human-readable name for
+    // every sort method enum constant, we extend LabelProvider to turn
+    // OlcValSortMethodEnum values into display strings for the combos.
     /**
-     * This class implement a {@link LabelProvider} for {@link OlcValSortMethodEnum} objects.
+     * A {@link LabelProvider} for {@link OlcValSortMethodEnum} objects that
+     * returns a human-readable label for each sort method constant.
      */
     private class OlcValSortMethodEnumLabelProvider extends LabelProvider
     {
+        // Like the translator delivering the proper display name for each
+        // sort method constant so the operator reads meaningful labels
+        // instead of raw enum names, we switch on the enum value and
+        // return the corresponding human-friendly string.
+        /**
+         * Returns a human-readable label for the given sort method object.
+         * Falls back to the default label provider for unrecognized types.
+         *
+         * @param element the sort method object to label
+         * @return the human-readable label string
+         */
         @Override
         public String getText( Object element )
         {

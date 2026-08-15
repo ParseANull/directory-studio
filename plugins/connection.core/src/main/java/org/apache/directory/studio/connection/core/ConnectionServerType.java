@@ -6,22 +6,33 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.connection.core;
 
 
+// ── CLASS: ConnectionServerType — C-3PO CLASSIFIES THE ALIEN SPECIES AT THE BAR
+// In the Mos Eisley cantina, C-3PO can rattle off the species of every patron
+// the moment he sees one: "That's a Rodian, that's a Wookiee..."
+// We do the same with LDAP servers after connecting: we probe the rootDSE and
+// classify the server as ApacheDS, OpenLDAP, Active Directory, etc.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This enum contains all detectable directory server types.
+ * Enumerates all LDAP server types we can auto-detect after connecting.
+ * We probe the rootDSE (the server's "about me" entry) for vendor-specific
+ * attributes and OIDs, then assign one of these constants to
+ * {@link DetectedConnectionProperties#getServerType()}.
+ * Think of this enum as C-3PO's species database — he looks at a few identifying
+ * features and tells us exactly what we're dealing with.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */

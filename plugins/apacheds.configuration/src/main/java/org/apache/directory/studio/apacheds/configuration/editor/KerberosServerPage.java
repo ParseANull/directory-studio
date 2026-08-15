@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration.editor;
 
@@ -56,8 +56,31 @@ import org.eclipse.ui.forms.widgets.TableWrapData;
 import org.eclipse.ui.forms.widgets.TableWrapLayout;
 
 
+// ── CLASS: KerberosServerPage — THE EMPIRE ENGINEERS THE AUTHENTICATION FORTRESS ─────────────────
+// In Return of the Jedi, Moff Jerjerrod and his engineers oversee the construction of
+// the second Death Star's security systems — the tractor beams, the energy shields,
+// the access-credential systems that let only authorised ships dock.
+// Kerberos is exactly that kind of security fortress: a ticket-based authentication
+// protocol that makes every user prove they have a valid credential before they're
+// let anywhere near the LDAP directory.  This page lets the administrator engineer
+// that fortress: which port the Kerberos KDC listens on, which encryption algorithms
+// are permitted, how long tickets last, and whether the Change Password service runs
+// alongside.  Think of every widget on this page as a switch in the engineering bay.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the General Page of the Server Configuration Editor.
+ * The "Kerberos Server" page of the ApacheDS server configuration editor.
+ * Kerberos is a ticket-based network authentication protocol; ApacheDS can act as
+ * a Key Distribution Centre (KDC) issuing service tickets for users who authenticate
+ * to the directory.  This page covers:
+ * <ul>
+ *   <li>Enabling/disabling the KDC server and setting its port and address</li>
+ *   <li>Enabling/disabling the Change Password server (port 464)</li>
+ *   <li>The primary KDC realm and LDAP search base DN</li>
+ *   <li>Supported encryption types (AES, DES, RC4, etc.)</li>
+ *   <li>Ticket policy flags (renewable, forwardable, proxiable, postdated, etc.)</li>
+ *   <li>Ticket lifetime and clock-skew tolerance</li>
+ * </ul>
+ * Think of this page as Moff Jerjerrod's engineering console for the authentication fortress.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -84,17 +107,17 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     private Button enableKerberosCheckbox;
     private Text kerberosPortText;
     private Text kerberosAddressText;
-    
+
     // The ChangePassword transport
     private Button enableChangePasswordCheckbox;
     private Text changePasswordPortText;
     private Text changePasswordAddressText;
-    
+
     // The basic Kerberos settings
     private Text primaryKdcRealmText;
     private Text kdcSearchBaseDnText;
     private CheckboxTableViewer encryptionTypesTableViewer;
-    
+
     // The kerberos Tickets settings
     private Button verifyBodyChecksumCheckbox;
     private Button allowEmptyAddressesCheckbox;
@@ -153,14 +176,14 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
         public void widgetSelected( SelectionEvent e )
         {
             boolean enabled = enableChangePasswordCheckbox.getSelection();
-            
+
             getChangePasswordServerBean().setEnabled( enabled );
             setEnabled( changePasswordPortText, enabled );
             setEnabled( changePasswordAddressText, enabled );
         }
     };
-    
-    
+
+
     /**
      * The ChangePassword port listener
      */
@@ -172,7 +195,7 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
         }
     };
 
-    
+
     /**
      * The ChangePassword address modify listener
      */
@@ -184,7 +207,7 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
         }
     };
 
-    
+
     private ModifyListener primaryKdcRealmTextListener = new ModifyListener()
     {
         public void modifyText( ModifyEvent e )
@@ -284,8 +307,8 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
             getKdcServerBean().setKrbPostdatedAllowed( allowPostdatedTicketsCheckbox.getSelection() );
         }
     };
-    
-    
+
+
     /**
      * The Allow Renewable Tickets listener
      */
@@ -296,8 +319,8 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
             getKdcServerBean().setKrbRenewableAllowed( allowRenewableTicketsCheckbox.getSelection() );
         }
     };
-    
-    
+
+
     /**
      * The Allow Proxiable Tickets listener
      */
@@ -308,8 +331,8 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
             getKdcServerBean().setKrbProxiableAllowed( allowProxiableTicketsCheckbox.getSelection() );
         }
     };
-    
-    
+
+
     private ModifyListener maximumRenewableLifetimeTextListener = new ModifyListener()
     {
         public void modifyText( ModifyEvent e )
@@ -334,11 +357,23 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     };
 
 
+    // ── MOFF JERJERROD OPENS THE ENGINEERING CONSOLE ─────────────────────────────────────────────
+    // Jerjerrod powers up the security engineering console and registers it with the
+    // Death Star's central command system (the editor), ready to receive configuration orders.
+    // We hand the editor reference and our page ID/title to the superclass.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of GeneralPage.
+     * Creates a new Kerberos server configuration page and associates it with the
+     * given editor. The page registers itself under its unique ID and title so Eclipse
+     * can add it as a tab in the multi-page editor.
      *
-     * @param editor
-     *      the associated editor
+     * <p>For example — Jerjerrod opens the engineering console:</p>
+     * <pre>
+     *   KerberosServerPage page = new KerberosServerPage(editor);
+     *   editor.addPage(page);
+     * </pre>
+     *
+     * @param editor  The parent {@link ServerConfigurationEditor}.
      */
     public KerberosServerPage( ServerConfigurationEditor editor )
     {
@@ -346,8 +381,26 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── LAYING OUT THE ENGINEERING CONSOLE PANELS ────────────────────────────────────────────────
+    // The Imperial engineers arrange the three main console panels in the engineering bay:
+    // the KDC server controls on the left, the encryption/realm settings below those,
+    // and the ticket-policy switches in the right column.
+    // createFormContent assembles the two-column layout and delegates to the section builders.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the two-column form layout for this page and delegates the creation
+     * of each section to the private helper methods. The left column holds the
+     * KDC server controls and the Kerberos settings; the right column holds the
+     * ticket-policy section.
+     *
+     * <p>For example — the engineering bay panels are arranged:</p>
+     * <pre>
+     *   // left column: Kerberos Server section + Kerberos Settings section
+     *   // right column: Ticket Settings section
+     * </pre>
+     *
+     * @param parent   The parent composite provided by the Eclipse forms framework.
+     * @param toolkit  The form toolkit used to create styled SWT widgets.
      */
     protected void createFormContent( Composite parent, FormToolkit toolkit )
     {
@@ -379,11 +432,27 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── WIRING UP THE KDC AND CHANGE-PASSWORD TRANSPORT CONTROLS ─────────────────────────────────
+    // The engineers install the control switches for the two listening posts:
+    // the main KDC checkpoint (port 60088) and the Change Password sub-station (port 60464).
+    // Each post has an enable toggle, a port dial, and an address selector.
+    // createKerberosServerSection builds those controls.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Kerberos Server section.
+     * Builds the "Kerberos Server" section containing the enable/disable checkbox
+     * for the KDC server (port 60088) and the Change Password server (port 60464),
+     * plus address and port text fields for each.
      *
-     * @param toolkit the toolkit to use
-     * @param parent the parent composite
+     * <p>For example — two listening-post control panels go up:</p>
+     * <pre>
+     *   // [X] Enable Kerberos Server
+     *   //     Port: [60088]  Address: [0.0.0.0]
+     *   // [X] Enable Change Password Server
+     *   //     Port: [60464]  Address: [0.0.0.0]
+     * </pre>
+     *
+     * @param toolkit  The form toolkit for creating styled widgets.
+     * @param parent   The parent composite (left column of the page layout).
      */
     private void createKerberosServerSection( FormToolkit toolkit, Composite parent )
     {
@@ -437,11 +506,27 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── CONFIGURING THE REALM AND ENCRYPTION ALGORITHMS ──────────────────────────────────────────
+    // The engineers program the KDC's realm name (like an Imperial district code —
+    // "EXAMPLE.COM") and which encryption ciphers are permitted for ticket signing.
+    // They also set the search base DN: the subtree of the LDAP directory where
+    // the KDC looks up user principals.
+    // createKerberosSettingsSection builds those controls.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Kerberos Settings section
+     * Builds the "Kerberos Settings" section containing the primary KDC realm
+     * name, the LDAP search base DN for principal lookups, and the multi-select
+     * table of supported encryption types (AES-128, AES-256, DES3, RC4, etc.).
      *
-     * @param toolkit the toolkit to use
-     * @param parent the parent composite
+     * <p>For example — the realm and cipher controls are wired in:</p>
+     * <pre>
+     *   // Primary KDC realm:  [EXAMPLE.COM]
+     *   // Search base DN:     [ou=users,dc=example,dc=com]
+     *   // Encryption types:   [X] AES-256  [X] AES-128  [ ] DES  ...
+     * </pre>
+     *
+     * @param toolkit  The form toolkit for creating styled widgets.
+     * @param parent   The parent composite (left column of the page layout).
      */
     private void createKerberosSettingsSection( FormToolkit toolkit, Composite parent )
     {
@@ -496,11 +581,31 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── SETTING THE TICKET POLICY DIALS ───────────────────────────────────────────────────────────
+    // The engineers fine-tune the Imperial access-credential policy: can tickets be
+    // renewed? Can they be delegated (proxiable)? How long do they last?
+    // Is a timestamp required to prevent replay attacks?  Each dial covers one ticket rule.
+    // createTicketSettingsSection builds all those policy checkboxes and lifetime fields.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Tickets Settings section
+     * Builds the "Ticket Settings" section on the right column, containing all
+     * ticket-policy flags (renewable, forwardable, proxiable, postdated,
+     * empty-addresses, pre-auth, body-checksum) and the numeric fields for
+     * maximum ticket lifetime, maximum renewable lifetime, and allowable clock skew.
      *
-     * @param toolkit the toolkit to use
-     * @param parent the parent composite
+     * <p>For example — the ticket-policy panel is wired in:</p>
+     * <pre>
+     *   // [X] Verify Body Checksum
+     *   // [X] Allow Empty Addresses
+     *   // [X] Allow Forwardable Addresses
+     *   // ...
+     *   // Max Renewable Lifetime: [604800000]
+     *   // Max Ticket Lifetime:    [86400000]
+     *   // Allowable Clock Skew:   [300000]
+     * </pre>
+     *
+     * @param toolkit  The form toolkit for creating styled widgets.
+     * @param parent   The parent composite (right column of the page layout).
      */
     private void createTicketSettingsSection( FormToolkit toolkit, Composite parent )
     {
@@ -574,8 +679,23 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── READING THE CURRENT FORTRESS SETTINGS INTO THE CONSOLE ───────────────────────────────────
+    // Jerjerrod's console technician reads all current settings from the data store and
+    // dials them into the control panel: KDC enabled? Port 60088? Realm EXAMPLE.COM?
+    // refreshUI pulls every field from the KdcServerBean and updates the widgets.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Refreshes all widget values on this page from the underlying
+     * {@link KdcServerBean} and {@link ChangePasswordServerBean}. We detach
+     * listeners first to suppress dirty notifications during the programmatic update,
+     * then re-attach them afterwards.
+     *
+     * <p>For example — the console technician reads in current settings:</p>
+     * <pre>
+     *   refreshUI();
+     *   // every checkbox, text field, and table viewer now reflects
+     *   // what is stored in the configuration model
+     * </pre>
      */
     protected void refreshUI()
     {
@@ -634,8 +754,22 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── ARMING ALL THE CONSOLE SENSORS ────────────────────────────────────────────────────────────
+    // The engineering crew arms every sensor on the console so any dial adjustment
+    // immediately signals "fortress modified" back to Jerjerrod's command display.
+    // addListeners wires every widget's dirty-and-model-update listener in one pass.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds listeners to UI Controls.
+     * Attaches all listeners — dirty-notification and model-update — to every
+     * interactive widget on this page. Called after a refresh so user changes
+     * are picked up and reflected in both the dirty flag and the underlying bean.
+     *
+     * <p>For example — the console sensors go live:</p>
+     * <pre>
+     *   addListeners();
+     *   // user changes any field -> editor is marked dirty
+     *   //                        -> corresponding bean setter is called
+     * </pre>
      */
     private void addListeners()
     {
@@ -717,8 +851,22 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── STANDING DOWN THE CONSOLE SENSORS ─────────────────────────────────────────────────────────
+    // Before the crew refreshes the console with new data from the data store,
+    // they disarm all the sensors so the programmatic updates don't trigger false alarms.
+    // removeListeners detaches every listener in one pass.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes listeners to UI Controls.
+     * Detaches all listeners from every interactive widget on this page.
+     * Called before a programmatic refresh so we don't accidentally mark the
+     * editor dirty when we are just populating the widgets from the model.
+     *
+     * <p>For example — the crew stands down the sensors before a console refresh:</p>
+     * <pre>
+     *   removeListeners();
+     *   // programmatic widget updates happen without triggering dirty flag
+     *   addListeners();
+     * </pre>
      */
     private void removeListeners()
     {
@@ -800,11 +948,22 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── LOCATING THE KDC COMMAND MODULE ──────────────────────────────────────────────────────────
+    // A console shortcut: Jerjerrod asks for the KDC module without specifying which
+    // fortress — we know it's our own, so we fetch the directory service bean implicitly.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the KDC Server bean.
+     * Returns the {@link KdcServerBean} from the current directory service bean.
+     * Convenience wrapper around the static version; uses the page's own
+     * {@code getDirectoryServiceBean()} to locate the directory service.
      *
-     * @return
-     *      the KDC Server bean
+     * <p>For example — Jerjerrod checks his own fortress's KDC module:</p>
+     * <pre>
+     *   KdcServerBean kdc = getKdcServerBean();
+     *   kdc.setKrbPrimaryRealm("EXAMPLE.COM");
+     * </pre>
+     *
+     * @return  The KDC server bean, created on demand if absent.
      */
     private KdcServerBean getKdcServerBean()
     {
@@ -812,13 +971,23 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── LOCATING THE KDC MODULE IN ANY FORTRESS ───────────────────────────────────────────────────
+    // Given any fortress's service record (DirectoryServiceBean), find — or create — its KDC module.
+    // This static version is called both by the page and by external save/load code.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the KDC Server bean.
+     * Returns the {@link KdcServerBean} from the given {@link DirectoryServiceBean},
+     * creating a new one and registering it if none exists yet. This is a static
+     * utility so the save job and other non-page code can call it without a page reference.
      *
-     * @param directoryServiceBean
-     *      the directory service bean
-     * @return
-     *      the KDC Server bean
+     * <p>For example — locating the KDC module in any fortress:</p>
+     * <pre>
+     *   KdcServerBean kdc = KerberosServerPage.getKdcServerBean(directoryService);
+     *   // kdc is guaranteed non-null
+     * </pre>
+     *
+     * @param directoryServiceBean  The directory service configuration to search.
+     * @return                      The existing or newly-created KDC server bean.
      */
     public static KdcServerBean getKdcServerBean( DirectoryServiceBean directoryServiceBean )
     {
@@ -834,11 +1003,26 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── ENABLING OR DISABLING THE AUTHENTICATION FORTRESS ────────────────────────────────────────
+    // Jerjerrod throws the master switch for the security checkpoint system:
+    // the KDC and its associated Key Derivation Interceptor (which derives Kerberos
+    // session keys from LDAP password entries) are both enabled or disabled together.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Enables the Kerberos Server.
+     * Enables or disables the Kerberos KDC server together with its companion
+     * Key Derivation Interceptor. Kerberos requires the interceptor to derive
+     * session keys from stored passwords — disabling one without the other
+     * leaves the system in an inconsistent state.
      *
-     * @param directoryServiceBean the directory service bean
-     * @param enableKerberosServer the enable kerberos flag
+     * <p>For example — throwing the master security switch:</p>
+     * <pre>
+     *   KerberosServerPage.enableKerberosServer(directoryService, true);
+     *   // kdcServerBean.isEnabled() == true
+     *   // keyDerivationInterceptor.isEnabled() == true
+     * </pre>
+     *
+     * @param directoryServiceBean   The directory service to configure.
+     * @param enableKerberosServer   {@code true} to enable, {@code false} to disable.
      */
     public static void enableKerberosServer( DirectoryServiceBean directoryServiceBean, boolean enableKerberosServer )
     {
@@ -856,11 +1040,19 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── LOCATING THE CHANGE-PASSWORD SUB-STATION ──────────────────────────────────────────────────
+    // Convenience shortcut: Jerjerrod checks the Change Password sub-station in our own fortress.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Change Password Server bean.
+     * Returns the {@link ChangePasswordServerBean} from the current directory service.
+     * Convenience wrapper around the static version.
      *
-     * @return
-     *      the Change Password Server bean
+     * <p>For example — Jerjerrod checks the Change Password sub-station:</p>
+     * <pre>
+     *   ChangePasswordServerBean cpServer = getChangePasswordServerBean();
+     * </pre>
+     *
+     * @return  The Change Password server bean, created on demand if absent.
      */
     private ChangePasswordServerBean getChangePasswordServerBean()
     {
@@ -868,13 +1060,24 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── LOCATING THE CHANGE-PASSWORD SUB-STATION IN ANY FORTRESS ─────────────────────────────────
+    // Given any fortress record, find — or create — its Change Password sub-station.
+    // This static version is reusable by save/load code outside the page.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Change Password Server bean.
+     * Returns the {@link ChangePasswordServerBean} from the given
+     * {@link DirectoryServiceBean}, creating one on demand if none exists.
+     * The Change Password server listens on port 464 and lets Kerberos principals
+     * change their passwords without an LDAP bind.
      *
-     * @param directoryServiceBean
-     *      the directory service bean
-     * @return
-     *      the Change Password Server bean
+     * <p>For example — locating the sub-station in any fortress:</p>
+     * <pre>
+     *   ChangePasswordServerBean cpServer =
+     *       KerberosServerPage.getChangePasswordServerBean(directoryService);
+     * </pre>
+     *
+     * @param directoryServiceBean  The directory service configuration to search.
+     * @return                      The existing or newly-created Change Password server bean.
      */
     public static ChangePasswordServerBean getChangePasswordServerBean( DirectoryServiceBean directoryServiceBean )
     {
@@ -890,10 +1093,26 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── FINDING THE KEY DERIVATION UNIT IN THE INTERCEPTOR CHAIN ─────────────────────────────────
+    // Deep in the fortress's security pipeline, there is one interceptor responsible for
+    // deriving Kerberos session keys from stored password entries.
+    // We scan the interceptor chain to find it by class name.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Key Derivation Interceptor.
+     * Searches the interceptor chain of the given directory service for the
+     * {@code KeyDerivationInterceptor}. This interceptor is responsible for
+     * computing Kerberos-compatible password hashes when a password is set in
+     * the directory. We need its reference so we can enable/disable it in sync
+     * with the KDC server.
      *
-     * @return the Key Derivation Interceptor.
+     * <p>For example — scanning the pipeline for the key-derivation unit:</p>
+     * <pre>
+     *   InterceptorBean kdi = getKeyDerivationInterceptor(directoryService);
+     *   if (kdi != null) { kdi.setEnabled(false); }
+     * </pre>
+     *
+     * @param directoryServiceBean  The directory service whose interceptors we search.
+     * @return                      The interceptor bean, or {@code null} if not found.
      */
     private static InterceptorBean getKeyDerivationInterceptor( DirectoryServiceBean directoryServiceBean )
     {
@@ -915,6 +1134,24 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── DIALLING IN THE KDC LISTENING PORT ───────────────────────────────────────────────────────
+    // The engineer turns the port dial on the KDC listening post: "60088 UDP/TCP."
+    // We parse the text, validate it's an integer, and apply it to all KDC transport beans.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Parses the given port string and applies it to every transport configured
+     * on the KDC server. Invalid (non-integer) values are logged to stdout and
+     * silently ignored — the port remains unchanged.
+     *
+     * <p>For example — dialling in the port:</p>
+     * <pre>
+     *   KerberosServerPage.setKerberosPort(directoryService, "60088");
+     *   // all KDC transports now report systemPort == 60088
+     * </pre>
+     *
+     * @param directoryServiceBean  The directory service whose KDC port we are updating.
+     * @param portAsText            The new port number as a string (e.g., {@code "60088"}).
+     */
     public static void setKerberosPort( DirectoryServiceBean directoryServiceBean, String portAsText )
     {
         try
@@ -933,6 +1170,23 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── UPDATING THE KDC LISTENING ADDRESS ────────────────────────────────────────────────────────
+    // The engineer updates the network address the KDC checkpoint listens on.
+    // We apply the new address to every transport bean registered with the KDC.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Sets the network address for every transport configured on the KDC server.
+     * Typically this is {@code "0.0.0.0"} (all interfaces) or a specific IP address.
+     *
+     * <p>For example — updating the listening address:</p>
+     * <pre>
+     *   setKerberosAddress(directoryService, "192.168.1.10");
+     *   // all KDC transports now bind to 192.168.1.10
+     * </pre>
+     *
+     * @param directoryServiceBean  The directory service whose KDC address we are updating.
+     * @param address               The new bind address string.
+     */
     private void setKerberosAddress( DirectoryServiceBean directoryServiceBean, String address )
     {
         KdcServerBean kdcServerBean = directoryServiceBean.getKdcServerBean();
@@ -943,6 +1197,23 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── DIALLING IN THE CHANGE-PASSWORD LISTENING PORT ────────────────────────────────────────────
+    // The engineer turns the port dial on the Change Password sub-station: "60464."
+    // We parse and apply it to all Change Password transport beans.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Parses the given port string and applies it to every transport configured
+     * on the Change Password server. Invalid values are logged and ignored.
+     *
+     * <p>For example — dialling in the Change Password port:</p>
+     * <pre>
+     *   KerberosServerPage.setChangePasswordPort(directoryService, "60464");
+     *   // all Change Password transports now report systemPort == 60464
+     * </pre>
+     *
+     * @param directoryServiceBean  The directory service whose Change Password port we update.
+     * @param portAsText            The new port number as a string (e.g., {@code "60464"}).
+     */
     public static void setChangePasswordPort( DirectoryServiceBean directoryServiceBean, String portAsText )
     {
         try
@@ -961,6 +1232,23 @@ public class KerberosServerPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── UPDATING THE CHANGE-PASSWORD LISTENING ADDRESS ────────────────────────────────────────────
+    // The engineer updates the network address the Change Password sub-station binds to.
+    // We apply the new address to every Change Password transport bean.
+    // ────────────────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Sets the network address for every transport configured on the Change Password
+     * server. Same semantics as {@link #setKerberosAddress} but targets the Change
+     * Password service.
+     *
+     * <p>For example — updating the sub-station's listening address:</p>
+     * <pre>
+     *   setChangePasswordAddress(directoryService, "0.0.0.0");
+     * </pre>
+     *
+     * @param directoryServiceBean  The directory service whose Change Password address we update.
+     * @param address               The new bind address string.
+     */
     private void setChangePasswordAddress( DirectoryServiceBean directoryServiceBean, String address )
     {
         ChangePasswordServerBean changePasswordServerBean = directoryServiceBean.getChangePasswordServerBean();

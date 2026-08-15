@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.ldapbrowser.core.model.filter;
 
@@ -23,9 +23,18 @@ package org.apache.directory.studio.ldapbrowser.core.model.filter;
 import org.eclipse.osgi.util.NLS;
 
 
+// ── CLASS: Messages — C-3PO'S PHRASE BOOK FOR FILTER ERROR MESSAGES ──────────
+// C-3PO always has a phrase book ready for situations where a Jawa sentence
+// breaks down: "The '&' character is missing."  "There are no sub-clauses."
+// "The attribute name is absent."  Each phrase is looked up from a properties
+// file keyed by these public static String fields, loaded at class initialization
+// by the Eclipse NLS framework.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class get messages from the resources file.
- *  
+ * NLS message catalog for the {@code model.filter} package.
+ * Provides the human-readable validation-error strings shown in the filter
+ * editor when the LDAP filter text is syntactically incorrect.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class Messages extends NLS

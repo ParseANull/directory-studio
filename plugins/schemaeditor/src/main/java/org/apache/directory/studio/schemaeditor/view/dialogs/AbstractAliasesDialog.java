@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.schemaeditor.view.dialogs;
@@ -57,8 +57,21 @@ import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: AbstractAliasesDialog — LANDO RUNNING CLOUD CITY ──────────────────
+// Lando Calrissian runs Cloud City's enormous bureaucracy: issuing permits,
+// revoking them, renaming residents, and making sure no two citizens claim the
+// same ID badge. Every rule he enforces keeps the city from descending into chaos.
+// We do the same here — we let users add, edit, and remove aliases on an LDAP
+// schema element, while making sure no alias collides with one already in the registry.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements dialog to manage aliases.
+ * Base dialog for managing the aliases list on an LDAP schema element (attribute type or object class).
+ * Aliases are the alternative human-readable names for a schema element — for example, an attribute
+ * might be known as both "commonName" and "cn". This dialog provides the full add/edit/remove UI
+ * backed by live duplicate-detection and name-format validation.
+ * Think of this class as Lando's permit office in Cloud City: it holds the master list of names,
+ * lets you issue new ones, revoke old ones, and blocks any name that's already taken somewhere
+ * else in the galaxy.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -93,10 +106,23 @@ public abstract class AbstractAliasesDialog extends Dialog
     private Label errorLabel;
 
 
+    // ── Lando Opens the Registry Books ───────────────────────────────────────
+    // When Lando takes over Cloud City, the first thing he does is open the
+    // resident registry and copy every existing permit into his own ledger.
+    // He needs that snapshot so he can later tell whether a new applicant
+    // is asking for a name that was already on the books when he arrived.
+    // We do exactly that here — we snapshot the incoming alias list in both
+    // original and lower-cased form so our duplicate-check has a baseline.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AbstractAliasesDialog.
+     * Constructs the dialog, taking an initial snapshot of the current aliases list.
+     * We keep a lower-cased copy alongside the display copy because alias comparisons
+     * in LDAP are case-insensitive — "cn" and "CN" are the same alias.
+     * The snapshot of initial aliases lets us exempt them from the "already taken"
+     * check: if "cn" was already on the element, the user shouldn't get an error
+     * just for leaving it there.
      *
-     * @param aliases an array of aliases
+     * @param aliases  the existing aliases on the schema element, or {@code null} if there are none yet
      */
     public AbstractAliasesDialog( List<String> aliases )
     {
@@ -113,8 +139,24 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Builds the Permit Office Counter ───────────────────────────────
+    // Lando doesn't just open the registry — he builds a proper reception desk
+    // with a big display board listing all current permits, buttons for issuing
+    // new ones, editing existing ones, or revoking them, and a red warning light
+    // that flashes when someone tries to register a name already in use.
+    // This method assembles that entire UI: the table of aliases, the three action
+    // buttons, and the error composite that stays hidden until something goes wrong.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the visual content area of the dialog: the aliases table, Add/Edit/Remove buttons,
+     * and an error strip that appears when a duplicate or invalid alias is detected.
+     * SWT's {@link TableEditor} is used so the user can type directly inside a table row
+     * rather than in a separate pop-up text field — it feels more like a spreadsheet.
+     * After building all the widgets we populate the table from our list, wire up the
+     * listeners, and run the first alias-check pass.
+     *
+     * @param parent  the parent composite supplied by the JFace Dialog framework
+     * @return        the top-level composite we just built, handed back to JFace to embed in the dialog
      */
     protected Control createDialogArea( Composite parent )
     {
@@ -191,8 +233,16 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Posts the Board of Current Permits ─────────────────────────────
+    // Every morning Lando clears the bulletin board and re-posts the current
+    // permit holders in alphabetical order so everyone in Cloud City knows
+    // exactly who holds what name today.
+    // We do the same: clear the SWT table, then add one row per alias in our list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Fills in the Aliases Table from the aliases list 
+     * Clears the SWT aliases table and refills it from our in-memory {@code aliases} list.
+     * We call this after any mutation — add, edit, or remove — to keep the visual table
+     * in sync with the data we'll return when the user hits OK.
      */
     private void fillAliasesTable()
     {
@@ -206,8 +256,20 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Assigns Staff to Every Desk ────────────────────────────────────
+    // Lando doesn't just build the permit office and walk away — he stations
+    // guards at the door (key listeners), clerks at the counter (selection and
+    // double-click listeners), and a supervisor who handles the right-click menu.
+    // Each person knows exactly what to do when an event comes in.
+    // This method registers all the SWT event listeners on the table and buttons.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Listeners.
+     * Wires up all SWT event listeners for the dialog's interactive widgets.
+     * Specifically: keyboard Delete/Backspace on the table removes selected aliases;
+     * a single click closes any open inline editor and refreshes button states;
+     * a double-click opens the inline text editor on the clicked row; the right-click
+     * context menu offers a Remove option; and the three buttons delegate to the
+     * appropriate add/edit/remove helpers.
      */
     private void initListeners()
     {
@@ -289,8 +351,18 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Checks Which Desks Are Open ────────────────────────────────────
+    // When a citizen walks up to the counter, Lando's staff check whether there's
+    // something selected in the queue before enabling the Edit and Remove windows.
+    // No selection means nobody's in line — those desks stay closed.
+    // We mirror that logic: if at least one table row is selected, we enable the
+    // Edit and Remove buttons; otherwise we grey them out.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the state of the buttons.
+     * Enables or disables the Edit and Remove buttons depending on whether the user
+     * has selected at least one row in the aliases table.
+     * We don't want those buttons clickable when nothing is highlighted — it would
+     * just throw a NullPointerException trying to edit row index -1.
      */
     private void updateButtonsState()
     {
@@ -307,8 +379,19 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Revokes the Selected Permits ───────────────────────────────────
+    // When a Cloud City resident loses their permit — maybe they broke the rules,
+    // maybe they're leaving — Lando removes them from both the public board
+    // and the internal registry ledger (case-insensitive), so the name is freed
+    // up for someone else to claim.
+    // We do the same: for every selected table row we remove the alias from both
+    // the display list and the lower-cased duplicate-detection list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the selected aliases.
+     * Removes every currently selected alias from our in-memory alias lists.
+     * We remove from both {@code aliases} (for display and final output) and
+     * {@code lowerCasedAliases} (for case-insensitive duplicate detection).
+     * After this call, {@link #fillAliasesTable()} should be called to refresh the UI.
      */
     private void removeSelectedAliases()
     {
@@ -321,8 +404,18 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Issues a Blank Permit Slip ─────────────────────────────────────
+    // When someone new wants to register in Cloud City, Lando hands them a blank
+    // form and sits them down at the counter so they can fill in their name right
+    // away. The form is pre-selected so they can start typing immediately.
+    // We add a blank row to the table and immediately open the inline text editor
+    // on it so the user can type the new alias without any extra clicking.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a new alias
+     * Appends a blank row to the aliases table and opens the inline text editor on it
+     * so the user can type the new alias name right away.
+     * The actual alias isn't saved to our list until the user types something —
+     * the {@link ModifyListener} on the editor handles that incrementally.
      */
     private void addANewAlias()
     {
@@ -332,11 +425,23 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Sits Down at the Editing Desk ──────────────────────────────────
+    // When a resident wants to correct a typo in their registered name, Lando
+    // dismisses whoever was at the desk before, slides a fresh form in front
+    // of the applicant, and lets them edit their entry in place. The form has
+    // all the existing text pre-selected so they can overwrite it immediately.
+    // We open an SWT Text widget right inside the table row, pre-select its
+    // contents, and attach listeners so every keystroke updates the alias list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Opens the {@link TableEditor} on the given {@link TableItem}.
+     * Opens an inline {@link Text} editor embedded inside the given {@link TableItem},
+     * letting the user edit the alias text directly in the table row.
+     * Any previous editor is disposed first. A {@link ModifyListener} keeps our in-memory
+     * list in sync as the user types, and pressing Enter closes the editor and commits.
+     * We also install a display-level {@link SWT#TRAVERSE} filter so that pressing
+     * Enter inside the inline editor doesn't accidentally close the whole dialog.
      *
-     * @param item
-     *      the {@link TableItem}
+     * @param item  the table row to open for inline editing; if {@code null} we return immediately
      */
     private void openTableEditor( TableItem item )
     {
@@ -375,8 +480,22 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Updates the Registry Mid-Edit ──────────────────────────────────
+    // While the resident is still writing their new name on the form, Lando's
+    // clerk is already updating the internal ledger in pencil — ready to ink it
+    // in the moment the resident lifts their pen. If the new name is blank,
+    // the entry gets removed rather than left as an empty line.
+    // We mirror this: on every keystroke in the inline editor, we remove the old
+    // alias from both lists and add the new one (if it's non-empty), then run
+    // the duplicate/format check so the error strip updates live.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the {@link TableEditor} text.
+     * Reads the current text from the active inline {@link TableEditor} and synchronises it
+     * with our in-memory alias lists, replacing the old value with the new one.
+     * If the new text is empty we just remove the old value without adding anything,
+     * which effectively discards a row the user cleared out.
+     * After updating the lists we call {@link #checkAliases()} so the error strip reflects
+     * the latest state without the user having to close the editor first.
      */
     private void saveTableEditorText()
     {
@@ -402,8 +521,19 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Stamps the Form and Files It ───────────────────────────────────
+    // When the resident finishes writing, Lando's clerk takes back the pen,
+    // stamps "FILED" on the form, and removes the editing desk from the counter.
+    // The Return-key intercept that was in place during editing is also removed
+    // so it doesn't interfere with the rest of the dialog.
+    // We do the final save of whatever text is in the editor, then dispose the
+    // Text widget and remove our display-level Traverse filter.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Closes the {@link TableEditor}.
+     * Commits the current text in the inline editor to our alias lists and then disposes
+     * the editor widget, returning the table to its normal non-editing state.
+     * Also removes the display-level {@link SWT#TRAVERSE} filter we installed in
+     * {@link #openTableEditor} so the Enter key behaves normally again everywhere else.
      */
     private void closeTableEditor()
     {
@@ -417,8 +547,24 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Checks for Duplicate Permits ───────────────────────────────────
+    // Before Cloud City can accept a new registration, Lando cross-checks it
+    // against every permit already on file across the whole registry — not just
+    // the ones this resident already holds. If there's a clash, or the name
+    // contains illegal characters, the red warning light above the counter
+    // flashes and the applicant must fix it before proceeding.
+    // We iterate over every alias in our list and make those same two checks:
+    // duplicates across the schema registry, and LDAP name-format validity.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Checks the aliases.
+     * Validates the current alias list and updates the error strip at the bottom of the dialog.
+     * Two kinds of problems can light up the error: (1) an alias that's already registered
+     * somewhere else in the schema — detected by calling the abstract {@link #isAliasAlreadyTaken}
+     * hook — and (2) an alias that contains characters that aren't valid in an LDAP schema name,
+     * detected by {@link PluginUtils#verifyName}.
+     * Aliases that were already on the element when the dialog opened are exempt from the
+     * "already taken" check — we don't want to block the user from keeping their own names.
+     * The error composite is hidden when everything looks clean.
      */
     private void checkAliases()
     {
@@ -444,8 +590,18 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Names the Office Window ────────────────────────────────────────
+    // Lando puts a sign on the office door so every visitor knows exactly which
+    // department they've walked into — no confusion about whether this is the
+    // permit office or the billing department.
+    // We set the dialog shell's title bar text to the appropriate "Edit Alias" label.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Sets the title bar text on the dialog shell.
+     * JFace calls this before the shell is made visible, so whatever we set here
+     * is what the user sees in the window title.
+     *
+     * @param newShell  the freshly created Shell that JFace hands us to configure
      */
     protected void configureShell( Shell newShell )
     {
@@ -454,11 +610,17 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Hands Over the Permit Book ─────────────────────────────────────
+    // When the meeting is over and the user clicks OK, Lando hands the caller
+    // the completed permit book — the final, committed list of approved aliases.
+    // The caller can then hand those aliases to the schema element being edited.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the aliases.
-     *  
-     * @return
-     *      the aliases
+     * Returns the final list of aliases as an array, ready to be stored back on the schema element.
+     * Call this after the dialog closes with OK — before that the list is still in flux.
+     *
+     * @return  a {@code String[]} containing every alias the user confirmed; never {@code null}
+     *          but may be empty if the user removed them all
      */
     public String[] getAliases()
     {
@@ -466,19 +628,38 @@ public abstract class AbstractAliasesDialog extends Dialog
     }
 
 
+    // ── Lando Delegates the Error Wording ────────────────────────────────────
+    // Lando can't write the exact error message himself — he doesn't know whether
+    // this office handles attribute type permits or object class permits. He
+    // delegates that wording to the department manager (the concrete subclass).
+    // Subclasses provide the specific "already exists" error message text.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the error message in the case where an identical alias already exists.
+     * Returns the human-readable error message to display when the user types an alias that's
+     * already registered elsewhere in the schema.
+     * We're abstract here because the message differs slightly between attribute types and
+     * object classes — the concrete subclass knows which flavour to return.
      *
-     * @return the error message
+     * @return  a non-null, non-empty localised error string
      */
     protected abstract String getAliasAlreadyExistsErrorMessage();
 
 
+    // ── Lando Delegates the Registry Check ───────────────────────────────────
+    // Lando's office can check for duplicates, but it needs to call the right
+    // department registry — attribute types are registered in one book, object
+    // classes in another. The department manager (concrete subclass) knows which
+    // registry to query for a given alias string.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if the given alias is already taken.
+     * Checks whether the given alias is already registered on a different schema element
+     * of the same kind (attribute type or object class).
+     * We delegate to the concrete subclass because the registry lookup differs: attribute
+     * types and object classes live in separate namespaces inside the schema handler.
      *
-     * @return <code>true</code> if the given alias is already taken,
-     *         <code>false</code> if not.
+     * @param alias  the alias string to look up, in its original (non-lower-cased) form
+     * @return       {@code true} if the alias is already claimed by another schema element,
+     *               {@code false} if it's free to use
      */
     protected abstract boolean isAliasAlreadyTaken( String alias );
 }

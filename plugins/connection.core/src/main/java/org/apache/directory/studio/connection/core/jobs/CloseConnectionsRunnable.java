@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.core.jobs;
@@ -31,21 +31,41 @@ import org.apache.directory.studio.connection.core.Messages;
 import org.apache.directory.studio.connection.core.event.ConnectionEventRegistry;
 
 
+// ── CLASS: CloseConnectionsRunnable — HAN POWERS DOWN THE FALCON'S ENGINES ────
+// When Han is done for the day (or the server session expires), he shuts down
+// the Falcon's engines: unbind (sign out), then disconnect (cut power).
+// This bulk runnable does exactly that for one or more connections in the
+// run() phase, then fires the "connection closed" events in runNotification().
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to close a connection to a directory server.
+ * Bulk runnable that closes (unbinds and disconnects) one or more LDAP connections.
+ * The {@code run()} phase calls {@code unbind()} and {@code disconnect()} on each
+ * connection that is currently open.
+ * The {@code runNotification()} phase fires {@link IConnectionListener#connectionClosed}
+ * and {@link ConnectionEventRegistry#fireConnectionClosed} for every connection that
+ * is now closed, so UI components (the Connections view) update correctly.
+ * Implements {@link StudioConnectionBulkRunnableWithProgress} so event firing is
+ * suppressed during the run phase and batched into one notification pass.
+ * Think of this as Han powering down the Falcon: the work happens silently, then the
+ * whole crew gets notified that the ship is dark.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class CloseConnectionsRunnable implements StudioConnectionBulkRunnableWithProgress
 {
 
+    /** The connections to close. */
     private Connection[] connections;
 
 
+    // ── CONSTRUCTORS — SINGLE, ARRAY, OR LIST ─────────────────────────────────────
+    // Three ways to hand us the connections to close, because the UI
+    // uses whichever form is most convenient at the call site.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of CloseConnectionsJob.
-     * 
-     * @param connection the connection
+     * Creates a runnable that closes a single connection.
+     *
+     * @param connection  The connection to close.
      */
     public CloseConnectionsRunnable( Connection connection )
     {
@@ -55,9 +75,9 @@ public class CloseConnectionsRunnable implements StudioConnectionBulkRunnableWit
 
 
     /**
-     * Creates a new instance of CloseConnectionsJob.
-     * 
-     * @param connections the connections
+     * Creates a runnable that closes an array of connections.
+     *
+     * @param connections  The connections to close.
      */
     public CloseConnectionsRunnable( Connection[] connections )
     {
@@ -66,9 +86,9 @@ public class CloseConnectionsRunnable implements StudioConnectionBulkRunnableWit
 
 
     /**
-     * Creates a new instance of CloseConnectionsJob.
-     * 
-     * @param connections the connections
+     * Creates a runnable that closes a list of connections.
+     *
+     * @param connections  The connections to close.
      */
     public CloseConnectionsRunnable( List<Connection> connections )
     {
@@ -76,8 +96,10 @@ public class CloseConnectionsRunnable implements StudioConnectionBulkRunnableWit
     }
 
 
+    // ── GET NAME — HUMAN-READABLE TASK LABEL ──────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Returns a singular or plural task name depending on how many connections we are closing.
      */
     public String getName()
     {
@@ -86,8 +108,10 @@ public class CloseConnectionsRunnable implements StudioConnectionBulkRunnableWit
     }
 
 
+    // ── GET LOCKED OBJECTS — THE CONNECTIONS ARE THE LOCK OBJECTS ─────────────────
     /**
      * {@inheritDoc}
+     * Returns the connections being closed as lock objects for the job scheduler.
      */
     public Object[] getLockedObjects()
     {
@@ -95,8 +119,10 @@ public class CloseConnectionsRunnable implements StudioConnectionBulkRunnableWit
     }
 
 
+    // ── GET ERROR MESSAGE — WHAT TO SHOW ON FAILURE ────────────────────────────────
     /**
      * {@inheritDoc}
+     * Returns a singular or plural error message depending on how many connections failed.
      */
     public String getErrorMessage()
     {
@@ -105,8 +131,16 @@ public class CloseConnectionsRunnable implements StudioConnectionBulkRunnableWit
     }
 
 
+    // ── RUN — UNBIND AND DISCONNECT ────────────────────────────────────────────────
+    // Han signs out (unbind) and then cuts power (disconnect) for each connection
+    // that is currently live.  Events are suppressed during this phase.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Unbinds and disconnects each connection that is currently open.
+     * Event firing is suppressed during this phase by the enclosing
+     * {@link StudioConnectionJob}.
+     *
+     * @param monitor  Progress monitor for cancellation and error reporting.
      */
     public void run( StudioProgressMonitor monitor )
     {
@@ -128,8 +162,18 @@ public class CloseConnectionsRunnable implements StudioConnectionBulkRunnableWit
     }
 
 
+    // ── RUN NOTIFICATION — FIRE THE "CONNECTION CLOSED" EVENTS ────────────────────
+    // Now that event firing is re-enabled, we tell all listeners and the event
+    // registry that each connection is now closed.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Fires {@link IConnectionListener#connectionClosed} and
+     * {@link ConnectionEventRegistry#fireConnectionClosed} for each connection that
+     * is now closed.
+     * Called by {@link StudioConnectionJob} after {@link #run(StudioProgressMonitor)}
+     * and after event firing has been re-enabled.
+     *
+     * @param monitor  Progress monitor from the enclosing job.
      */
     public void runNotification( StudioProgressMonitor monitor )
     {
@@ -154,8 +198,10 @@ public class CloseConnectionsRunnable implements StudioConnectionBulkRunnableWit
     }
 
 
+    // ── GET CONNECTIONS — WE MANAGE OUR OWN CONNECTION LIFECYCLE ─────────────────
     /**
      * {@inheritDoc}
+     * Returns {@code null} — closing connections don't need pre-opening.
      */
     public Connection[] getConnections()
     {

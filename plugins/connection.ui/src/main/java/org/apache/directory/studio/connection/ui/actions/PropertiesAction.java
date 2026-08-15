@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.ui.actions;
@@ -31,13 +31,27 @@ import org.eclipse.ui.IWorkbenchCommandConstants;
 import org.eclipse.ui.dialogs.PreferencesUtil;
 
 
+// ── CLASS: PropertiesAction — HAN OPENS THE FALCON'S ENGINEERING LOG ──────────────
+// When the crew needs to update the Falcon's configuration — change the jump
+// coordinates, update the auth codes, adjust the shield frequency — they open the
+// engineering log.  PropertiesAction opens Eclipse's Properties dialog for the
+// selected connection, pre-navigated to the connection property page.
+// Only enabled when exactly one connection is selected.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This Action opens the Property Dialog for a given object.
+ * Opens the Eclipse Properties dialog for the selected LDAP connection.
+ *
+ * <p>Uses {@link PreferencesUtil#createPropertyDialogOn} to open the property
+ * dialog navigated to the connection property page ID from the plugin properties.
+ * The dialog title is truncated to 30 characters using {@link Utils#shorten}.</p>
+ *
+ * <p>Only enabled when exactly one connection is selected.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class PropertiesAction extends StudioAction
 {
+    // ── GET TEXT ──────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -47,8 +61,10 @@ public class PropertiesAction extends StudioAction
     }
 
 
+    // ── GET IMAGE DESCRIPTOR — NO ICON ────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Returns {@code null} — this action uses no icon.
      */
     public ImageDescriptor getImageDescriptor()
     {
@@ -56,6 +72,7 @@ public class PropertiesAction extends StudioAction
     }
 
 
+    // ── GET COMMAND ID — MAPS TO FILE > PROPERTIES ────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -65,18 +82,22 @@ public class PropertiesAction extends StudioAction
     }
 
 
+    // ── IS ENABLED — EXACTLY ONE CONNECTION SELECTED ──────────────────────────────
     /**
      * {@inheritDoc}
+     * Returns {@code true} only when exactly one connection is selected.
      */
     public boolean isEnabled()
     {
         return getSelectedConnections().length == 1;
-
     }
 
 
+    // ── RUN — OPEN THE PROPERTY DIALOG ────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Opens the connection property dialog for the selected connection,
+     * pre-navigated to the connection property page.
      */
     public void run()
     {

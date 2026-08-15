@@ -28,20 +28,36 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 
 
+// ── CLASS: LdifUtils — C-3PO'S ENCODING AND DECODING TOOLKIT ─────────────────
+// C-3PO is fluent in over six million forms of communication, which means he
+// knows exactly when a DN needs Base64 encoding, when a URL escape is required,
+// and how to make a newline printable in a debug log without breaking the
+// transmission format.
+// LdifUtils is that toolkit: static helpers for UTF-8 encode/decode, Base64
+// encode/decode, hex encode, URL encode, "must encode?" checks, and a small
+// newline-to-escape-sequence converter for safe debug printing.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Utilities for LDAP related encoding and decoding.
+ * Static utility methods for LDAP/LDIF encoding and decoding.
+ * Covers UTF-8 byte conversion, Base64 encode/decode, hex encoding, URL
+ * encoding, "must-encode" checks for LDIF values and DNs, and a helper that
+ * converts {@code \n} / {@code \r} to printable escape sequences.
+ * Think of this as C-3PO's encoding toolkit — he knows exactly which
+ * character set to use for every situation.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LdifUtils
 {
 
+    // ── UTF-8 ENCODE A STRING ─────────────────────────────────────────────────
     /**
-     * Encodes the given string to UTF-8
+     * Encodes {@code s} to a UTF-8 byte array.
+     * Falls back to the platform default encoding if UTF-8 is somehow not
+     * available (should never happen in practice).
      *
-     * @param s the string to encode
-     *
-     * @return the byte[] the encoded value
+     * @param s  the string to encode
+     * @return   the UTF-8 byte representation
      */
     public static byte[] utf8encode( String s )
     {
@@ -56,12 +72,13 @@ public class LdifUtils
     }
 
 
+    // ── URL-ENCODE A STRING ───────────────────────────────────────────────────
     /**
-     * Encodes the given string into URL format.
+     * URL-encodes {@code s} using UTF-8 percent-encoding.
+     * Returns {@code s} unchanged if UTF-8 is somehow unavailable.
      *
-     * @param s the string to encode
-     *
-     * @return the string the URL encoded string
+     * @param s  the string to URL-encode
+     * @return   the percent-encoded string
      */
     public static String urlEncode( String s )
     {
@@ -76,12 +93,13 @@ public class LdifUtils
     }
 
 
+    // ── BASE64-ENCODE A BYTE ARRAY ────────────────────────────────────────────
     /**
-     * Encodes the given byte array using BASE-64 encoding.
+     * Encodes {@code b} using Base64 and returns the result as a UTF-8 string.
+     * Used to produce the {@code ::}-prefixed values in LDIF output.
      *
-     * @param b the b the byte array to encode
-     *
-     * @return the BASE-64 encoded string
+     * @param b  the byte array to encode
+     * @return   the Base64-encoded string
      */
     public static String base64encode( byte[] b )
     {
@@ -89,12 +107,13 @@ public class LdifUtils
     }
 
 
+    // ── HEX-ENCODE A BYTE ARRAY ───────────────────────────────────────────────
     /**
-     * Encodes the given byte array to a sequence of
-     * its hex values.
+     * Encodes {@code data} as a lowercase hexadecimal string.
+     * Returns {@code null} if {@code data} is {@code null}.
      *
-     * @param data the data to encode
-     * @return the HEX encoded string
+     * @param data  the byte array to encode
+     * @return      the hex-encoded string, or {@code null}
      */
     public static String hexEncode( byte[] data )
     {
@@ -110,12 +129,13 @@ public class LdifUtils
     }
 
 
+    // ── UTF-8 DECODE A BYTE ARRAY ─────────────────────────────────────────────
     /**
-     * Decodes the given UTF-8 byte array to an string.
+     * Decodes a UTF-8 byte array to a {@link String}.
+     * Falls back to the platform default encoding if UTF-8 is unavailable.
      *
-     * @param b the b the byte array to decode
-     *
-     * @return the decoded string
+     * @param b  the byte array to decode
+     * @return   the decoded string
      */
     public static String utf8decode( byte[] b )
     {
@@ -130,13 +150,12 @@ public class LdifUtils
     }
 
 
+    // ── BASE64-DECODE A STRING TO BYTES ───────────────────────────────────────
     /**
-     * Decodes the given BASE-64 encoded string to its
-     * bytes presentation.
+     * Decodes a Base64-encoded string to its raw byte array.
      *
-     * @param s the s the BASE-64 encoded string
-     *
-     * @return the byte[] the decoded byte array
+     * @param s  the Base64-encoded string
+     * @return   the decoded byte array
      */
     public static byte[] base64decodeToByteArray( String s )
     {
@@ -144,12 +163,13 @@ public class LdifUtils
     }
 
 
+    // ── CHECK WHETHER A DN NEEDS ENCODING ────────────────────────────────────
     /**
-     * Checks if the given distinguished name must be encoded.
+     * Returns {@code true} if {@code dn} contains characters that require
+     * Base64 encoding in LDIF (see {@link #mustEncode}).
      *
-     * @param dn the dn to check
-     *
-     * @return true, if must encode Dn
+     * @param dn  the distinguished name string to check
+     * @return    {@code true} if encoding is required
      */
     public static boolean mustEncodeDN( String dn )
     {
@@ -157,13 +177,22 @@ public class LdifUtils
     }
 
 
+    // ── CHECK WHETHER A VALUE NEEDS ENCODING ─────────────────────────────────
+    // LDIF requires Base64 encoding for values that start with space/colon/<,
+    // end with space, or contain control characters or non-ASCII.
     /**
-     * Checks if the given string must be encoded to be
-     * used in an LDIF.
+     * Returns {@code true} if {@code value} must be Base64-encoded to appear
+     * safely in an LDIF file.
+     * The triggers are:
+     * <ul>
+     *   <li>starts with {@code ' '}, {@code ':'}, or {@code '<'}</li>
+     *   <li>ends with {@code ' '}</li>
+     *   <li>contains {@code \r}, {@code \n}, {@code NUL}, or any code point
+     *       above U+007F</li>
+     * </ul>
      *
-     * @param value the value to check
-     *
-     * @return true, if must encode
+     * @param value  the value string to check
+     * @return       {@code true} if Base64 encoding is required
      */
     public static boolean mustEncode( String value )
     {
@@ -176,7 +205,7 @@ public class LdifUtils
         {
             return true;
         }
-        
+
         if ( value.endsWith( " " ) ) //$NON-NLS-1$
         {
             return true;
@@ -184,8 +213,8 @@ public class LdifUtils
 
         for ( int i = 0; i < value.length(); i++ )
         {
-            if ( ( value.charAt( i ) == '\r' ) || ( value.charAt( i ) == '\n' ) || ( value.charAt( i ) == '\u0000' )
-                || ( value.charAt( i ) > '\u007F' ) )
+            if ( ( value.charAt( i ) == '\r' ) || ( value.charAt( i ) == '\n' ) || ( value.charAt( i ) == ' ' )
+                || ( value.charAt( i ) > '' ) )
             {
                 return true;
             }
@@ -193,12 +222,17 @@ public class LdifUtils
 
         return false;
     }
-    
-    
+
+
+    // ── CONVERT NEWLINES TO ESCAPE SEQUENCES ─────────────────────────────────
+    // Makes a string safe to print in debug output without injecting real newlines.
     /**
-     * Convert all the '\n' and '\r' to a String 
-     * @param s The String to be converted
-     * @return The resulting String
+     * Replaces {@code \n} and {@code \r} characters in {@code s} with their
+     * two-character escape-sequence representations ({@code \\n} and
+     * {@code \\r}).  Returns an empty string for {@code null} input.
+     *
+     * @param s  the string to convert
+     * @return   the string with newlines replaced by printable escapes
      */
     public static String convertNlRcToString( String s )
     {

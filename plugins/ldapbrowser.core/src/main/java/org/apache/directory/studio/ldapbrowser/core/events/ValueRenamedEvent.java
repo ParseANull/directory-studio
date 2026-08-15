@@ -27,9 +27,24 @@ import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 import org.apache.directory.studio.ldapbrowser.core.model.IValue;
 
 
+// ── CLASS: ValueRenamedEvent — VADER DECLARES "NO, I AM YOUR FATHER" ─────────
+// In the carbon-freeze chamber on Cloud City, Vader reveals the truth to Luke:
+// "No — I am your father."  The value (the fact of Luke's parentage) hasn't
+// changed — it was always Vader — but the label, the attribute type, has
+// shifted.  "Your father" moved from the attribute "Obi-Wan's story" to the
+// attribute "Vader's identity."  Same data, different column header.
+// In LDAP terms: a value is "renamed" when its attribute TYPE changes — the
+// raw value content stays the same but it moves from one attribute to another.
+// For example, a value sitting under "uid" might be re-attributed to "cn"
+// (same string, different column).  We carry both the old value (old type)
+// and the new value (new type) so listeners can update the UI accordingly.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An ValueRenamedEvent indicates that an {@link IValue} was renamed. This
- * means that the attribute type was modified.
+ * Signals that an {@link IValue} was "renamed" — i.e. its attribute type was
+ * changed, moving it from one attribute to another on the same {@link IEntry}.
+ * The string content of the value may or may not change; what changed is which
+ * attribute type owns it.  We store both the old value (under the old attribute
+ * type) and the new value (under the new attribute type).
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -43,13 +58,24 @@ public class ValueRenamedEvent extends EntryModificationEvent
     private IValue newValue;
 
 
+    // ── Vader Records Both The Old And New Label For The Revelation ───────────────
+    // "Old label: Obi-Wan's padawan — that's what the Rebellion believed.
+    //  New label: Vader's son — that's the truth."
+    // Both value objects are stored so the listener can clean up the old
+    // attribute row and create a new row under the correct attribute type.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ValueRenamedEvent.
+     * Creates a new ValueRenamedEvent.
      *
-     * @param connection the connection
-     * @param modifiedEntry the modified entry
-     * @param oldValue the old value with the old attribute type
-     * @param newValue the new value with the new attribute type
+     * <p>For example — a value is moved from the "uid" attribute to "cn":</p>
+     * <pre>
+     *   new ValueRenamedEvent(conn, userEntry, oldUidValue, newCnValue);
+     * </pre>
+     *
+     * @param connection    the browser connection through which the change occurred.
+     * @param modifiedEntry the LDAP entry that owns the value.
+     * @param oldValue      the value as it was (with its original attribute type).
+     * @param newValue      the value as it is now (with the new attribute type).
      */
     public ValueRenamedEvent( IBrowserConnection connection, IEntry modifiedEntry, IValue oldValue, IValue newValue )
     {
@@ -59,10 +85,15 @@ public class ValueRenamedEvent extends EntryModificationEvent
     }
 
 
+    // ── "He is your father now" — Retrieve The New Label ─────────────────────────
+    // "Vader's son, attribute: family."  The listener needs the new value to
+    // insert the correct attribute-type row and populate it.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the new value with the new attribute type.
+     * Returns the value under its new attribute type after the rename.
+     * Use this to insert (or refresh) the table row for the new attribute.
      *
-     * @return the new value with the new attribute type
+     * @return the new {@link IValue} with the updated attribute type; never {@code null}.
      */
     public IValue getNewValue()
     {
@@ -70,10 +101,15 @@ public class ValueRenamedEvent extends EntryModificationEvent
     }
 
 
+    // ── "He was 'Obi-Wan's padawan'" — Retrieve The Old Label ────────────────────
+    // "Old label: padawan.  Remove that row."  The listener uses the old value
+    // to find and remove the row that used to display under the original type.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the old value with the old attribute type.
+     * Returns the value as it was under its original attribute type.
+     * Use this to locate and remove the old row in the attribute table.
      *
-     * @return the old value with the old attribute type
+     * @return the old {@link IValue} with the original attribute type; never {@code null}.
      */
     public IValue getOldValue()
     {
@@ -81,8 +117,14 @@ public class ValueRenamedEvent extends EntryModificationEvent
     }
 
 
+    // ── Vader Logs The Identity Revelation ───────────────────────────────────────
+    // "Renamed 'oldUid → newCn' at 'cn=Luke Skywalker,...'"
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns a human-readable description of this event, suitable for logs and
+     * the status bar.
+     *
+     * @return a localised string like "Renamed 'uid:luke' to 'cn:Luke Skywalker' at 'cn=Luke,...'".
      */
     public String toString()
     {

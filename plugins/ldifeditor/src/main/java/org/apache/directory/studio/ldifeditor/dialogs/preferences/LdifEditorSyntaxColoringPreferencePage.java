@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.dialogs.preferences;
@@ -56,10 +56,29 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: LdifEditorSyntaxColoringPreferencePage — C-3PO COLOUR CALIBRATION ──
+// C-3PO annotates every token of the LDIF communiqué with a colour-coded
+// diplomatic tag: comments in grey, DNs in bold, values in the standard hue.
+// The syntax-colouring preference page lets the user pick those colours and
+// font styles for each of the ten syntax categories, with a live preview pane
+// so they can see the result immediately.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Eclipse {@link PreferencePage} for configuring the LDIF editor's syntax-colouring.
+ * Presents ten {@link SyntaxItem} rows (comments, DN, attribute, value-type, value,
+ * keywords, changetype-add, changetype-modify, changetype-delete, changetype-moddn)
+ * with colour, bold, italic, strikethrough, and underline controls, plus a live
+ * {@link LdifEditorWidget} preview pane.
+ * Implements {@link ILdifEditor} because the embedded widget needs an editor context.
+ * Think of this as C-3PO's colour-tag calibration panel.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage implements IWorkbenchPreferencePage,
     ILdifEditor
 {
 
+    /** Sample LDIF text shown in the preview pane. */
     private static final String LDIF_INITIAL = "" + "# Content record" + BrowserCoreConstants.LINE_SEPARATOR //$NON-NLS-1$ //$NON-NLS-2$
         + "dn: cn=content record" + BrowserCoreConstants.LINE_SEPARATOR + "objectClass: person" //$NON-NLS-1$ //$NON-NLS-2$
         + BrowserCoreConstants.LINE_SEPARATOR + "cn: content record" + BrowserCoreConstants.LINE_SEPARATOR //$NON-NLS-1$
@@ -89,39 +108,67 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
         + BrowserCoreConstants.LINE_SEPARATOR + "newsuperior: cn=new superior" + BrowserCoreConstants.LINE_SEPARATOR //$NON-NLS-1$
         + "" + BrowserCoreConstants.LINE_SEPARATOR; //$NON-NLS-1$
 
+    /** The embedded LDIF editor widget used as the preview pane. */
     private LdifEditorWidget ldifEditorWidget;
 
+    /** The ten syntax category items. */
     private SyntaxItem[] syntaxItems;
 
+    /** Colour picker widget. */
     private ColorSelector colorSelector;
 
+    /** Bold checkbox. */
     private Button boldCheckBox;
 
+    /** Italic checkbox. */
     private Button italicCheckBox;
 
+    /** Underline checkbox. */
     private Button underlineCheckBox;
 
+    /** Strikethrough checkbox. */
     private Button strikethroughCheckBox;
 
+    /** Table viewer listing syntax categories. */
     private TableViewer syntaxItemViewer;
 
+    // ── CLASS: SyntaxItem — ONE COLOUR-CATEGORY ENTRY ────────────────────────
+    // C-3PO's annotation index: each entry records the display name, preference
+    // key, current colour, and font-style flags for one token category.
+    /**
+     * DTO representing one syntax-colouring category.
+     * Knows how to load, save, and reset its preferences.
+     */
     private class SyntaxItem
     {
+        /** Human-readable display name shown in the list. */
         String displayName;
 
+        /** Preference key base (suffixes {@code _RGB} and {@code _STYLE} are appended). */
         String key;
 
+        /** Current colour. */
         RGB rgb;
 
+        /** Whether the font style is bold. */
         boolean bold;
 
+        /** Whether the font style is italic. */
         boolean italic;
 
+        /** Whether the font style has strikethrough. */
         boolean strikethrough;
 
+        /** Whether the font style has underline. */
         boolean underline;
 
 
+        /**
+         * Creates a {@code SyntaxItem} and loads its current preferences.
+         *
+         * @param displayName  the human-readable category name
+         * @param key          the preference key base
+         */
         SyntaxItem( String displayName, String key )
         {
             this.displayName = displayName;
@@ -130,6 +177,11 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
         }
 
 
+        /**
+         * Returns the combined SWT style integer for the current flags.
+         *
+         * @return the style integer
+         */
         int getStyle()
         {
             int style = SWT.NORMAL;
@@ -145,6 +197,11 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
         }
 
 
+        /**
+         * Decodes the combined SWT style integer into the individual flags.
+         *
+         * @param style  the style integer
+         */
         void setStyle( int style )
         {
             this.bold = ( style & SWT.BOLD ) != SWT.NORMAL;
@@ -154,6 +211,9 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
         }
 
 
+        /**
+         * Loads the colour and style from the preference store.
+         */
         void loadPreferences()
         {
             IPreferenceStore store = getPreferenceStore();
@@ -164,6 +224,9 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
         }
 
 
+        /**
+         * Saves the colour and style to the preference store.
+         */
         void savePreferences()
         {
             IPreferenceStore store = getPreferenceStore();
@@ -173,6 +236,9 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
         }
 
 
+        /**
+         * Resets the colour and style to their factory defaults.
+         */
         void loadDefaultPreferences()
         {
             IPreferenceStore store = getPreferenceStore();
@@ -186,6 +252,11 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
         }
 
 
+        /**
+         * Returns the display name for the table viewer label provider.
+         *
+         * @return the display name
+         */
         public String toString()
         {
             return displayName;
@@ -193,6 +264,11 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── CONSTRUCT THE PREFERENCE PAGE ─────────────────────────────────────────
+    /**
+     * Creates a new syntax-colouring preference page and binds it to the
+     * LDIF editor preference store.
+     */
     public LdifEditorSyntaxColoringPreferencePage()
     {
         super( Messages.getString( "LdifEditorSyntaxColoringPreferencePage.SyntaxColoring" ) ); //$NON-NLS-1$
@@ -201,11 +277,19 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── INITIALISE ────────────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     */
     public void init( IWorkbench workbench )
     {
     }
 
 
+    // ── DISPOSE ───────────────────────────────────────────────────────────────
+    /**
+     * Disposes the embedded {@link LdifEditorWidget}.
+     */
     public void dispose()
     {
         ldifEditorWidget.dispose();
@@ -213,6 +297,16 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── BUILD THE PAGE CONTENTS ───────────────────────────────────────────────
+    // C-3PO's technician wires up the category list on the left, the
+    // colour/style controls in the middle, and the live preview pane below.
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Creates the syntax category list, colour/style controls, and live
+     * preview pane.  Initialises all ten {@link SyntaxItem} rows and selects
+     * the first one.</p>
+     */
     protected Control createContents( Composite parent )
     {
 
@@ -266,6 +360,13 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── BUILD THE SYNTAX-ITEM LIST AND CONTROLS ───────────────────────────────
+    /**
+     * Creates the syntax-category table viewer and the colour/style controls
+     * (colour selector, bold, italic, strikethrough, underline checkboxes).
+     *
+     * @param parent  the parent composite
+     */
     private void createSyntaxPage( Composite parent )
     {
 
@@ -343,6 +444,10 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── REACT TO UNDERLINE CHANGE ─────────────────────────────────────────────
+    /**
+     * Updates the selected syntax item's underline flag and refreshes the preview.
+     */
     private void handleUnderlineSelectionEvent()
     {
         SyntaxItem item = getSyntaxItem();
@@ -354,6 +459,10 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── REACT TO STRIKETHROUGH CHANGE ─────────────────────────────────────────
+    /**
+     * Updates the selected syntax item's strikethrough flag and refreshes the preview.
+     */
     private void handleStrikethroughSelectionEvent()
     {
         SyntaxItem item = getSyntaxItem();
@@ -365,6 +474,10 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── REACT TO ITALIC CHANGE ────────────────────────────────────────────────
+    /**
+     * Updates the selected syntax item's italic flag and refreshes the preview.
+     */
     private void handleItalicSelectionEvent()
     {
         SyntaxItem item = getSyntaxItem();
@@ -376,6 +489,10 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── REACT TO BOLD CHANGE ──────────────────────────────────────────────────
+    /**
+     * Updates the selected syntax item's bold flag and refreshes the preview.
+     */
     private void handleBoldSelectionEvent()
     {
         SyntaxItem item = getSyntaxItem();
@@ -387,6 +504,10 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── REACT TO COLOUR CHANGE ────────────────────────────────────────────────
+    /**
+     * Updates the selected syntax item's colour and refreshes the preview.
+     */
     private void handleColorSelectorEvent()
     {
         SyntaxItem item = getSyntaxItem();
@@ -398,6 +519,10 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── REACT TO LIST SELECTION CHANGE ────────────────────────────────────────
+    /**
+     * Loads the selected syntax item's colour and style flags into the controls.
+     */
     private void handleSyntaxItemViewerSelectionEvent()
     {
         SyntaxItem item = getSyntaxItem();
@@ -412,6 +537,12 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── GET THE SELECTED SYNTAX ITEM ──────────────────────────────────────────
+    /**
+     * Returns the currently selected {@link SyntaxItem}, or {@code null}.
+     *
+     * @return the selected syntax item, or {@code null}
+     */
     private SyntaxItem getSyntaxItem()
     {
         SyntaxItem item = ( SyntaxItem ) ( ( IStructuredSelection ) syntaxItemViewer.getSelection() ).getFirstElement();
@@ -419,6 +550,13 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── PUSH A TEXT ATTRIBUTE CHANGE TO THE PREVIEW ───────────────────────────
+    /**
+     * Pushes the updated colour and style for {@code item} to the source-viewer
+     * configuration and refreshes the preview document.
+     *
+     * @param item  the syntax item whose attributes changed
+     */
     private void setTextAttribute( SyntaxItem item )
     {
         ldifEditorWidget.getSourceViewerConfiguration().setTextAttribute( item.key, item.rgb, item.getStyle() );
@@ -430,6 +568,13 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── BUILD THE PREVIEW PANE ────────────────────────────────────────────────
+    /**
+     * Creates the read-only {@link LdifEditorWidget} preview pane pre-loaded
+     * with the sample LDIF text.
+     *
+     * @param parent  the parent composite
+     */
     private void createPreviewer( Composite parent )
     {
 
@@ -447,18 +592,36 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── ILdifEditor: GET CONNECTION ───────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Delegates to the embedded {@link LdifEditorWidget}.</p>
+     */
     public IBrowserConnection getConnection()
     {
         return ldifEditorWidget.getConnection();
     }
 
 
+    // ── ILdifEditor: GET LDIF MODEL ───────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Delegates to the embedded {@link LdifEditorWidget}.</p>
+     */
     public LdifFile getLdifModel()
     {
         return ldifEditorWidget.getLdifModel();
     }
 
 
+    // ── SAVE PREFERENCES ──────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Persists all ten syntax item colours and styles to the preference store.</p>
+     */
     public boolean performOk()
     {
         for ( int i = 0; i < syntaxItems.length; i++ )
@@ -469,6 +632,13 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── RESTORE DEFAULTS ──────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Reloads factory defaults for all ten syntax items and refreshes the
+     * controls and preview.</p>
+     */
     protected void performDefaults()
     {
         for ( int i = 0; i < syntaxItems.length; i++ )
@@ -481,6 +651,12 @@ public class LdifEditorSyntaxColoringPreferencePage extends PreferencePage imple
     }
 
 
+    // ── IAdaptable ────────────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns {@code null} — no adapters registered.</p>
+     */
     public Object getAdapter( Class adapter )
     {
         return null;

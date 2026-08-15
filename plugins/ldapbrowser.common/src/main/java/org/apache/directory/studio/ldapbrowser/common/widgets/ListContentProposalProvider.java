@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.ldapbrowser.common.widgets;
 
@@ -29,9 +29,20 @@ import org.eclipse.jface.fieldassist.IContentProposal;
 import org.eclipse.jface.fieldassist.IContentProposalProvider;
 
 
+// ── CLASS: ListContentProposalProvider — R2-D2 PROJECTING LEIA'S HOLOGRAM ────
+// R2 stores Leia's complete message in memory and, when asked, projects only the parts
+// that match what Obi-Wan has already heard — filtering the full recording to what's relevant.
+// ListContentProposalProvider keeps a list of all possible completions and, on each
+// keystroke, filters it down to just the entries that start with what the user has typed.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * ListContentProposalProvider is a class designed to map a dynamic list of
- * Strings to content proposals.
+ * An {@link IContentProposalProvider} that filters a dynamic list of Strings into
+ * autocomplete proposals based on the user's current input prefix.
+ * Used throughout Directory Studio to power the Ctrl+Space autocomplete on LDAP
+ * attribute-type combos — the list of proposals is updated externally via
+ * {@link #setProposals(List)} whenever the schema changes.
+ * Think of R2-D2: he carries the full message in memory and projects only the relevant
+ * fragment that matches the current playback position.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -42,10 +53,23 @@ public class ListContentProposalProvider implements IContentProposalProvider
     private List<String> proposals;
 
 
+    // ── R2 LOADS A LIST-FORMAT MESSAGE ────────────────────────────────────────────
+    // R2 is handed a pre-built list of holographic frames to store — no conversion needed.
+    // He stashes them in memory ready to play back on demand.
+    // We delegate to setProposals() to copy and store the list safely.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ListContentProposalProvider.
+     * Creates a ListContentProposalProvider pre-loaded with the given list of proposal strings.
+     * The list is copied internally so later changes to the caller's list don't affect us.
      *
-     * @param proposals the dynamic list of proposals
+     * <p>For example — R2 stores the list-format message:</p>
+     * <pre>
+     *   proposals = List.of("cn", "sn", "uid", "mail");
+     *   provider  = new ListContentProposalProvider(proposals);
+     * </pre>
+     *
+     * @param proposals  The initial list of candidate strings for autocomplete; may be {@code null}
+     *                   (treated as empty list).
      */
     public ListContentProposalProvider( List<String> proposals )
     {
@@ -53,10 +77,22 @@ public class ListContentProposalProvider implements IContentProposalProvider
     }
 
 
+    // ── R2 LOADS AN ARRAY-FORMAT MESSAGE ──────────────────────────────────────────
+    // R2 is handed an array of frames instead — he converts it to a list and stashes it.
+    // Same storage, different input format for the caller's convenience.
+    // We wrap the array in a List and delegate to setProposals().
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ListContentProposalProvider.
+     * Creates a ListContentProposalProvider pre-loaded with the given array of proposal strings.
+     * Convenience overload that converts the array to a list internally.
      *
-     * @param proposals the proposals
+     * <p>For example — R2 loads an array of frames:</p>
+     * <pre>
+     *   String[] attrs = {"cn", "sn", "uid", "mail"};
+     *   provider = new ListContentProposalProvider(attrs);
+     * </pre>
+     *
+     * @param proposals  The initial array of candidate strings for autocomplete; must not be {@code null}.
      */
     public ListContentProposalProvider( String[] proposals )
     {
@@ -64,8 +100,30 @@ public class ListContentProposalProvider implements IContentProposalProvider
     }
 
 
+    // ── R2 PLAYS BACK THE MATCHING FRAMES OF THE HOLOGRAM ────────────────────────
+    // Obi-Wan has heard "Help me, Obi-Wan" so far — R2 fast-forwards through the recording
+    // and projects only the frames that start with those words, sorted alphabetically.
+    // We filter our proposals list to those whose prefix matches the typed input (case-insensitive).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns an array of autocomplete proposals that start with the text the user has
+     * typed up to {@code position}.
+     * The matching is case-insensitive and prefix-only. If the typed string is empty,
+     * no proposals are returned (we don't flood the popup with the full list).
+     * Results are sorted alphabetically before filtering.
+     *
+     * <p>For example — R2 projects the matching frames:</p>
+     * <pre>
+     *   contents  = "cn"  (user typed "cn")
+     *   position  = 2
+     *   proposals = ["cn", "commonName"]  // only entries starting with "cn"
+     * </pre>
+     *
+     * @param contents  The full current text of the input field.
+     * @param position  The cursor position within {@code contents}; proposals match the prefix
+     *                  {@code contents.substring(0, position)}.
+     * @return          An array of {@link IContentProposal} whose content starts with the typed prefix;
+     *                  empty array if the prefix is empty or nothing matches.
      */
     public IContentProposal[] getProposals( String contents, int position )
     {
@@ -111,10 +169,24 @@ public class ListContentProposalProvider implements IContentProposalProvider
     }
 
 
+    // ── R2 SWAPS IN A NEW RECORDING ────────────────────────────────────────────────
+    // The mission controller swaps out R2's memory chip with an updated list of frames.
+    // R2 discards the old recording and loads the new one, copying it so the original is safe.
+    // We replace our internal list with a defensive copy of newProposals (or an empty list if null).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the possible strings.
-     * 
-     * @param newProposals the possible strings
+     * Replaces the current list of autocomplete proposals with a new one.
+     * The new list is copied defensively — changes to the caller's list after this call
+     * won't affect what the provider shows. A {@code null} argument is treated as an
+     * empty list so callers don't need to null-check before calling.
+     *
+     * <p>For example — R2 swaps his memory chip:</p>
+     * <pre>
+     *   provider.setProposals(updatedAttributeNames);
+     *   // Provider now offers the new schema's attribute names
+     * </pre>
+     *
+     * @param newProposals  The new candidate strings to use for autocomplete; {@code null} clears the list.
      */
     public void setProposals( List<String> newProposals )
     {

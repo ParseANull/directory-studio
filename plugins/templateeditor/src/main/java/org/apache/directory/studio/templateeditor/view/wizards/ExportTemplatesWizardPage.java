@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.view.wizards;
 
@@ -55,9 +55,18 @@ import org.apache.directory.studio.templateeditor.EntryTemplatePluginConstants;
 import org.apache.directory.studio.templateeditor.model.Template;
 
 
+// ── CLASS: ExportTemplatesWizardPage — EMPEROR'S EXPORT-ORDER STEP ────────────────
+// This is Step 1 of the Emperor's plan to dispatch standing orders to disk. Luke —
+// the user — is presented with a sorted table of all known templates (pre-ticked
+// for the ones already selected in the preference page) and a directory picker.
+// When both a template selection and a valid directory are confirmed, the "Finish"
+// button lights up and the export can proceed. Until then, the Emperor's plan
+// remains blocked with a clear error message.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the wizard page for the wizard for exporting
- * templates to the disk.
+ * The single page of the {@link ExportTemplatesWizard}. Shows a checkbox table
+ * of all known templates and a directory-picker field. The "Finish" button is only
+ * enabled when at least one template is checked and the export directory is valid.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -75,11 +84,15 @@ public class ExportTemplatesWizardPage extends AbstractWizardPage
     private Button exportDirectoryButton;
 
 
+    // ── CONSTRUCTOR: INITIALISE THE PAGE ──────────────────────────────────────────
+    // The Emperor's export step is named, titled, described, and given a banner
+    // image. The pre-checked objects (templates already selected on the pref page)
+    // are stored so they can seed the checkbox table at init time.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExportTemplatesWizardPage.
+     * Creates a new {@code ExportTemplatesWizardPage} with the given pre-checked objects.
      *
-     * @param preCheckedObjects
-     *      an array containing the pre-checked elements
+     * @param preCheckedObjects  templates to pre-check in the table; may be empty or {@code null}
      */
     public ExportTemplatesWizardPage( Object[] preCheckedObjects )
     {
@@ -93,6 +106,11 @@ public class ExportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── CREATE CONTROL: BUILD THE WIZARD PAGE UI ──────────────────────────────────
+    // The Emperor lays out his two-part export form: the Templates group (checkbox
+    // table + Select All / Deselect All) and the Export Destination group (directory
+    // text + Browse button). Both groups must be satisfied before "Finish" is enabled.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -200,8 +218,15 @@ public class ExportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── INIT FIELDS: POPULATE TEMPLATES TABLE WITH PRE-CHECKED STATE ──────────────
+    // The Emperor seeds the export table with all known templates sorted
+    // alphabetically, then ticks those already selected in the preference page.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the UI Fields.
+     * Populates the templates table with all templates known to the plugin's
+     * {@link org.apache.directory.studio.templateeditor.TemplatesManager}, sorted
+     * case-insensitively by title. Pre-checks the objects supplied at construction
+     * time.
      */
     private void initFields()
     {
@@ -224,8 +249,15 @@ public class ExportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── CHOOSE EXPORT DIRECTORY: OPEN DIRECTORY BROWSER ──────────────────────────
+    // The Emperor's courier opens a native directory dialog so Luke can pick the
+    // outpost folder. The last-used path from preferences is offered as the
+    // starting location.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the exportMultipleFiles 'browse' button is selected.
+     * Opens a native {@link DirectoryDialog} so the user can browse to an export
+     * folder. Pre-fills the filter path from the current text field or the saved
+     * dialog preference. Updates the text field with the chosen directory.
      */
     private void chooseExportDirectory()
     {
@@ -250,8 +282,14 @@ public class ExportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── DIALOG CHANGED: VALIDATE AND UPDATE PAGE COMPLETION ───────────────────────
+    // The Emperor checks whether the plan can proceed: at least one template must be
+    // selected and the directory must be a non-empty existing folder. Each violated
+    // condition produces an error message that blocks "Finish".
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the user modifies something in the UI.
+     * Validates the current UI state and updates the error message and page-completion
+     * flag. Called whenever the user changes any field.
      */
     private void dialogChanged()
     {
@@ -289,11 +327,11 @@ public class ExportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── GET SELECTED TEMPLATES: RETURN CHECKED TEMPLATES AS AN ARRAY ──────────────
     /**
-     * Gets the selected templates.
+     * Returns the templates currently checked in the wizard's table as a typed array.
      *
-     * @return
-     *      the selected templates
+     * @return the checked templates (may be empty)
      */
     public Template[] getSelectedTemplates()
     {
@@ -309,11 +347,11 @@ public class ExportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── GET EXPORT DIRECTORY: RETURN THE CHOSEN DIRECTORY PATH ────────────────────
     /**
-     * Gets the export directory.
+     * Returns the text currently in the export directory field.
      *
-     * @return
-     *      the export directory
+     * @return the chosen export directory path (may be empty)
      */
     public String getExportDirectory()
     {
@@ -321,8 +359,10 @@ public class ExportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── SAVE DIALOG SETTINGS: PERSIST THE DIRECTORY PREFERENCE ───────────────────
     /**
-     * Saves the dialog settings.
+     * Persists the chosen export directory to the plugin preference store so it
+     * is offered as the default path next time the wizard is opened.
      */
     public void saveDialogSettings()
     {

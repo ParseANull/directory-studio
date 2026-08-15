@@ -39,10 +39,27 @@ import org.apache.directory.studio.ldapbrowser.core.utils.Utils;
 import org.eclipse.search.ui.ISearchPageScoreComputer;
 
 
+// ── CLASS: DelegateEntry — R2-D2 STANDING IN FOR ANOTHER DROID ───────────────
+// R2-D2 sometimes has to fill in for another droid that isn't physically
+// present.  He carries that droid's connection ID and DN, and when asked
+// anything — "what are your attributes?", "do you have children?" — he looks
+// up the real droid in BrowserConnection's cache and passes the question on.
+// If the real droid isn't in the cache (entry not loaded, connection offline,
+// or entry doesn't exist), he returns sensible defaults.
+// DelegateEntry is that stand-in: an IEntry proxy that holds a connection ID +
+// DN and lazily resolves to the real cached entry on every call.  Subclasses
+// (BookmarkEntry, ContinuedSearchResultEntry) specialise the resolution logic.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An implementation of {@link IEntry} that just holds another instance
- * of {@link IEntry} and delegates all method calls to this instance.
- * It is used for bookmarks, alias and referral entries.
+ * An abstract {@link IEntry} implementation that holds another
+ * {@link IEntry} instance and forwards all method calls to it.
+ * Used for bookmarks, alias entries, and referral continuation entries.
+ * The real delegate is resolved lazily on every call from
+ * {@link BrowserCorePlugin}'s connection manager cache.
+ *
+ * <p>Think of this as R2-D2 standing in for another droid — he holds the
+ * connection ID and DN, looks up the real entry on demand, and passes
+ * every question straight through.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -64,14 +81,16 @@ public abstract class DelegateEntry implements IEntry
     protected IEntry delegate;
 
 
+    // ── No-Arg Constructor For Serialisation ─────────────────────────────────────
     protected DelegateEntry()
     {
     }
 
 
+    // ── R2-D2 Stores The Connection ID And DN For Later Resolution ────────────────
     /**
      * Creates a new instance of DelegateEntry.
-     * 
+     *
      * @param browserConnection the browser connection of the delegate
      * @param dn the Dn of the delegate
      */
@@ -85,10 +104,16 @@ public abstract class DelegateEntry implements IEntry
     }
 
 
+    // ── R2-D2 Looks Up The Real Entry From The Connection Cache ──────────────────
+    // "Let me check the cache for connection ID X, DN Y... found it?  Return it.
+    // Not found or connection offline?  Return null and note that it may not exist."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the delegate.
-     * 
-     * @return the delegate, may be null if the delegate doesn't exist.
+     * Gets the delegate entry by resolving the stored connection ID and DN
+     * against the connection manager cache.
+     *
+     * @return the delegate entry, or {@code null} if not in cache or
+     *         connection is offline
      */
     protected IEntry getDelegate()
     {
@@ -113,10 +138,11 @@ public abstract class DelegateEntry implements IEntry
     }
 
 
+    // ── R2-D2 Caches A Pre-Resolved Delegate Entry ───────────────────────────────
     /**
      * Sets the delegate.
-     * 
-     * @param delegate the new delegate
+     *
+     * @param delegate the new delegate entry to cache locally
      */
     protected void setDelegate( IEntry delegate )
     {
@@ -124,6 +150,12 @@ public abstract class DelegateEntry implements IEntry
     }
 
 
+    // ── R2-D2 Delegates All IEntry Calls To The Real Entry ───────────────────────
+    // For every method below: if the delegate resolves, we pass the call through;
+    // otherwise we return a sensible default (null / false / empty array / -1).
+    // ────────────────────────────────────────────────────────────────────────────
+
+    // ── Pass-Through: Connection ──────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -892,6 +924,7 @@ public abstract class DelegateEntry implements IEntry
     }
 
 
+    // ── R2-D2 Adapts The Delegate Entry To Any Requested Interface ───────────────
     /**
      * {@inheritDoc}
      */

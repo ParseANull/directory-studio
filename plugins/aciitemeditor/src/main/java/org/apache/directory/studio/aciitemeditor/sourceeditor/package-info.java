@@ -6,18 +6,26 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 /**
- * Contains the source editor configuration.
+ * Source-editor configuration for the ACI item editor.
+ * Wires up the Eclipse JFace text framework with ACI-specific syntax colouring
+ * ({@link org.apache.directory.studio.aciitemeditor.sourceeditor.ACICodeScanner}),
+ * content-assist proposals
+ * ({@link org.apache.directory.studio.aciitemeditor.sourceeditor.ACIContentAssistProcessor}),
+ * and auto-formatting
+ * ({@link org.apache.directory.studio.aciitemeditor.sourceeditor.ACIFormattingStrategy}).
+ * Think of this as the ISB's colour-coded annotation layer — every keyword, string,
+ * grant, and denial gets its own colour so officers can read the directive at a glance.
  */
 package org.apache.directory.studio.aciitemeditor.sourceeditor;

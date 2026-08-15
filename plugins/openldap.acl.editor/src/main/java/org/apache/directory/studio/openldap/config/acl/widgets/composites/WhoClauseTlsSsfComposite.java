@@ -25,18 +25,46 @@ import org.apache.directory.studio.openldap.config.acl.OpenLdapAclValueWithConte
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseTlsSsf;
 
 
+// ── CLASS: WhoClauseTlsSsfComposite — TARKIN REQUIRING TLS ENCRYPTION TIER ───
+// Grand Moff Tarkin requires the TLS layer security strength factor to meet a
+// minimum encryption tier. This composite binds
+// AbstractWhoClauseCryptoStrengthComposite to AclWhoClauseTlsSsf. The SSF combo
+// and optional custom spinner are inherited from the abstract base.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * 
+ * A clause composite for the {@code tls_ssf} who-clause. Inherits the SSF
+ * preset-tier combo and custom spinner from
+ * {@link AbstractWhoClauseCryptoStrengthComposite}.
+ *
+ * <p>Think of this class as Grand Moff Tarkin requiring a minimum TLS
+ * encryption tier before the rule applies.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class WhoClauseTlsSsfComposite extends AbstractWhoClauseCryptoStrengthComposite<AclWhoClauseTlsSsf>
 {
+    // ── Constructor With Explicit Clause ──────────────────────────────────────
+    /**
+     * Creates a new TLS-SSF who-clause composite with an explicit clause.
+     *
+     * @param context               The ACL context.
+     * @param clause                The TLS-SSF clause to edit.
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhoClauseTlsSsfComposite( OpenLdapAclValueWithContext context, AclWhoClauseTlsSsf clause, Composite visualEditorComposite )
     {
         super( context, clause, visualEditorComposite );
     }
 
 
+    // ── Constructor Without Explicit Clause ───────────────────────────────────
+    /**
+     * Creates a new TLS-SSF who-clause composite with a default
+     * {@link AclWhoClauseTlsSsf} instance.
+     *
+     * @param context               The ACL context.
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhoClauseTlsSsfComposite( OpenLdapAclValueWithContext context, Composite visualEditorComposite )
     {
         super( context, new AclWhoClauseTlsSsf(), visualEditorComposite );

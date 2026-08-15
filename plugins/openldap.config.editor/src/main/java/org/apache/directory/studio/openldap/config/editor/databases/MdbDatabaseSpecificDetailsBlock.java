@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.databases;
 
@@ -48,46 +48,27 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: MdbDatabaseSpecificDetailsBlock — Palpatine's Memory-Mapped Archives ──
+// The Empire eventually upgraded from the older Berkeley vaults to a faster,
+// simpler memory-mapped data store: MDB (Lightning Memory-Mapped Database).
+// LMDB is leaner than BDB — no transaction log, no deadlock manager, just a
+// single memory-mapped file that the OS keeps in RAM as long as possible.
+// This block configures the MDB backend across four collapsible sections:
+// configuration (directory + mode), indexes, limits, and options.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements a block for Memory-Mapped DB Specific Details. The GUI will
- * look like :
- * 
- * <pre>
- * .--------------------------------------------------------------------.
- * | Database Specific Settings                                         |
- * +--------------------------------------------------------------------+
- * | .----------------------------------------------------------------. |
- * | |v MDB Configuration                                             | |
- * | +----------------------------------------------------------------+ |
- * | | Directory : [////////////////////////////[v] (Browse)          | |
- * | | Mode :      [--------(0000)               ] (Edit Permissions) | |
- * | +----------------------------------------------------------------+ |
- * |                                                                    |
- * | v Database indices                                                 |
- * |  +----------------------------------------------+                  |
- * |  | indice 1                                     | (Add)            |
- * |  | indice 2                                     | (Edit)           |
- * |  | ...                                          | (Delete)         |
- * |  +----------------------------------------------+                  |
- * |                                                                    |
- * | v Database Limits                                                  |
- * |  Maximum Readers :     [                         ]                 |
- * |  Maximum Size :        [                         ]                 |
- * |  Maximum Entry Size :  [                         ]                 | (2.4.41)
- * |  Search Stack Depth :  [                         ]                 |
- * |  Checkpoint Interval : [                         ]                 |
- * |                                                                    |
- * | v Database Options                                                 |
- * |  Disable Synchronous Database Writes : [----------]                |
- * |  Environment Flags :                                               | (2.4.33)
- * |    +----------------------------------------------+                |
- * |    | Flag 1                                       | (Add)          |
- * |    | Flag 2                                       | (Edit)         |
- * |    | ...                                          | (Delete)       |
- * |    +----------------------------------------------+                |
- * +--------------------------------------------------------------------+
- * </pre>
- * 
+ * Database-specific UI block for the OpenLDAP MDB (Lightning Memory-Mapped Database)
+ * backend ({@code olcMdbConfig}).
+ * MDB is OpenLDAP's modern, high-performance storage engine. It uses a single
+ * memory-mapped file — no separate transaction log, no BDB locking overhead.
+ * We expose its configuration in four collapsible sections: MDB Configuration
+ * (directory + file mode), Database Indices, Database Limits (readers, size,
+ * entry size, stack depth, checkpoint), and Database Options (no-sync toggle
+ * and environment flags).
+ * The {@code olcDbDirectory} field is mandatory and therefore displayed in red bold.
+ * Think of this as Palpatine's upgraded memory-mapped Imperial archives —
+ * faster reads, simpler writes, same absolute authority over data.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDetailsBlock<OlcMdbConfig>
@@ -122,29 +103,42 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
 
     /** The olcDbSearchStack attribute( Integer) */
     private Text searchStackDepthText;
-    
-    
+
+
+    // ── Listen for Index Table Changes ────────────────────────────────────────
+    // When the user adds, edits, or removes an index row, we collect all
+    // current rows and push the updated list directly into the model.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * The olcAllows listener
+     * The {@code olcAllows} listener — fires whenever the indices table changes.
+     * Collects the current list of {@link DbIndexWrapper} elements and writes
+     * them back to the model's {@code olcDbIndex} attribute.
      */
     private WidgetModifyListener indexesListener = event ->
         {
             List<String> indices = new ArrayList<>();
-            
+
             for ( DbIndexWrapper dbIndex : indicesWidget.getElements() )
             {
                 indices.add( dbIndex.toString() );
             }
-            
+
             database.setOlcDbIndex( indices );
         };
-        
+
+
+    // ── Commission the Memory-Mapped Archive ─────────────────────────────────
+    // The Imperial archivist for the MDB vault receives their assignment:
+    // manage this particular MDB database. We bind to the parent details page,
+    // the OlcMdbConfig model, and the live LDAP connection for any pickers.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of MdbDatabaseSpecificDetailsBlock.
-     * 
-     * @param databaseDetailsPage the database details page 
-     * @param database the database
-     * @param browserConnection the connection
+     * Constructs a new MDB database block, linking it to the parent details page,
+     * the MDB model object, and the live browser connection.
+     *
+     * @param detailsPage       the parent details page that receives dirty signals
+     * @param database          the {@link OlcMdbConfig} model we are editing
+     * @param browserConnection the live LDAP connection for entry-picker widgets and schema checks
      */
     public MdbDatabaseSpecificDetailsBlock( DatabasesDetailsPage detailsPage, OlcMdbConfig database,
         IBrowserConnection browserConnection )
@@ -153,8 +147,17 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
     }
 
 
+    // ── Build the Four-Section Control Console ────────────────────────────────
+    // The archivist lays out four collapsible vault-management panels:
+    // configuration, indexes, limits, and options.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the complete block UI — four collapsible {@link Section} panels
+     * covering every configurable aspect of an MDB database.
+     *
+     * @param parent   the parent composite to attach our content to
+     * @param toolkit  the JFace Forms toolkit for styled widget creation
+     * @return         the top-level composite that wraps all four sections
      */
     public Composite createBlockContent( Composite parent, FormToolkit toolkit )
     {
@@ -172,28 +175,23 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
     }
 
 
+    // ── Build the MDB Configuration Console ──────────────────────────────────
+    // The primary configuration panel: directory (where the mdb file lives,
+    // rendered in bold red because it is a required attribute) and file mode
+    // (Unix permissions on the mdb file). These are the two mandatory knobs
+    // before MDB can serve any data.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the database configuration section. We manage the following configuration elements :
+     * Creates the "MDB Configuration" section covering {@code olcDbDirectory}
+     * (required — shown in red bold) and {@code olcDbMode} (Unix permissions).
+     * We manage the following configuration elements:
      * <ul>
      * <li>Directory : the directory on disk where the file will be stored</li>
      * <li>mode : the file mode for this directory</li>
      * </ul>
-     * It covers the following attributes :
-     * <ul>
-     * <li>olcDbDirectory</li>
-     * <li>olcDbMode</li>
-     * </ul>
      *
-     * <pre>
-     * .------------------------------------------------------------------.
-     * |v MDB Configuration                                               |
-     * +------------------------------------------------------------------+
-     * | Directory : [///////////////////////////////] (Browse)           |
-     * | Mode :      [///////////////////////////////] (Edit Permissions) |
-     * +------------------------------------------------------------------+
-     * </pre
-     * @param parent the parent composite
-     * @param toolkit the toolkit
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createDatabaseConfigurationSection( Composite parent, FormToolkit toolkit )
     {
@@ -229,15 +227,19 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
     }
 
 
+    // ── Build the Indexing Console ────────────────────────────────────────────
+    // MDB can maintain secondary indexes (B-tree sorted values for specific
+    // attributes) to speed up filtered searches. We show a table widget that
+    // lets the operator add, edit, and remove index definitions. Each row maps
+    // to an {@code olcDbIndex} entry in the config.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the database indexes section.
-     * It covers the following attribute :
-     * <ul>
-     * <li>olcDbIndex</li>
-     * </ul>
+     * Creates the "Database Indices" section — a {@link TableWidget} of
+     * {@link DbIndexWrapper} items representing the {@code olcDbIndex} multi-value attribute.
+     * Covers: {@code olcDbIndex}.
      *
-     * @param parent the parent composite
-     * @param toolkit the toolkit
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createDatabaseIndexesSection( Composite parent, FormToolkit toolkit )
     {
@@ -254,24 +256,30 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
         indicesWidget = new TableWidget<>( new DbIndexDecorator( null, browserConnection ) );
         indicesWidget.createWidgetWithEdit( databaseIndexesComposite, toolkit );
         indicesWidget.getControl().setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false, 2, 1 ) );
-        
+
         indicesWidget.addWidgetModifyListener( indexesListener );
     }
 
 
+    // ── Build the Limits Console ──────────────────────────────────────────────
+    // Operational ceilings for the MDB store: max concurrent reader threads,
+    // max file size (the memory-map reservation), optional max entry size
+    // (only available if the schema declares olcDbMaxEntrySize — added in 2.4.41),
+    // search recursion depth, and checkpoint interval.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the database limits section.
-     * It covers the following attributes :
+     * Creates the "Database Limits" section covering:
      * <ul>
-     * <li>olcDbCheckpoint</li>
-     * <li>olcDbMaxEntrySize (for OpenLDAP 2.4.41)</li>
-     * <li>olcDbMaxReaders</li>
-     * <li>olcDbMaxSize</li>
-     * <li>olcDbSearchStack</li>
+     * <li>{@code olcDbCheckpoint} — checkpoint interval</li>
+     * <li>{@code olcDbMaxEntrySize} — max per-entry size (OpenLDAP 2.4.41+ only,
+     *     created only if the schema has the attribute type)</li>
+     * <li>{@code olcDbMaxReaders} — maximum number of concurrent reader threads</li>
+     * <li>{@code olcDbMaxSize} — maximum total memory-map size</li>
+     * <li>{@code olcDbSearchStack} — maximum search recursion depth</li>
      * </ul>
      *
-     * @param parent the parent composite
-     * @param toolkit the toolkit
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createDatabaseLimitsSection( Composite parent, FormToolkit toolkit )
     {
@@ -314,16 +322,20 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
     }
 
 
+    // ── Build the Options Console ─────────────────────────────────────────────
+    // The behavioral override panel: whether MDB should skip the OS sync after
+    // each commit (olcDbNoSync — faster but riskier on crash), plus environment
+    // flags added in OpenLDAP 2.4.33 (not yet wired up in the UI).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the database options section. 
-     * It covers the following attributes :
+     * Creates the "Database Options" section covering:
      * <ul>
-     * <li>olcDbNoSync</li>
-     * <li>olcDbEnvFlags (for OpenLDAP 2.4.33)</li>
+     * <li>{@code olcDbNoSync} — disable synchronous database writes (faster but less durable)</li>
+     * <li>{@code olcDbEnvFlags} — environment flags (OpenLDAP 2.4.33+, UI not yet wired)</li>
      * </ul>
      *
-     * @param parent the parent composite
-     * @param toolkit the toolkit
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createDatabaseOptionsSection( Composite parent, FormToolkit toolkit )
     {
@@ -347,8 +359,18 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
     }
 
 
+    // ── Re-read All Archive Settings from the Model ───────────────────────────
+    // The archivist walks through every control panel and updates it to match
+    // the current OlcMdbConfig model state. For the optional olcDbMaxEntrySize
+    // field, we only touch it if the schema knows about that attribute.
+    // Listeners are paused during this sweep to avoid spurious dirty signals.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reloads all UI controls from the current {@link OlcMdbConfig} model.
+     * Every widget in all four sections is updated to match the model.
+     * Null model values become safe display defaults (empty strings / false).
+     * The {@code maxEntrySizeText} widget is only updated when the connected
+     * schema advertises the {@code olcDbMaxEntrySize} attribute type.
      */
     public void refresh()
     {
@@ -366,12 +388,12 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
 
             // Indices Text
             List<DbIndexWrapper> dbIndexWrappers = new ArrayList<>();
-            
+
             for ( String index : database.getOlcDbIndex() )
             {
                 dbIndexWrappers.add( new DbIndexWrapper( index ) );
             }
-            
+
             indicesWidget.setElements( dbIndexWrappers );
 
             // Max Readers Text
@@ -398,7 +420,7 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
             {
                 // Max Entry Size Text
                 Integer maxEntrySize = database.getOlcDbMaxEntrySize();
-                
+
                 if ( maxEntrySize != null )
                 {
                     maxEntrySizeText.setText( maxEntrySize.toString() );
@@ -410,8 +432,15 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
     }
 
 
+    // ── Start Watching All Controls ───────────────────────────────────────────
+    // Every widget in all four sections gets a dirty listener attached.
+    // If the schema exposes olcDbMaxEntrySize, that field gets a listener too.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the listeners.
+     * Attaches dirty listeners to every widget in all four sections.
+     * The {@code maxEntrySizeText} listener is only attached when the schema
+     * advertises {@code olcDbMaxEntrySize}. Any user interaction with any
+     * control propagates a "editor is dirty" signal to the parent.
      */
     private void addListeners()
     {
@@ -435,8 +464,17 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
     }
 
 
+    // ── Stop Watching All Controls ────────────────────────────────────────────
+    // All dirty listeners are detached before we update controls from the model,
+    // preventing false dirty events. Schema-conditional listeners are also removed
+    // only when the schema has the corresponding attribute type.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the listeners
+     * Detaches all dirty listeners from every widget in all four sections.
+     * Called before populating controls from the model so that programmatic
+     * updates do not trigger spurious "editor is dirty" events.
+     * The {@code maxEntrySizeText} listener is only removed when the schema
+     * advertises {@code olcDbMaxEntrySize}.
      */
     private void removeListeners()
     {
@@ -460,8 +498,20 @@ public class MdbDatabaseSpecificDetailsBlock extends AbstractDatabaseSpecificDet
     }
 
 
+    // ── Commit All Archive Settings to the Model ──────────────────────────────
+    // The archivist reads every control and stamps its value into the official
+    // OlcMdbConfig record. Empty/unparseable numbers become null in the model.
+    // The directory widget also saves its browse-dialog history on commit.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Pushes the current state of every UI control back into the {@link OlcMdbConfig} model.
+     * Empty numeric fields are stored as null. The directory widget saves its dialog
+     * settings (browse history) on commit. The index list is rebuilt from the
+     * table widget's current rows. The optional {@code olcDbMaxEntrySize} field is
+     * only committed when the schema advertises that attribute.
+     *
+     * @param onSave  {@code true} when triggered by a full editor save;
+     *                {@code false} for page-change commits
      */
     public void commit( boolean onSave )
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.ldapservers.properties;
 
@@ -34,15 +34,34 @@ import org.eclipse.ui.IWorkbenchPropertyPage;
 import org.eclipse.ui.dialogs.PropertyPage;
 
 
+// ── CLASS: ServerPropertyPage — THE IMPERIAL DOSSIER ON THIS INSTALLATION ────────────────
+// When an officer right-clicks a ship in the hangar manifest and selects "Properties", they
+// get a dossier: ship name, type, vendor (manufacturer), and the docking bay number.
+// This is that read-only dossier panel for an LDAP server: Name, Type, Vendor, Location — no
+// changes allowed here, just inspecting the facts.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Info property page for an LDAP server.
+ * The "Info" tab in a server's Properties dialog.
+ * Shows the server's name, adapter type+version, vendor, and on-disk folder path.
+ * All fields are read-only — this is the dossier, not the configuration page.
+ * Think of it as the Imperial dossier page: you look, you don't edit.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ServerPropertyPage extends PropertyPage implements IWorkbenchPropertyPage
 {
+    // ── Opening The Dossier — No Default/Apply Buttons Needed ────────────────────────────────
+    // A read-only dossier doesn't need a "Save" button — there's nothing to save.
+    // We disable the default "Apply" and "Restore Defaults" buttons upfront.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ServerPropertyPage.
+     * Creates the page and immediately suppresses the "Apply" and "Restore Defaults" buttons —
+     * this is a read-only information page, so there's nothing to apply or reset.
+     *
+     * <p>For example — the dossier is stamped READ-ONLY before it leaves the archive:</p>
+     * <pre>
+     *   new ServerPropertyPage() → calls noDefaultAndApplyButton() → no Save button appears.
+     * </pre>
      */
     public ServerPropertyPage()
     {
@@ -51,8 +70,19 @@ public class ServerPropertyPage extends PropertyPage implements IWorkbenchProper
     }
 
 
+    // ── Laying Out The Dossier Fields ────────────────────────────────────────────────────────
+    // The clerk lays out the dossier in a two-column grid: left column for the label ("Name:"),
+    // right column for the value ("My ApacheDS Server").
+    // Each field is a read-only text widget — the user can read and copy, but not edit.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the page's widget tree inside {@code parent}.
+     * Lays out a 2-column grid: label on the left, read-only text on the right, for each of
+     * Name, Type, Vendor, and Location.
+     * Pulls the values from the {@link LdapServer} returned by {@link #getElement()}.
+     *
+     * @param parent  the parent composite provided by the Properties dialog framework
+     * @return the top-level control created here (the composite)
      */
     protected Control createContents( Composite parent )
     {

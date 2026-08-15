@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.actions;
@@ -43,8 +43,21 @@ import org.apache.directory.studio.ldapbrowser.ui.BrowserUIPlugin;
 import org.eclipse.jface.resource.ImageDescriptor;
 
 
+// ── CLASS: CopyEntryAsCsvAction — YODA LIFTS THE X-WING INTO SPREADSHEET FORM
+// Yoda raises Luke's X-wing from the Dagobah swamp and reshapes it into a
+// neat, tabular form that any Rebel navigator can read — rows and columns,
+// clean and flat. That's exactly what we do here: take LDAP entries (which are
+// hierarchical and attribute-rich) and flatten them into CSV rows so they can
+// be opened in a spreadsheet or imported into another tool.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This Action copies entry(ies) as CSV.
+ * Copies one or more LDAP entries to the clipboard as comma-separated values
+ * (CSV), with configurable delimiters and encoding pulled from preferences.
+ * Extends {@link CopyEntryAsAction} and implements the {@code serialializeEntries}
+ * method to produce CSV output; also adds {@code MODE_TABLE} for copying the
+ * entire search-result table as currently displayed.
+ * Think of this as Yoda lifting the X-wing into a flat, tabular configuration
+ * — the same data, just reshaped for a different consumer.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -56,11 +69,20 @@ public class CopyEntryAsCsvAction extends CopyEntryAsAction
     public static final int MODE_TABLE = 5;
 
 
+    // ── Yoda Selects the CSV Configuration ───────────────────────────────────
+    // Yoda decides on the exact shape the X-wing will take before he lifts it —
+    // DN-only? User attributes? The full table? He sets the parameters and lets
+    // the parent class handle the rest.
+    // We pass the "CSV" type label and the mode to the parent constructor,
+    // which sets up the menu label appendix accordingly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of CopyEntryAsCsvAction.
+     * Creates a new {@code CopyEntryAsCsvAction} configured for the given mode.
+     * Passes the "CSV" format label to the parent so menu items read like
+     * "Copy Entry as CSV (User Attributes)".
      *
-     * @param mode
-     *      the copy Mode
+     * @param mode  one of the {@code MODE_*} constants from {@link CopyEntryAsAction}
+     *              or {@link #MODE_TABLE}; controls which attributes are included
      */
     public CopyEntryAsCsvAction( int mode )
     {
@@ -68,8 +90,16 @@ public class CopyEntryAsCsvAction extends CopyEntryAsAction
     }
 
 
+    // ── Yoda Selects the Right Symbol for the Transformation ─────────────────
+    // Yoda knows which kind of lift this is — there's a different sigil for a
+    // full table copy versus a DN-only copy versus an operational-attributes copy.
+    // We return the correct icon based on the configured mode.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the image descriptor for the icon representing this CSV copy mode.
+     * Each mode has a distinct icon so the user can tell them apart in menus.
+     *
+     * @return  the appropriate {@link ImageDescriptor} for this mode; never {@code null}
      */
     public ImageDescriptor getImageDescriptor()
     {
@@ -100,8 +130,18 @@ public class CopyEntryAsCsvAction extends CopyEntryAsAction
     }
 
 
+    // ── Yoda Names the Lift for the Table Case ────────────────────────────────
+    // For the special table-copy mode, Yoda uses a unique incantation —
+    // "Copy Table" — rather than the usual "Copy Entry as CSV" label.
+    // All other modes fall back to the parent's context-sensitive label.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns "Copy Table" when in {@code MODE_TABLE}, delegating to the parent
+     * for all other modes.
+     * The table mode copies the entire search-result editor content as a CSV
+     * snapshot, which is conceptually different from copying individual entries.
+     *
+     * @return  the localised display name for this action
      */
     public String getText()
     {
@@ -114,8 +154,16 @@ public class CopyEntryAsCsvAction extends CopyEntryAsAction
     }
 
 
+    // ── Yoda Checks Whether the Table Is Ready to Lift ───────────────────────
+    // In table mode, Yoda can only act if the search has results to show —
+    // no results, no lift. For all other modes, the parent's logic applies.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code true} when the action can execute.
+     * For {@code MODE_TABLE}, requires that the current input is a search with
+     * at least one result; all other modes delegate to the parent.
+     *
+     * @return  {@code true} if this action is applicable in the current context
      */
     public boolean isEnabled()
     {
@@ -130,8 +178,17 @@ public class CopyEntryAsCsvAction extends CopyEntryAsAction
     }
 
 
+    // ── Yoda Lifts the Table Into CSV Form ────────────────────────────────────
+    // In table mode, Yoda reaches directly into the search input and lifts every
+    // visible result row; for all other modes, he delegates the heavy lifting to
+    // the parent's {@code run()} — which handles bookmarks, uninitialized entries,
+    // and the general serialisation pipeline.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Executes the copy operation.
+     * For {@code MODE_TABLE}, bypasses the parent and directly serializes all
+     * entries from the search input so the output mirrors the table view exactly.
+     * All other modes delegate to {@link CopyEntryAsAction#run()}.
      */
     public void run()
     {
@@ -163,8 +220,23 @@ public class CopyEntryAsCsvAction extends CopyEntryAsAction
     }
 
 
+    // ── Yoda Shapes the Entries Into CSV Rows ────────────────────────────────
+    // The X-wing is airborne; now Yoda reshapes its form into something flat and
+    // tabular — a header row of column names, then one row per entry, each cell
+    // quoted and delimited according to the user's preferences.
+    // This is the core CSV serialization: pull preferences, build the header,
+    // then iterate entries and attributes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Serializes the given entries into CSV format, appending the result to
+     * {@code text}.
+     * Format parameters (delimiter, quote character, line separator, binary
+     * encoding) are read from preferences. The column set is determined by
+     * the mode — DN-only, returning-attributes, table, or all user/operational
+     * attributes discovered across all entries.
+     *
+     * @param entries  the entries to serialize; may be empty but not null
+     * @param text     the buffer to append CSV output to; must not be null
      */
     public void serialializeEntries( IEntry[] entries, StringBuffer text )
     {

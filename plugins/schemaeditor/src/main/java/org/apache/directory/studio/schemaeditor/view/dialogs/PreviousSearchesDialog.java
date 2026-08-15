@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.dialogs;
 
@@ -49,8 +49,22 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: PreviousSearchesDialog — LUKE'S BINARY SUNSET ─────────────────────
+// Luke stands at the edge of the Lars homestead moisture-farm, gazing at Tatooine's
+// twin suns sinking toward the horizon. He's reviewing everything that's already
+// happened — two suns, two chapters of his life already written — and deciding which
+// thread to pick back up. He can stare at the sky (browse the history) or head back
+// inside to re-run an old mission (reopen a previous search). He can also erase a
+// chapter he no longer wants to think about (remove a search from the history).
+// This dialog shows Luke — the user — a scrollable list of past search strings and
+// lets them either re-execute one or remove it from the record entirely.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This dialog is used to display the previous searches.
+ * A dialog that displays the user's saved search history from the Schema Editor's search view.
+ * The user can browse past search strings, open one to re-run it in the search view,
+ * or permanently remove an entry they no longer want in their history.
+ * Think of this dialog as Luke's binary sunset: a moment to look back at the searches
+ * already run and decide which path to retrace.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -65,8 +79,18 @@ public class PreviousSearchesDialog extends Dialog
     private Button removeButton;
 
 
+    // ── Luke Carries a Reminder of the Search View ───────────────────────────
+    // Luke doesn't gaze at the sunset in isolation — he keeps in mind which door
+    // leads back into the homestead (the SearchView). When he picks a memory to
+    // relive, he knows exactly where to walk back to.
+    // We store a reference to the SearchView so that when the user picks a previous
+    // search and clicks Open, we can push that search string back into the live view.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PreviousSearchesDialog.
+     * Constructs the dialog, holding a reference to the {@link SearchView} that will
+     * receive the replayed search when the user clicks Open.
+     *
+     * @param view  the Schema Editor search view to replay the selected search into
      */
     public PreviousSearchesDialog( SearchView view )
     {
@@ -75,8 +99,15 @@ public class PreviousSearchesDialog extends Dialog
     }
 
 
+    // ── The Horizon Is Labeled "Previous Searches" ────────────────────────────
+    // As the suns sink, a title card fades in across the horizon so there's no
+    // ambiguity about what this scene is showing us. We set the shell title.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Sets the window title bar text to the localised "Previous Searches" label.
+     * JFace calls this before the dialog becomes visible.
+     *
+     * @param newShell  the freshly created Shell JFace hands us to configure
      */
     protected void configureShell( Shell newShell )
     {
@@ -85,8 +116,22 @@ public class PreviousSearchesDialog extends Dialog
     }
 
 
+    // ── Luke Spreads His Memories Across the Horizon ──────────────────────────
+    // As Luke gazes out at the twin suns, the sky fills with images of past searches —
+    // each one a small icon on the horizon, the query string beside it. He sees a
+    // Remove button to erase ones he'd rather forget, and an Open button appears
+    // in the button bar for the one he wants to revisit.
+    // We build the table viewer (backed by the search history), the Remove button,
+    // and the inline label, then load the history list immediately.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the dialog's content area: an instruction label, a scrollable table of past
+     * search strings (each decorated with the search-history icon), and a Remove button.
+     * The Open button lives in the button bar — see {@link #createButtonsForButtonBar}.
+     * Double-clicking a row triggers the same action as clicking Open.
+     *
+     * @param parent  the parent composite supplied by the JFace Dialog framework
+     * @return        the assembled composite, handed back to JFace for embedding
      */
     protected Control createDialogArea( Composite parent )
     {
@@ -148,8 +193,15 @@ public class PreviousSearchesDialog extends Dialog
     }
 
 
+    // ── Luke Loads His Memories from the Archive ──────────────────────────────
+    // Luke reaches back into his memory and pulls up every previous search he's
+    // run — the archive loads them all in order. If one has just been erased
+    // (via Remove), this refreshes the list to reflect the deletion.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the TableViewer.
+     * Loads (or reloads) the table viewer from the persisted search-string history.
+     * We call this on initial open and again after the user removes an entry,
+     * so the displayed list stays in sync with the stored history.
      */
     private void initTableViewer()
     {
@@ -157,8 +209,19 @@ public class PreviousSearchesDialog extends Dialog
     }
 
 
+    // ── Luke Has Only Two Paths: Revisit or Walk Away ────────────────────────
+    // As the suns touch the horizon, Luke knows he either walks back inside to
+    // re-run the chosen search (Open) or turns away from the memory entirely (Cancel).
+    // The Open button starts disabled and only lights up when Luke focuses on
+    // a specific memory in the list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Creates the dialog's button bar with a Cancel button and an Open button.
+     * The Open button is initially disabled because nothing is selected yet;
+     * the selection-changed listener in {@link #createDialogArea} enables it
+     * as soon as the user highlights a row.
+     *
+     * @param parent  the button bar composite JFace hands us
      */
     protected void createButtonsForButtonBar( Composite parent )
     {
@@ -169,8 +232,22 @@ public class PreviousSearchesDialog extends Dialog
     }
 
 
+    // ── Luke Steps Back Through the Door and Relives the Search ──────────────
+    // Luke makes his decision: he steps away from the sunset, walks back inside,
+    // and picks up the thread where he left it. He hands the search string to the
+    // SearchView, which replays it with the same scope and "search in" settings
+    // that were active when the search was first saved.
+    // If Cancel was pressed instead, we just hand control up to the parent without
+    // touching the view.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Handles button presses for this dialog.
+     * When the user clicks Open (OK_ID) with a row selected, we extract the selected
+     * search string and replay it into the {@link SearchView} using the last-saved
+     * search-in settings and scope from the {@link SearchPage}.
+     * Any other button ID (Cancel) is passed straight up to the parent handler.
+     *
+     * @param buttonId  the ID of the button that was pressed, as defined in {@link IDialogConstants}
      */
     protected void buttonPressed( int buttonId )
     {

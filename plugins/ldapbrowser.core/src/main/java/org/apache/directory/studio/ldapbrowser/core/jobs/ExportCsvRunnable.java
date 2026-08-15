@@ -53,8 +53,19 @@ import org.apache.directory.studio.ldifparser.model.lines.LdifAttrValLine;
 import org.eclipse.core.runtime.Preferences;
 
 
+// ── CLASS: ExportCsvRunnable — CLONE TROOPER FILING THE EMPIRE'S CSV DOSSIERS ─
+// Order 66 has been received: marshal all matching LDAP entries from the galaxy
+// and write them to a CSV file, one row per trooper (entry), one column per
+// attribute.  Multi-valued attributes are joined with the configured delimiter;
+// binary values are base-64 or hex-encoded so the dossiers remain readable.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to export directory content to an CSV file.
+ * Runnable to export directory content to a CSV file.
+ *
+ * <p>Think of this as a clone trooper executing Order 66 to collect every
+ * matching entry from the LDAP directory and file it in a comma-separated
+ * dossier — row by row, attribute by attribute, until the mission is complete
+ * or the progress monitor signals a cancellation.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -73,9 +84,14 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
     private boolean exportDn;
 
 
+    // ── Clone Trooper Receives Mission Orders For The CSV Export ─────────────────
+    // The trooper is briefed with the target filename, the LDAP connection,
+    // the search parameters defining which entries to collect, and whether the
+    // distinguished name column should appear in the final report.
+    // All mission parameters are stored for execution in run().
     /**
      * Creates a new instance of ExportCsvRunnable.
-     * 
+     *
      * @param exportCsvFilename the filename of the csv file
      * @param browserConnection the browser connection
      * @param searchParameter the search parameter
@@ -91,6 +107,9 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Reports Which LDAP Connection This Mission Uses ─────────────
+    // The Empire needs to know which Star Destroyer (connection) this trooper
+    // will board before the mission begins, so the connection is returned here.
     /**
      * {@inheritDoc}
      */
@@ -101,6 +120,8 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Reports The Human-Readable Mission Name ─────────────────────
+    // Returns the localised job name shown in the Eclipse progress dialog.
     /**
      * {@inheritDoc}
      */
@@ -110,6 +131,9 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Locks The Target File To Prevent Concurrent Missions ────────
+    // A SHA digest of the filename combined with the connection URL creates a
+    // unique lock token — two troopers cannot write the same CSV simultaneously.
     /**
      * {@inheritDoc}
      */
@@ -120,6 +144,9 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Returns The Error Message If The Mission Fails ──────────────
+    // Han shoots first: when something goes wrong the trooper reports a
+    // localised error message so the UI can display it to the operator.
     /**
      * {@inheritDoc}
      */
@@ -129,6 +156,10 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Executes Order 66: Write All Matching Entries To CSV ────────
+    // Opens the target file, writes a header row of attribute names, then streams
+    // every matching LDAP entry through exportToCsv() row by row.
+    // On completion or error the file streams are closed and errors reported.
     /**
      * {@inheritDoc}
      */
@@ -188,9 +219,14 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Streams All Search Results Into The CSV Writer ─────────────
+    // Uses ExportLdifRunnable.search() to obtain an LDAP result enumeration,
+    // then transforms each LdifContentRecord into a CSV row via recordToCsv().
+    // Tolerated LDAP size-limit codes (3, 4, 11) are swallowed; others propagate.
+    // Progress is reported after each row so the UI stays responsive.
     /**
      * Exports to CSV.
-     * 
+     *
      * @param browserConnection the browser connection
      * @param searchParameter the search parameter
      * @param bufferedWriter the buffered writer
@@ -204,8 +240,7 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
      * @param encoding the encoding
      * @param binaryEncoding the binary encoding
      * @param exportDn the export dn
-     * 
-     * @throws IOException Signals that an I/O exception has occurred.
+     * @throws IOException if the writer raises an I/O error
      */
     private static void exportToCsv( IBrowserConnection browserConnection, SearchParameter searchParameter,
         BufferedWriter bufferedWriter, int count, StudioProgressMonitor monitor, String[] attributes,
@@ -248,9 +283,14 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Formats One LDIF Record As A Single CSV Row ────────────────
+    // Builds an attribute map (OID → joined values) from the record, then outputs
+    // each requested attribute column in order, quoting every value.
+    // Postal address values are decoded from their $-delimited format.
+    // The row is terminated with the configured line separator, not the system one.
     /**
-     * Transforms an LDIF rRecord to CSV.
-     * 
+     * Transforms an LDIF record to CSV.
+     *
      * @param browserConnection the browser connection
      * @param record the record
      * @param attributes the attributes
@@ -261,8 +301,7 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
      * @param encoding the encoding
      * @param binaryEncoding the binary encoding
      * @param exportDn the export dn
-     * 
-     * @return the string
+     * @return the formatted CSV row string
      */
     private static String recordToCsv( IBrowserConnection browserConnection, LdifContentRecord record,
         String[] attributes, String attributeDelimiter, String valueDelimiter, String quoteCharacter,
@@ -314,6 +353,11 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Safely Quotes A Cell Value For The CSV File ────────────────
+    // Any embedded quote characters are doubled so CSV parsers interpret them
+    // as literal quotes.  Values starting with "=" are prefixed with a single
+    // quote to prevent spreadsheet applications from evaluating them as formulas.
+    // The value is always wrapped in the configured quote character.
     private static void appendValue( String quoteCharacter, StringBuffer sb, String value )
     {
         // escape quote character
@@ -332,15 +376,19 @@ public class ExportCsvRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Collapses All Attribute Values Into One Map ────────────────
+    // Lando runs Cloud City: each attribute OID maps to all its values joined by
+    // the value delimiter.  Attribute names are normalised to OID strings so that
+    // aliases resolve to the same map key.  Binary values that can't be encoded
+    // in the target charset fall back to base-64, hex, or "(BINARY)" placeholder.
     /**
-     * Gets the attribute map.
-     * 
+     * Gets the attribute map (OID &rarr; joined values) from an LDIF content record.
+     *
      * @param browserConnection the browser connection
      * @param record the record
      * @param valueDelimiter the value delimiter
      * @param encoding the encoding
      * @param binaryEncoding the binary encoding
-     * 
      * @return the attribute map
      */
     static Map<String, String> getAttributeMap( IBrowserConnection browserConnection, LdifContentRecord record,

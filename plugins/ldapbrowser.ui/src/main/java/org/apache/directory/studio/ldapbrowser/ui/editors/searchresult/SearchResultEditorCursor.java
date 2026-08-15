@@ -51,8 +51,28 @@ import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.widgets.Display;
 
 
+// ── CLASS: SearchResultEditorCursor — R2-D2 Navigating the Death Star Computer ──
+// R2-D2 plugs into the Death Star's computer terminal and moves through sector
+// after sector of data — he knows exactly which corridor (row) and which data
+// point (column) he's at, and he can read the current value at that location.
+// He also clones what he finds into a working copy before modifying anything,
+// so the original is always safe.
+// This cursor works the same way: it tracks the current row+column in the result
+// table, maintains a working copy of the selected entry for safe editing, and
+// broadcasts selection events so actions know what's currently under the cursor.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The cursor implementation for the search result editor.
+ * A custom table cursor for the search result editor that combines cell-level
+ * navigation with selection-provider semantics and entry-change awareness.
+ * We extend SWT's {@link TableCursor} to add:
+ * <ul>
+ *   <li>JFace {@link ISelectionProvider} so actions get typed selection events</li>
+ *   <li>Working-copy management — we clone the selected entry so edits don't
+ *       corrupt the live LDAP model until explicitly committed</li>
+ *   <li>Entry-update listener so the table refreshes when the LDAP model changes</li>
+ * </ul>
+ * Think of this as R2-D2 navigating the Death Star data terminal — precise
+ * position tracking plus safe copy-before-modify.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -72,10 +92,18 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     private ISearchResult workingCopy;
 
 
+    // ── R2 Plugs Into the Terminal ────────────────────────────────────────────
+    // R2-D2 finds the access point, plugs in, and immediately sets up his sensors —
+    // he picks the right display colors, registers for entry-update broadcasts,
+    // and initializes his internal navigation and selection machinery.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SearchResultEditorCursor.
-     * 
-     * @param viewer the viewer
+     * Constructs the cursor on the given table viewer and wires up all listeners.
+     * We paint the cursor in the system's list-selection colors, register with the
+     * global event registry for entry updates, then initialize the selection-bounds
+     * checker and the selection-provider machinery.
+     *
+     * @param viewer the JFace TableViewer this cursor navigates
      */
     public SearchResultEditorCursor( TableViewer viewer )
     {
@@ -93,8 +121,14 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Ensures He Doesn't Navigate Off the Edge ───────────────────────────
+    // When the table has fewer columns than R2 expects, he snaps himself back to
+    // the last valid column so he doesn't fall off the grid.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the selection checker.
+     * Initializes a selection listener that keeps the cursor within valid column bounds.
+     * If the cursor is in a column index beyond the current column count (e.g. after
+     * the column set shrinks), we snap it back to the last valid column.
      */
     private void initSelectionChecker()
     {
@@ -124,8 +158,16 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Sets Up His Broadcast System ───────────────────────────────────────
+    // Every time R2 moves to a new sector, he broadcasts his new position so
+    // every action can update its enabled state.  We fire SelectionChangedEvents
+    // to every registered listener on each cursor move.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the selection provider.
+     * Initializes a selection listener that fires {@link SelectionChangedEvent} to all
+     * registered JFace selection listeners when the cursor moves.
+     * This is what makes Eclipse actions re-evaluate their enabled state as the user
+     * navigates the table with arrow keys.
      */
     private void initSelectionProvider()
     {
@@ -143,8 +185,14 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Takes Control of the Terminal ──────────────────────────────────────
+    // R2 asserts focus so keyboard events go to him — standard override to ensure
+    // super's setFocus behavior is exposed publicly.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Requests focus for this cursor widget.
+     *
+     * @return {@code true} if focus was successfully set
      */
     public boolean setFocus()
     {
@@ -152,8 +200,13 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Unplugs From the Terminal ──────────────────────────────────────────
+    // Mission complete — R2 disconnects, deregisters from the event bus, and
+    // nulls his viewer reference so he doesn't hold up garbage collection.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Deregisters from the event registry and disposes this cursor.
+     * Always call this before discarding the cursor to avoid listener leaks.
      */
     public void dispose()
     {
@@ -163,8 +216,16 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Receives an Entry Update Broadcast ────────────────────────────────
+    // The Death Star's computer notifies R2 that some sector data changed —
+    // he refreshes the display so the user sees the latest state.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called when any LDAP entry is modified.
+     * We refresh the table viewer and redraw the cursor so the display stays
+     * current with the model.
+     *
+     * @param event the modification event (not inspected — any change triggers a refresh)
      */
     public void entryUpdated( EntryModificationEvent event )
     {
@@ -173,10 +234,15 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Reports His Current Column Coordinate ─────────────────────────────
+    // "I'm in column cn, sector 3" — R2 reads his position and translates the
+    // column index back to the attribute description string.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the selected property.
-     * 
-     * @return the selected property
+     * Returns the attribute name (column property) of the column the cursor is in.
+     * Returns {@code null} if the cursor is disposed or has no valid position.
+     *
+     * @return the property string for the current column (e.g. "cn", "mail"), or {@code null}
      */
     public String getSelectedProperty()
     {
@@ -190,10 +256,19 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Reads the Attribute Cluster at His Position ────────────────────────
+    // R2 digs into the current sector's data node and extracts the attribute
+    // hierarchy — which may include subtype attributes that group together.
+    // If the attribute doesn't exist yet, he synthesizes a placeholder so the
+    // editor can still create a new value.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the selected attribute hierarchy.
-     * 
-     * @return the selected attribute hierarchy
+     * Returns the {@link AttributeHierarchy} for the attribute column the cursor is on.
+     * If the entry doesn't have that attribute, we return a synthetic single-attribute
+     * hierarchy so value editors can add a new value.
+     * Returns {@code null} for the DN column or if there's no valid cursor position.
+     *
+     * @return the attribute hierarchy at the cursor position, or {@code null}
      */
     public AttributeHierarchy getSelectedAttributeHierarchy()
     {
@@ -219,10 +294,26 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Retrieves the Working Copy of the Current Sector ──────────────────
+    // R2 doesn't hand over the live entry to be edited — he always makes a clone
+    // first.  If the cursor is still on the same row as before, he reuses the
+    // existing clone; if it moved, he makes a fresh clone of the new row's entry.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the selected search result.
-     * 
-     * @return the selected search result
+     * Returns the working copy of the {@link ISearchResult} under the cursor.
+     * We maintain a reference copy (for computing diffs) and a working copy (for
+     * in-place edits).  If the cursor has moved to a different row, we re-clone
+     * the new row's entry.  We never return the live entry — always the clone.
+     *
+     * <p>For example — R2 clones the sector before touching it:</p>
+     * <pre>
+     *   originalEntry = getRow().getData().getEntry()
+     *   referenceCopy = clone(originalEntry)   // for diff computation
+     *   workingCopy   = clone(originalEntry)   // for in-place editing
+     *   return workingCopy
+     * </pre>
+     *
+     * @return the cloned working-copy {@link ISearchResult}, or {@code null} if no row is selected
      */
     public ISearchResult getSelectedSearchResult()
     {
@@ -248,10 +339,16 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Retrieves the Unmodified Reference Copy ────────────────────────────
+    // After editing, someone needs to compare "what it was before" vs "what it is now"
+    // to compute the LDAP modify diff.  R2 kept a pristine reference copy for this.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the selected reference copy.
-     * 
-     * @return the selected reference copy, may be null
+     * Returns the unmodified reference copy of the selected search result.
+     * The search result editor uses this to compute the LDAP diff between the
+     * reference state and the modified working copy.
+     *
+     * @return the reference-copy {@link ISearchResult}, or {@code null} if no row has been visited
      */
     public ISearchResult getSelectedReferenceCopy()
     {
@@ -259,8 +356,15 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Discards His Working Copies ────────────────────────────────────────
+    // After an edit is committed (or cancelled), R2 throws away his working copies
+    // so the next selection starts fresh.  He also notifies all listeners of the
+    // reset so actions re-evaluate their enabled state.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Resets reference and working copy copy.
+     * Clears the working copy and reference copy, then fires a selection-changed event.
+     * Call this after a LDAP modify completes to force the cursor to re-clone the
+     * entry on the next {@link #getSelectedSearchResult()} call.
      */
     public void resetCopies()
     {
@@ -276,8 +380,14 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Registers a New Listener on His Broadcast Channel ─────────────────
+    // A new action wants to hear R2's position broadcasts — he adds it to the list.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Registers a JFace selection-changed listener that will receive events when
+     * the cursor moves.  Duplicate registrations are silently ignored.
+     *
+     * @param listener the listener to add; must not be null
      */
     public void addSelectionChangedListener( ISelectionChangedListener listener )
     {
@@ -288,8 +398,19 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Reports His Current Selection to the Workbench ────────────────────
+    // The workbench asks "what have you got selected?" — R2 packages up the current
+    // search result, attribute hierarchy, and property name into a StructuredSelection
+    // so every action can read exactly what's under the cursor.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns a {@link StructuredSelection} containing the currently selected
+     * search result, attribute hierarchy, and column property — in that order,
+     * omitting any that are {@code null}.
+     * Actions call {@link org.apache.directory.studio.ldapbrowser.common.actions.BrowserAction#getSelectedSearchResults()}
+     * and similar helpers which unwrap this selection.
+     *
+     * @return a non-null {@link ISelection}; may be empty if nothing is selected
      */
     public ISelection getSelection()
     {
@@ -315,8 +436,15 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Removes a Listener From His Broadcast Channel ─────────────────────
+    // An action is being disposed — it deregisters so R2 doesn't waste cycles
+    // notifying dead listeners.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Deregisters a previously added selection-changed listener.
+     * If the listener was never registered, this call is a no-op.
+     *
+     * @param listener the listener to remove; must not be null
      */
     public void removeSelectionChangedListener( ISelectionChangedListener listener )
     {
@@ -327,8 +455,15 @@ public class SearchResultEditorCursor extends TableCursor implements ISelectionP
     }
 
 
+    // ── R2 Ignores Programmatic Selection Overrides ───────────────────────────
+    // The ISelectionProvider interface requires this method, but our selection is
+    // always driven by the SWT cursor position — we don't support programmatic setting.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * No-op — cursor selection is driven by SWT events, not by programmatic calls.
+     * We implement this to satisfy {@link ISelectionProvider} but ignore the argument.
+     *
+     * @param selection ignored
      */
     public void setSelection( ISelection selection )
     {

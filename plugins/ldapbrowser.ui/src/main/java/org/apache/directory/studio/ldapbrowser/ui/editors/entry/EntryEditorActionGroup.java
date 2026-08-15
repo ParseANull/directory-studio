@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.entry;
@@ -56,9 +56,21 @@ import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.actions.ActionFactory;
 
 
+// ── CLASS: EntryEditorActionGroup — CLONE TROOPERS RECEIVING ORDER 66 ─────────
+// Palpatine's signal goes out and every clone trooper snaps into a specific role:
+// some guard the exits, some man the blasters, some relay orders through comms.
+// EntryEditorActionGroup is that coordinated platoon — it instantiates every action
+// for the entry editor (new attribute, delete, copy, refresh, schema browser, etc.)
+// and deploys each one to the right location: toolbar, main menu, or context menu.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The EntryEditorWidgetActionGroup manages all actions of the entry editor.
- * 
+ * Assembles and manages every user-facing action available in the entry editor.
+ * It creates all the actions (new attribute, delete, copy variants, refresh, schema
+ * browser links, etc.), stores them in a map, and distributes them across the toolbar,
+ * drop-down menu, and context menu.
+ * Think of this class as the clone trooper platoon: each action is a trooper with
+ * a specific assignment, and this class gives every one of them their marching orders.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class EntryEditorActionGroup extends EntryEditorWidgetActionGroup
@@ -161,10 +173,29 @@ public class EntryEditorActionGroup extends EntryEditorWidgetActionGroup
     private static final String fetchOperationalAttributesAction = "fetchOperationalAttributesAction"; //$NON-NLS-1$
 
 
+    // ── PLATOON FORMS UP AND RECEIVES ASSIGNMENTS ─────────────────────────────
+    // Palpatine broadcasts Order 66 and each clone snaps to attention, ready for
+    // their specific mission — some take the exits, some guard the archives.
+    // We create every action the entry editor needs here, wrap each in a proxy
+    // that keeps its enabled state in sync with the viewer's selection, and
+    // stash them in the map so the toolbar/menu builders can find them by key.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EntryEditorActionGroup.
-     * 
-     * @param entryEditor the entry editor
+     * Creates the full set of actions for the given entry editor instance.
+     * We wrap each action in an {@link EntryEditorActionProxy} so they stay
+     * enabled/disabled based on what's selected in the attribute-table viewer.
+     * The entry value editor action gets special treatment because it needs to
+     * reference the action group itself for deactivation during wizard dialogs.
+     *
+     * <p>For example — the platoon forms up:</p>
+     * <pre>
+     *   actionMap.put("newAttribute", trooper1); // guards the "New Attribute" exit
+     *   actionMap.put("delete",       trooper2); // guards the "Delete" exit
+     *   actionMap.put("refresh",      trooper3); // guards the "Refresh" exit
+     * </pre>
+     *
+     * @param entryEditor  The entry editor this action group will serve — used to
+     *                     get the viewer, config, and value editor manager.
      */
     public EntryEditorActionGroup( EntryEditor entryEditor )
     {
@@ -244,8 +275,17 @@ public class EntryEditorActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── PLATOON STANDS DOWN AND RELEASES THEIR WEAPONS ───────────────────────
+    // The mission is over — Palpatine recalls the troopers, each one holstering
+    // their weapon and stepping out of formation so the base can be cleared.
+    // We null out each action reference so GC can clean up; the guard condition
+    // prevents double-dispose if Eclipse happens to call this twice.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Releases all actions and frees their resources.
+     * Eclipse calls this when the editor tab is closed; we deactivate global
+     * handlers first so keyboard shortcuts stop working immediately, then dispose
+     * each action that owns disposable resources (expand/collapse hold listeners).
      */
     public void dispose()
     {
@@ -267,8 +307,18 @@ public class EntryEditorActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── TROOPERS TAKE THEIR POSITIONS ON THE TOOLBAR ─────────────────────────
+    // The platoon sergeant assigns each trooper a spot in the firing line —
+    // new-value trooper on the left flank, delete trooper on the right flank,
+    // with separators between squads so the line stays readable.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Populates the editor's toolbar with the most-used actions.
+     * We add new-value, new-attribute, delete, delete-all-values, refresh,
+     * expand-all, collapse-all, and quick-filter buttons in logical groups
+     * separated by {@link Separator} lines.
+     *
+     * @param toolBarManager  The toolbar manager Eclipse provides for this editor.
      */
     public void fillToolBar( IToolBarManager toolBarManager )
     {
@@ -289,8 +339,19 @@ public class EntryEditorActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── TROOPERS MAN THE COMMAND DROPDOWN ────────────────────────────────────
+    // The platoon sergeant designates a squad for the "view menu" dropdown —
+    // sort order, display decorations, auto-save toggle, and preferences access.
+    // The menu listener refreshes checkbox states right before the menu opens
+    // so the user always sees the current preference values reflected.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Populates the editor's drop-down view menu with configuration-style actions.
+     * Includes sort dialog, show-decorated-values toggle, auto-save toggle, and
+     * a link to the entry editor preferences page. A menu listener updates
+     * checkbox states on each open so they reflect current preferences.
+     *
+     * @param menuManager  The drop-down menu manager for the editor toolbar.
      */
     public void fillMenu( IMenuManager menuManager )
     {
@@ -314,8 +375,19 @@ public class EntryEditorActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── TROOPERS DEPLOY INTO THE CONTEXT-MENU POSITIONS ──────────────────────
+    // Right before the user right-clicks, the sergeant re-arranges the platoon
+    // into exactly the positions Palpatine ordered: new-entry squads first,
+    // navigation squads next, copy/delete squads after, then edit and refresh.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the right-click context menu for the attribute table viewer.
+     * This is called fresh every time the context menu is about to appear, so
+     * we can conditionally add the "Fetch Operational Attributes" item only when
+     * it's actually enabled. The menu is organized into logical sections: New,
+     * Navigate, Copy/Delete, Edit, and Refresh.
+     *
+     * @param menuManager  The context menu manager to populate.
      */
     protected void contextMenuAboutToShow( IMenuManager menuManager )
     {
@@ -389,8 +461,17 @@ public class EntryEditorActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── TROOPERS ASSUME GLOBAL FIRING POSITIONS ───────────────────────────────
+    // The entry editor gains focus — Palpatine orders the platoon to take up
+    // global positions so their weapons (keyboard shortcuts) cover the whole base.
+    // We bind the Refresh key, new-attribute, locate-DN, and edit-attribute actions
+    // to global Eclipse key bindings so they fire from anywhere while focused here.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Wires this editor's actions into Eclipse's global keybinding system.
+     * Called when the editor gains focus — we register Refresh, New Attribute,
+     * Locate DN in DIT, Edit Attribute Description, and the entry value editor
+     * as global handlers so their keyboard shortcuts work while the editor is active.
      */
     public void activateGlobalActionHandlers()
     {
@@ -412,8 +493,16 @@ public class EntryEditorActionGroup extends EntryEditorWidgetActionGroup
     }
 
 
+    // ── TROOPERS STAND DOWN FROM GLOBAL POSITIONS ─────────────────────────────
+    // The editor loses focus — Palpatine orders the platoon to step back from the
+    // global firing line so their keys don't fire when another editor is active.
+    // We unbind the same handlers we registered in activateGlobalActionHandlers.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Removes this editor's actions from Eclipse's global keybinding system.
+     * Called when the editor loses focus — we unregister exactly the handlers
+     * we registered in {@link #activateGlobalActionHandlers()} so they don't
+     * interfere with whichever editor is now active.
      */
     public void deactivateGlobalActionHandlers()
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -47,11 +47,17 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.LimitWrapper;
 import org.apache.directory.studio.openldap.config.editor.wrappers.LimitsWrapper;
 
 
+// Like Princess Leia transmitting the full Rebellion access policy —
+// who gets in, what they can do, and how much they can ask for —
+// we project this dialog so the operator can define selector rules
+// and attach a list of specific limits to each one.
 /**
- * The LimitsDialog is used to edit the Limits parameter<br/>
- * 
- * The dialog overlay is like :
- * 
+ * A dialog for editing an OpenLDAP "limits" configuration entry.
+ * We let the operator choose a selector (Any, Anonymous, Users, DN, or Group)
+ * and attach a list of size/time limit entries to it. A read-only text
+ * field shows the resulting limits string as edits happen.
+ *
+ * <p>The dialog layout looks like this:
  * <pre>
  * +-------------------------------------------------------+
  * | Limits                                                |
@@ -88,41 +94,41 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.LimitsWrapper
  * |  (Cancel)                                      (OK)   |
  * +-------------------------------------------------------+
  * </pre>
- *  
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LimitsDialog extends AddEditDialog<LimitsWrapper>
 {
     /** The Any radio button */
     private Button anyButton;
-    
+
     /** The Anonymous radio button */
     private Button anonymousButton;
-    
+
     /** The Users radio button */
     private Button usersButton;
-    
+
     /** The DNSpec radio button */
     private Button dnSpecButton;
-    
+
     /** The DNSpec type */
     private Combo dnSpecTypeCombo;
-    
+
     /** The DNSpec style */
     private Combo dnSpecStyleCombo;
-    
+
     /** The DNSpec pattern */
     private Text dnSpecPatternText;
-    
+
     /** The Group radio button */
     private Button groupButton;
-    
+
     /** The Group ObjectClass type */
     private Combo groupObjectClassCombo;
-    
+
     /** The Group AttributeType style */
     private Combo groupAttributeTypeCombo;
-    
+
     /** The Group pattern */
     private Text groupPatternText;
 
@@ -131,12 +137,18 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
 
     /** The resulting Limits Text */
     private Text limitsText;
-    
+
     /** The Attribute list loader */
     private SchemaObjectLoader schemaObjectLoader;
 
+    // Like cutting the power to DN and Group controls when the operator
+    // selects Any, Anonymous, or Users — those selectors don't need
+    // extra detail — we disable all the dnSpec and group widgets so
+    // the operator doesn't get confused by irrelevant fields.
     /**
-     * Disable the DnSpec and Group widgets
+     * Disables all the DN spec and Group sub-controls so they can't
+     * be interacted with when a simple selector (Any/Anonymous/Users)
+     * is chosen.
      */
     private void disableDnSpecGroupButtons()
     {
@@ -147,10 +159,18 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
         groupObjectClassCombo.setEnabled( false );
         groupPatternText.setEnabled( false );
     }
-    
-    
+
+
+    // Like the Rebellion selectively powering up either the DN targeting
+    // system or the group identification scanner depending on which
+    // selector the operator chose, we enable the right sub-controls
+    // and disable the wrong ones in one coordinated call.
     /**
-     * Disable or enable the DnSpec and Group widgets
+     * Enables or disables the DN spec and Group sub-controls independently,
+     * based on which selector the operator is working with.
+     *
+     * @param dnSpecStatus {@code true} to enable the DN spec controls, {@code false} to disable them
+     * @param groupStatus {@code true} to enable the group controls, {@code false} to disable them
      */
     private void setDnSpecGroupButtons( boolean dnSpecStatus, boolean groupStatus )
     {
@@ -161,10 +181,16 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
         dnSpecStyleCombo.setEnabled( dnSpecStatus );
         dnSpecPatternText.setEnabled( dnSpecStatus  );
     }
-    
 
+
+    // Like resetting the targeting computer before switching to a different
+    // selector type so old selector data doesn't contaminate the new one,
+    // we null out the dnSpec fields, objectClass, attributeType, and
+    // pattern on the edited element in one clean sweep.
     /**
-     * Reset the content of the edited element
+     * Clears all selector-specific fields on the edited element —
+     * DN spec style, type, pattern, object class, attribute type —
+     * so stale data from a previous selector doesn't bleed through.
      */
     private void clearEditedElement()
     {
@@ -175,11 +201,11 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
         getEditedElement().setSelectorPattern( null );
     }
 
-    
+
     /**
      * Listeners for the Selector radioButtons. It will enable or disable the dnSpec or Group accordingly
      * to the selection.
-     **/ 
+     */
     private SelectionListener selectorButtonsSelectionListener = new SelectionAdapter()
     {
         @Override
@@ -188,7 +214,7 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
             if ( event.getSource() instanceof Button )
             {
                 Button button = (Button)event.getSource();
-                
+
                 if ( button == anyButton )
                 {
                     if ( button.getSelection() )
@@ -236,8 +262,8 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
             }
         }
     };
-    
-    
+
+
     /**
      * The dnSpecTypeCombo listener
      */
@@ -250,8 +276,8 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
             limitsText.setText( getEditedElement().toString() );
         }
     };
-    
-    
+
+
     /**
      * The dnSpecTypeCombo listener
      */
@@ -265,7 +291,7 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
         }
     };
 
-    
+
     /**
      * The groupAttributeTypeCombo listener
      */
@@ -278,8 +304,8 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
             limitsText.setText( getEditedElement().toString() );
         }
     };
-    
-    
+
+
     /**
      * The groupObjectClassCombo listener
      */
@@ -306,11 +332,11 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
             {
                 getEditedElement().setSelectorPattern( groupPatternText.getText() );
             }
-            
+
             limitsText.setText( getEditedElement().toString() );
         };
-    
-    
+
+
     /**
      * The olcLimits listener
      */
@@ -319,12 +345,18 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
             getEditedElement().setLimits( limitsTableWidget.getElements() );
             limitsText.setText( getEditedElement().toString() );
         };
-    
 
+
+    // Like Leia opening a fresh hologram channel with a resizable frame
+    // and a schema loader ready to populate the combo boxes, we create
+    // the dialog with the RESIZE style and initialize the schema
+    // object loader for attribute/objectclass lookups.
     /**
-     * Create a new instance of the LimitsDialog
-     * 
-     * @param parentShell The parent Shell
+     * Creates a new LimitsDialog attached to the given parent shell.
+     * We initialize the schema object loader so the group combos can
+     * be populated with known attribute names and object class names.
+     *
+     * @param parentShell the parent shell this dialog belongs to
      */
     public LimitsDialog( Shell parentShell )
     {
@@ -334,11 +366,16 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
     }
 
 
+    // Like Leia pre-loading an existing mission briefing into the hologram
+    // before opening it for review, we parse the provided limits string
+    // and set it as the edited element so the dialog opens in the right state.
     /**
-     * Create a new instance of the LimitsDialog
-     * 
-     * @param parentShell The parent Shell
-     * @param timeLimitStr The instance containing the Limits data
+     * Creates a new LimitsDialog pre-populated with the given limits string.
+     * We parse the string into a {@link LimitsWrapper} and set it as the
+     * starting edited element.
+     *
+     * @param parentShell the parent shell this dialog belongs to
+     * @param limitsStr the existing limits configuration string to pre-load
      */
     public LimitsDialog( Shell parentShell, String limitsStr )
     {
@@ -348,10 +385,15 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
 
         setEditedElement( new LimitsWrapper( limitsStr ) );
     }
-    
-    
+
+
+    // Like labeling the hologram projector so everyone knows this is
+    // the "Limits" briefing, we stamp the dialog shell with the
+    // "Limits" title before the window appears to the operator.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to "Limits".
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -361,8 +403,15 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
     }
 
 
+    // Like Leia's hologram materializing with two clear sections — the
+    // editable mission parameters up top and the computed result below —
+    // we build the dialog area with a limits input group and a read-only
+    // resulting limits display, then initialize and wire everything up.
     /**
-     * Create the Dialog for TimeLimit :
+     * Builds the full dialog content area with a limits-input group
+     * (selector radio buttons, DN/Group sub-controls, and limit table)
+     * and a read-only resulting-limits text field below.
+     *
      * <pre>
      * +-------------------------------------------------------+
      * | Limits                                                |
@@ -399,7 +448,9 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
      * |  (Cancel)                                      (OK)   |
      * +-------------------------------------------------------+
      * </pre>
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -408,22 +459,28 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
         GridData gd = new GridData( GridData.FILL_BOTH );
         composite.setLayoutData( gd );
 
-        
+
         createLimitsEditGroup( composite );
         createLimitsShowGroup( composite );
 
         initDialog();
         addListeners();
-        
+
         applyDialogFont( composite );
 
         return composite;
     }
 
 
+    // Like assembling the full tactical operations panel — selector
+    // radio buttons, DN detail controls, group detail controls, and
+    // the orderable limits list — we build the input group here so
+    // the operator has everything they need in one panel.
     /**
-     * Creates the Limits input group.
-     * 
+     * Builds the limits input group with selector radio buttons (Any,
+     * Anonymous, Users, DN, Group), DN spec sub-controls, Group sub-controls,
+     * and the orderable limit entries table.
+     *
      * <pre>
      * Limits
      * .---------------------------------------------------.
@@ -452,7 +509,8 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
      * | +-------------------------------------+           |
      * '---------------------------------------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent the parent composite to attach the input group to
      */
     private void createLimitsEditGroup( Composite parent )
     {
@@ -483,7 +541,7 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
         GridLayout dnSpecGridLayout = new GridLayout( 2, false );
         dnSpecGroup.setLayout( dnSpecGridLayout );
         dnSpecGroup.setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false ) );
-        
+
         // The DNSpec type Combo
         BaseWidgetUtils.createLabel( dnSpecGroup, "Type :", 1 );
         dnSpecTypeCombo = BaseWidgetUtils.createCombo( dnSpecGroup, DnSpecTypeEnum.getNames(), -1, 1 );
@@ -495,7 +553,7 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
         dnSpecStyleCombo = BaseWidgetUtils.createCombo( dnSpecGroup, DnSpecStyleEnum.getNames(), -1, 1 );
         dnSpecStyleCombo.setEnabled( false );
         dnSpecStyleCombo.addSelectionListener( dnSpecStyleComboListener );
-        
+
         // The DNSpec pattern Text
         BaseWidgetUtils.createLabel( dnSpecGroup, "Pattern :", 1 );
         dnSpecPatternText = BaseWidgetUtils.createText( dnSpecGroup, "", 1 );
@@ -518,7 +576,7 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
         groupObjectClassCombo = BaseWidgetUtils.createCombo( groupGroup, schemaObjectLoader.getObjectClassNamesAndOids(), -1, 1 );
         groupObjectClassCombo.setEnabled( false );
         groupObjectClassCombo.addSelectionListener( groupObjectClassComboListener );
-        
+
         // The AttributeType Combo
         BaseWidgetUtils.createLabel( groupGroup, "Attribute Type :", 1 );
         groupAttributeTypeCombo = BaseWidgetUtils.createCombo( groupGroup, schemaObjectLoader.getAttributeNamesAndOids(), -1, 1 );
@@ -533,8 +591,8 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
 
         // The Limits table
         BaseWidgetUtils.createLabel( selectorGroup, "Limits :", 1 );
-        
-        limitsTableWidget = new TableWidget<>( 
+
+        limitsTableWidget = new TableWidget<>(
             new LimitDecorator( parent.getShell() , "Limit") );
 
         limitsTableWidget.createWidgetWithEdit( selectorGroup, null );
@@ -543,18 +601,23 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
     }
 
 
+    // Like adding a read-only status board to the operations room so
+    // commanders can see the synthesized limits string at a glance
+    // without having to decode the individual form fields, we create
+    // the resulting-limits display group with a non-editable text area.
     /**
-     * Creates the TimeLimit show group. This is the part of the dialog
-     * where the real TimeLimit is shown, or an error message if the TimeLimit
-     * is invalid.
-     * 
+     * Builds the read-only "Resulting Limits" display group, showing
+     * the computed limits string so the operator can immediately see
+     * what the current form field values will produce.
+     *
      * <pre>
      * Resulting Limits
      * .------------------------------------.
      * | <////////////////////////////////> |
      * '------------------------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent the parent composite to attach the display group to
      */
     private void createLimitsShowGroup( Composite parent )
     {
@@ -571,8 +634,14 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
     }
 
 
+    // Like connecting all the status feeds from each sub-panel back
+    // to the operations display so every change is reflected immediately,
+    // we wire up the various listeners that update the edited element
+    // and the resulting-limits text when the operator makes changes.
     /**
-     * Adds listeners.
+     * Attaches the event listeners to the dialog's interactive controls
+     * so the edited element and the resulting-limits text stay in sync
+     * as the operator makes selections and enters values.
      */
     private void addListeners()
     {
@@ -588,6 +657,13 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
     }
 
 
+    // Like Leia starting a brand-new transmission from a blank template,
+    // we seed the dialog with an empty LimitsWrapper so the operator
+    // starts from a clean slate when adding a new limits entry.
+    /**
+     * Seeds the dialog with a new empty {@link LimitsWrapper} when the
+     * operator is adding a brand-new limits configuration entry.
+     */
     @Override
     public void addNewElement()
     {
@@ -595,17 +671,23 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
     }
 
 
+    // Like the hologram operator reviewing the existing mission parameters
+    // before the briefing goes live so the radio buttons and combos
+    // reflect the current selector state, we read the edited element's
+    // selector value and enable or disable the right sub-controls.
     /**
-     * Initializes the UI from the Limits
+     * Initializes the dialog controls from the current {@link LimitsWrapper},
+     * selecting the correct selector radio button and enabling only the
+     * sub-controls that are relevant to that selector type.
      */
     protected void initDialog()
     {
         LimitsWrapper editedElement = getEditedElement();
-        
+
         if ( editedElement != null )
         {
             LimitSelectorEnum selector = editedElement.getSelector();
-            
+
             if ( selector != null )
             {
                 switch ( editedElement.getSelector() )
@@ -619,7 +701,7 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
                         groupObjectClassCombo.setEnabled( false );
                         groupPatternText.setEnabled( false );
                         break;
-                        
+
                     case ANY :
                         anyButton.setSelection( true );
                         dnSpecStyleCombo.setEnabled( false );
@@ -629,7 +711,7 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
                         groupObjectClassCombo.setEnabled( false );
                         groupPatternText.setEnabled( false );
                         break;
-                        
+
                     case USERS :
                         usersButton.setSelection( true );
                         dnSpecStyleCombo.setEnabled( false );
@@ -640,7 +722,7 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
                         groupObjectClassCombo.setEnabled( false );
                         groupPatternText.setEnabled( false );
                         break;
-                        
+
                     case DNSPEC :
                         dnSpecButton.setSelection( true );
                         dnSpecStyleCombo.setEnabled( true );
@@ -650,7 +732,7 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
                         groupObjectClassCombo.setEnabled( false );
                         groupPatternText.setEnabled( false );
                         break;
-                        
+
                     case GROUP :
                         groupButton.setSelection( true );
                         dnSpecStyleCombo.setEnabled( false );
@@ -660,7 +742,7 @@ public class LimitsDialog extends AddEditDialog<LimitsWrapper>
                         groupObjectClassCombo.setEnabled( true );
                         groupPatternText.setEnabled( true );
                         break;
-                        
+
                     default :
                         dnSpecStyleCombo.setEnabled( false );
                         dnSpecTypeCombo.setEnabled( false );

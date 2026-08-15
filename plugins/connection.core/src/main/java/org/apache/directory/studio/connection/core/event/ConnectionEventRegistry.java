@@ -35,32 +35,70 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 
 
+// ── CLASS: ConnectionEventRegistry — REBEL COMMAND'S MISSION BROADCAST CENTER ──
+// When Rebel High Command has news, they don't tell each pilot separately in
+// person — they broadcast a coded dispatch and every pilot who has subscribed
+// to that channel receives it via their own courier.
+// This class is that broadcast center: static fire* methods push events to all
+// registered listeners, each delivered by the listener's own EventRunner
+// (which controls what thread the notification lands on).
+// Per-thread suspension lets long-running jobs (like bulk edits) block the
+// broadcast while they work, then re-enable it when done.  The rate-limit
+// warning (>10 events/sec) helps us notice when something is spinning.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The ConnectionEventRegistry is a central point to register for connection specific
- * events and to fire events to registered listeners.
+ * Central pub/sub hub for all connection and connection-folder state changes.
+ * Callers register {@link ConnectionUpdateListener}s along with an {@link EventRunner}
+ * that controls notification delivery (e.g. a JFace async-exec runner for the UI thread).
+ * Static {@code fire*} methods then broadcast events to every registered listener,
+ * each via that listener's own runner so threading is handled correctly.
+ *
+ * <p>Key design points:</p>
+ * <ul>
+ *   <li>Event firing can be suspended per-thread so bulk operations don't spam listeners.</li>
+ *   <li>A rate-limit warning is logged when more than 10 events fire per second.</li>
+ *   <li>The inner {@link EventManager} clones the listener map before iterating to avoid
+ *       {@link java.util.ConcurrentModificationException} if a listener is removed during
+ *       event delivery.</li>
+ * </ul>
+ * Think of this as Rebel High Command's encrypted broadcast channel: every registered
+ * pilot (listener) gets the news, delivered by their own courier (runner), unless they
+ * have specifically gone radio-silent (suspended firing) for a mission.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ConnectionEventRegistry
 {
 
-    /** The list of threads with suspended event firing. */
+    /** Thread IDs for which event firing is currently suspended. */
     private static List<Long> suspendedEventFiringThreads = new ArrayList<Long>();
 
-    /** The lock used to synchronize event firings */
+    /**
+     * Lock object used to synchronize individual event deliveries inside
+     * {@link EventManager#fire(EventRunnableFactory)}.
+     */
     protected static Object lock = new Object();
 
-    /** The list with time stamps of recent event firings */
+    /** Rolling window of event firing timestamps (for rate-limit checks). */
     private static List<Long> fireTimeStamps = new ArrayList<Long>();
 
-    /** A counter for fired events */
+    /** Monotonically increasing count of all events fired since startup. */
     private static long fireCount = 0L;
 
 
+    // ── IS EVENT FIRING SUSPENDED — CHECK RADIO-SILENCE STATUS ────────────────────
+    // Obi-Wan's Force sensitivity sometimes gets overwhelmed by too many
+    // disturbances hitting him at once — he warns the crew if that happens.
+    // We check whether the current thread has suspended its event firing (like a
+    // bulk-edit job), and if not, we count the event, prune old timestamps from the
+    // rolling window, and warn if we're seeing more than 10 events per second.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if event firing is suspended in the current thread.
+     * Returns {@code true} if event firing is suspended in the calling thread.
+     * As a side effect, increments the event counter and logs a warning if more
+     * than 10 events have fired in the last second (possible UI refresh storm).
      *
-     * @return true, if event firing is suspended in the current thread
+     * @return  {@code true} if the current thread has suspended event firing.
      */
     protected static boolean isEventFiringSuspendedInCurrentThread()
     {
@@ -106,10 +144,15 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── GET FIRE COUNT — HOW MANY DISPATCHES HAVE WE SENT? ────────────────────────
+    // We return the total number of events that have been fired since this
+    // static class was loaded.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the number of fired events.
-     * 
-     * @return the number of fired events
+     * Returns the total number of events fired by this registry since JVM startup.
+     * Useful in tests to verify that events did or did not fire.
+     *
+     * @return  The cumulative event-fire count.
      */
     public static long getFireCount()
     {
@@ -117,8 +160,14 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── RESUME EVENT FIRING — TAKE THE CURRENT THREAD OFF RADIO-SILENCE ───────────
+    // The bulk job is done, so we remove this thread from the suspended list
+    // and let events flow again.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Resumes event firing in the current thread.
+     * Re-enables event firing in the calling thread.
+     * Should be called in a {@code finally} block after
+     * {@link #suspendEventFiringInCurrentThread()}.
      */
     public static void resumeEventFiringInCurrentThread()
     {
@@ -129,8 +178,14 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── SUSPEND EVENT FIRING — PUT THE CURRENT THREAD ON RADIO-SILENCE ────────────
+    // During a big bulk operation we don't want a barrage of intermediate events
+    // hitting listeners — we silence this thread until the operation finishes.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Suspends event firing in the current thread.
+     * Prevents event firing from the calling thread until
+     * {@link #resumeEventFiringInCurrentThread()} is called.
+     * Use this at the start of a bulk operation and resume in a {@code finally} block.
      */
     public static void suspendEventFiringInCurrentThread()
     {
@@ -140,14 +195,21 @@ public class ConnectionEventRegistry
         }
     }
 
+    /** The single EventManager instance for all ConnectionUpdateListener registrations. */
     private static final EventManager<ConnectionUpdateListener, EventRunner> connectionUpdateEventManager = new EventManager<ConnectionUpdateListener, EventRunner>();
 
 
+    // ── ADD CONNECTION UPDATE LISTENER — TUNE IN TO THE BROADCAST CHANNEL ─────────
+    // We register a pilot (listener) and assign them a courier (runner) to deliver
+    // their dispatches on the right thread.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the connection update listener.
+     * Registers a {@link ConnectionUpdateListener} to receive connection and folder events.
+     * Each listener gets an {@link EventRunner} that controls the notification delivery thread.
+     * A listener is only registered once — duplicate additions are silently ignored.
      *
-     * @param listener the listener
-     * @param runner the runner
+     * @param listener  The listener to register.
+     * @param runner    The runner that will deliver events to this listener.
      */
     public static void addConnectionUpdateListener( ConnectionUpdateListener listener, EventRunner runner )
     {
@@ -155,10 +217,15 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── REMOVE CONNECTION UPDATE LISTENER — SIGN OFF THE BROADCAST CHANNEL ────────
+    // The pilot is leaving the channel — we remove them from the roster so they
+    // stop receiving dispatches.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Removes the connection update listener.
+     * Unregisters a previously registered {@link ConnectionUpdateListener}.
+     * No-op if the listener is not currently registered.
      *
-     * @param listener the listener
+     * @param listener  The listener to remove.
      */
     public static void removeConnectionUpdateListener( ConnectionUpdateListener listener )
     {
@@ -166,12 +233,15 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── FIRE CONNECTION OPENED — BROADCAST: A SHIP HAS MADE CONTACT ───────────────
+    // Rebel Command sends the "connection opened" dispatch to all registered listeners.
+    // Each listener gets it via their own courier (EventRunner).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Notifies each {@link ConnectionUpdateListener} about the opened connection.
-     * Uses the {@link EventRunner}s.
+     * Notifies all registered {@link ConnectionUpdateListener}s that a connection has been opened.
      *
-     * @param connection the opened connection
-     * @param source the source
+     * @param connection  The newly opened connection.
+     * @param source      The source of the event (for informational purposes).
      */
     public static void fireConnectionOpened( final Connection connection, final Object source )
     {
@@ -192,12 +262,14 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── FIRE CONNECTION CLOSED — BROADCAST: A SHIP HAS GONE DARK ─────────────────
+    // Rebel Command sends the "connection closed" dispatch to all registered listeners.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Notifies each {@link ConnectionUpdateListener} about the closed connection.
-     * Uses the {@link EventRunner}s.
+     * Notifies all registered {@link ConnectionUpdateListener}s that a connection has been closed.
      *
-     * @param connection the closed connection
-     * @param source the source
+     * @param connection  The now-closed connection.
+     * @param source      The source of the event.
      */
     public static void fireConnectionClosed( final Connection connection, final Object source )
     {
@@ -218,12 +290,16 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── FIRE CONNECTION UPDATED — BROADCAST: A SHIP'S MANIFEST HAS CHANGED ────────
+    // Someone edited the connection's parameters — name, host, auth — and we
+    // broadcast that change to all listeners so they can refresh their views.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Notifies each {@link ConnectionUpdateListener} about the updated connection.
-     * Uses the {@link EventRunner}s.
+     * Notifies all registered {@link ConnectionUpdateListener}s that a connection's
+     * configuration has been updated.
      *
-     * @param connection the updated connection
-     * @param source the source
+     * @param connection  The connection whose parameters changed.
+     * @param source      The source of the event.
      */
     public static void fireConnectionUpdated( final Connection connection, final Object source )
     {
@@ -244,12 +320,16 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── FIRE CONNECTION ADDED — BROADCAST: A NEW SHIP HAS JOINED THE FLEET ────────
+    // A new connection has been saved to the ConnectionManager — we broadcast
+    // that so the UI (Connections view) can add it to the list.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Notifies each {@link ConnectionUpdateListener} about the added connection.
-     * Uses the {@link EventRunner}s.
+     * Notifies all registered {@link ConnectionUpdateListener}s that a new connection has
+     * been added to the connection manager.
      *
-     * @param connection the added connection
-     * @param source the source
+     * @param connection  The newly added connection.
+     * @param source      The source of the event.
      */
     public static void fireConnectionAdded( final Connection connection, final Object source )
     {
@@ -270,12 +350,16 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── FIRE CONNECTION REMOVED — BROADCAST: A SHIP HAS LEFT THE FLEET ────────────
+    // A connection was deleted from the ConnectionManager — we broadcast so
+    // the UI removes it from the connections list.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Notifies each {@link ConnectionUpdateListener} about the removed connection.
-     * Uses the {@link EventRunner}s.
+     * Notifies all registered {@link ConnectionUpdateListener}s that a connection has
+     * been removed from the connection manager.
      *
-     * @param connection the removed connection
-     * @param source the source
+     * @param connection  The removed connection.
+     * @param source      The source of the event.
      */
     public static void fireConnectionRemoved( final Connection connection, final Object source )
     {
@@ -296,12 +380,16 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── FIRE FOLDER MODIFIED — BROADCAST: A BINDER'S CONTENTS CHANGED ─────────────
+    // Chewie rearranged the binders — a folder's name or membership changed, so
+    // we broadcast so the tree viewer refreshes.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Notifies each {@link ConnectionUpdateListener} about the modified connection folder.
-     * Uses the {@link EventRunner}s.
+     * Notifies all registered {@link ConnectionUpdateListener}s that a connection folder
+     * has been modified (name changed, connections moved, etc.).
      *
-     * @param connectionFolder the modified connection folder
-     * @param source the source
+     * @param connectionFolder  The modified folder.
+     * @param source            The source of the event.
      */
     public static void fireConnectonFolderModified( final ConnectionFolder connectionFolder, final Object source )
     {
@@ -322,12 +410,15 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── FIRE FOLDER ADDED — BROADCAST: CHEWIE MADE A NEW BINDER ──────────────────
+    // A new folder was created — we broadcast so the tree viewer inserts it.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Notifies each {@link ConnectionUpdateListener} about the added connection folder.
-     * Uses the {@link EventRunner}s.
+     * Notifies all registered {@link ConnectionUpdateListener}s that a new connection
+     * folder has been added.
      *
-     * @param connectionFolder the added connection folder
-     * @param source the source
+     * @param connectionFolder  The newly added folder.
+     * @param source            The source of the event.
      */
     public static void fireConnectonFolderAdded( final ConnectionFolder connectionFolder, final Object source )
     {
@@ -348,12 +439,15 @@ public class ConnectionEventRegistry
     }
 
 
+    // ── FIRE FOLDER REMOVED — BROADCAST: CHEWIE TOSSED A BINDER ──────────────────
+    // A folder was deleted — we broadcast so the tree viewer removes it.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Notifies each {@link ConnectionUpdateListener} about the removed connection folder.
-     * Uses the {@link EventRunner}s.
+     * Notifies all registered {@link ConnectionUpdateListener}s that a connection folder
+     * has been removed.
      *
-     * @param connectionFolder the removed connection folder
-     * @param source the source
+     * @param connectionFolder  The removed folder.
+     * @param source            The source of the event.
      */
     public static void fireConnectonFolderRemoved( final ConnectionFolder connectionFolder, final Object source )
     {
@@ -373,16 +467,37 @@ public class ConnectionEventRegistry
         connectionUpdateEventManager.fire( factory );
     }
 
+
+    // ── INNER CLASS: EventManager — THE SUBSCRIPTION DATABASE + COURIER DISPATCHER ──
+    // Rebel Command keeps a database of which pilots have signed up for which
+    // channels, and which courier carries their dispatches.
+    // This inner class manages that database and dispatches events through it.
+    // ─────────────────────────────────────────────────────────────────────────────
+    /**
+     * Generic listener registry and event dispatcher.
+     * Maintains a {@code Map<L, EventRunner>} where L is the listener type
+     * and the runner controls delivery threading.
+     * The {@link #fire(EventRunnableFactory)} method clones the map before
+     * iterating to prevent concurrent-modification issues.
+     *
+     * @param <L>  The listener type.
+     * @param <R>  The event runner type (must extend {@link EventRunner}).
+     */
     public static class EventManager<L, R extends EventRunner>
     {
+        /** Map from listener instance to its delivery runner. */
         private Map<L, EventRunner> listeners = new HashMap<L, EventRunner>();
 
 
+        // ── ADD LISTENER — SIGN A PILOT UP FOR THE CHANNEL ────────────────────────
+        // We only add if not already present — we don't want double-delivery.
+        // ──────────────────────────────────────────────────────────────────────────
         /**
-         * Adds the listener.
+         * Registers a listener with the given runner.
+         * If the listener is already registered, this is a no-op (we don't add duplicates).
          *
-         * @param listener the listener
-         * @param runner the runner
+         * @param listener  The listener to register.  Must not be {@code null}.
+         * @param runner    The runner to deliver events to this listener.  Must not be {@code null}.
          */
         public void addListener( L listener, R runner )
         {
@@ -399,10 +514,14 @@ public class ConnectionEventRegistry
         }
 
 
+        // ── REMOVE LISTENER — PULL A PILOT OFF THE CHANNEL ────────────────────────
+        // We remove the listener if they're there; otherwise silently do nothing.
+        // ──────────────────────────────────────────────────────────────────────────
         /**
-         * Removes the listener.
+         * Unregisters the given listener.
+         * If the listener is not registered, this is a no-op.
          *
-         * @param listener the listener
+         * @param listener  The listener to remove.
          */
         public void removeListener( L listener )
         {
@@ -416,12 +535,19 @@ public class ConnectionEventRegistry
         }
 
 
+        // ── FIRE — DISPATCH TO ALL REGISTERED LISTENERS ───────────────────────────
+        // We check if event firing is suspended in this thread; if so, we return
+        // immediately.  Otherwise we clone the listener map (so removals during
+        // delivery don't cause exceptions), create a personalized runnable for each
+        // listener via the factory, and hand it to that listener's runner.
+        // ──────────────────────────────────────────────────────────────────────────
         /**
-         * Notifies each {@link ConnectionUpdateListener} about the removed connection.
-         * Uses the {@link EventRunner}s.
+         * Dispatches the event described by the given factory to all registered listeners.
+         * Each listener receives its own {@link EventRunnable} and is notified via its
+         * registered {@link EventRunner}.
+         * If event firing is suspended in the current thread, this method returns immediately.
          *
-         * @param connection the removed connection
-         * @param source the source
+         * @param factory  Factory that creates a personalized {@link EventRunnable} for each listener.
          */
         public void fire( EventRunnableFactory<L> factory )
         {

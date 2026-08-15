@@ -3,19 +3,19 @@
  *  or more contributor license agreements.  See the NOTICE file
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
+ *  to you under the Apache Studio, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.ui.actions;
@@ -34,25 +34,52 @@ import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: StudioAction — THE REBEL PILOT BASE CLASS ──────────────────────────────
+// Every pilot in the Rebel Alliance has a set of skills they all share: they know
+// how to read the mission briefing, check who's in the flight, know their ship's
+// status, and execute a maneuver.  StudioAction is the base class that gives all
+// Connections-view actions those shared skills.
+// Concrete actions (OpenConnectionAction, DeleteAction, etc.) extend this and fill
+// in the mission-specific parts: getText(), getImageDescriptor(), isEnabled(), run().
+// This class handles the plumbing:
+//   - Stores the current selection (connections + folders) as arrays.
+//   - Implements selectionChanged() so the Eclipse workbench can notify us.
+//   - Provides getShell() so subclasses can open dialogs.
+//   - Proxies run(IAction) to the abstract run().
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This abstract class must be extended by each Action related to the Browser.
+ * Abstract base class for all Connections-view actions.
+ *
+ * <p>Implements {@link IWorkbenchWindowActionDelegate} so instances can be
+ * contributed to the workbench via extension points.  Also usable directly as
+ * the inner action of a {@link StudioActionProxy}.</p>
+ *
+ * <p>Subclasses must implement:</p>
+ * <ul>
+ *   <li>{@link #getText()} — the human-readable action label.</li>
+ *   <li>{@link #getImageDescriptor()} — the toolbar/menu icon.</li>
+ *   <li>{@link #getCommandId()} — the Eclipse command ID, or {@code null}.</li>
+ *   <li>{@link #isEnabled()} — whether the action is available for the current selection.</li>
+ *   <li>{@link #run()} — the action logic.</li>
+ * </ul>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public abstract class StudioAction implements IWorkbenchWindowActionDelegate
 {
-    /** The selected Connections */
+    /** The connections currently selected in the Connections view. */
     private Connection[] selectedConnections;
 
-    /** The selected connection folders */
+    /** The connection folders currently selected in the Connections view. */
     private ConnectionFolder[] selectedConnectionFolders;
 
-    /** The input */
+    /** The optional input object set on this action (e.g., from inputChanged). */
     private Object input;
 
 
+    // ── CONSTRUCTOR ───────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BrowserAction.
+     * Creates a new StudioAction with empty selection arrays.
      */
     protected StudioAction()
     {
@@ -60,10 +87,11 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
     }
 
 
+    // ── GET STYLE — DEFAULT: PUSH BUTTON ──────────────────────────────────────────
     /**
-     * Gets the style.
-     * 
-     * @return the style
+     * Returns the Eclipse action style.  Defaults to {@link Action#AS_PUSH_BUTTON}.
+     *
+     * @return  The action style constant.
      */
     public int getStyle()
     {
@@ -71,8 +99,10 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
     }
 
 
+    // ── INIT (WINDOW) — INITIALISE FROM THE WORKBENCH WINDOW ──────────────────────
     /**
-     * @see org.eclipse.ui.IWorkbenchWindowActionDelegate#init(org.eclipse.ui.IWorkbenchWindow)
+     * {@inheritDoc}
+     * Resets the action state when it is initialised by the workbench window.
      */
     public void init( IWorkbenchWindow window )
     {
@@ -80,8 +110,10 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
     }
 
 
+    // ── RUN (IACTION) — BRIDGE FROM IWorkbenchWindowActionDelegate ────────────────
     /**
-     * @see org.eclipse.ui.IActionDelegate#run(org.eclipse.jface.action.IAction)
+     * {@inheritDoc}
+     * Delegates to the abstract {@link #run()} method.
      */
     public void run( IAction action )
     {
@@ -89,8 +121,11 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
     }
 
 
+    // ── SELECTION CHANGED — UPDATE SELECTION AND ENABLE STATE ─────────────────────
     /**
-     * @see org.eclipse.ui.IActionDelegate#selectionChanged(org.eclipse.jface.action.IAction, org.eclipse.jface.viewers.ISelection)
+     * {@inheritDoc}
+     * Extracts connections and folders from the new selection and updates the
+     * action's enabled state and text on the IAction wrapper.
      */
     public void selectionChanged( IAction action, ISelection selection )
     {
@@ -103,65 +138,52 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
     }
 
 
+    // ── ABSTRACT METHODS — SUBCLASS RESPONSIBILITIES ──────────────────────────────
+
     /**
-     * Returns the text for this action.
-     * <p>
-     * This method is associated with the <code>TEXT</code> property;
-     * property change events are reported when its value changes.
-     * </p>
+     * Returns the human-readable label for this action.
      *
-     * @return the text, or <code>null</code> if none
+     * @return  The action text.
      */
     public abstract String getText();
 
 
     /**
-     * Returns the image for this action as an image descriptor.
-     * <p>
-     * This method is associated with the <code>IMAGE</code> property;
-     * property change events are reported when its value changes.
-     * </p>
+     * Returns the icon for this action, or {@code null} for no icon.
      *
-     * @return the image, or <code>null</code> if this action has no image
+     * @return  The {@link ImageDescriptor}, or {@code null}.
      */
     public abstract ImageDescriptor getImageDescriptor();
 
 
     /**
-     * Returns the command identifier.
+     * Returns the Eclipse command definition ID to bind this action to a key binding,
+     * or {@code null} if no binding is needed.
      *
-     * @return the command identifier
+     * @return  The command ID string, or {@code null}.
      */
     public abstract String getCommandId();
 
 
     /**
-     * Returns whether this action is enabled.
-     * <p>
-     * This method is associated with the <code>ENABLED</code> property;
-     * property change events are reported when its value changes.
-     * </p>
+     * Returns {@code true} if this action should be enabled for the current selection.
      *
-     * @return <code>true</code> if enabled, and
-     *   <code>false</code> if disabled
+     * @return  {@code true} if enabled.
      */
     public abstract boolean isEnabled();
 
 
     /**
-     * Runs this action.
-     * Each action implementation must define the steps needed to carry out this action.
-     * The default implementation of this method in <code>Action</code>
-     * does nothing.
+     * Executes this action.  Subclasses implement the actual logic here.
      */
     public abstract void run();
 
 
+    // ── IS CHECKED — OPTIONAL TOGGLE STATE ────────────────────────────────────────
     /**
-     * Returns weather this action is checked.
-     * The default implementations returns false.
+     * Returns {@code false} by default.  Override for toggle-style actions.
      *
-     * @return
+     * @return  {@code false}.
      */
     public boolean isChecked()
     {
@@ -169,34 +191,36 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
     }
 
 
+    // ── INIT — RESET STATE ────────────────────────────────────────────────────────
     /**
-     * Initializes this action
+     * Resets the action state: clears selected connections, folders, and input.
      */
     private void init()
     {
         this.selectedConnections = new Connection[0];
         this.selectedConnectionFolders = new ConnectionFolder[0];
-
         this.input = null;
     }
 
 
+    // ── DISPOSE — CLEAN UP RESOURCES ──────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Clears selection and input references.
      */
     public void dispose()
     {
         this.selectedConnections = new Connection[0];
         this.selectedConnectionFolders = new ConnectionFolder[0];
-
         this.input = null;
     }
 
 
+    // ── GET SHELL — CONVENIENCE ACCESSOR ──────────────────────────────────────────
     /**
-     * Returns the current active shell
+     * Returns the active workbench shell, for use by subclasses that need to open dialogs.
      *
-     * @return the current active shell
+     * @return  The active SWT {@link Shell}.
      */
     protected Shell getShell()
     {
@@ -204,10 +228,12 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
     }
 
 
+    // ── SELECTION GETTERS / SETTERS ───────────────────────────────────────────────
+
     /**
-     * Gets the selected Connections.
+     * Returns the connections currently selected in the Connections view.
      *
-     * @return the selected Connections
+     * @return  The selected connections; never {@code null}.
      */
     public Connection[] getSelectedConnections()
     {
@@ -216,9 +242,9 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
 
 
     /**
-     * Sets the selected Connections.
+     * Sets the selected connections.
      *
-     * @param selectedConnections the selected Connections to set
+     * @param selectedConnections  The connections to set.
      */
     public void setSelectedConnections( Connection[] selectedConnections )
     {
@@ -227,9 +253,9 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
 
 
     /**
-     * Gets the selected connection folders.
+     * Returns the connection folders currently selected in the Connections view.
      *
-     * @return the selected connection folders
+     * @return  The selected folders; never {@code null}.
      */
     public ConnectionFolder[] getSelectedConnectionFolders()
     {
@@ -240,7 +266,7 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
     /**
      * Sets the selected connection folders.
      *
-     * @param selectedConnectionFolders the selected connections folders to set
+     * @param selectedConnectionFolders  The folders to set.
      */
     public void setSelectedConnectionFolders( ConnectionFolder[] selectedConnectionFolders )
     {
@@ -249,9 +275,9 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
 
 
     /**
-     * Gets the input.
+     * Returns the optional input object for this action.
      *
-     * @return the input
+     * @return  The input object, or {@code null}.
      */
     public Object getInput()
     {
@@ -260,9 +286,9 @@ public abstract class StudioAction implements IWorkbenchWindowActionDelegate
 
 
     /**
-     * Sets the input.
+     * Sets the optional input object for this action.
      *
-     * @param input the input to set
+     * @param input  The input object.
      */
     public void setInput( Object input )
     {

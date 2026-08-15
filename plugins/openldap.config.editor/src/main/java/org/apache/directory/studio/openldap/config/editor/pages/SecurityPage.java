@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.pages;
 
@@ -53,49 +53,28 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.SsfDecorator;
 import org.apache.directory.studio.openldap.config.model.OlcGlobal;
 
 
+// ── CLASS: SecurityPage — Vader Inspecting the Shield Bunker ─────────────────
+// On Endor, Vader descends to personally verify that every layer of the
+// shield generator's protection system is correctly configured: TLS encryption
+// for the communications channel, SASL authentication for identity validation,
+// and miscellaneous security parameters for local SSF and password policy.
+// SecurityPage is that inspection tour — one editor tab that gives the
+// administrator direct control over the three major security subsystems of
+// an OpenLDAP server.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Security Page of the Server Configuration Editor. It covers
- * the TLS configuration, the SASL configuration and some othe rseci-urity parameters.
- * <ul>
- *   <li> TLS :
- *     <ul>
- *       <li>olcTLSCACertificateFile</li>
- *       <li>olcTLSCACertificatePath</li>
- *       <li>olcTLSCertificateFile</li>
- *       <li>olcTLSCertificateKeyFile</li>
- *       <li>olcTLSCipherSuite</li>
- *       <li>olcTLSCrlCheck</li>
- *       <li>olcTLSCrlFile</li>
- *       <li>olcTLSDhParamFile</li>
- *       <li>olcTLSProtocolMin</li>
- *       <li>olcTLSRandFile</li>
- *       <li>olcTLSVerifyClient></li>
- *     </ul>
- *   </li>
- *   <li> SASL :
- *     <ul>
- *       <li>olcSaslAuxProps</li>
- *       <li>olcSaslHost</li>
- *       <li>olcSaslRealm</li>
- *       <li>olcSaslSecProps</li>
- *     </ul>
- *   </li>
- *   <li> Miscellaneous :
- *     <ul>
- *       <li>olcLocalSsf</li>
- *       <li>olcPasswordCryptSaltFormat</li>
- *       <li>olcPasswordHash</li>
- *       <li>olcSecurity</li>
- *     </ul>
- *   </li>
- * </ul>
- * 
+ * The "Security" tab page of the OpenLDAP server configuration editor.
+ * It covers TLS configuration, SASL configuration, and miscellaneous
+ * security parameters (local SSF, password hash, security features).
+ * Think of it as Vader's personal inspection of the shield bunker — every
+ * layer of the server's security posture in one focused view.
+ *
  * <pre>
  *   +------------------------------------------------------------------------------------------------------+
  *   | Security Configuration                                                                               |
  *   +------------------------------------------------------------------------------------------------------+
  *   | .-----------------------------------------------. .------------------------------------------------. |
- *   | |V TLS Configuration                            | |V SASL  Configuration                           | |
+ *   | |V TLS Configuration                            | |V SASL  Configuration                           | |
  *   | +-----------------------------------------------+ +------------------------------------------------+ |
  *   | | TLS Certificate File :     [                ] | | SASL Host :                [       ]           | |
  *   | | TLS Certificate Key File : [                ] | | SASL Realm :               [       ]           | |
@@ -122,7 +101,7 @@ import org.apache.directory.studio.openldap.config.model.OlcGlobal;
  *   |                                                   +------------------------------------------------+ |
  *   +------------------------------------------------------------------------------------------------------+
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
@@ -149,7 +128,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
     /** The olcTLSCipherSuite Text */
     private Text tlsCipherSuiteText;
 
-    /** The olcTLSCrlCheck Text */
+    /** The olcTlsCrlCheck Text */
     private Combo tlsCrlCheckCombo;
 
     /** The olcTLSCrlFile Text */
@@ -180,7 +159,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
     /** The olcSaslSecProps */
     private Text saslSecPropsText;
     private Button saslSecPropsEditButton;
-    
+
     // UI Controls for the Misc part
     /** The olcLocalSSF */
     private Text localSsfText;
@@ -196,7 +175,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
 
     /** A constant for the no-selection in Combo */
     private static final String NO_CHOICE = "---";
-    
+
     /** The CRL Checks */
     private static final String[] crlChecks = new String[]
         {
@@ -226,8 +205,8 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
         "hard",
         "true"
         };
-    
-    
+
+
     /**
      * The olcLocalSSF listener
      */
@@ -237,89 +216,89 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
             {
                 getConfiguration().getGlobal().setOlcLocalSSF( Integer.valueOf( localSsfText.getText() ) );
             }
-        };    
-    
+        };
+
     /**
      * The olcPasswordCryptSaltFormat listener
      */
     private ModifyListener passwordCryptSaltFormatListener = event ->
         getConfiguration().getGlobal().setOlcPasswordCryptSaltFormat( passwordCryptSaltFormatText.getText() );
-    
-    
+
+
     /**
      * The olcPasswordHash listener
      */
-    private WidgetModifyListener passwordHashListener = event -> 
+    private WidgetModifyListener passwordHashListener = event ->
         {
             List<String> passwordHashes = new ArrayList<>();
-            
+
             for ( PasswordHashEnum passwordHash : passwordHashTableWidget.getElements() )
             {
                 passwordHashes.add( passwordHash.getName() );
             }
-            
+
             getConfiguration().getGlobal().setOlcPasswordHash( passwordHashes );
         };
-    
-    
+
+
     /**
      * The olcSecurity listener
      */
     private WidgetModifyListener securityListener = event ->
         {
             List<String> ssfWrappers = new ArrayList<>();
-            
+
             for ( SsfWrapper ssfWrapper : securityTableWidget.getElements() )
             {
                 ssfWrappers.add( ssfWrapper.toString() );
             }
-            
+
             getConfiguration().getGlobal().setOlcSecurity( ssfWrappers );
         };
 
-    
+
     /**
      * The olcTlsCertificateFile listener
      */
     private ModifyListener tlsCertificateFileTextListener = event ->
         getConfiguration().getGlobal().setOlcTLSCertificateFile( tlsCertificateFileText.getText() );
-    
-    
+
+
     /**
      * The olcTlsCertificateKeyFile listener
      */
     private ModifyListener tlsCertificateKeyFileTextListener = event ->
         getConfiguration().getGlobal().setOlcTLSCertificateKeyFile( tlsCertificateKeyFileText.getText() );
-    
-    
+
+
     /**
      * The olcTlsCACertificateFile listener
      */
     private ModifyListener tlsCaCertificateFileTextListener = event ->
         getConfiguration().getGlobal().setOlcTLSCACertificateFile( tlsCaCertificateFileText.getText() );
-    
-    
+
+
     /**
      * The olcTlsCACertificatePath listener
      */
     private ModifyListener tlsCaCertificatePathTextListener = event ->
         getConfiguration().getGlobal().setOlcTLSCACertificatePath( tlsCaCertificatePathText.getText() );
-    
-    
+
+
     /**
      * The olcTlsCipherSuite listener
      */
     private ModifyListener tlsCipherSuiteTextListener = event ->
         getConfiguration().getGlobal().setOlcTLSCipherSuite( tlsCipherSuiteText.getText() );
-    
-    
+
+
     /**
      * The olcTlsCrlFile listener
      */
     private ModifyListener tlsCrlFileTextListener = event ->
         getConfiguration().getGlobal().setOlcTLSCRLFile( tlsCrlFileText.getText() );
-    
-    
+
+
     /**
      * The olcTlsCrlCheck listener
      */
@@ -331,22 +310,22 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
             getConfiguration().getGlobal().setOlcTLSCRLCheck( tlsCrlCheckCombo.getText() );
         }
     };
-    
-    
+
+
     /**
      * The olcTlsDhParamFile listener
      */
     private ModifyListener tlsDhParamFileTextListener = event ->
         getConfiguration().getGlobal().setOlcTLSDHParamFile(  tlsDhParamFileText.getText() );
-    
-    
+
+
     /**
      * The olcTlsRandFile listener
      */
     private ModifyListener tlsRandFileTextListener = event ->
         getConfiguration().getGlobal().setOlcTLSRandFile(  tlsRandFileText.getText() );
-    
-    
+
+
     /**
      * The olcTlsProtocolMin listener
      */
@@ -358,8 +337,8 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
             getConfiguration().getGlobal().setOlcTLSProtocolMin( tlsProtocolMinCombo.getText() );
         }
     };
-    
-    
+
+
     /**
      * The olcTlsVerifyClient listener
      */
@@ -371,29 +350,29 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
             getConfiguration().getGlobal().setOlcTLSVerifyClient( tlsVerifyClientCombo.getText() );
         }
     };
-    
-    
+
+
     /**
      * The olcSaslAuxProps listener
      */
     private ModifyListener saslAuxPropsTextListener = event ->
         getConfiguration().getGlobal().setOlcSaslAuxprops( saslAuxPropsText.getText() );
-    
-    
+
+
     /**
      * The olcSaslHost listener
      */
     private ModifyListener saslHostTextListener = event ->
         getConfiguration().getGlobal().setOlcSaslHost( saslHostText.getText() );
-    
-    
+
+
     /**
      * The olcSaslrealm listener
      */
     private ModifyListener saslRealmTextListener = event ->
         getConfiguration().getGlobal().setOlcSaslRealm( saslRealmText.getText() );
-    
-    
+
+
     /**
      * The listener for the SaslSecProps Text
      */
@@ -407,17 +386,23 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
             if ( dialog.open() == OverlayDialog.OK )
             {
                 String saslSecPropsValue = dialog.getSaslSecPropsValue();
-                
+
                 if ( saslSecPropsValue != null )
                 {
                     saslSecPropsText.setText( saslSecPropsValue );
                 }
-                
+
                 getConfiguration().getGlobal().setOlcSaslSecProps( saslSecPropsValue );
             }
         }
     };
 
+
+    // ── Constructor — Vader Arrives at the Security Station ───────────────────
+    // Vader steps off the shuttle onto the security platform, confirms his
+    // command authority with the editor, and prepares to inspect every
+    // TLS certificate, SASL configuration, and SSF setting on the station.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates a new instance of SecurityPage.
      *
@@ -429,10 +414,15 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── createFormContent — Vader Walks the Three Security Bays ───────────────
+    // Vader walks through the three security bays in sequence: TLS on the left
+    // (spanning both rows), then SASL and Miscellaneous stacked on the right.
+    // Each bay becomes its own section in the form.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the OpenLDAP Security config Tab. It contains 2 rows, with
      * 2 columns :
-     * 
+     *
      * <pre>
      * +-----------------------------------+---------------------------------+
      * |                                   |                                 |
@@ -480,6 +470,11 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── createTlsSection — Vader Checks the Encryption Vault ─────────────────
+    // The TLS bay holds all the encryption credentials: certificate files,
+    // key files, CA bundles, cipher suites, protocol floors, and CRL settings.
+    // Vader confirms every field with his inspection droid before moving on.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the TLS section. This section is a grid with 4 columns,
      * <ul>
@@ -495,7 +490,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
      * <li>olcTLSRandFile</li>
      * <li>olcTLSVerifyClient></li>
      * </ul>
-     * 
+     *
      * <pre>
      * .-----------------------------------------------.
      * |V TLS parameters                               |
@@ -591,6 +586,12 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── createSaslSection — Vader Checks the Authentication Bay ──────────────
+    // The SASL bay controls how clients prove their identity: the host they
+    // connect to, the security realm, the auxprop plugins for attribute lookup,
+    // and the security-properties string that governs the allowed mechanisms.
+    // Vader opens the dialog to review the secprops value directly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the SASL section. This section is a grid with 4 columns,
      * <ul>
@@ -599,7 +600,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
      * <li>olcSaslRealm</li>
      * <li>olcSaslSecProps</li>
      * </ul>
-     * 
+     *
      * <pre>
      * .---------------------------------------------------------.
      * |V SASL Parameters                                        |
@@ -610,7 +611,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
      * | SASL Security Properties : [                ] (Edit...) |
      * +---------------------------------------------------------+
      * </pre>
-     * 
+     *
      *
      * @param toolkit the toolkit
      * @param parent the parent composite
@@ -645,13 +646,18 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
         toolkit.createLabel( saslSectionComposite, Messages.getString( "OpenLDAPSecurityPage.SaslSecProps" ) ); //$NON-NLS-1$
         saslSecPropsText = toolkit.createText( saslSectionComposite, "" );
         saslSecPropsText.setLayoutData( new GridData( GridData.FILL_HORIZONTAL ) );
-        saslSecPropsEditButton = BaseWidgetUtils.createButton( saslSectionComposite, 
+        saslSecPropsEditButton = BaseWidgetUtils.createButton( saslSectionComposite,
             Messages.getString( "OpenLDAPSecurityPage.Edit" ), 1 );
         saslSecPropsEditButton.setLayoutData( new GridData( SWT.RIGHT, SWT.CENTER, false, false ) );
         saslSecPropsEditButton.addSelectionListener( saslSecPropsEditSelectionListener );
     }
 
 
+    // ── createMiscSection — Vader Reviews the Remaining Security Parameters ───
+    // After TLS and SASL, Vader reviews the miscellaneous security settings:
+    // the local SSF (strength factor), the password crypt format, the allowed
+    // password hash algorithms, and the security feature flags.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Creates the Misc section. This section is a grid with 4 columns,
      * <ul>
@@ -660,7 +666,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
      * <li>olcPasswordHash</li>
      * <li>olcSecurity</li>
      * </ul>
-     * 
+     *
      * <pre>
      * .-------------------------------------------------------------------------------.
      * |V Miscellaneous Security Parameters                                            |
@@ -681,7 +687,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
      * | +-----------------------------------------------------------------+           |
      * +-------------------------------------------------------------------------------+
      * </pre>
-     * 
+     *
      *
      * @param toolkit the toolkit
      * @param parent the parent composite
@@ -703,7 +709,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
         toolkit.createLabel( miscSectionComposite, Messages.getString( "OpenLDAPSecurityPage.PasswordCryptSaltFormat" ) ); //$NON-NLS-1$
         passwordCryptSaltFormatText = toolkit.createText( miscSectionComposite, "" );
         addModifyListener( passwordCryptSaltFormatText, passwordCryptSaltFormatListener );
-        
+
         // A blank line
         toolkit.createLabel( miscSectionComposite, "" );
         toolkit.createLabel( miscSectionComposite, "" );
@@ -713,7 +719,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
         // The PasswordHash widget
         Label passwordHashLabel = toolkit.createLabel( miscSectionComposite, Messages.getString( "OpenLDAPSecurityPage.PasswordHash" ) ); //$NON-NLS-1$
         passwordHashLabel.setLayoutData( new GridData( SWT.FILL, SWT.FILL, false, false, 4, 1 ) );
-        
+
         passwordHashTableWidget = new TableWidget<>( new PasswordHashDecorator( miscSectionComposite.getShell() ) );
 
         passwordHashTableWidget.createWidgetNoEdit( miscSectionComposite, toolkit );
@@ -729,7 +735,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
         // The Security widget
         Label securityLabel = toolkit.createLabel( miscSectionComposite, Messages.getString( "OpenLDAPSecurityPage.Security" ) ); //$NON-NLS-1$
         securityLabel.setLayoutData( new GridData( SWT.FILL, SWT.FILL, false, false, 4, 1 ) );
-        
+
         securityTableWidget = new TableWidget<>( new SsfDecorator( miscSectionComposite.getShell() ) );
 
         securityTableWidget.createWidgetWithEdit( miscSectionComposite, toolkit );
@@ -738,6 +744,11 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── refreshUI — Vader Updates His Inspection Report ───────────────────────
+    // After receiving fresh data from the configuration relay, Vader updates
+    // his inspection dossier: every TLS field, every SASL setting, every
+    // security parameter is reloaded from the current model.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -791,7 +802,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
             {
                 // Select the right one
                 boolean found = false;
-                
+
                 for ( String check : crlChecks )
                 {
                     if ( check.equalsIgnoreCase( tlsCrlCheck ) )
@@ -801,7 +812,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
                         break;
                     }
                 }
-                
+
                 if ( !found )
                 {
                     tlsVerifyClientCombo.setText( NO_CHOICE );
@@ -825,7 +836,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
             {
                 // Select the right one
                 boolean found = false;
-                
+
                 for ( String verify : verifyClients )
                 {
                     if ( verify.equalsIgnoreCase( tlsVerifyClient ) )
@@ -835,7 +846,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
                         break;
                     }
                 }
-                
+
                 if ( !found )
                 {
                     tlsVerifyClientCombo.setText( NO_CHOICE );
@@ -853,7 +864,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
             {
                 // Select the right one
                 boolean found = false;
-                
+
                 for ( String protocol : protocols )
                 {
                     if ( protocol.equalsIgnoreCase( tlsProtocolMin ) )
@@ -863,7 +874,7 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
                         break;
                     }
                 }
-                
+
                 if ( !found )
                 {
                     tlsProtocolMinCombo.setText( NO_CHOICE );
@@ -908,11 +919,16 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
 
             securityTableWidget.setElements( ssfWrappers );
         }
-        
+
         addListeners();
     }
 
 
+    // ── addListeners — Vader Activates the Security Monitors ──────────────────
+    // Before leaving the station, Vader arms all the monitoring systems —
+    // every widget is connected to the dirty-state sensor so any change
+    // immediately flags the configuration as modified.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Adds the listeners.
      */
@@ -940,6 +956,11 @@ public class SecurityPage extends OpenLDAPServerConfigurationEditorPage
     }
 
 
+    // ── removeListeners — Vader Disarms the Security Monitors ─────────────────
+    // Before a programmatic data reload, Vader tells the crew to stand down
+    // the monitoring systems so the automatic data fill doesn't falsely
+    // trigger the dirty-state alarm.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Removes the listeners
      */

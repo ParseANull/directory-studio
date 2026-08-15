@@ -27,8 +27,20 @@ import org.apache.directory.studio.ldapbrowser.core.model.IBrowserConnection;
 import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 
 
+// ── CLASS: BaseDNEntry — THE TOP LEVEL SECTOR OF THE DEATH STAR ──────────────
+// The Death Star blueprint has a top-level sector that has no parent sector —
+// it is the root of the whole structure.  BaseDNEntry is that root: an entry
+// whose parent is always the RootDSE rather than another real entry, and whose
+// DN is the configured base DN of the connection.  It cannot have its RDN or
+// parent changed after construction.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The BaseDNEntry class represents an entry without a logical parent entry.
+ * Represents an LDAP entry at the root of a naming context (a base DN),
+ * i.e. an entry that has no logical parent entry other than the
+ * {@link RootDSE}.  The DN and connection are fixed at construction time.
+ *
+ * <p>Think of this as the top-level sector of the Death Star blueprint —
+ * there is nothing above it in the directory tree.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -44,16 +56,18 @@ public class BaseDNEntry extends AbstractEntry
     protected IBrowserConnection browserConnection;
 
 
+    // ── No-Arg Constructor For Serialisation ─────────────────────────────────────
     protected BaseDNEntry()
     {
     }
 
 
+    // ── Root Sector Constructor: DN + Connection Required ────────────────────────
     /**
      * Creates a new instance of BaseDNEntry.
-     * 
-     * @param baseDn the base Dn
-     * @param browserConnection the browser connection
+     *
+     * @param baseDn the base Dn of this naming context root; must not be {@code null}
+     * @param browserConnection the browser connection this entry belongs to; must not be {@code null}
      */
     public BaseDNEntry( Dn baseDn, IBrowserConnection browserConnection )
     {
@@ -66,6 +80,7 @@ public class BaseDNEntry extends AbstractEntry
     }
 
 
+    // ── Blueprint: Return This Sector's Base DN ───────────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IEntry#getDn()
      */
@@ -75,6 +90,7 @@ public class BaseDNEntry extends AbstractEntry
     }
 
 
+    // ── Blueprint: Parent Is Always The RootDSE ───────────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IEntry#getParententry()
      */
@@ -84,6 +100,7 @@ public class BaseDNEntry extends AbstractEntry
     }
 
 
+    // ── Blueprint: Return The Connection Owning This Sector ───────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.IEntry#getBrowserConnection()
      */
@@ -93,6 +110,7 @@ public class BaseDNEntry extends AbstractEntry
     }
 
 
+    // ── Base DN Cannot Be Re-Parented By RDN Change — No-Op ──────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.impl.AbstractEntry#setRdn(org.apache.directory.studio.ldapbrowser.core.model.RDN)
      */
@@ -101,6 +119,7 @@ public class BaseDNEntry extends AbstractEntry
     }
 
 
+    // ── Base DN Cannot Be Re-Parented — No-Op ────────────────────────────────────
     /**
      * @see org.apache.directory.studio.ldapbrowser.core.model.impl.AbstractEntry#setParent(org.apache.directory.studio.ldapbrowser.core.model.IEntry)
      */

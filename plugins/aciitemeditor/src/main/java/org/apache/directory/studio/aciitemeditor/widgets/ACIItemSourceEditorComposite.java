@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.widgets;
 
@@ -41,8 +41,20 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 
 
+// ── CLASS: ACIItemSourceEditorComposite — CASSIAN'S INTERCEPT CONSOLE ─────────
+// Cassian Andor leans over a terminal displaying the raw intercepted Imperial
+// transmission — unformatted, verbatim, exactly as the rebels captured it.
+// This composite is that console: a syntax-highlighted SourceViewer showing the
+// raw ACI item string.  You can load it unchecked (force) or validated (parse).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This composite contains the source editor.
+ * SWT {@link Composite} wrapping a syntax-highlighted {@link SourceViewer}
+ * for editing raw ACI item strings.
+ * Provides validated ({@link #setInput}/{@link #getInput}) and unvalidated
+ * ({@link #forceSetInput}/{@link #forceGetInput}) access to the editor content.
+ * Formatting is applied automatically on load via the content formatter.
+ * Think of this as Cassian's intercept console: syntax colour, auto-format,
+ * parse-on-demand.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -55,11 +67,17 @@ public class ACIItemSourceEditorComposite extends Composite
     private SourceViewerConfiguration configuration;
 
 
+    // ── CONSTRUCT THE SOURCE CONSOLE ──────────────────────────────────────────
+    // Cassian's console is assembled: a SourceViewer is created with syntax
+    // highlighting configuration, monospace font, and an empty Document.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ACIItemSourceEditorComposite.
+     * Creates a new {@code ACIItemSourceEditorComposite}.
+     * Builds the {@link SourceViewer}, attaches {@link ACISourceViewerConfiguration},
+     * sets the monospace font, and initialises an empty document.
      *
-     * @param parent
-     * @param style
+     * @param parent  the parent composite
+     * @param style   SWT style bits
      */
     public ACIItemSourceEditorComposite( Composite parent, int style )
     {
@@ -70,9 +88,12 @@ public class ACIItemSourceEditorComposite extends Composite
     }
 
 
+    // ── BUILD THE SYNTAX-HIGHLIGHTED EDITOR ───────────────────────────────────
+    // The SourceViewer is created, configured with ACI syntax highlighting,
+    // given the JFace monospace font, and wired to an empty Document.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates and configures the source editor.
-     *
+     * Instantiates and configures the {@link SourceViewer}.
      */
     private void createSourceEditor()
     {
@@ -94,13 +115,22 @@ public class ACIItemSourceEditorComposite extends Composite
     }
 
 
+    // ── VALIDATED INPUT SETTER ────────────────────────────────────────────────
+    // Cassian verifies the transmission before loading it into the console —
+    // if the parser rejects it we throw instead of loading garbage.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the input to the source editor.
-     * A syntax check is performed before setting the input, an 
-     * invalid syntax causes a ParseException.
+     * Validates {@code input} by parsing it, then loads it into the source
+     * viewer and auto-formats.
      *
-     * @param input the valid string representation of the ACI item
-     * @throws ParseException it the syntax check fails.
+     * <p>For example — the tab folder synchronises from visual to source:</p>
+     * <pre>
+     *   sourceComposite.setInput(visualComposite.getInput());
+     *   // parse succeeds, the ACI text appears formatted in the editor
+     * </pre>
+     *
+     * @param input  the ACI string to validate and load
+     * @throws ParseException  if {@code input} is not valid ACI syntax
      */
     public void setInput( String input ) throws ParseException
     {
@@ -111,10 +141,16 @@ public class ACIItemSourceEditorComposite extends Composite
     }
 
 
+    // ── UNVALIDATED INPUT SETTER ──────────────────────────────────────────────
+    // When the dialog first opens with whatever string is stored in the attribute,
+    // we load it without validation — the user may need to fix bad syntax.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Set the input to the source editor without a syntax check.
+     * Loads {@code input} into the source viewer and auto-formats it, without
+     * performing a syntax check.
+     * Use this when the content may be malformed (e.g., on initial dialog open).
      *
-     * @param input The string representation of the ACI item, may be invalid
+     * @param input  the ACI string to load (may be invalid)
      */
     public void forceSetInput( String input )
     {
@@ -127,13 +163,17 @@ public class ACIItemSourceEditorComposite extends Composite
     }
 
 
+    // ── VALIDATED OUTPUT GETTER ───────────────────────────────────────────────
+    // Cassian re-parses the transmission before handing it off to confirm it
+    // is still valid after any edits; the normalised string is returned.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the string representation of the ACI item.
-     * A syntax check is performed before returning the input, an 
-     * invalid syntax causes a ParseException.
+     * Returns the normalised ACI string from the source editor after stripping
+     * newlines and parsing for validity.
+     * Throws {@link ParseException} if the content is invalid.
      *
-     * @return the valid string representation of the ACI item
-     * @throws ParseException it the syntax check fails.
+     * @return the valid normalised ACI string
+     * @throws ParseException  if the source editor content fails to parse
      */
     public String getInput() throws ParseException
     {
@@ -155,11 +195,11 @@ public class ACIItemSourceEditorComposite extends Composite
     }
 
 
+    // ── UNVALIDATED OUTPUT GETTER ─────────────────────────────────────────────
     /**
-     * Returns the string representation of the ACI item without syntax check.
-     * In other words only the text in the source editor is returned.
+     * Returns the raw text currently in the source editor without any validation.
      *
-     * @return the string representation of the ACI item, may be invalid
+     * @return the raw editor content, which may be invalid ACI syntax
      */
     public String forceGetInput()
     {
@@ -167,18 +207,22 @@ public class ACIItemSourceEditorComposite extends Composite
     }
 
 
+    // ── CONTEXT INJECTION ─────────────────────────────────────────────────────
     /**
-     * Sets the context.
-     * 
-     * @param context the context
+     * Accepts the connection context; currently unused by the source editor
+     * (the source editor does not need schema access directly).
+     *
+     * @param context  the value context (not currently used)
      */
     public void setContext( ACIItemValueWithContext context )
     {
     }
 
 
+    // ── FORMAT THE CURRENT DOCUMENT ───────────────────────────────────────────
     /**
-     * Formats the content.
+     * Runs the content formatter over the entire source editor document,
+     * pretty-printing the ACI text.
      */
     public void format()
     {

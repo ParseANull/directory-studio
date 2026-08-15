@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.common.ui.widgets;
 
@@ -36,9 +36,23 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.apache.directory.studio.openldap.common.ui.dialogs.PasswordDialog;
 
 
+// ── CLASS: PasswordWidget — REBEL VAULT KEEPER GUARDING SECRET ACCESS CODES ──
+// Picture the Rebel vault keeper standing guard over the encrypted access codes
+// for the Hoth base. The vault display shows the codes as bullet dots by default
+// so passing Imperials cannot read them. The "Show Password" checkbox lifts the
+// veil for the vault keeper alone. The "Edit Password..." button opens a
+// {@link PasswordDialog} so the keeper can change the codes. An optional "None"
+// checkbox allows the keeper to signal that no code is currently stored.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The PasswordWidget provides a label to display the password, an edit button 
- * and a 'Show Password' button to show/hide the password.
+ * We provide a password display-and-edit widget consisting of a read-only text
+ * field (masked by default), an "Edit Password..." button, and a "Show Password"
+ * checkbox. An optional "None" checkbox signals a null (absent) password. We
+ * extend {@link AbstractWidget} so change listeners are notified when the
+ * password is updated.
+ *
+ * <p>The PasswordWidget provides a label to display the password, an edit button
+ * and a 'Show Password' button to show/hide the password.</p>
  */
 public class PasswordWidget extends AbstractWidget
 {
@@ -59,18 +73,29 @@ public class PasswordWidget extends AbstractWidget
     private Button showPasswordCheckbox;
 
 
+    // ── CONSTRUCTOR: PasswordWidget() — BLANK VAULT SETUP ────────────────────
+    // We create a vault keeper widget with no password and no None checkbox.
+    // Use this when every invocation of the parent page will always have a
+    // password (i.e., it is never optional).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PasswordWidget.
+     * We create a new {@link PasswordWidget} with no initial password and
+     * without a "None" checkbox.
      */
     public PasswordWidget()
     {
     }
 
 
+    // ── CONSTRUCTOR: PasswordWidget(boolean) — CONFIGURING THE VAULT ──────────
+    // We create a vault keeper widget that optionally shows a "None" checkbox.
+    // When the checkbox is present the user can signal that no password is stored.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PasswordWidget.
+     * We create a new {@link PasswordWidget} that shows or hides the "None"
+     * checkbox according to the supplied flag.
      *
-     * @param showNoneButton the flag to show the "None" checkbox
+     * @param showNoneCheckbox  {@code true} to show a "None" checkbox
      */
     public PasswordWidget( boolean showNoneCheckbox )
     {
@@ -78,10 +103,16 @@ public class PasswordWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: createWidget(Composite) — OPENING THE VAULT (NO TOOLKIT) ──────
+    // We delegate to the toolkit-aware overload with a {@code null} toolkit so
+    // there is always one code path to maintain.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
-     * 
-     * @param parent the parent
+     * We create the widget's SWT controls inside the given parent without a
+     * {@link FormToolkit}. Delegates to
+     * {@link #createWidget(Composite, FormToolkit)}.
+     *
+     * @param parent  the parent {@link Composite}
      */
     public void createWidget( Composite parent )
     {
@@ -89,11 +120,18 @@ public class PasswordWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: createWidget(Composite, FormToolkit) — OPENING THE VAULT ──────
+    // We build the composite holding the optional None checkbox, the masked
+    // password text field, the Edit button, and the Show Password checkbox. We
+    // wire up the None checkbox to disable editing when checked, and we call
+    // noneCheckboxSelected() at the end to set the initial enabled state.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
-     * 
-     * @param parent the parent
-     * @param toolkit the toolkit
+     * We create all SWT controls for this widget inside the given parent,
+     * optionally adapting them with a {@link FormToolkit} for Eclipse Forms pages.
+     *
+     * @param parent   the parent {@link Composite}
+     * @param toolkit  the form toolkit, or {@code null} for plain SWT
      */
     public void createWidget( Composite parent, FormToolkit toolkit )
     {
@@ -153,7 +191,7 @@ public class PasswordWidget extends AbstractWidget
         }
         else
         {
-            passwordText.setEchoChar( '\u2022' );
+            passwordText.setEchoChar( '•' );
         }
 
         // Edit Button
@@ -209,10 +247,15 @@ public class PasswordWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getNumberOfColumnsForComposite — COUNTING THE VAULT PANELS ────
+    // We return 3 when the None checkbox is shown (checkbox + text + button),
+    // or 2 when hidden (text + button).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the number of columns for the composite.
+     * We return the column count needed by the inner composite: 3 if the "None"
+     * checkbox is visible, 2 otherwise.
      *
-     * @return the number of columns for the composite
+     * @return the number of columns for the inner {@link GridLayout}
      */
     private int getNumberOfColumnsForComposite()
     {
@@ -227,8 +270,17 @@ public class PasswordWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: noneCheckboxSelected — LOCKING OR UNLOCKING THE VAULT ─────────
+    // When the None checkbox is checked we disable the Edit button and the Show
+    // Password checkbox because there is no code to view or change. When
+    // unchecked we re-enable both controls.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the "None" checkbox is clicked.
+     * We enable or disable the Edit button and Show Password checkbox based on
+     * the state of the None checkbox. When {@code state} is {@code true} both
+     * controls are disabled.
+     *
+     * @param state  {@code true} if "None" is selected
      */
     private void noneCheckboxSelected( boolean state )
     {
@@ -237,8 +289,15 @@ public class PasswordWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: editButtonAction — OPENING THE VAULT DOOR ────────────────────
+    // We open a {@link PasswordDialog} pre-seeded with the current password. If
+    // the user confirms a new password we update our internal field, refresh the
+    // text display, and fire change listeners.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This action is called when the 'Edit...' button is clicked.
+     * We open a {@link PasswordDialog} seeded with the current password. If the
+     * user confirms a new password we update our internal byte array, display
+     * it in the text field, and notify change listeners.
      */
     private void editButtonAction()
     {
@@ -260,8 +319,14 @@ public class PasswordWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: showPasswordAction — LIFTING OR LOWERING THE VEIL ────────────
+    // We toggle the echo character on the password text field between the null
+    // character (show plaintext) and the bullet character (mask as dots).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This action is called when the 'Show Password' checkbox is clicked.
+     * We toggle the password text field between plaintext mode (echo char
+     * {@code '\0'}) and masked mode (echo char {@code '•'}) based on the
+     * current state of the "Show Password" checkbox.
      */
     private void showPasswordAction()
     {
@@ -271,15 +336,22 @@ public class PasswordWidget extends AbstractWidget
         }
         else
         {
-            passwordText.setEchoChar( '\u2022' );
+            passwordText.setEchoChar( '•' );
         }
     }
 
 
+    // ── METHOD: setPassword — LOADING THE ACCESS CODES ────────────────────────
+    // We update our internal password field and synchronize the text display.
+    // If a None checkbox is present we also update its selection state and
+    // enable/disable the edit controls accordingly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the password.
+     * We set the widget's current password and refresh the display. If a "None"
+     * checkbox is present we set its selection based on whether {@code password}
+     * is {@code null}.
      *
-     * @param password the password
+     * @param password  the new password bytes, or {@code null} for none
      */
     public void setPassword( byte[] password )
     {
@@ -304,10 +376,15 @@ public class PasswordWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getPassword — READING THE ACCESS CODES ───────────────────────
+    // We return the current password bytes, or {@code null} if None is selected
+    // or the password array is empty.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the password.
+     * We return the current password as a byte array, or {@code null} if the
+     * "None" checkbox is checked or no password has been set.
      *
-     * @return the password
+     * @return the password bytes, or {@code null}
      */
     public byte[] getPassword()
     {
@@ -325,10 +402,16 @@ public class PasswordWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getPasswordAsString — READING THE ACCESS CODES AS TEXT ────────
+    // We return the password decoded as a UTF-16 String, or {@code null} if
+    // None is selected or the password is empty. Useful for text-based
+    // configuration attributes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the password as string.
+     * We return the current password decoded as a {@link String}, or
+     * {@code null} if the "None" checkbox is checked or no password has been set.
      *
-     * @return the password as string
+     * @return the password string, or {@code null}
      */
     public String getPasswordAsString()
     {
@@ -346,10 +429,15 @@ public class PasswordWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getControl — HANDING OVER THE VAULT DOOR HANDLE ──────────────
+    // We return the top-level composite so the parent layout can size and
+    // position the entire password widget as a unit.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the primary control associated with this widget.
+     * We return the top-level {@link Control} (a {@link Composite}) for this
+     * widget so the parent layout can size and position it.
      *
-     * @return the primary control associated with this widget.
+     * @return the primary composite control
      */
     public Control getControl()
     {
@@ -357,10 +445,16 @@ public class PasswordWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: setEnabled — LOCKING OR UNLOCKING THE VAULT EXTERNALLY ────────
+    // We enable or disable the interactive controls depending on the overall
+    // enabled flag, honouring the None checkbox state if present.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the enabled state of the widget.
+     * We enable or disable the widget's interactive controls. When a "None"
+     * checkbox is present, we also enable/disable it and respect its current
+     * selection state when enabling the Edit and Show Password controls.
      *
-     * @param enabled true to enable the widget, false to disable the widget
+     * @param enabled  {@code true} to enable the widget, {@code false} to disable it
      */
     public void setEnabled( boolean enabled )
     {

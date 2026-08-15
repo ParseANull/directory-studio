@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui;
@@ -35,8 +35,20 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
 
+// ── CLASS: BrowserUIPlugin — Han Solo Jumps to Hyperspace ────────────────────
+// Han slams the hyperdrive lever forward on the Millennium Falcon: systems spin
+// up, life support engages, the navicomputer locks in coordinates, and in a flash
+// of blue light the whole ship is somewhere completely different.
+// BrowserUIPlugin is that moment — the OSGi activator that fires up everything
+// the Browser UI plugin needs (images, the entry editor manager, properties) and
+// tears it all down cleanly when the plugin is stopped.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The main plugin class to be used in the desktop.
+ * The OSGi activator (main plugin class) for the Browser UI plugin.
+ * It boots the plugin's shared services on startup and shuts them down on stop,
+ * and acts as the single static access point for images, properties, and managers.
+ * Think of this class as Han Solo at the Falcon's controls — it's the one that
+ * makes the whole ship jump to hyperspace and brings it safely out the other side.
  */
 public class BrowserUIPlugin extends AbstractUIPlugin
 {
@@ -50,8 +62,16 @@ public class BrowserUIPlugin extends AbstractUIPlugin
     private PropertyResourceBundle properties;
 
 
+    // ── Han Grabs the Controls ────────────────────────────────────────────────
+    // Han drops into the pilot's seat of the Millennium Falcon, takes the
+    // controls, and makes himself the one everyone calls when they need the ship.
+    // This constructor sets our singleton reference so the rest of the plugin
+    // can call {@code getDefault()} and always get back this one instance.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * The constructor.
+     * Constructs the plugin and registers this instance as the shared singleton.
+     * Eclipse's OSGi framework calls this exactly once when the bundle is first
+     * activated; we just need to store the reference for later retrieval.
      */
     public BrowserUIPlugin()
     {
@@ -59,8 +79,20 @@ public class BrowserUIPlugin extends AbstractUIPlugin
     }
 
 
+    // ── Punch It, Chewie — Hyperdrive Engaged ─────────────────────────────────
+    // The Falcon's systems power up in sequence: shields, engines, navicomputer.
+    // Han doesn't leave port without everything ready.
+    // We do the same here — the entry editor manager is created and ready before
+    // any part of the UI tries to open an entry editor panel.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called upon plug-in activation
+     * Called by OSGi when the bundle activates — our plugin's equivalent of
+     * punching the hyperdrive. We initialise the {@link EntryEditorManager} here
+     * so it's available the moment the UI starts rendering entry editors.
+     *
+     * @param context  the OSGi bundle context, passed to the superclass to do
+     *                 all the standard Eclipse plugin startup housekeeping
+     * @throws Exception if the superclass startup fails for any reason
      */
     public void start( BundleContext context ) throws Exception
     {
@@ -73,8 +105,20 @@ public class BrowserUIPlugin extends AbstractUIPlugin
     }
 
 
+    // ── Falcon Powers Down After the Jump ─────────────────────────────────────
+    // Coming out of hyperspace, Han cuts the engines and powers down non-essential
+    // systems — you don't leave the hyperdrive spinning when you land.
+    // We mirror that here: dispose the entry editor manager and clear the singleton
+    // so nothing holds a stale reference after the plugin unloads.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the plug-in is stopped
+     * Called by OSGi when the bundle is being stopped — the orderly shutdown of
+     * our plugin. We dispose the entry editor manager (releasing any listeners or
+     * resources it holds) and null out the singleton so nobody accidentally uses
+     * a dead plugin instance.
+     *
+     * @param context  the OSGi bundle context; forwarded to the superclass
+     * @throws Exception if the superclass shutdown fails
      */
     public void stop( BundleContext context ) throws Exception
     {
@@ -90,8 +134,19 @@ public class BrowserUIPlugin extends AbstractUIPlugin
     }
 
 
+    // ── The Falcon Is Always Docked Right Here ────────────────────────────────
+    // No matter where you are in the galaxy, you know exactly where to find Han's
+    // ship — it's the one with the dented hull in Bay 94.
+    // {@code getDefault()} is that Bay 94: the single well-known address for our
+    // plugin instance that every other class calls to reach shared services.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the shared instance.
+     * Returns the shared singleton instance of this plugin.
+     * Every class in the plugin that needs an image, a property, or the entry
+     * editor manager goes through this method — it's our central dispatch point.
+     *
+     * @return the singleton {@code BrowserUIPlugin} instance, or {@code null}
+     *         if the plugin hasn't started yet (shouldn't normally happen in practice)
      */
     public static BrowserUIPlugin getDefault()
     {
@@ -112,13 +167,24 @@ public class BrowserUIPlugin extends AbstractUIPlugin
     //        }
     //    }
 
+    // ── Han Pulls Up the Star Map ─────────────────────────────────────────────
+    // Han needs coordinates — he consults the navicomputer, which knows the path
+    // to every location in the galaxy as a vector, not a rendered image.
+    // An {@code ImageDescriptor} is exactly that: a lightweight recipe for
+    // creating a real SWT {@code Image} later, without actually allocating it yet.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Use this method to get SWT images. Use the IMG_ constants from
-     * BrowserUIConstants for the key.
-     * 
-     * @param key
-     *                The key (relative path to the image im filesystem)
-     * @return The image discriptor or null
+     * Looks up an {@code ImageDescriptor} for the given resource path key.
+     * Use the {@code IMG_*} constants from {@link BrowserUIConstants} as keys.
+     * A descriptor is a lazy handle — it describes how to create the image without
+     * allocating the SWT resource yet, which is useful when you need to pass images
+     * to JFace contributions before the UI is fully up.
+     *
+     * @param key  the relative path to the image file within the plugin bundle,
+     *             e.g. {@code "resources/icons/entry_default.gif"}
+     * @return an {@code ImageDescriptor} for the image, or {@code null} if the
+     *         path can't be resolved inside the bundle
+     * @see BrowserUIConstants
      */
     public ImageDescriptor getImageDescriptor( String key )
     {
@@ -137,17 +203,24 @@ public class BrowserUIPlugin extends AbstractUIPlugin
     }
 
 
+    // ── Han Fires Up the Real Engines ─────────────────────────────────────────
+    // The star map gave coordinates; now Han actually powers the sublight engines
+    // and the Falcon moves for real. The first flight to a new destination takes
+    // a moment; after that, the navicomputer has it cached.
+    // {@code getImage} works the same way: first call creates the SWT Image and
+    // caches it in Eclipse's ImageRegistry; every call after is instant.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Use this method to get SWT images. Use the IMG_ constants from
-     * BrowserUIConstants for the key. A ImageRegistry is used to manage the
-     * the key->Image mapping.
-     * <p>
-     * Note: Don't dispose the returned SWT Image. It is disposed
-     * automatically when the plugin is stopped.
-     * 
-     * @param key
-     *                The key (relative path to the image im filesystem)
-     * @return The SWT Image or null
+     * Returns a fully allocated SWT {@code Image} for the given resource path key.
+     * Use the {@code IMG_*} constants from {@link BrowserUIConstants} as the key.
+     * The image is cached in the plugin's {@code ImageRegistry} after the first
+     * load, so repeated calls are cheap. Do NOT dispose the returned image — the
+     * registry owns it and will dispose it automatically when the plugin stops.
+     *
+     * @param key  the relative path to the image file, e.g.
+     *             {@code "resources/icons/search.gif"}
+     * @return the cached SWT {@code Image}, or {@code null} if the path can't
+     *         be resolved or the descriptor can't produce an image
      * @see BrowserUIConstants
      */
     public Image getImage( String key )
@@ -166,11 +239,18 @@ public class BrowserUIPlugin extends AbstractUIPlugin
     }
 
 
+    // ── Han Hands Off the Crew Manifest ──────────────────────────────────────
+    // Every ship needs a crew chief — someone who knows which passengers need
+    // which berths. The entry editor manager is that crew chief for editors.
+    // We hand it off here so callers can ask it "which editor opens this entry?"
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the entry editor manager
+     * Returns the {@link EntryEditorManager} that handles which entry editor
+     * extension should be used for any given LDAP entry.
+     * It's created during {@link #start(BundleContext)} and disposed during
+     * {@link #stop(BundleContext)}, so it's always valid while the plugin is alive.
      *
-     * @return
-     *      the entry editor manager
+     * @return the shared {@code EntryEditorManager} instance
      */
     public EntryEditorManager getEntryEditorManager()
     {
@@ -178,11 +258,22 @@ public class BrowserUIPlugin extends AbstractUIPlugin
     }
 
 
+    // ── Han Reads the Falcon's Flight Manual ──────────────────────────────────
+    // The Millennium Falcon has a battered properties binder in the cockpit — IDs,
+    // frequencies, docking codes — that Han consults when he needs an exact value.
+    // We load our {@code plugin.properties} file lazily the same way: only when
+    // something actually needs a value do we open the file and parse it.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the plugin properties.
+     * Returns the plugin's {@code plugin.properties} file as a
+     * {@code PropertyResourceBundle}, loading it lazily on first access.
+     * This file contains all the plug-in contribution IDs (editor IDs, view IDs,
+     * preference page IDs, etc.) that we expose as constants in
+     * {@link BrowserUIConstants}. If the file can't be read, we log an error and
+     * return {@code null} — callers should handle that defensively.
      *
-     * @return
-     *      the plugin properties
+     * @return the {@code PropertyResourceBundle} from {@code plugin.properties},
+     *         or {@code null} if the file couldn't be opened
      */
     public PropertyResourceBundle getPluginProperties()
     {

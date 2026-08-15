@@ -29,8 +29,22 @@ import org.apache.directory.studio.ldapbrowser.core.model.IQuickSearch;
 import org.apache.directory.studio.ldapbrowser.core.model.ISearch;
 
 
+// ── CLASS: QuickSearch — HAN JUMPING TO HYPERSPACE WITHOUT A DESTINATION ─────
+// Han doesn't always have coordinates plotted.  Sometimes he just pulls the
+// lever and picks a heading on the fly — quick, minimal setup, full speed.
+// QuickSearch is that impulse jump: a Search subtype anchored to a specific
+// entry with SUBTREE scope and the connection's default limits already filled
+// in.  You hand it a base entry and go — no need to configure everything from
+// scratch.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Default implementation of IQuickSearch.
+ * Default implementation of {@link IQuickSearch}.
+ * A convenience subclass of {@link Search} that is anchored to a specific
+ * base {@link IEntry} and pre-populated with the connection's default
+ * scope, limits, and dereferencing settings.
+ *
+ * <p>Think of this as Han jumping to hyperspace with minimal setup — the
+ * base entry is your destination, and the connection fills in the rest.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -42,10 +56,12 @@ public class QuickSearch extends Search implements IQuickSearch
     private IEntry searchBaseEntry;
 
 
+    // ── Han Plots A Quick Jump With Just A Base Entry ─────────────────────────────
     /**
-     * Instantiates a new quick search.
-     * 
-     * @param searchBaseEntry the search base entry
+     * Instantiates a new quick search anchored to the given entry.
+     * Connection defaults are not applied by this constructor.
+     *
+     * @param searchBaseEntry the entry to use as the search base
      */
     public QuickSearch( IEntry searchBaseEntry )
     {
@@ -53,11 +69,16 @@ public class QuickSearch extends Search implements IQuickSearch
     }
 
 
+    // ── Han Plots A Quick Jump With Entry + Connection Defaults ──────────────────
+    // "Base entry set.  SUBTREE scope.  Connection limits applied.  Ready to go."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Instantiates a new quick search.
-     * 
-     * @param searchBaseEntry the search base entry
-     * @param connection the connection
+     * Instantiates a new quick search anchored to the given entry with all
+     * connection defaults (scope, limits, dereferencing, referral handling)
+     * pre-populated from {@code connection}.
+     *
+     * @param searchBaseEntry the entry to use as the search base
+     * @param connection the browser connection to read default settings from
      */
     public QuickSearch( IEntry searchBaseEntry, IBrowserConnection connection )
     {
@@ -76,6 +97,12 @@ public class QuickSearch extends Search implements IQuickSearch
     }
 
 
+    // ── Han Returns His Jump Destination ─────────────────────────────────────────
+    /**
+     * Returns the entry this quick search is anchored to.
+     *
+     * @return the search base entry
+     */
     public IEntry getSearchBaseEntry()
     {
         return searchBaseEntry;

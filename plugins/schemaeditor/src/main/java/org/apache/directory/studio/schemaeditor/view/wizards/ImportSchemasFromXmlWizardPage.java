@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.wizards;
 
@@ -49,11 +49,19 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: ImportSchemasFromXmlWizardPage — C-3PO Surveys The Scroll Archive ─
+// C-3PO stands before a shelf of Jawa data scrolls (XML files), reads out the
+// titles on each one, and lets the user check off the scrolls they want him to
+// translate.  The .xml extension is his filter for "yes, this is a data scroll I
+// can read" versus "this is something else entirely."
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the WizardPage of the ImportSchemasFromOpenLdapWizard.
- * <p>
- * It is used to let the user enter the informations about the
- * schemas he wants to import.
+ * The wizard page shown by {@link ImportSchemasFromXmlWizard} that lets the user
+ * choose a filesystem directory and select which XML schema files to import.
+ * It provides a directory picker and a checkbox table of .xml files found there.
+ * Think of this page as C-3PO surveying a Jawa archive shelf: he lists the readable
+ * scrolls, lets you check the ones you want, and refuses to proceed until at least
+ * one is selected and the archive path is valid.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -67,8 +75,15 @@ public class ImportSchemasFromXmlWizardPage extends AbstractWizardPage
     private Button schemaFilesTableDeselectAllButton;
 
 
+    // ── C-3PO Introduces Himself And States His Purpose ───────────────────────
+    // "I am C-3PO, human-cyborg relations, and I am here to translate your XML
+    // schema files."  Before doing anything, 3PO sets the page title and description
+    // so the operator knows exactly what kind of scrolls he handles.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ImportSchemasFromOpenLdapWizardPage.
+     * Creates the wizard page and registers its title, description, and banner image.
+     * The string we pass to the superclass constructor is the page's unique ID within
+     * the wizard — Eclipse uses it internally to manage page navigation.
      */
     protected ImportSchemasFromXmlWizardPage()
     {
@@ -79,8 +94,27 @@ public class ImportSchemasFromXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── C-3PO Arranges His Translation Workspace ─────────────────────────────
+    // 3PO clears a table, sets up a directory locator (so he knows which shelf to
+    // browse), and arranges a checklist display where he can list each readable
+    // scroll.  He also places "Select All" and "Deselect All" shortcuts so the
+    // operator doesn't have to tick every item individually.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all SWT widgets for the page and wires their event listeners so
+     * every user interaction triggers immediate validation.
+     * Eclipse calls this once, lazily, just before the page becomes visible.
+     * We must call {@code setControl()} at the end or Eclipse will throw.
+     *
+     * <p>For example — C-3PO lays out his translation workspace:</p>
+     * <pre>
+     *   Top section: "Which archive shelf?" — text field + Browse button.
+     *   Bottom section: Checklist of .xml files on that shelf.
+     *   3PO blocks the "proceed" button until at least one scroll is ticked.
+     * </pre>
+     *
+     * @param parent  the parent composite provided by the wizard framework;
+     *                we nest our own composite inside it.
      */
     public void createControl( Composite parent )
     {
@@ -197,8 +231,15 @@ public class ImportSchemasFromXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── C-3PO Resets His Workspace Before Starting ───────────────────────────
+    // Before 3PO begins, he clears his notepad and sets his status light to red —
+    // he's not ready to translate anything yet; the operator needs to tell him
+    // which shelf to look at first.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the UI Fields.
+     * Resets the page to a clean, incomplete state right after the widgets are built.
+     * Clears any prior error message and marks the page as not complete, keeping the
+     * Finish button disabled until {@link #dialogChanged()} confirms valid input.
      */
     private void initFields()
     {
@@ -207,8 +248,16 @@ public class ImportSchemasFromXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── C-3PO Locates The Scroll Archive Shelf ───────────────────────────────
+    // The operator points 3PO to a storage room; he opens the directory browser,
+    // navigates to the indicated location, and loads the list of .xml scrolls he
+    // finds there onto his checklist display.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the exportMultipleFiles 'browse' button is selected.
+     * Opens the OS-native directory chooser when the user clicks Browse, then
+     * populates the file table with .xml files found in the chosen directory.
+     * We pre-fill the dialog's starting path from the text field or the saved
+     * preference so the user doesn't have to navigate from the root every time.
      */
     private void chooseFromDirectory()
     {
@@ -234,11 +283,24 @@ public class ImportSchemasFromXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── C-3PO Reads The Scroll Titles On The Shelf ───────────────────────────
+    // 3PO scans the shelf at the given location, reads the title tag on each
+    // container, and lists only the ones ending in ".xml" — the standard wrapping
+    // for Jawa-encoded schema data scrolls.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Fills in the SchemaFilesTable with the schema files found in the given path.
+     * Scans the given filesystem directory for .xml files and loads them into the
+     * checkbox table viewer so the user can pick which ones to import.
+     * Only files ending in {@code .xml} are included — everything else is ignored.
      *
-     * @param path
-     *      the path to search schema files in
+     * <p>For example — C-3PO scans the Jawa archive shelf:</p>
+     * <pre>
+     *   3PO lists: "schema-bundle.xml" — yes; "readme.txt" — no; "inetOrgPerson.xml" — yes.
+     *   The matching scrolls appear as check-boxes on his display.
+     * </pre>
+     *
+     * @param path  the absolute filesystem path to list; we open it as a {@link File}
+     *              and iterate its direct children.
      */
     private void fillInSchemaFilesTable( String path )
     {
@@ -260,8 +322,17 @@ public class ImportSchemasFromXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── C-3PO Runs His Pre-Translation Checklist ─────────────────────────────
+    // Before 3PO starts reading, he runs through his checklist: is there an open
+    // project to put the results in? Is the shelf path specified and readable? Has
+    // the operator checked at least one scroll?  If anything is off, 3PO displays
+    // a polite error message and keeps the proceed button locked.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the user modifies something in the UI.
+     * Validates all user inputs and updates the page's error message and
+     * completion state on every interaction.
+     * We check that a schema project is open, the directory path is non-empty and
+     * valid, and at least one .xml file is checked.
      */
     private void dialogChanged()
     {
@@ -313,11 +384,19 @@ public class ImportSchemasFromXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── C-3PO Hands Over The Selected Scrolls ────────────────────────────────
+    // The operator has ticked the scrolls they want; 3PO gathers them from the
+    // shelf and passes the stack to the wizard's translation engine so it can
+    // begin decoding each one.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the selected schema files.
+     * Returns the .xml files the user checked in the table as a {@link File} array
+     * for the wizard's {@code performFinish()} to process.
+     * Casting is safe here because we only ever put {@link File} instances into
+     * the viewer's input.
      *
-     * @return
-     *      the selected schema files
+     * @return  a non-null (possibly empty) array of the user-selected {@link File}
+     *          objects.
      */
     public File[] getSelectedSchemaFiles()
     {
@@ -333,8 +412,16 @@ public class ImportSchemasFromXmlWizardPage extends AbstractWizardPage
     }
 
 
+    // ── C-3PO Notes The Archive Location For Future Missions ─────────────────
+    // After completing the translation job, 3PO records the shelf location in his
+    // memory so the next time someone asks him to translate scrolls they start in
+    // the right place without hunting through every storage room on the ship.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the dialog settings.
+     * Persists the directory path the user chose into the plugin's preference store
+     * so the next wizard invocation starts from the same location.
+     * Called by the wizard just before the import runs, so we only save a path that
+     * has passed validation.
      */
     public void saveDialogSettings()
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor.text;
@@ -27,12 +27,36 @@ import org.eclipse.jface.text.rules.RuleBasedPartitionScanner;
 import org.eclipse.jface.text.rules.Token;
 
 
+// ── CLASS: LdifPartitionScanner — REBEL BASE PERIMETER SCANNER ────────────────
+// The Rebel base uses a perimeter scanner to delineate each LDIF record zone
+// in the transmission: once it spots the start of a record it emits a
+// LDIF_RECORD token and moves on.
+// LdifPartitionScanner is that perimeter scanner: it installs a single
+// LdifRecordRule and emits a {@code __ldif_record} token for every LDIF record
+// it detects.  Everything between records falls into the default partition.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Eclipse {@link RuleBasedPartitionScanner} that divides an LDIF document into
+ * two content types: {@link #LDIF_RECORD} (each LDIF record block) and the
+ * default partition (everything else, e.g. separating blank lines).
+ * Uses a single {@link LdifRecordRule} to identify record boundaries.
+ * Think of this as the Rebel perimeter scanner that marks where each
+ * transmission record begins and ends.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class LdifPartitionScanner extends RuleBasedPartitionScanner
 {
 
+    /** The content-type ID for an LDIF record partition. */
     public final static String LDIF_RECORD = "__ldif_record"; //$NON-NLS-1$
 
 
+    // ── CONSTRUCT AND INSTALL THE RECORD RULE ────────────────────────────────
+    /**
+     * Creates a new partition scanner and installs a single
+     * {@link LdifRecordRule} that emits the {@link #LDIF_RECORD} token.
+     */
     public LdifPartitionScanner()
     {
         IToken record = new Token( LDIF_RECORD );
@@ -44,6 +68,12 @@ public class LdifPartitionScanner extends RuleBasedPartitionScanner
     }
 
 
+    // ── FORWARD READ ─────────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Delegates directly to the superclass.</p>
+     */
     public int read()
     {
         return super.read();

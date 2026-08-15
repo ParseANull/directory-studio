@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 package org.apache.directory.studio.schemaeditor.model.io;
 
@@ -41,8 +41,21 @@ import org.dom4j.io.SAXReader;
 import org.eclipse.osgi.util.NLS;
 
 
+// ── CLASS: XMLSchemaFileImporter — C-3PO Reading an XML Schema Scroll ─────────
+// The XML schema file is written in Studio's own dialect — a structured XML
+// vocabulary with its own element names and attribute conventions.  C-3PO reads
+// every element, decodes each field from its XML representation, and assembles
+// the proper AttributeType, ObjectClass, MatchingRule, and LdapSyntax objects
+// the schema editor's model expects.  If anything is missing or malformed,
+// C-3PO flags it immediately with a clear error.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to import a Schema file from the XML Format.
+ * Reads Apache Directory Studio's own XML schema format from an
+ * {@link InputStream} and converts it into {@link Schema} objects.
+ * Supports both single-schema ({@code <schema>} root) and multi-schema
+ * ({@code <schemas>} root) files.  Delegates the actual DOM parsing to Dom4J.
+ * Think of this class as C-3PO: he reads every XML element like a sentence in
+ * a foreign dialect and translates it into the Java objects everyone else uses.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -84,17 +97,18 @@ public class XMLSchemaFileImporter
     private static final String USAGE_TAG = "usage"; //$NON-NLS-1$
 
 
+    // ── C-3PO Reads a Multi-Schema Scroll ────────────────────────────────────
+    // The scroll has a {@code <schemas>} root; C-3PO iterates over each nested
+    // {@code <schema>} element and translates each into a Schema object.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Extracts the Schemas from the given path.
+     * Parses a multi-schema XML file (root element {@code <schemas>}) and returns
+     * all contained schemas as an array.
      *
-     * @param inputStream
-     *      the {@link InputStream} of the file
-     * @param path
-     *      the path of the file.
-     * @return
-     *      the corresponding schema
-     * @throws XMLSchemaFileImportException
-     *      if an error occurs when importing the schema
+     * @param inputStream  the stream to read — must not be null
+     * @param path         the file path, used for schema naming and error messages
+     * @return             an array of Schema objects — never null
+     * @throws XMLSchemaFileImportException  if the file can't be read or isn't a valid schemas file
      */
     public static Schema[] getSchemas( InputStream inputStream, String path ) throws XMLSchemaFileImportException
     {
@@ -121,17 +135,17 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Reads a Single-Schema Scroll ───────────────────────────────────
+    // The scroll has a {@code <schema>} root; C-3PO reads the whole thing and
+    // returns one Schema object.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Extracts the Schema from the given path.
+     * Parses a single-schema XML file (root element {@code <schema>}) and returns it.
      *
-     * @param inputStream
-     *      the {@link InputStream} of the file
-     * @param path
-     *      the path of the file.
-     * @return
-     *      the corresponding schema
-     * @throws XMLSchemaFileImportException
-     *      if an error occurs when importing the schema
+     * @param inputStream  the stream to read — must not be null
+     * @param path         the file path, used for schema naming and error messages
+     * @return             the parsed Schema — never null
+     * @throws XMLSchemaFileImportException  if the file can't be read or is malformed
      */
     public static Schema getSchema( InputStream inputStream, String path ) throws XMLSchemaFileImportException
     {
@@ -153,17 +167,20 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Iterates Over a Bundle of Schema Scrolls ───────────────────────
+    // C-3PO opens the bundle ({@code <schemas>} element), reads the label count,
+    // and decodes each nested {@code <schema>} in turn.
+    // This is also called directly by ProjectsImporter when reading schema backups.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads schemas.
+     * Reads all {@code <schema>} children of the given {@code <schemas>} element.
+     * Exposed as public because {@link ProjectsImporter} calls it directly when
+     * reading embedded schema backup elements.
      *
-     * @param element
-     *      the element
-     * @param path
-     *      the path of the file
-     * @throws XMLSchemaFileImportException
-     *      if an error occurs when importing the schema
-     * @return
-     *      the corresponding schemas
+     * @param element  the {@code <schemas>} DOM element — must not be null
+     * @param path     the file path, used for error messages
+     * @return         an array of Schema objects — never null
+     * @throws XMLSchemaFileImportException  if the element is not a valid {@code <schemas>} node
      */
     public static Schema[] readSchemas( Element element, String path ) throws XMLSchemaFileImportException
     {
@@ -185,17 +202,20 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Decodes a Single Schema Scroll in Full ─────────────────────────
+    // C-3PO reads the schema's name, then decodes each section in order:
+    // attribute types, object classes, matching rules, syntaxes.
+    // Exposed as public because ProjectsImporter reuses it for embedded schemas.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads a schema.
+     * Reads a {@code <schema>} DOM element and builds the corresponding Schema.
+     * Delegates to the four {@code readX} helpers for each element type.
+     * Exposed as public because {@link ProjectsImporter} calls it directly.
      *
-     * @param element
-     *      the element
-     * @param path
-     *      the path of the file
-     * @throws XMLSchemaFileImportException
-     *      if an error occurs when importing the schema
-     * @return
-     *      the corresponding schema
+     * @param element  the {@code <schema>} DOM element — must not be null
+     * @param path     the file path, used for schema naming and error messages
+     * @return         a populated Schema — never null
+     * @throws XMLSchemaFileImportException  if any required data is missing or invalid
      */
     public static Schema readSchema( Element element, String path ) throws XMLSchemaFileImportException
     {
@@ -218,17 +238,18 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Reads the Schema's Title ───────────────────────────────────────
+    // C-3PO checks the {@code name} attribute on the {@code <schema>} element;
+    // if it's there he uses it; otherwise he derives the name from the filename.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the name of the schema.
+     * Determines the schema name from the {@code name} attribute of the element,
+     * falling back to deriving it from the file path if the attribute is absent.
      *
-     * @param element
-     *      the element
-     * @param path
-     *      the path
-     * @return
-     *      the name of the schema
-     * @throws XMLSchemaFileImportException
-     *      if an error occurs when reading the file
+     * @param element  the {@code <schema>} DOM element
+     * @param path     the file path to fall back on
+     * @return         the schema name — never null
+     * @throws XMLSchemaFileImportException  if the element is not a {@code <schema>} element
      */
     private static String getSchemaName( Element element, String path ) throws XMLSchemaFileImportException
     {
@@ -250,13 +271,15 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Reads the Filename for Naming ──────────────────────────────────
+    // If there's no name attribute, C-3PO strips the {@code .xml} extension from
+    // the filename and uses the base name as the schema name.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the name of the file.
+     * Derives a schema name from a file path by stripping the {@code .xml} extension.
      *
-     * @param path
-     *      the path
-     * @return
-     *      the name of the file.
+     * @param path  the full file path
+     * @return      the base filename without extension — never null
      */
     private static String getNameFromPath( String path )
     {
@@ -272,14 +295,17 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Reads the Attribute-Type Section ───────────────────────────────
+    // C-3PO finds the {@code <attributetypes>} group in the scroll and reads
+    // each {@code <attributetype>} child in turn.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the attribute types.
+     * Reads all {@code <attributetype>} elements nested under {@code <attributetypes>}
+     * in the given element, adding each to the schema.
      *
-     * @param element
-     *      the element
-     * @param schema
-     *      the schema
-     * @throws XMLSchemaFileImportException
+     * @param element  the {@code <schema>} element containing the attribute types
+     * @param schema   the schema to populate
+     * @throws XMLSchemaFileImportException  if any attribute type is malformed
      */
     private static void readAttributeTypes( Element element, Schema schema ) throws XMLSchemaFileImportException
     {
@@ -294,13 +320,18 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Decodes a Single Attribute-Type Entry ───────────────────────────
+    // One {@code <attributetype>} element: C-3PO reads the OID (required), then
+    // every optional field — names, description, superior, usage, syntax, flags.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads an attribute type.
+     * Reads a single {@code <attributetype>} element and adds the resulting
+     * {@link AttributeType} to the given schema.
+     * The {@code oid} attribute is mandatory; all others are optional.
      *
-     * @param element
-     *      the element
-     * @param schema
-     *      the schema
+     * @param element  the {@code <attributetype>} DOM element
+     * @param schema   the schema to add to
+     * @throws XMLSchemaFileImportException  if the OID is missing or a value is unconvertible
      */
     private static void readAttributeType( Element element, Schema schema ) throws XMLSchemaFileImportException
     {
@@ -441,14 +472,16 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Reads the Object-Class Section ─────────────────────────────────
+    // C-3PO finds the {@code <objectclasses>} group and reads each child entry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the object classes
+     * Reads all {@code <objectclass>} elements nested under {@code <objectclasses>}
+     * and adds each to the schema.
      *
-     * @param element
-     *      the element
-     * @param schema
-     *      the schema
-     * @throws XMLSchemaFileImportException
+     * @param element  the {@code <schema>} element
+     * @param schema   the schema to populate
+     * @throws XMLSchemaFileImportException  if any object class is malformed
      */
     private static void readObjectClasses( Element element, Schema schema ) throws XMLSchemaFileImportException
     {
@@ -463,14 +496,17 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Decodes a Single Object-Class Entry ─────────────────────────────
+    // One {@code <objectclass>}: C-3PO reads OID, names, description, superiors,
+    // type, obsolete flag, and mandatory/optional attribute lists.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads an object class
+     * Reads a single {@code <objectclass>} element and adds the result to the schema.
+     * The {@code oid} attribute is mandatory; all others are optional.
      *
-     * @param element
-     *      the element
-     * @param schema
-     *      the schema
-     * @throws XMLSchemaFileImportException
+     * @param element  the {@code <objectclass>} DOM element
+     * @param schema   the schema to add to
+     * @throws XMLSchemaFileImportException  if the OID is missing or a value is unconvertible
      */
     private static void readObjectClass( Element element, Schema schema ) throws XMLSchemaFileImportException
     {
@@ -588,14 +624,16 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Reads the Matching-Rules Section ────────────────────────────────
+    // C-3PO finds the {@code <matchingrules>} group and reads each child entry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the matching rules.
+     * Reads all {@code <matchingrule>} elements nested under {@code <matchingrules>}
+     * and adds each to the schema.
      *
-     * @param element
-     *      the element
-     * @param schema
-     *      the schema
-     * @throws XMLSchemaFileImportException
+     * @param element  the {@code <schema>} element
+     * @param schema   the schema to populate
+     * @throws XMLSchemaFileImportException  if any matching rule is malformed
      */
     private static void readMatchingRules( Element element, Schema schema ) throws XMLSchemaFileImportException
     {
@@ -610,14 +648,16 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Decodes a Single Matching-Rule Entry ────────────────────────────
+    // One {@code <matchingrule>}: C-3PO reads OID, aliases, description, obsolete
+    // flag, and the associated syntax OID.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads a matching rule.
+     * Reads a single {@code <matchingrule>} element and adds the result to the schema.
      *
-     * @param element
-     *      the element
-     * @param schema
-     *      the schema
-     * @throws XMLSchemaFileImportException
+     * @param element  the {@code <matchingrule>} DOM element
+     * @param schema   the schema to add to
+     * @throws XMLSchemaFileImportException  if the OID is missing
      */
     private static void readMatchingRule( Element element, Schema schema ) throws XMLSchemaFileImportException
     {
@@ -679,14 +719,16 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Reads the Syntaxes Section ─────────────────────────────────────
+    // C-3PO finds the {@code <syntaxes>} group and reads each child entry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the syntaxes
+     * Reads all {@code <syntax>} elements nested under {@code <syntaxes>}
+     * and adds each to the schema.
      *
-     * @param element
-     *      the element
-     * @param schema
-     *      the schema
-     * @throws XMLSchemaFileImportException
+     * @param element  the {@code <schema>} element
+     * @param schema   the schema to populate
+     * @throws XMLSchemaFileImportException  if any syntax is malformed
      */
     private static void readSyntaxes( Element element, Schema schema ) throws XMLSchemaFileImportException
     {
@@ -701,14 +743,16 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Decodes a Single Syntax Entry ──────────────────────────────────
+    // One {@code <syntax>}: C-3PO reads OID, aliases, description, obsolete flag,
+    // and the human-readable flag.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads a syntax.
+     * Reads a single {@code <syntax>} element and adds the result to the schema.
      *
-     * @param element
-     *      the element
-     * @param schema
-     *      the schema
-     * @throws XMLSchemaFileImportException
+     * @param element  the {@code <syntax>} DOM element
+     * @param schema   the schema to add to
+     * @throws XMLSchemaFileImportException  if the OID is missing or a boolean is invalid
      */
     private static void readSyntax( Element element, Schema schema ) throws XMLSchemaFileImportException
     {
@@ -770,15 +814,18 @@ public class XMLSchemaFileImporter
     }
 
 
+    // ── C-3PO Translates "true"/"false" Strings into Booleans ────────────────
+    // A simple two-word vocabulary: "true" or "false".  If C-3PO gets any other
+    // word he flags it as an untranslatable value.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads a boolean value
+     * Parses a "true" or "false" string into a boolean.
+     * Throws if any other value is encountered, since the XML format has no
+     * other valid values for boolean attributes.
      *
-     * @param value
-     *      the value
-     * @return
-     *      the boolean value
-     * @throws XMLSchemaFileImportException
-     *      if the boolean could not be read
+     * @param value  the string to parse — must be "true" or "false"
+     * @return       the corresponding boolean value
+     * @throws XMLSchemaFileImportException  if the value is neither "true" nor "false"
      */
     private static boolean readBoolean( String value ) throws XMLSchemaFileImportException
     {
@@ -807,14 +854,21 @@ public class XMLSchemaFileImporter
     };
 
 
+    // ── C-3PO Peeks at the Scroll Type Before Reading It ─────────────────────
+    // C-3PO glances at the root element before committing to a full read —
+    // is this a single-schema scroll or a multi-schema bundle?  He returns
+    // the type so the caller knows which method to call.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the type of file.
+     * Determines whether the XML file contains a single schema or multiple schemas
+     * by inspecting its root element.
+     * Use the returned {@link SchemaFileType} to decide whether to call
+     * {@link #getSchema} or {@link #getSchemas}.
      *
-     * @param path
-     *      the path of the file
-     * @return
-     *      the type of the file
-     * @throws XMLSchemaFileImportException
+     * @param inputStream  the stream to inspect — consumed by this call
+     * @param path         the file path, used in error messages
+     * @return             {@code SINGLE} or {@code MULTIPLE}
+     * @throws XMLSchemaFileImportException  if the file can't be read or has an unrecognised root
      */
     public static SchemaFileType getSchemaFileType( InputStream inputStream, String path )
         throws XMLSchemaFileImportException

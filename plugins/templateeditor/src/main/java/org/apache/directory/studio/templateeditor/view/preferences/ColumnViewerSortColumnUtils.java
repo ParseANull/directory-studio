@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.view.preferences;
 
@@ -35,21 +35,41 @@ import org.eclipse.ui.PlatformUI;
 import org.apache.directory.studio.templateeditor.view.ColumnsTableViewerComparator;
 
 
+// ── CLASS: ColumnViewerSortColumnUtils — PALPATINE INSTALLING SORT-ORDER TRIGGERS ─
+// When Palpatine reviews his standing-orders roster, he wants to sort it by clicking
+// any column header. This utility class wires up the click listeners on table and
+// tree column headers. When a header is clicked, it either reverses the current sort
+// (if that column is already primary) or switches to the new column in ascending
+// order. The sort-direction arrow indicator in the column header is then updated.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This helper class can be used to add sort columns to {@link TableViewer} 
- * and {@link TreeViewer} objects.
+ * Static utility that adds clickable sort behaviour to columns in
+ * {@link TableViewer} and {@link TreeViewer} widgets. Clicking a column header
+ * toggles the sort direction if that column is already the primary sort key,
+ * or makes it the new primary sort key. The sort-direction arrow on the column
+ * header is updated asynchronously to keep the UI responsive.
+ *
+ * <p>Think of this as Palpatine's roster-sort installer:</p>
+ * <pre>
+ *   ColumnViewerSortColumnUtils.addSortColumn( tableViewer, titleColumn );
+ *   // Now clicking the "Title" column header sorts the table by that column.
+ * </pre>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ColumnViewerSortColumnUtils
 {
+    // ── ADD SORT COLUMN (TABLE): WIRE UP A TABLE COLUMN HEADER ───────────────────
+    // Palpatine installs a click listener on the given table column so that
+    // clicking the header triggers a resort of the table.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a sort column to the table viewer.
+     * Registers a click listener on the given {@code TableColumn} so that clicking
+     * its header re-sorts the {@code TableViewer}. The column's zero-based index
+     * is determined automatically by scanning the table's column list.
      *
-     * @param tableViewer
-     *      the table viewer
-     * @param tableColumn
-     *      the table column
+     * @param tableViewer  the table viewer whose comparator will be invoked
+     * @param tableColumn  the column to make sortable; does nothing if {@code null}
      */
     public static void addSortColumn( TableViewer tableViewer, TableColumn tableColumn )
     {
@@ -75,15 +95,17 @@ public class ColumnViewerSortColumnUtils
     }
 
 
+    // ── GET HEADER LISTENER (TABLE): BUILD THE CLICK HANDLER ──────────────────────
+    // Palpatine's click-handler factory — builds a SelectionAdapter that calls
+    // resortTable() when the column header is clicked.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a header listener for the given column.
-     * 
-     * @param tableViewer
-     *      the table viewer
-     * @param columnIndex
-     *      the column index
-     * @return
-     *      a header listener for the given column
+     * Returns a {@link SelectionListener} that calls {@link #resortTable} when the
+     * column header is clicked.
+     *
+     * @param tableViewer  the table viewer to resort
+     * @param columnIndex  the zero-based index of the column being clicked
+     * @return the click listener
      */
     private static SelectionListener getHeaderListener( final TableViewer tableViewer, final int columnIndex )
     {
@@ -103,15 +125,21 @@ public class ColumnViewerSortColumnUtils
     }
 
 
+    // ── RESORT TABLE: APPLY THE NEW SORT ORDER ────────────────────────────────────
+    // Palpatine's sort clerk checks whether the clicked column is already the
+    // primary key (in which case the order is reversed) or a new key (in which
+    // case the column switches and the order stays ascending). The table is then
+    // refreshed and the direction indicator updated on the UI thread.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Resorts the table based on column.
-     * 
-     * @param tableViewer
-     *      the table viewer
-     * @param tableColumn 
-     *      the table column being resorted
-     * @param columnIndex
-     *      the column index
+     * Applies a new sort order to the table viewer. If {@code columnIndex} is the
+     * current primary sort column, the order is reversed; otherwise the primary
+     * column is changed. The table is refreshed and the sort-direction arrow updated
+     * asynchronously via {@link PlatformUI#getWorkbench()}.
+     *
+     * @param tableViewer  the viewer to resort
+     * @param tableColumn  the column whose header was clicked
+     * @param columnIndex  the zero-based column index
      */
     protected static void resortTable( final TableViewer tableViewer, final TableColumn tableColumn, int columnIndex )
     {
@@ -140,13 +168,16 @@ public class ColumnViewerSortColumnUtils
     }
 
 
+    // ── UPDATE DIRECTION INDICATOR (TABLE): SHOW THE SORT ARROW ──────────────────
+    // Palpatine's sort arrow is updated to show which column is primary and whether
+    // the sort is ascending (up arrow) or descending (down arrow).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the direction indicator as column is now the primary column.
+     * Updates the sort-direction arrow indicator on the table to reflect the
+     * current primary sort column and direction.
      *
-     * @param tableViewer
-     *      the table viewer
-     * @param tableColumn
-     *      the table column
+     * @param tableViewer  the viewer whose table header arrow should be updated
+     * @param tableColumn  the column to highlight as the primary sort key
      */
     protected static void updateDirectionIndicator( TableViewer tableViewer, TableColumn tableColumn )
     {
@@ -162,13 +193,17 @@ public class ColumnViewerSortColumnUtils
     }
 
 
+    // ── ADD SORT COLUMN (TREE): WIRE UP A TREE COLUMN HEADER ─────────────────────
+    // Palpatine installs a click listener on the given tree column so that clicking
+    // the header triggers a resort of the tree.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a sort column to the tree viewer.
+     * Registers a click listener on the given {@code TreeColumn} so that clicking
+     * its header re-sorts the {@code TreeViewer}. The column's zero-based index
+     * is determined automatically by scanning the tree's column list.
      *
-     * @param treeViewer
-     *      the tree viewer
-     * @param treeColumn
-     *      the tree column
+     * @param treeViewer  the tree viewer whose comparator will be invoked
+     * @param treeColumn  the column to make sortable; does nothing if {@code null}
      */
     public static void addSortColumn( TreeViewer treeViewer, TreeColumn treeColumn )
     {
@@ -194,15 +229,14 @@ public class ColumnViewerSortColumnUtils
     }
 
 
+    // ── GET HEADER LISTENER (TREE): BUILD THE CLICK HANDLER ───────────────────────
     /**
-     * Gets a header listener for the given column.
-     * 
-     * @param treeViewer
-     *      the tree viewer
-     * @param columnIndex
-     *      the column index
-     * @return
-     *      a header listener for the given column
+     * Returns a {@link SelectionListener} that calls {@link #resortTree} when the
+     * tree column header is clicked.
+     *
+     * @param treeViewer   the tree viewer to resort
+     * @param columnIndex  the zero-based index of the column being clicked
+     * @return the click listener
      */
     private static SelectionListener getHeaderListener( final TreeViewer treeViewer, final int columnIndex )
     {
@@ -222,15 +256,16 @@ public class ColumnViewerSortColumnUtils
     }
 
 
+    // ── RESORT TREE: APPLY THE NEW SORT ORDER ─────────────────────────────────────
     /**
-     * Resorts the tree based on column.
-     * 
-     * @param treeViewer
-     *      the tree viewer
-     * @param treeColumn 
-     *      the tree column being resorted
-     * @param columnIndex
-     *      the column index
+     * Applies a new sort order to the tree viewer. If {@code columnIndex} is the
+     * current primary sort column, the order is reversed; otherwise the primary
+     * column is changed. The tree is refreshed and the sort-direction arrow updated
+     * asynchronously.
+     *
+     * @param treeViewer  the viewer to resort
+     * @param treeColumn  the column whose header was clicked
+     * @param columnIndex the zero-based column index
      */
     protected static void resortTree( final TreeViewer treeViewer, final TreeColumn treeColumn, int columnIndex )
     {
@@ -259,13 +294,13 @@ public class ColumnViewerSortColumnUtils
     }
 
 
+    // ── UPDATE DIRECTION INDICATOR (TREE): SHOW THE SORT ARROW ───────────────────
     /**
-     * Updates the direction indicator as column is now the primary column.
+     * Updates the sort-direction arrow indicator on the tree to reflect the
+     * current primary sort column and direction.
      *
-     * @param treeViewer
-     *      the tree viewer
-     * @param treeColumn
-     *      the tree column
+     * @param treeViewer  the viewer whose tree header arrow should be updated
+     * @param treeColumn  the column to highlight as the primary sort key
      */
     protected static void updateDirectionIndicator( TreeViewer treeViewer, TreeColumn treeColumn )
     {

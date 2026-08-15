@@ -33,10 +33,24 @@ import org.apache.directory.studio.ldapbrowser.core.model.IRootDSE;
 import org.apache.directory.studio.ldapbrowser.core.model.schema.Schema;
 
 
+// ── CLASS: DummyConnection — HAN'S DUMMY CONSOLE THAT DOES NOTHING ───────────
+// When Han needs to pretend there's a hyperdrive running but doesn't actually
+// want to go anywhere, he plugs in a dummy console: it looks like a connection,
+// it accepts every command, but every method returns zero / null / false and
+// does nothing.  This lets the rest of the code run without crashing when no
+// real directory connection is available — wizard previews, offline schema
+// browsing, referral resolution before the connection is known.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Connection without any operation. It could be used to make model modifications
- * without committing these modifications to the directory.
- * 
+ * A no-op implementation of {@link IBrowserConnection} used when a real
+ * connection is not available (e.g. wizard previews, schema-only browsing,
+ * or pending referral resolution).  Every mutating method is a no-op;
+ * every accessor returns a safe default (0 / null / false / NEVER / IGNORE).
+ * Only {@link #getSchema()} returns the schema passed to the constructor.
+ *
+ * <p>Think of this as Han's dummy console — it accepts every call but goes
+ * nowhere and does nothing.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DummyConnection implements IBrowserConnection
@@ -48,10 +62,12 @@ public class DummyConnection implements IBrowserConnection
     private Schema schema;
 
 
+    // ── Dummy Console Constructor: Only The Schema Matters ───────────────────────
     /**
      * Creates a new instance of DummyConnection.
-     * 
-     * @param schema the schema
+     *
+     * @param schema the schema to return from {@link #getSchema()}; all other
+     *               accessors return fixed safe defaults
      */
     public DummyConnection( Schema schema )
     {

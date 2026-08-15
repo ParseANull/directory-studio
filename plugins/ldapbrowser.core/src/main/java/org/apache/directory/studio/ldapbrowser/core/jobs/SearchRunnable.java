@@ -70,8 +70,19 @@ import org.apache.directory.studio.ldapbrowser.core.utils.JNDIUtils;
 import org.apache.directory.studio.ldapbrowser.core.utils.Utils;
 
 
+// ── CLASS: SearchRunnable — CLONE TROOPERS SCOUTING THE GALAXY ───────────────
+// Clone troopers fan out across the galaxy (LDAP directory) under Order 66.
+// Each ISearch is a scout mission: send the search request, receive results,
+// populate the browser entry cache, and fire a SearchUpdateEvent when done.
+// Paged-results pagination is handled transparently or via scroll-mode runnables.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to perform search operations. 
+ * Runnable to perform LDAP search operations and update the browser model.
+ *
+ * <p>Think of this as clone troopers executing Order 66 across the galaxy:
+ * each search is a scout mission — entries are fetched, cached, and their
+ * flags (alias, referral, hasChildren) initialised.  Pagination is handled
+ * transparently; events are fired when the mission completes.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -84,10 +95,13 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     protected ISearch[] searchesToPerform;
 
 
+    // ── Clone Troopers Receive A Batch Of Search Missions ────────────────────────
+    // Stores the full array of ISearch objects that this runnable will execute.
+    // Both searches and searchesToPerform initially point to the same array.
     /**
-     * Creates a new instance of SearchRunnable.
-     * 
-     * @param searches the searches
+     * Creates a new instance of SearchRunnable for multiple searches.
+     *
+     * @param searches the searches to perform
      */
     public SearchRunnable( ISearch[] searches )
     {
@@ -96,11 +110,15 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Troopers Receive A Paged-Continuation Mission ───────────────────────
+    // Private constructor used when creating next-page / top-page runnables.
+    // The outer search accumulates results; the inner searchToPerform holds
+    // the cloned search with the updated paged-results cookie.
     /**
-     * Creates a new instance of SearchRunnable.
-     * 
-     * @param search the search
-     * @param searchToPerform the search to perform
+     * Creates a new instance of SearchRunnable for a single paged continuation.
+     *
+     * @param search the outer search that accumulates results
+     * @param searchToPerform the cloned search carrying the next-page cookie
      */
     private SearchRunnable( ISearch search, ISearch searchToPerform )
     {
@@ -111,6 +129,8 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Troopers Report Their LDAP Connections ──────────────────────────────
+    // One connection per search object; used by the job scheduler.
     /**
      * {@inheritDoc}
      */
@@ -125,6 +145,7 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Troopers Report Their Mission Name ──────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -134,6 +155,8 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Troopers Lock Their Search Objects Against Concurrent Missions ─────
+    // Lando runs Cloud City: each ISearch object is used as its own lock token.
     /**
      * {@inheritDoc}
      */
@@ -145,6 +168,8 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Troopers Return The Appropriate Error Message ───────────────────────
+    // Han shoots first: singular vs. plural message depending on search count.
     /**
      * {@inheritDoc}
      */
@@ -155,6 +180,10 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Troopers Execute All Search Missions In Sequence ────────────────────
+    // Iterates all searches, calls searchAndUpdateModel() for each, handles
+    // paged-results response controls, and sets up next-page / top-page runnables
+    // for scroll-mode pagination.  Transparent pagination loops until done.
     /**
      * {@inheritDoc}
      */
@@ -272,6 +301,9 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Troopers Fire A SearchUpdateEvent After Each Mission Completes ─────
+    // Obi-Wan senses a disturbance in the Force: each search fires a
+    // SEARCH_PERFORMED event so the UI can refresh the results view.
     /**
      * {@inheritDoc}
      */
@@ -285,11 +317,15 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Executes One Search And Populates The Browser Cache ────────
+    // Calls search() to get the raw enumeration, iterates every result,
+    // creates or retrieves the IEntry from cache, initialises flags, fills
+    // attributes, builds search-result objects, and propagates response controls.
     /**
      * Searches the directory and updates the browser model.
-     * 
+     *
      * @param browserConnection the browser connection
-     * @param search the search
+     * @param search the search to execute and populate
      * @param monitor the progress monitor
      */
     public static void searchAndUpdateModel( IBrowserConnection browserConnection, ISearch search,
@@ -438,6 +474,18 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Sends The Raw LDAP Search Request To The Server ────────────
+    // Translates a SearchParameter into JNDI SearchControls and delegates to
+    // the connection wrapper.  Returns null when no connection is available.
+    // The time limit is decremented by 1 ms to avoid off-by-one timeouts.
+    /**
+     * Sends a raw LDAP search to the server and returns the result enumeration.
+     *
+     * @param browserConnection the browser connection
+     * @param parameter the search parameters
+     * @param monitor the progress monitor
+     * @return the result enumeration, or {@code null} if no connection is available
+     */
     public static StudioSearchResultEnumeration search( IBrowserConnection browserConnection, SearchParameter parameter,
         StudioProgressMonitor monitor )
     {
@@ -492,6 +540,11 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Enhances The Search Parameters Before Firing The Request ───
+    // Clones the search's parameter, then conditionally appends hasSubordinates /
+    // numSubordinates / subordinateCount for child detection, always appends
+    // objectClass for alias/referral/icon detection, and strips unsupported
+    // controls by comparing against the rootDSE's supportedControl attribute.
     private static SearchParameter getSearchParameter( ISearch search )
     {
         SearchParameter searchParameter = ( SearchParameter ) search.getSearchParameter().clone();
@@ -581,14 +634,17 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Ensures Every Ancestor Exists In The Cache Tree ────────────
+    // Walks up from the target DN to the nearest cached ancestor, then walks
+    // back down creating Entry or BaseDNEntry nodes and linking them to their
+    // parents.  A lightweight OBJECT-scope search verifies base-DN entries exist.
     /**
-     * Creates the entry and puts it into the BrowserConnection's entry cache.
-     * 
+     * Creates the entry and all missing ancestors in the browser connection's cache.
+     *
      * @param browserConnection the browser connection
-     * @param dn the Dn of the entry
-     * @param monitor 
-     * 
-     * @return the created entry
+     * @param dn the DN of the entry to create
+     * @param monitor the progress monitor
+     * @return the created (or found) entry, or {@code null} if creation failed
      */
     private static IEntry createAndCacheEntry( IBrowserConnection browserConnection, Dn dn,
         StudioProgressMonitor monitor )
@@ -662,18 +718,17 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Sets The Entry's Tactical Flags From The Search Result ─────
+    // Mace Windu confronts Palpatine: the entry's objectClass values are inspected
+    // to mark it as alias, referral, or subentry; subordinate-count attributes
+    // are used to set hasChildrenHint=false when the count is 0 or "FALSE".
     /**
-     * Initializes the following flags of the entry:
-     * <ul>
-     * <li>hasChildren</li>
-     * <li>isAlias</li>
-     * <li>isReferral</li>
-     * <li>isSubentry</li>
-     * </ul>
-     * 
-     * @param entry the entry
-     * @param sr the the JNDI search result
-     * @param searchParameter the search parameters
+     * Initialises the hasChildren, isAlias, isReferral and isSubentry flags
+     * of the entry from the search result attributes.
+     *
+     * @param entry the entry to initialise
+     * @param sr the search result
+     * @param searchParameter the search parameters (controls flag initialisation)
      */
     private static void initFlags( IEntry entry, StudioSearchResult sr, SearchParameter searchParameter )
     {
@@ -756,13 +811,17 @@ public class SearchRunnable implements StudioConnectionBulkRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Overwrites The Entry's Attributes With Fresh Search Data ───
+    // Clears previously-cached attributes that match the requested attribute list
+    // (honouring * and + wildcards), then populates the entry with the new values
+    // from the search result.  String and binary values are handled separately.
     /**
-     * Fills the attributes and values of the search result into the entry.
-     * Clears existing attributes and values in the entry.
-     * 
-     * @param entry the entry
-     * @param sr the JNDI search result
-     * @param searchParameter the search parameters
+     * Fills the attributes and values from the search result into the entry,
+     * clearing any previously cached values for the returned attributes.
+     *
+     * @param entry the entry to populate
+     * @param sr the search result containing fresh attribute data
+     * @param searchParameter the search parameters (used to determine which attributes to clear)
      */
     private static void fillAttributes( IEntry entry, StudioSearchResult sr, SearchParameter searchParameter )
     {

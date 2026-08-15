@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor.actions;
@@ -48,14 +48,45 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 
 
+// ── CLASS: AbstractOpenValueEditorAction — REBEL SPECIALIST POPS OPEN THE VAULT
+// The Rebellion has specialist teams for opening different kinds of sealed
+// containers: one team for text messages, one for binary data, one for
+// encrypted credentials.  The team reads the current value, opens the right
+// specialist dialog, and writes the edited result back.
+// AbstractOpenValueEditorAction does the same: it reads the selected
+// LdifAttrValLine, wraps it in a DummyEntry so any value-editor dialog can work
+// with it, opens the dialog, and writes the formatted replacement line back to
+// the IDocument if the user committed a new value.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Base class for actions that open a value-editor dialog for the currently
+ * selected {@link LdifAttrValLine} or {@link LdifControlLine}.
+ * Wraps the selected value in a {@link DummyEntry} so that any
+ * {@link AbstractDialogValueEditor} can operate on it, then writes the
+ * replacement {@link LdifAttrValLine} or {@link LdifControlLine} back to the
+ * {@link IDocument}.
+ * Think of this as the Rebel specialist who opens the right vault door and
+ * writes a new value inside.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public abstract class AbstractOpenValueEditorAction extends AbstractLdifAction
 {
 
+    /** Manager of all registered value-editor extensions. */
     protected ValueEditorManager valueEditorManager;
 
+    /** The specific value-editor to use; set by subclasses. */
     protected IValueEditor valueEditor;
 
 
+    // ── CONSTRUCT AND BIND TO EDITOR ─────────────────────────────────────────
+    /**
+     * Creates a new action bound to {@code editor} and retrieves its
+     * {@link ValueEditorManager}.
+     *
+     * @param editor  the LDIF editor this action operates on
+     */
     public AbstractOpenValueEditorAction( LdifEditor editor )
     {
         super( Messages.getString( "AbstractOpenValueEditorAction.EditValue" ), editor ); //$NON-NLS-1$
@@ -63,12 +94,30 @@ public abstract class AbstractOpenValueEditorAction extends AbstractLdifAction
     }
 
 
+    // ── EXPOSE THE VALUE EDITOR ───────────────────────────────────────────────
+    /**
+     * Returns the {@link IValueEditor} that will be opened by this action.
+     * Subclasses set {@link #valueEditor} during {@code update()}.
+     *
+     * @return the value editor, or {@code null} before first update
+     */
     public Object getValueEditor()
     {
         return valueEditor;
     }
 
 
+    // ── OPEN THE DIALOG AND WRITE BACK ────────────────────────────────────────
+    // The specialist opens their vault-cracking kit, edits the value inside,
+    // and screws the lid back on with the new content.
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Reads the selected {@link LdifValueLineBase}, wraps the old value in a
+     * {@link DummyEntry}, opens the {@link AbstractDialogValueEditor}, and if the
+     * user confirmed, writes a replacement line back to the document at the
+     * original offset.</p>
+     */
     protected void doRun()
     {
 
@@ -92,7 +141,7 @@ public abstract class AbstractOpenValueEditorAction extends AbstractLdifAction
                     IDocument document = editor.getDocumentProvider().getDocument( editor.getEditorInput() );
 
                     LdifValueLineBase newLine;
-                    
+
                     if ( line instanceof LdifControlLine )
                     {
                         LdifControlLine oldControlLine = ( LdifControlLine ) line;
@@ -135,12 +184,31 @@ public abstract class AbstractOpenValueEditorAction extends AbstractLdifAction
     }
 
 
+    // ── RESOLVE THE CONNECTION ────────────────────────────────────────────────
+    // If no live connection is selected we use a dummy so the value editor
+    // still has a schema to work with.
+    /**
+     * Returns the editor's {@link IBrowserConnection}, or a
+     * {@link DummyConnection} backed by the default schema if none is set.
+     *
+     * @return a non-null browser connection
+     */
     protected IBrowserConnection getConnection()
     {
         return editor.getConnection() != null ? editor.getConnection() : new DummyConnection( Schema.DEFAULT_SCHEMA );
     }
 
 
+    // ── BUILD THE RAW VALUE FOR THE EDITOR ───────────────────────────────────
+    // The specialist wraps the raw bytes in a DummyEntry so the dialog widget
+    // has all the context it needs.
+    /**
+     * Wraps the selected value in a {@link DummyEntry} and calls
+     * {@link IValueEditor#getRawValue(org.apache.directory.studio.ldapbrowser.core.model.IValue)}
+     * to produce the form the editor dialog expects.
+     *
+     * @return the raw value object, or {@code null} if no value is selected
+     */
     protected Object getValueEditorRawValue()
     {
         IBrowserConnection connection = getConnection();
@@ -170,6 +238,13 @@ public abstract class AbstractOpenValueEditorAction extends AbstractLdifAction
     }
 
 
+    // ── EXTRACT THE DN FROM THE SELECTED RECORD ───────────────────────────────
+    /**
+     * Returns the DN string of the {@link LdifRecord} that contains the
+     * selection, or {@code null} if not exactly one record is selected.
+     *
+     * @return the DN string, or {@code null}
+     */
     protected String getDn()
     {
         LdifContainer[] selectedLdifContainers = getSelectedLdifContainers();
@@ -184,6 +259,14 @@ public abstract class AbstractOpenValueEditorAction extends AbstractLdifAction
     }
 
 
+    // ── EXTRACT THE OLD VALUE ─────────────────────────────────────────────────
+    /**
+     * Returns the current value of the selected {@link LdifValueLineBase}, or
+     * {@code null} if no single value line is selected.
+     * For {@link LdifControlLine}s the control value is returned instead.
+     *
+     * @return the current value (String or byte[]), or {@code null}
+     */
     protected Object getValue()
     {
         LdifPart[] parts = getSelectedLdifParts();
@@ -203,6 +286,14 @@ public abstract class AbstractOpenValueEditorAction extends AbstractLdifAction
     }
 
 
+    // ── EXTRACT THE ATTRIBUTE DESCRIPTION ────────────────────────────────────
+    /**
+     * Returns the attribute description (type name) of the selected
+     * {@link LdifValueLineBase}, or an empty string for control lines.
+     * Returns {@code null} if no single value line is selected.
+     *
+     * @return the attribute description, or {@code null}
+     */
     protected String getAttributeDescription()
     {
         String attributeDescription = null;
@@ -224,6 +315,15 @@ public abstract class AbstractOpenValueEditorAction extends AbstractLdifAction
     }
 
 
+    // ── CHECK WHETHER AN EDITABLE LINE IS SELECTED ───────────────────────────
+    /**
+     * Returns {@code true} if exactly one LDIF part is selected and it is an
+     * editable line type: {@link LdifAttrValLine}, {@link LdifDnLine},
+     * {@link LdifControlLine}, {@link LdifNewrdnLine},
+     * {@link LdifDeloldrdnLine}, or {@link LdifNewsuperiorLine}.
+     *
+     * @return {@code true} if an editable line is selected
+     */
     protected boolean isEditableLineSelected()
     {
         LdifPart[] parts = getSelectedLdifParts();

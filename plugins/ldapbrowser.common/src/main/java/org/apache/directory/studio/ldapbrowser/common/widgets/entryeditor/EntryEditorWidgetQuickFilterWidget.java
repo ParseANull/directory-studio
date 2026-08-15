@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.widgets.entryeditor;
@@ -37,16 +37,27 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 
 
+// -- CLASS: EntryEditorWidgetQuickFilterWidget -- R2-D2 QUERIES THE DEATH STAR SYSTEMS --
+// In the Death Star's detention block, R2-D2 rolls up to the central terminal and plugs in.
+// He brings up two search fields on the screen -- attribute type and value -- and a "Clear"
+// button so the Rebels can reset the query if they need to.  As Han types "Leia" into the
+// value box, R2 instantly narrows the results to matching cells.
+// This class IS that terminal panel: two text boxes plus a Clear button that live above the
+// entry editor table and drive {@link EntryEditorWidgetFilter} in real time.
+// ---------------------------------------------------------------------------------
 /**
- * The EntryEditorWidgetQuickFilterWidget implements an instant search 
- * for the entry editor widget. It contains separate search fields for
- * attribute type and/or value, plus a Clear button :
+ * The quick-filter bar that sits above the entry editor table and lets users narrow down
+ * visible rows by typing an attribute name fragment and/or a value fragment.
+ * The bar can be shown or hidden (it's hidden by default and toggled by an action).
+ * When shown, it looks like this:
  * <pre>
  * +----------------------------------------------------------------+
  * | [(attribute)] [(Value)                             ] (X Clear) |
  * +----------------------------------------------------------------+
  * </pre>
- * 
+ * Think of this class as R2-D2's Death Star search interface: plug in, type a query,
+ * get instant matching results.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class EntryEditorWidgetQuickFilterWidget
@@ -87,8 +98,8 @@ public class EntryEditorWidgetQuickFilterWidget
                 || !Strings.isEmpty( quickFilterValueText.getText() ) ); //$NON-NLS-1$
         }
     };
-    
-    
+
+
     /**
      * The Listener that reacts on any text entered into the quick Value filter text widget
      */
@@ -101,8 +112,8 @@ public class EntryEditorWidgetQuickFilterWidget
                 || !Strings.isEmpty( quickFilterValueText.getText() ) ); //$NON-NLS-1$
         }
     };
-    
-    
+
+
     /**
      * The listener associated with teh Clear button. It will reset the attribute and value Texts
      */
@@ -116,11 +127,23 @@ public class EntryEditorWidgetQuickFilterWidget
     };
 
 
+    // -- R2 INITIALIZES HIS SEARCH PARAMETERS ----------------------------------
+    // R2-D2 powers up and stores references to two things: the filter object he'll
+    // feed search strings into as the user types, and the parent entry editor widget
+    // so he knows where to return focus when the panel is closed.
+    // ---------------------------------------------------------------------------------
     /**
-     * Creates a new instance of EntryEditorWidgetQuickFilterWidget.
-     * 
-     * @param filter the filter
-     * @param entryEditorWidget the entry editor widget
+     * Creates a new quick-filter widget wired to the given filter and entry editor.
+     * You still need to call {@link #createComposite(Composite)} to actually build the SWT controls.
+     *
+     * <p>For example -- R2 initializes before approaching the terminal:</p>
+     * <pre>
+     *   R2: "Filter reference: loaded. Entry editor widget: loaded.
+     *        Approaching Death Star terminal... interface ready."
+     * </pre>
+     *
+     * @param filter             the filter object that will receive attribute/value search strings
+     * @param entryEditorWidget  the parent entry editor -- used to return focus to the table on close
      */
     public EntryEditorWidgetQuickFilterWidget( EntryEditorWidgetFilter filter, EntryEditorWidget entryEditorWidget )
     {
@@ -129,15 +152,30 @@ public class EntryEditorWidgetQuickFilterWidget
     }
 
 
+    // -- R2 LOCATES THE TERMINAL PANEL IN THE WALL -----------------------------
+    // R2 rolls to the panel location and creates the outer frame -- a zero-height
+    // placeholder composite. The search fields themselves don't exist yet; they're
+    // created on demand when the user activates the quick filter via setActive(true).
+    // The zero-height trick means the panel takes up no visible space when hidden.
+    // ---------------------------------------------------------------------------------
     /**
-     * Creates the outer composite.
+     * Builds the invisible outer container that will eventually hold the quick-filter bar.
+     * The outer composite starts with zero width and height, so it takes up no space.
+     * The actual input fields are only created when {@link #setActive(boolean)} is called
+     * with {@code true}. Call this during the entry editor's layout setup.
      * <pre>
      * +----------------------------------------------------------+
      * |                                                          |
      * +----------------------------------------------------------+
      * </pre>
-     * 
-     * @param parent the parent
+     *
+     * <p>For example -- R2 claims his spot at the wall terminal:</p>
+     * <pre>
+     *   R2 rolls into position. The panel slot is there but blank.
+     *   "BWOOP." (Terminal frame registered. Awaiting activation.)
+     * </pre>
+     *
+     * @param parent  the SWT composite to build the outer frame inside
      */
     public void createComposite( Composite parent )
     {
@@ -158,10 +196,24 @@ public class EntryEditorWidgetQuickFilterWidget
     }
 
 
+    // -- R2 PULLS UP THE FULL SEARCH INTERFACE ---------------------------------
+    // R2 activates the terminal: the screen lights up showing two text boxes (attribute
+    // filter, value filter) and the Clear button. He repositions the layout so the
+    // panel now takes up visible real estate, and focuses the attribute field so the
+    // user can start typing immediately.
+    // ---------------------------------------------------------------------------------
     /**
-     * Creates the inner composite with its input fields.
+     * Creates the inner composite with the three search controls: attribute text field,
+     * value text field, and Clear button. Resizes the outer composite from zero to full-width
+     * so the bar becomes visible, then triggers a layout pass to push the table down.
      * <pre>
      * [          ] [                                     ] (X)
+     * </pre>
+     *
+     * <p>For example -- R2 activates the search screen:</p>
+     * <pre>
+     *   Panel lights up. Two text boxes and a Clear button appear.
+     *   R2: "BWEEP." (Ready for query input.)
      * </pre>
      */
     private void createFilterView()
@@ -175,7 +227,7 @@ public class EntryEditorWidgetQuickFilterWidget
         // The QuickFilterAttribute Text
         quickFilterAttributeText = new Text( innerComposite, SWT.BORDER );
         quickFilterAttributeText.setLayoutData( new GridData( 200 - 14, SWT.DEFAULT ) );
-        
+
         quickFilterAttributeText.addModifyListener( quickFilterAttributeTextListener );
 
         // The QuickFilterValue Text
@@ -199,8 +251,23 @@ public class EntryEditorWidgetQuickFilterWidget
     }
 
 
+    // -- R2 RETRACTS THE SEARCH INTERFACE --------------------------------------
+    // The user has closed the quick-filter bar. R2 clears both text fields (which
+    // fires the modify listeners and resets the filter to show everything), disposes
+    // the inner composite, then collapses the outer frame back to zero size so no
+    // space is wasted. Focus returns to the main entry table.
+    // ---------------------------------------------------------------------------------
     /**
-     * Destroys the inner widget.
+     * Tears down the inner composite and collapses the outer frame back to zero height.
+     * Clearing the text fields before disposal fires the modify listeners, which resets
+     * the filter to show all attributes again. After this, the quick-filter bar is invisible.
+     *
+     * <p>For example -- R2 retracts the search panel:</p>
+     * <pre>
+     *   R2 clears the text fields: filter is reset.
+     *   He collapses the screen back into the wall.
+     *   "BWOOP." (Terminal stowed. Back to standby.)
+     * </pre>
      */
     private void destroy()
     {
@@ -219,8 +286,20 @@ public class EntryEditorWidgetQuickFilterWidget
     }
 
 
+    // -- R2 FULLY DISCONNECTS FROM THE TERMINAL --------------------------------
+    // The mission is over and R2 unplugs everything: text fields, buttons, composites,
+    // and finally the filter reference itself. After this, the object is inert.
+    // ---------------------------------------------------------------------------------
     /**
-     * Disposes this widget.
+     * Fully disposes this widget and releases all SWT resources.
+     * Safe to call even if the widget was never fully shown (the inner composite may be null).
+     * After disposal, all fields are null and the object must not be used again.
+     *
+     * <p>For example -- R2 fully disconnects from the Death Star:</p>
+     * <pre>
+     *   R2 retracts his probe. All panel references are cleared.
+     *   "BEEEEP." (All systems offline. Ready for transport to the Falcon.)
+     * </pre>
      */
     public void dispose()
     {
@@ -238,10 +317,25 @@ public class EntryEditorWidgetQuickFilterWidget
     }
 
 
+    // -- R2 TOGGLES THE TERMINAL ACTIVE STATE ----------------------------------
+    // Han tells R2: "disable the terminal -- we don't want to accidentally query
+    // while no entry is selected."  Or: "enable it -- we have a live entry."
+    // We propagate the enabled state down through both composites and all three
+    // child controls so they visually grey out or come back to life together.
+    // ---------------------------------------------------------------------------------
     /**
-     * Enables or disables this quick filter widget.
-     * 
-     * @param enabled true to enable this quick filter widget, false to disable it
+     * Enables or disables all controls in the quick-filter bar.
+     * When disabled (e.g., no LDAP entry is selected), the text fields and button
+     * grey out so the user can't interact with them.
+     *
+     * <p>For example -- Han tells R2 to go standby:</p>
+     * <pre>
+     *   Han: "No entry selected, R2. Disable the search panel."
+     *   R2 greys out all three controls. They can't be clicked.
+     *   Han selects an entry: "OK R2, re-enable." Controls come back.
+     * </pre>
+     *
+     * @param enabled  {@code true} to enable all controls, {@code false} to grey them out
      */
     public void setEnabled( boolean enabled )
     {
@@ -249,7 +343,7 @@ public class EntryEditorWidgetQuickFilterWidget
         {
             composite.setEnabled( enabled );
         }
-        
+
         if ( ( innerComposite != null ) && !innerComposite.isDisposed() )
         {
             innerComposite.setEnabled( enabled );
@@ -260,10 +354,27 @@ public class EntryEditorWidgetQuickFilterWidget
     }
 
 
+    // -- R2 SHOWS OR HIDES THE SEARCH PANEL ------------------------------------
+    // The user has pressed the "Quick Filter" toolbar button. If the panel isn't
+    // showing, R2 calls createFilterView() to build it and focuses the attribute
+    // text field. If the panel IS showing, R2 calls destroy() to collapse it and
+    // returns focus to the entry table so keyboard navigation keeps working.
+    // ---------------------------------------------------------------------------------
     /**
-     * Activates or deactivates this quick filter widget.
+     * Activates or deactivates the quick-filter bar.
+     * Activating builds the inner composite and focuses the attribute text field.
+     * Deactivating clears search criteria (resetting the filter to show everything),
+     * tears down the inner composite, and returns focus to the entry editor table.
      *
-     * @param visible true to create this quick filter widget, false to destroy it
+     * <p>For example -- R2 toggles the search panel on the user's command:</p>
+     * <pre>
+     *   User presses "Quick Filter" button (visible=true):
+     *     R2 opens the panel and places the cursor in the attribute field.
+     *   User presses it again (visible=false):
+     *     R2 clears the fields, collapses the panel, returns focus to table.
+     * </pre>
+     *
+     * @param visible  {@code true} to show the quick-filter bar, {@code false} to hide it
      */
     public void setActive( boolean visible )
     {

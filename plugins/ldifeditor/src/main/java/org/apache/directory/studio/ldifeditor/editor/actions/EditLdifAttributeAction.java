@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor.actions;
@@ -50,9 +50,35 @@ import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.swt.widgets.Display;
 
 
+// ── CLASS: EditLdifAttributeAction — REBEL OFFICER RENAMES THE ATTRIBUTE ──────
+// A Rebel officer needs to rename an attribute in a communiqué: they open the
+// AttributeWizard, choose a new type name from the schema-aware list, and the
+// console rewrites every affected line in the document automatically.
+// EditLdifAttributeAction does exactly that: it fires the AttributeWizard for
+// the selected attr-val line or mod-spec, and on OK rewrites the line (or the
+// entire mod-spec block) with the new attribute description.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Action that opens the {@link AttributeWizard} to rename the attribute
+ * description of the currently selected {@link LdifAttrValLine} or
+ * {@link LdifModSpec}.
+ * For a standalone attr-val line the replacement is a single new
+ * {@link LdifAttrValLine}.  For a mod-spec the type line and all attr-val lines
+ * inside it are rewritten with the new description.
+ * Think of this as the Rebel officer correcting a mis-labelled field in an LDIF
+ * communiqué.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class EditLdifAttributeAction extends AbstractLdifAction
 {
 
+    // ── CONSTRUCT ─────────────────────────────────────────────────────────────
+    /**
+     * Creates a new {@code EditLdifAttributeAction} bound to {@code editor}.
+     *
+     * @param editor  the LDIF editor this action operates on
+     */
     public EditLdifAttributeAction( LdifEditor editor )
     {
         super( Messages.getString( "EditLdifAttributeAction.EditAttributeDescription" ), editor ); //$NON-NLS-1$
@@ -60,6 +86,17 @@ public class EditLdifAttributeAction extends AbstractLdifAction
     }
 
 
+    // ── RECOMPUTE ENABLEMENT ──────────────────────────────────────────────────
+    // Enabled only when exactly one attr-val line (or mod-spec) is selected
+    // inside a content, add, or modify record.
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Enabled when exactly one part is selected and it is an
+     * {@link LdifAttrValLine} or the selection is within a {@link LdifModSpec},
+     * and the containing record is a content, change-add, or change-modify
+     * record.</p>
+     */
     public void update()
     {
         LdifContainer[] containers = getSelectedLdifContainers();
@@ -74,6 +111,21 @@ public class EditLdifAttributeAction extends AbstractLdifAction
     }
 
 
+    // ── OPEN THE WIZARD AND REWRITE THE DOCUMENT ─────────────────────────────
+    // The officer opens the attribute wizard; if they confirm a new name the
+    // console rewrites the selected line (or the entire mod-spec) in one shot.
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Opens the {@link AttributeWizard}.  On {@code OK}:
+     * <ul>
+     *   <li>For a mod-spec: rewrites the type line and all attr-val lines
+     *       inside it with the new description.</li>
+     *   <li>For a plain attr-val line: replaces the single line with a new
+     *       {@link LdifAttrValLine} carrying the new description.</li>
+     * </ul>
+     * </p>
+     */
     protected void doRun()
     {
 

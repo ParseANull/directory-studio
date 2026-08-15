@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -74,9 +74,20 @@ import org.apache.directory.studio.openldap.syncrepl.SyncRepl;
 import org.apache.directory.studio.openldap.syncrepl.Type;
 
 
+// Like Leia's hologram flickering to life with the Rebel Alliance's most complete
+// intelligence briefing — presenting the full SyncRepl consumer configuration in a
+// single scrolled dialog with four major sections (consumer identity, provider connection,
+// authentication method, and data scope), wiring every field back to the SyncRepl model
+// so the administrator can configure replication from replica ID all the way through to
+// the attribute list and attributes-only flag — we project this dialog.
 /**
  * The ReplicationConsumerDialog is used to edit the configuration of a SyncRepl consumer.
- * 
+ * We present four groups: Replication Consumer (replica ID, replication type, and a button
+ * to configure options), Replication Provider Connection (host, port, encryption method),
+ * Authentication (Simple or SASL tabs), and Replication Data Configuration (search base DN,
+ * filter, scope, attributes table, and attributes-only checkbox). We keep OK disabled until
+ * at minimum a replica ID, a provider host, and a search base DN have all been provided.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ReplicationConsumerDialog extends Dialog
@@ -269,7 +280,7 @@ public class ReplicationConsumerDialog extends Dialog
             }
             else
             {
-                credentialsText.setEchoChar( '\u2022' );
+                credentialsText.setEchoChar( '•' );
             }
         }
     };
@@ -361,12 +372,16 @@ public class ReplicationConsumerDialog extends Dialog
     };
 
 
+    // Like Leia's hologram projector powering up with no prior intelligence loaded —
+    // we know who the recipient is (the browser connection) but the SyncRepl message
+    // has not been composed yet, so we initialise a fresh default SyncRepl and store
+    // it ready for the administrator to fill in every field from scratch.
     /**
-     * Creates a new instance of OverlayDialog.
-     * 
+     * Creates a new instance of ReplicationConsumerDialog with a fresh default
+     * SyncRepl configuration.
+     *
      * @param parentShell the parent shell
-     * @param index the index
-     * @param browserConnection the connection
+     * @param browserConnection the connection used by DN and filter widgets for lookups
      */
     public ReplicationConsumerDialog( Shell parentShell, IBrowserConnection browserConnection )
     {
@@ -377,12 +392,18 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram re-projecting an existing message — the SyncRepl
+    // configuration has already been transmitted once, so we take a defensive
+    // copy of it rather than editing the original, and fall back to a fresh
+    // default if the caller passes null.
     /**
-     * Creates a new instance of OverlayDialog.
-     * 
+     * Creates a new instance of ReplicationConsumerDialog backed by the given
+     * SyncRepl configuration. If {@code syncRepl} is non-null we work on a
+     * copy of it; otherwise we start with a fresh default.
+     *
      * @param parentShell the parent shell
-     * @param index the index
-     * @param browserConnection the connection
+     * @param syncRepl the existing SyncRepl to edit, or {@code null} to start with defaults
+     * @param browserConnection the connection used by DN and filter widgets for lookups
      */
     public ReplicationConsumerDialog( Shell parentShell, SyncRepl syncRepl, IBrowserConnection browserConnection )
     {
@@ -401,10 +422,14 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's transmission beacon initialising a blank hologram packet —
+    // all parameters at their zero-point defaults, ready for the administrator
+    // to supply every detail — we create and return a fresh empty SyncRepl.
     /**
-     * Creates a default SyncRepl configuration.
+     * Creates and returns a default, fully-initialised SyncRepl configuration
+     * with all parameters at their initial values.
      *
-     * @return a default SyncRepl configuration
+     * @return a new default {@link SyncRepl} instance
      */
     private SyncRepl createDefaultSyncRepl()
     {
@@ -412,6 +437,9 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram labelling its header before the message begins —
+    // making sure the recipient instantly knows this briefing is titled
+    // "Replication Consumer" — we set the shell text here.
     /**
      * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
      */
@@ -423,7 +451,16 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram establishing which controls end the briefing —
+    // creating the OK button as the primary action and the Cancel button as
+    // the exit, then immediately evaluating whether OK should start enabled
+    // based on the current SyncRepl state — we set up the button bar.
     /**
+     * Creates the OK and Cancel buttons for the button bar and immediately
+     * calls {@link #updateOkButtonEnableState()} to set the initial enabled
+     * state of the OK button.
+     *
+     * @param parent the button bar composite
      * @see org.eclipse.jface.dialogs.Dialog#createButtonsForButtonBar(org.eclipse.swt.widgets.Composite)
      */
     @Override
@@ -436,7 +473,17 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram unfolding its complete briefing inside a scrollable
+    // viewport — creating the scrolled composite, then building four major
+    // sections (consumer identity, provider connection, authentication, and data
+    // configuration) before loading all current SyncRepl values into the widgets —
+    // we assemble the full dialog content area.
     /**
+     * Creates the dialog area: a {@link ScrolledComposite} containing the
+     * four replication configuration groups, all populated via {@link #refreshUI()}.
+     *
+     * @param parent the parent composite
+     * @return the top-level scrolled composite
      * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
      */
     @Override
@@ -466,8 +513,16 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram opening with the consumer's own identity — replica ID
+    // so the provider can tell which consumer is connecting, replication type
+    // (Refresh And Persist or Refresh Only), and a button that launches the full
+    // ReplicationOptionsDialog where all the fine-tuned sync options live — we
+    // create the Replication Consumer group.
     /**
-     * Creates the replication consumer group.
+     * Creates the "Replication Consumer" group containing a replica ID text field,
+     * a replication type combo (Refresh And Persist / Refresh Only), and a
+     * "Configure Replication Options..." button that opens the
+     * {@link ReplicationOptionsDialog}.
      *
      * @param parent the parent composite
      */
@@ -520,8 +575,15 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram specifying the hyperspace coordinates of the provider —
+    // the host and port the consumer must connect to, the encryption method to
+    // use (plain, LDAPS, or Start TLS), and a button to configure the Start TLS
+    // parameters in detail — we create the Replication Provider Connection group.
     /**
-     * Creates the replication provider group.
+     * Creates the "Replication Provider Connection" group containing a provider
+     * host text field, a provider port text field, an encryption method combo
+     * (No Encryption / SSL LDAPS / Start TLS), and a "Configure Start TLS..."
+     * button (enabled only when Start TLS is selected).
      *
      * @param parent the parent composite
      */
@@ -585,8 +647,16 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram carrying authentication credentials for the Rebel contact —
+    // offering two modes side-by-side in a tab folder: simple authentication (bind DN
+    // and password with a show/hide toggle) or SASL authentication (a summary label
+    // showing the current mechanism and IDs, plus a button to open the SASL dialog) —
+    // we create the Authentication group.
     /**
-     * Creates the replication authentication group.
+     * Creates the "Authentication" group containing a {@link TabFolder} with two tabs:
+     * "Simple Authentication" (bind DN text, credentials text with masking and a show
+     * checkbox) and "SASL Authentication" (a summary label and a "Configure SASL
+     * Authentication..." button that opens the {@link ReplicationSaslDialog}).
      *
      * @param parent the parent composite
      */
@@ -615,7 +685,7 @@ public class ReplicationConsumerDialog extends Dialog
         // Credentials Text
         BaseWidgetUtils.createLabel( simpleAuthenticationComposite, "Credentials:", 1 );
         credentialsText = BaseWidgetUtils.createText( simpleAuthenticationComposite, "", 1 );
-        credentialsText.setEchoChar( '\u2022' );
+        credentialsText.setEchoChar( '•' );
 
         // Show Credentials Checkbox
         BaseWidgetUtils.createLabel( simpleAuthenticationComposite, "", 1 );
@@ -649,8 +719,16 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram spelling out precisely which part of the galaxy's
+    // directory the consumer should replicate — search base DN, LDAP filter,
+    // scope (Subtree, Subordinate, One Level, or Base), a table of specific
+    // attribute names to include, and an attributes-only checkbox so the consumer
+    // can skip retrieving actual values — we build the Replication Data Configuration group.
     /**
-     * Creates the replication data group.
+     * Creates the "Replication Data Configuration" group containing a search base
+     * DN {@link EntryWidget}, a filter {@link FilterWidget}, a scope combo
+     * (SUB / SUBORD / ONE / BASE), an attributes {@link TableViewer} with Add,
+     * Edit, and Delete buttons, and an "Attributes Only" checkbox.
      *
      * @param parent the parent composite
      */
@@ -763,8 +841,13 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram keeping track of which attribute in the list is
+    // currently highlighted — enabling Edit and Delete only when an entry
+    // is selected, disabling them when the table has nothing selected —
+    // we update the attributes table button states.
     /**
-     * Updates the state of the attributes table buttons.
+     * Enables or disables the Edit and Delete attribute buttons based on
+     * whether the attributes {@link TableViewer} currently has a selection.
      */
     private void updateAttributesTableButtonsState()
     {
@@ -775,8 +858,14 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram adding a new piece of intelligence to the attribute
+    // roster — opening an AttributeDialog to let the administrator name the
+    // attribute to replicate, then appending it to our local list and syncing
+    // it back into the SyncRepl model — we handle the add-attribute action.
     /**
-     * Action launched when the add attribute button is clicked.
+     * Opens an {@link AttributeDialog} to let the user pick an attribute name.
+     * On confirmation, adds the chosen attribute to the local list and updates
+     * the SyncRepl's attribute array, then refreshes the table viewer.
      */
     private void addAttributeButtonAction()
     {
@@ -793,8 +882,14 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram revising an existing intelligence item on the attribute
+    // roster — pulling the selected entry into an AttributeDialog pre-filled with
+    // its current name, then splicing the edited value back at the same position
+    // in the list and re-syncing to the SyncRepl model — we handle the edit action.
     /**
-     * Action launched when the edit attribute button is clicked.
+     * Opens an {@link AttributeDialog} pre-populated with the currently selected
+     * attribute name. On confirmation, replaces the old entry at the same index in
+     * the local list, updates the SyncRepl's attribute array, and refreshes the viewer.
      */
     private void editAttributeButtonAction()
     {
@@ -820,8 +915,14 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram striking a piece of outdated intelligence from the
+    // attribute roster — removing the selected entry from our local list and
+    // writing the trimmed array back into the SyncRepl model before refreshing
+    // the table — we handle the delete-attribute action.
     /**
-     * Action launched when the delete attribute button is clicked.
+     * Removes the currently selected attribute from the local list, updates
+     * the SyncRepl's attribute array accordingly, and refreshes the attributes
+     * table viewer.
      */
     private void deleteAttributeButtonAction()
     {
@@ -839,10 +940,15 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram stamping a standard-width frame around each action
+    // button so the three buttons in the attributes panel are all the same width
+    // and align neatly — we create the reusable button GridData here.
     /**
-     * Create a new button grid data.
+     * Creates and returns a {@link GridData} instance sized to
+     * {@link IDialogConstants#BUTTON_WIDTH}, used to give the attributes table's
+     * Add, Edit, and Delete buttons a consistent minimum width.
      *
-     * @return the new button grid data
+     * @return a new {@link GridData} with a button-width hint
      */
     private GridData createNewButtonGridData()
     {
@@ -852,6 +958,18 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram refreshing its projection from the current intelligence
+    // record — first removing all listeners so programmatic widget updates do not
+    // fire spurious model changes, then re-populating every field (replica ID,
+    // replication type, provider host/port/encryption, authentication mode, bind DN
+    // or SASL summary, search base DN, filter, scope, attributes list, and
+    // attributes-only flag) from the SyncRepl object, then re-adding the listeners —
+    // we update the entire UI in one pass.
+    /**
+     * Refreshes all dialog widgets from the current {@link SyncRepl} state.
+     * Listeners are removed before population and restored afterwards to prevent
+     * feedback loops. Covers all four configuration groups.
+     */
     private void refreshUI()
     {
         if ( syncRepl != null )
@@ -1066,10 +1184,16 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram composing the SASL status line that appears on the
+    // Authentication tab — summarising whether an authentication ID or authorisation ID
+    // has been set, and which SASL mechanism will be used, so the administrator
+    // can see at a glance whether SASL is configured — we build the label text.
     /**
-     * Gets the SASL authentication label text.
+     * Builds and returns the descriptive text displayed on the SASL Authentication
+     * tab. Reports the authentication ID (preferred) or authorisation ID and the
+     * SASL mechanism title, or a "not configured" message when neither ID is set.
      *
-     * @return the text for the SASL authentication label
+     * @return the SASL authentication label text
      */
     private String getSaslAuthenticationLabelText()
     {
@@ -1108,10 +1232,14 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram reading which replication mode the administrator
+    // selected — Refresh And Persist or Refresh Only — we pull the current
+    // selection from the replication type combo and return it as a Type enum.
     /**
-     * Gets the replication type.
+     * Returns the {@link Type} currently selected in the replication type
+     * combo viewer, or {@code null} if nothing is selected.
      *
-     * @return the replication type
+     * @return the selected replication type, or {@code null}
      */
     private Type getReplicationType()
     {
@@ -1126,10 +1254,15 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram encoding the provider coordinates into a single
+    // Provider object — reading host, port, and the LDAPS flag from the
+    // relevant widgets and packaging them up — we build and return the Provider.
     /**
-     * Gets the provider.
+     * Builds a {@link Provider} from the current values of the host text,
+     * port text, and encryption method combo widgets. The LDAPS flag is set
+     * when {@link EncryptionMethod#SSL_ENCRYPTION_LDAPS} is selected.
      *
-     * @return the provider
+     * @return a new {@link Provider} reflecting the current widget state
      */
     private Provider getProvider()
     {
@@ -1174,10 +1307,14 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram reading which encryption channel the administrator
+    // chose for the provider connection — No Encryption, SSL LDAPS, or Start TLS —
+    // we pull the selected EncryptionMethod enum value from the combo and return it.
     /**
-     * Gets the encryption method.
+     * Returns the {@link EncryptionMethod} currently selected in the encryption
+     * method combo viewer, or {@code null} if nothing is selected.
      *
-     * @return the encryption method
+     * @return the selected encryption method, or {@code null}
      */
     private EncryptionMethod getEncryptionMethod()
     {
@@ -1192,10 +1329,14 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram specifying how deep into the directory tree the
+    // consumer should reach — reading which Scope enum is selected in the scope
+    // combo and returning it — we extract and return the current scope value.
     /**
-     * Gets the scope.
+     * Returns the {@link Scope} currently selected in the scope combo viewer,
+     * or {@code null} if nothing is selected.
      *
-     * @return the scope
+     * @return the selected scope, or {@code null}
      */
     private Scope getScope()
     {
@@ -1210,8 +1351,15 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram switching on all of its sensors — wiring every text
+    // field, combo, checkbox, table, and button to its corresponding listener so
+    // every change the administrator makes is immediately reflected in the SyncRepl
+    // model and the OK button state — we add all listeners in one place.
     /**
-     * Adds listeners.
+     * Registers all field listeners: modify listeners on text fields, selection
+     * listeners on checkboxes and buttons, selection-changed listeners on combo
+     * viewers and the table viewer, a double-click listener on the attributes table,
+     * and widget-modify listeners on the entry and filter widgets.
      */
     private void addListeners()
     {
@@ -1241,8 +1389,14 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram going dark momentarily while we overwrite the projection
+    // with updated intelligence — detaching every listener before we repopulate all
+    // the widgets so no spurious model-update events fire during the refresh — we
+    // cleanly remove all listeners here.
     /**
-     * Removes listeners.
+     * Removes all field listeners that were registered by {@link #addListeners()}.
+     * Called at the start of {@link #refreshUI()} to prevent feedback loops while
+     * the widgets are being repopulated from the SyncRepl model.
      */
     private void removeListeners()
     {
@@ -1272,8 +1426,15 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram verifying that the transmission is complete before
+    // authorising the send — checking that a replica ID has been given, that a
+    // provider host has been specified, and that a non-empty search base DN has
+    // been chosen, keeping OK disabled until all three conditions are met — we
+    // update the OK button enabled state.
     /**
-     * Updates the OK button 'enable' state.
+     * Enables the OK button only when a replica ID, a provider host, and a
+     * non-empty search base DN are all present; disables it as soon as any of
+     * the three required fields is missing.
      */
     private void updateOkButtonEnableState()
     {
@@ -1310,8 +1471,14 @@ public class ReplicationConsumerDialog extends Dialog
     }
 
 
+    // Like Leia's hologram handing its finished intelligence packet to the
+    // waiting Rebel officer — returning the SyncRepl object that holds all
+    // the configuration the administrator just set up so the caller can
+    // persist it — we expose getSyncRepl().
     /**
-     * Gets the SyncRepl value.
+     * Returns the {@link SyncRepl} value configured by this dialog.
+     * After the dialog is closed with OK the returned object reflects all
+     * changes the administrator made.
      *
      * @return the SyncRepl value
      */
@@ -1320,8 +1487,12 @@ public class ReplicationConsumerDialog extends Dialog
         return syncRepl;
     }
 
+    // Like Leia's hologram encoding the transmission channel — specifying whether
+    // the connection to the provider travels in the clear, over SSL (LDAPS), or
+    // is upgraded via the Start TLS extension — we define the EncryptionMethod enum.
     /**
-     * Enum used for the Encryption Method selected by the user.
+     * Enum representing the encryption method used for the provider connection.
+     * We map the three options (plain, SSL LDAPS, Start TLS) to combo-viewer items.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */

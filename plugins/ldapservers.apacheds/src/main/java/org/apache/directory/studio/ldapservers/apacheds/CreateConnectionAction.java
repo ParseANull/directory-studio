@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapservers.apacheds;
@@ -43,8 +43,26 @@ import org.eclipse.ui.IObjectActionDelegate;
 import org.eclipse.ui.IWorkbenchPart;
 
 
+// ── CLASS: CreateConnectionAction — Docking the Falcon at the Rebel Base ──────
+// Once the Millennium Falcon has landed and the engines are running, Han wants
+// to plug in to the Rebel base's communication network.  He checks the docking
+// bay (Servers view selection), reads the Falcon's port manifest (config.ldif),
+// and creates an LDAP Browser connection entry with the right host, port,
+// encryption, and credentials so the Alliance computers can talk to the ship.
+// CreateConnectionAction is that "plug in" step: it reads the running server's
+// config, builds a ConnectionParameter object, and hands it to the connection
+// framework via CreateConnectionActionHelper.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the create connection action for an ApacheDS 2.0.0 server.
+ * The Eclipse action that creates an LDAP Browser connection to a selected
+ * ApacheDS 2.0.0 server.
+ * On {@link #run} we read the server's {@code config.ldif} to discover which
+ * protocol (LDAP or LDAPS) is active, build a {@link ConnectionParameter} with
+ * the correct host/port/encryption/credentials, and register it with the
+ * LDAP Browser via {@link CreateConnectionActionHelper}.
+ * Think of this as docking the Falcon and plugging into the Rebel base's
+ * communication network — the ship (server) is running; we just need to hand
+ * the connection parameters to the Alliance computers.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -54,8 +72,21 @@ public class CreateConnectionAction implements IObjectActionDelegate
     private ServersView view;
 
 
+    // ── Read the Port Manifest and Create the Docking Connection ─────────────
+    // We verify the type, read the config, check that LDAP or LDAPS is enabled,
+    // then call createConnection() to build and register the connection entry.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Runs the create-connection action.
+     * <ol>
+     *   <li>Gets the single selected server from the Servers view.</li>
+     *   <li>Verifies it is an ApacheDS 2.0.0 server.</li>
+     *   <li>Reads its {@code config.ldif} to get the active protocol and port.</li>
+     *   <li>Checks that LDAP and/or LDAPS is enabled.</li>
+     *   <li>Creates and registers an LDAP Browser connection entry.</li>
+     * </ol>
+     *
+     * @param action  the triggering action (not used directly).
      */
     public void run( IAction action )
     {
@@ -69,7 +100,8 @@ public class CreateConnectionAction implements IObjectActionDelegate
                 LdapServer server = ( LdapServer ) selection.getFirstElement();
 
                 // Checking that the server is really an ApacheDS 2.0.0 server
-                if(!ExtensionUtils.verifyApacheDs200OrPrintError( server, view )) {
+                if ( !ExtensionUtils.verifyApacheDs200OrPrintError( server, view ) )
+                {
                     return;
                 }
 
@@ -119,12 +151,16 @@ public class CreateConnectionAction implements IObjectActionDelegate
     }
 
 
+    // ── The Port Is Closed — Tell the Crew ────────────────────────────────────
+    // Opens a modal error dialog when the config file can't be read, so the
+    // operator knows why the connection couldn't be created.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Reports to the user an error message indicating the server 
-     * configuration could not be read correctly.
+     * Shows a modal error dialog reporting that the server configuration
+     * could not be read.
      *
-     * @param message
-     *      the message
+     * @param view     the Servers view, used as the parent shell.
+     * @param message  the error message to display.
      */
     private void reportErrorReadingServerConfiguration( ServersView view, String message )
     {
@@ -136,8 +172,21 @@ public class CreateConnectionAction implements IObjectActionDelegate
     }
 
 
+    // ── Plug the Falcon into the Base Communication Network ───────────────────
+    // We build a ConnectionParameter object with the right host, port, encryption,
+    // credentials, and server-type metadata, then hand it to
+    // CreateConnectionActionHelper so it appears in the LDAP Browser Connections view.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the connection
+     * Builds a {@link ConnectionParameter} from the server's active configuration
+     * and registers it as a new LDAP Browser connection.
+     * Prefers LDAP over LDAPS when both are enabled.
+     * Stores the password {@code "secret"} (the ApacheDS default admin password)
+     * in the keystore if one is configured, otherwise stores it in clear text
+     * on the parameter object.
+     *
+     * @param server         the server to connect to.
+     * @param configuration  the parsed configuration bean from {@code config.ldif}.
      */
     private void createConnection( LdapServer server, ConfigBean configuration )
     {
@@ -167,7 +216,7 @@ public class CreateConnectionAction implements IObjectActionDelegate
             PasswordsKeyStoreManager passwordsKeyStoreManager = ConnectionCorePlugin.getDefault()
                 .getPasswordsKeyStoreManager();
 
-            // Checking if the keystore is loaded 
+            // Checking if the keystore is loaded
             if ( passwordsKeyStoreManager.isLoaded() )
             {
                 passwordsKeyStoreManager.storeConnectionPassword( connectionParameter.getId(), "secret" ); //$NON-NLS-1$
@@ -208,8 +257,16 @@ public class CreateConnectionAction implements IObjectActionDelegate
     }
 
 
+    // ── Nothing to Do on Selection Change ────────────────────────────────────
+    // This action doesn't update its enabled state based on selection;
+    // the action is always present in the context menu.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called when the selection in the Servers view changes.
+     * This action does nothing on selection change — it is always enabled.
+     *
+     * @param action     the action.
+     * @param selection  the new selection (unused).
      */
     public void selectionChanged( IAction action, ISelection selection )
     {
@@ -217,8 +274,15 @@ public class CreateConnectionAction implements IObjectActionDelegate
     }
 
 
+    // ── Connect This Action to the Docking Bay View ───────────────────────────
+    // Eclipse calls this when the context menu is being built; we capture the
+    // Servers view so run() can read the selection from it.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Associates this action with the active {@link ServersView}.
+     *
+     * @param action      the action (unused).
+     * @param targetPart  the workbench part; stored if it is a {@link ServersView}.
      */
     public void setActivePart( IAction action, IWorkbenchPart targetPart )
     {

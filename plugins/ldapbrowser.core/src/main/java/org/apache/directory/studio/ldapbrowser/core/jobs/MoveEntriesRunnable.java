@@ -47,13 +47,30 @@ import org.apache.directory.studio.ldapbrowser.core.model.ISearch;
 import org.apache.directory.studio.ldapbrowser.core.model.ISearchResult;
 
 
+// ── CLASS: MoveEntriesRunnable — THE REBEL FLEET RETREATS FROM HOTH ──────────
+// The Empire has discovered Echo Base.  The Rebel fleet begins an emergency
+// evacuation, moving transports from Hoth's atmosphere to a new rendezvous
+// point in the Anoat system.  For a single transport (single entry), we issue
+// a direct jump order (LDAP moddn).  For a large convoy (multiple entries)
+// we avoid individual landing announcements (individual events would kill the UI)
+// and instead send one bulk fleet-relocated signal (BulkModificationEvent).
+// If a transport has too many cargo containers to jump directly (error 66), we
+// ask if we should simulate the move by copying everything to the new location
+// and destroying the originals.
+// This runnable moves one or more entries to a new parent DN using LDAP moddn.
+// For non-leaf entries that can't be moved directly it falls back to simulated
+// move (copy+delete) via {@link SimulateRenameDialog}.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to move entries.
- * 
- * First it tries to move an entry using an moddn operation. If
- * that operation fails with an LDAP error 66 (ContextNotEmptyException)
- * the use is asked if s/he wants to simulate such a move by recursively
- * searching/creating/deleting entries.
+ * A background runnable that moves one or more LDAP entries to a new parent DN.
+ * Like {@link RenameEntryRunnable}, we try a direct LDAP moddn first.  On
+ * error 66 (NotAllowedOnNonLeaf) we ask the user (once, even for multiple
+ * entries) whether to simulate the move as copy+delete.
+ * For a single moved entry we fire an {@link EntryMovedEvent}; for multiple
+ * entries the UI impact of per-entry events would be severe, so we fire a
+ * single {@link BulkModificationEvent} and mark both old and new parents as
+ * uninitialized.
+ * Think of it as the Rebel evacuation from Hoth.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -78,12 +95,23 @@ public class MoveEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     private SimulateRenameDialog dialog;
 
 
+    // ── The Rebel Fleet Picks Up Its Evacuation Orders ────────────────────────
+    // Stores entries to move, the new parent, and the dialog.  New entries array
+    // starts null and is filled as each move succeeds.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of MoveEntriesRunnable.
-     * 
-     * @param entries the entries to move
-     * @param newParent the new parent
-     * @param dialog the dialog
+     * Creates a new MoveEntriesRunnable.
+     *
+     * <p>For example:</p>
+     * <pre>
+     *   new StudioBrowserJob(new MoveEntriesRunnable(
+     *       new IEntry[]{entry1, entry2}, newParent, dialog)).execute();
+     * </pre>
+     *
+     * @param entries   the entries to move.
+     * @param newParent the destination parent entry.
+     * @param dialog    the dialog for simulated-rename prompting; may be
+     *                  {@code null}.
      */
     public MoveEntriesRunnable( IEntry[] entries, IEntry newParent, SimulateRenameDialog dialog )
     {
@@ -95,8 +123,13 @@ public class MoveEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── One Comms Channel For The Fleet ───────────────────────────────────────
+    // All moves go to the same server (the one holding the new parent).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the connection for the destination parent entry.
+     *
+     * @return single-element array with the underlying {@link Connection}.
      */
     public Connection[] getConnections()
     {
@@ -105,8 +138,13 @@ public class MoveEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── The Job Name For The Progress Bar ─────────────────────────────────────
+    // "Move entry" (singular) or "Move entries" (plural).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the display name for this background job.
+     *
+     * @return a localised "Move entry" or "Move entries" label.
      */
     public String getName()
     {
@@ -115,8 +153,13 @@ public class MoveEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── Lock All Involved Entries ──────────────────────────────────────────────
+    // We lock the new parent and all source entries to avoid concurrent changes.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the new parent and all source entries as locked objects.
+     *
+     * @return the lock list.
      */
     public Object[] getLockedObjects()
     {
@@ -127,8 +170,13 @@ public class MoveEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── If The Evacuation Fails ────────────────────────────────────────────────
+    // Singular vs plural error message.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the error message shown if the move fails.
+     *
+     * @return a localised error string.
      */
     public String getErrorMessage()
     {
@@ -137,8 +185,18 @@ public class MoveEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── The Fleet Jumps To The New Rendezvous Point ────────────────────────────
+    // For each entry: compose the new DN (same RDN, new parent), try moddn.
+    // On error 66: offer simulation (only ask the user once, use cached answer).
+    // On success: uncache old entry, delete from old parent, read new entry,
+    //             add to new parent, reset affected search results.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Moves each entry to the new parent using LDAP moddn.  Falls back to
+     * simulated move on error 66.  After each successful move, updates the
+     * browser model and affected search result sets.
+     *
+     * @param monitor the Eclipse progress monitor.
      */
     public void run( StudioProgressMonitor monitor )
     {
@@ -268,8 +326,17 @@ public class MoveEntriesRunnable implements StudioConnectionBulkRunnableWithProg
     }
 
 
+    // ── The Fleet Signals Its New Position ────────────────────────────────────
+    // Single-entry move: fire EntryMovedEvent per entry.
+    // Multi-entry move: too many events would thrash the UI — instead mark the
+    // old and new parents as uninitialized and fire one BulkModificationEvent.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Fires the appropriate update event(s).  For a single moved entry fires
+     * an {@link EntryMovedEvent}.  For multiple entries fires a
+     * {@link BulkModificationEvent} and marks old/new parents as uninitialized.
+     *
+     * @param monitor ignored.
      */
     public void runNotification( StudioProgressMonitor monitor )
     {

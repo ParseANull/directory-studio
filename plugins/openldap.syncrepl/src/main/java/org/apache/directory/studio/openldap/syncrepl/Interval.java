@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.syncrepl;
 
@@ -25,10 +25,24 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
+// ── CLASS: Interval — The Scheduled Intelligence Dispatch Timetable ───────────
+// The Empire's sector command receives a fresh intelligence package from Death
+// Star HQ at a fixed schedule: every 00 days, 01 hour, 00 minutes, 00 seconds
+// for instance.  The schedule is expressed as "dd:hh:mm:ss" and it governs how
+// often a consumer LDAP server polls its provider in "refreshOnly" sync mode.
+// This class parses that schedule string, stores the four components, and
+// serialises them back to the same "dd:hh:mm:ss" format.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an interval.
- * <p>
- * Format: "dd:hh:mm:ss"
+ * Models the syncrepl {@code interval} parameter.
+ * An interval specifies how often the consumer polls the provider for changes
+ * when operating in "refreshOnly" replication mode.
+ * Format: {@code "dd:hh:mm:ss"} where each component is a zero-padded two-digit integer.
+ * For example — an interval of one hour would be written as {@code "00:01:00:00"}.
+ * Think of this as the scheduled timetable for Imperial intelligence dispatches:
+ * every N days, hours, minutes, and seconds.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class Interval
 {
@@ -48,22 +62,31 @@ public class Interval
     private int seconds;
 
 
+    // ── Empty Timetable Created — All Zeros by Default ────────────────────────
+    // A blank interval with all fields at zero; the caller sets individual
+    // components (days, hours, minutes, seconds) afterwards.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of Interval.
-     *
+     * Creates a zero-valued interval.
+     * All fields default to 0 — use the setters or the four-argument constructor
+     * to populate them.
      */
     public Interval()
     {
     }
 
 
+    // ── Full Timetable Specified at Creation ──────────────────────────────────
+    // The dispatch scheduler supplies all four components at once when the
+    // interval is known upfront.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of Interval.
+     * Creates an interval with all four components set.
      *
-     * @param days the days
-     * @param hours the hours
-     * @param minutes the minutes
-     * @param seconds the seconds
+     * @param days     the day component (0–99).
+     * @param hours    the hour component (0–23, though OpenLDAP accepts larger values).
+     * @param minutes  the minute component (0–59).
+     * @param seconds  the second component (0–59).
      */
     public Interval( int days, int hours, int minutes, int seconds )
     {
@@ -74,11 +97,15 @@ public class Interval
     }
 
 
+    // ── Copy the Timetable for a Different Sector ─────────────────────────────
+    // Imperial HQ sends the same timetable to multiple sector commands — we
+    // deep-copy the interval so each command has its own independent schedule.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a copy of a Interval object.
+     * Returns a deep copy of the given interval, or {@code null} if the input is {@code null}.
      *
-     * @param syncRepl the initial Interval object
-     * @return a copy of the given Interval object
+     * @param interval  the interval to copy.
+     * @return          a new {@link Interval} with the same component values.
      */
     public static Interval copy( Interval interval )
     {
@@ -98,10 +125,13 @@ public class Interval
     }
 
 
+    // ── Copy This Timetable ───────────────────────────────────────────────────
+    // Convenience instance method that delegates to the static copy().
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a copy of the Interval object.
+     * Returns a deep copy of this interval.
      *
-     * @return a copy of the Interval object
+     * @return  a new {@link Interval} with the same component values.
      */
     public Interval copy()
     {
@@ -109,12 +139,19 @@ public class Interval
     }
 
 
+    // ── Decode the Timetable from the Configuration String ────────────────────
+    // The OpenLDAP configuration file stores the interval as a "dd:hh:mm:ss"
+    // string — we match each group with a regex and parse the integers out.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Parses an interval string.
+     * Parses an interval string in "dd:hh:mm:ss" format.
+     * Each component must be exactly two digits.  We parse them as integers
+     * and store them in the returned object.
      *
-     * @param s the string
-     * @return an interval
-     * @throws ParseException if an error occurs during parsing
+     * @param s  the interval string, e.g. {@code "00:01:00:00"}.
+     * @return   the parsed {@link Interval}.
+     * @throws ParseException  if the string doesn't match the expected format
+     *                         or if any component can't be parsed as an integer.
      */
     public static Interval parse( String s ) throws ParseException
     {
@@ -184,56 +221,103 @@ public class Interval
     }
 
 
+    /**
+     * Returns the day component of this interval.
+     *
+     * @return  the number of days.
+     */
     public int getDays()
     {
         return days;
     }
 
 
+    /**
+     * Returns the hour component of this interval.
+     *
+     * @return  the number of hours.
+     */
     public int getHours()
     {
         return hours;
     }
 
 
+    /**
+     * Returns the minute component of this interval.
+     *
+     * @return  the number of minutes.
+     */
     public int getMinutes()
     {
         return minutes;
     }
 
 
+    /**
+     * Returns the second component of this interval.
+     *
+     * @return  the number of seconds.
+     */
     public int getSeconds()
     {
         return seconds;
     }
 
 
+    /**
+     * Sets the day component.
+     *
+     * @param days  the number of days.
+     */
     public void setDays( int days )
     {
         this.days = days;
     }
 
 
+    /**
+     * Sets the hour component.
+     *
+     * @param hours  the number of hours.
+     */
     public void setHours( int hours )
     {
         this.hours = hours;
     }
 
 
+    /**
+     * Sets the minute component.
+     *
+     * @param minutes  the number of minutes.
+     */
     public void setMinutes( int minutes )
     {
         this.minutes = minutes;
     }
 
 
+    /**
+     * Sets the second component.
+     *
+     * @param seconds  the number of seconds.
+     */
     public void setSeconds( int seconds )
     {
         this.seconds = seconds;
     }
 
 
+    // ── Write the Timetable Back into the Configuration ───────────────────────
+    // We format each component as a two-digit zero-padded string and join them
+    // with colons to produce the "dd:hh:mm:ss" token for the config file.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the interval as a {@code "dd:hh:mm:ss"} string for use in the
+     * OpenLDAP syncrepl directive.
+     *
+     * @return  the formatted interval string.
      */
     public String toString()
     {
@@ -252,13 +336,16 @@ public class Interval
     }
 
 
+    // ── Always Print with Two Digits ──────────────────────────────────────────
+    // OpenLDAP requires two-digit components in the interval string — "01" not
+    // "1" — so we zero-pad any value less than 10.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the string value for the given integer.
-     * <p>
-     * Makes sure the int is printed with two letters.
+     * Formats an integer as a two-character zero-padded string.
+     * Values below 10 get a leading zero; values 10 and above are printed as-is.
      *
-     * @param val the integer
-     * @return the string value for the given integer
+     * @param val  the integer to format.
+     * @return     the two-character string representation.
      */
     private String intValToString( int val )
     {

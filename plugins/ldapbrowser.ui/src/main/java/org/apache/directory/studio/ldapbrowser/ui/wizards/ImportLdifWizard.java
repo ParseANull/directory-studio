@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -43,8 +43,22 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 
 
+// ── CLASS: ImportLdifWizard — C-3PO READS THE LDIF SCROLL TO THE SERVER ──────
+// C-3PO receives a stack of LDIF paper (the native language of LDAP servers)
+// and reads each operation to the server in order: add, modify, delete.
+// The LDIF import wizard adds two extras that the DSML import lacks:
+// logging (so every operation and its outcome is written to a log file) and
+// two error-handling options (update if entry exists; continue on error).
+// It's the most full-featured of all the import wizards.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Import LDIF Wizard.
+ * One-page wizard that imports an LDIF file into an LDAP server.
+ * The main page lets the user select the source LDIF file, the target connection,
+ * optional logging (default or custom log file), and two options:
+ * "update if entry exists" and "continue on error". The wizard dispatches an
+ * {@link ImportLdifRunnable} as an async background job. Two constructors:
+ * no-arg for the Eclipse IImportWizard entry point, and a constructor that
+ * accepts a pre-selected connection.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -73,8 +87,14 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
     private boolean continueOnError;
 
 
+    // ── C-3PO Announces Himself: No Pre-Set Connection ────────────────────────────
+    // When opened from File → Import, the connection is derived from the current
+    // workbench selection in init().
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ImportLdifWizard.
+     * Creates a new ImportLdifWizard with the localised "LDIF Import" title.
+     * The import connection will be derived from the current selection in
+     * {@link #init}.
      */
     public ImportLdifWizard()
     {
@@ -83,10 +103,14 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── C-3PO Accepts a Pre-Set Connection ───────────────────────────────────────
+    // When an action already knows the target connection, it passes it here
+    // so the UI pre-populates the connection widget.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ImportLdifWizard.
-     * 
-     * @param importConnection the import connection
+     * Creates a new ImportLdifWizard with a pre-selected target connection.
+     *
+     * @param importConnection  the connection to pre-populate on the main page.
      */
     public ImportLdifWizard( IBrowserConnection importConnection )
     {
@@ -95,10 +119,13 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── C-3PO Has a Registry ID ───────────────────────────────────────────────────
+    // Actions can open this wizard by constant ID.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the ID of the Import LDIF Wizard
-     * 
-     * @return The ID of the Import LDIF Wizard
+     * Returns the Eclipse wizard ID for the import LDIF wizard.
+     *
+     * @return  the wizard ID string from {@link BrowserUIConstants}.
      */
     public static String getId()
     {
@@ -106,8 +133,20 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── C-3PO Derives the Target from Context ────────────────────────────────────
+    // When opened from the Eclipse File → Import menu, we inspect the first
+    // element of the selection to find a suitable IBrowserConnection.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Derives the target connection from the current workbench selection.
+     * Walks the model hierarchy from any IEntry, ISearchResult, IBookmark,
+     * IAttribute, IValue, IBrowserConnection, Connection, or BrowserCategory
+     * to find the IBrowserConnection.
+     *
+     * @param workbench  the current workbench (unused).
+     * @param selection  the current structured selection.
      */
     public void init( IWorkbench workbench, IStructuredSelection selection )
     {
@@ -152,8 +191,13 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── C-3PO Opens the Briefing Page ────────────────────────────────────────────
+    // One page covers all options: LDIF source, connection, logging, and flags.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Adds the single {@link ImportLdifMainWizardPage}.
      */
     public void addPages()
     {
@@ -162,8 +206,15 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── C-3PO Connects the Help System ────────────────────────────────────────────
+    // F1 opens the LDIF import help article.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Registers the LDIF import help context ID on the main page.
+     *
+     * @param pageContainer  the wizard page container.
      */
     public void createPageControls( Composite pageContainer )
     {
@@ -174,8 +225,20 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── C-3PO Reads the LDIF Scroll Aloud ────────────────────────────────────────
+    // The import job is dispatched: with a log file if logging is enabled,
+    // without if not. Returns false only if no filename was set (shouldn't
+    // happen after successful validation).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Saves dialog settings and launches an async {@link ImportLdifRunnable}.
+     * Uses the two-argument constructor if logging is disabled, or the four-argument
+     * constructor (with log file, update flag, continue-on-error flag) if logging
+     * is enabled.
+     *
+     * @return  {@code true} if the job launched; {@code false} if no LDIF filename is set.
      */
     public boolean performFinish()
     {
@@ -203,10 +266,13 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── C-3PO Gets and Sets the Target Connection ─────────────────────────────────
+    // The main page pushes connection changes here via setImportConnection().
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the import connection.
-     * 
-     * @return the import connection
+     * Returns the target connection for the import.
+     *
+     * @return  the import connection, or {@code null} if not yet set.
      */
     public IBrowserConnection getImportConnection()
     {
@@ -215,9 +281,9 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
 
 
     /**
-     * Sets the import connection.
-     * 
-     * @param importConnection the import connection
+     * Sets the target connection. Called by the main page's connection-widget listener.
+     *
+     * @param importConnection  the new target connection.
      */
     public void setImportConnection( IBrowserConnection importConnection )
     {
@@ -226,9 +292,9 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
 
 
     /**
-     * Sets the ldif filename.
-     * 
-     * @param ldifFilename the ldif filename
+     * Sets the LDIF source file path. Called by the main page's file-browser widget.
+     *
+     * @param ldifFilename  the path to the LDIF file to import.
      */
     public void setLdifFilename( String ldifFilename )
     {
@@ -237,9 +303,11 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
 
 
     /**
-     * Sets the update if entry exists flag.
-     * 
-     * @param updateIfEntryExists the update if entry exists flag
+     * Sets the "update if entry exists" flag.
+     * When true, the import runnable attempts to update entries that already exist
+     * in the server (instead of failing with an "already exists" error).
+     *
+     * @param updateIfEntryExists  {@code true} to update pre-existing entries.
      */
     public void setUpdateIfEntryExists( boolean updateIfEntryExists )
     {
@@ -248,9 +316,10 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
 
 
     /**
-     * Sets the continue on error flag.
-     * 
-     * @param continueOnError the continue on error flag
+     * Sets the "continue on error" flag.
+     * When true, the import keeps processing subsequent operations even if one fails.
+     *
+     * @param continueOnError  {@code true} to continue past errors.
      */
     public void setContinueOnError( boolean continueOnError )
     {
@@ -259,9 +328,10 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
 
 
     /**
-     * Sets the log filename.
-     * 
-     * @param logFilename the log filename
+     * Sets the log file path for import logging.
+     * Only used when enableLogging is {@code true}.
+     *
+     * @param logFilename  the path to write import log entries.
      */
     public void setLogFilename( String logFilename )
     {
@@ -270,9 +340,10 @@ public class ImportLdifWizard extends Wizard implements IImportWizard
 
 
     /**
-     * Sets the enable logging flag.
-     * 
-     * @param b the enable logging flag
+     * Sets the enable-logging flag.
+     * When true, every import operation and its outcome is logged to the log file.
+     *
+     * @param b  {@code true} to enable logging.
      */
     public void setEnableLogging( boolean b )
     {

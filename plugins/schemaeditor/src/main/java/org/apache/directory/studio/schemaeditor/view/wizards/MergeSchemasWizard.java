@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.wizards;
 
@@ -45,8 +45,23 @@ import org.eclipse.ui.IImportWizard;
 import org.eclipse.ui.IWorkbench;
 
 
+// ── CLASS: MergeSchemasWizard — Yoda Lifting Luke's X-Wing From The Swamp ────
+// On Dagobah, Yoda stands on the shore, concentrates hard, and lifts the entire
+// X-wing out of the murky swamp water — taking something heavy and submerged from
+// one place and depositing it cleanly somewhere else.  That's exactly what we do:
+// we pull schema objects out of source projects and merge them into the target
+// project, handling all the recursive dependency lifting along the way.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the wizard to merge schema projects.
+ * The wizard that orchestrates merging selected schema objects from other projects
+ * into the currently open schema project.
+ * It spans two pages: a selection page (pick what to merge) and an options page
+ * (choose merge behaviour flags).  The heavy lifting — cloning attribute types and
+ * object classes, resolving dependencies, handling conflicts — happens in
+ * {@link #performFinish()}.
+ * Think of this class as Yoda lifting the X-wing: it gathers everything selected,
+ * lifts each schema object out of its source project, and sets it down cleanly in
+ * the target project, recursing into dependencies as needed.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -57,8 +72,15 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     private MergeSchemasOptionsWizardPage optionsPage;
 
 
+    // ── Yoda Prepares His Concentration ───────────────────────────────────────
+    // Before Yoda lifts anything, he plants his feet, closes his eyes, and
+    // prepares the two-stage plan: first Luke shows him what's in the swamp
+    // (selection page), then Luke tells him how to handle it (options page).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Registers the two wizard pages that collect the merge specification from the user.
+     * Eclipse calls this before the dialog opens so it can build the page navigation
+     * buttons.  Page order matters: selection comes first, options second.
      */
     public void addPages()
     {
@@ -72,8 +94,29 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── Yoda Lifts The X-Wing ─────────────────────────────────────────────────
+    // Yoda closes his eyes, reaches out through the Force, and the X-wing rises —
+    // every component of it, including the engine parts that were hidden under the
+    // mud.  If anything can't be moved cleanly (a conflict, a duplicate OID), he
+    // surfaces a report rather than leaving pieces behind invisibly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Executes the merge when the user clicks Finish.
+     * We read the selected objects and option flags from the two pages, then call
+     * {@link #mergeObjects(Object[], List, boolean, boolean, boolean)} to do the
+     * actual work.  Any conflicts (duplicate OIDs, alias clashes) are collected into
+     * an error list and shown to the user in a text-area dialog rather than silently
+     * ignored or treated as fatal.
+     *
+     * <p>For example — Yoda lifts Luke's X-wing from the swamp:</p>
+     * <pre>
+     *   Yoda reaches out: every attribute type and object class rises.
+     *   Dependencies (super-types, referenced attributes) are pulled along automatically.
+     *   Anything that won't fit cleanly in the target gets logged: "Conflicts found, hmm."
+     * </pre>
+     *
+     * @return  {@code true} always — conflicts are reported via a dialog, not by
+     *          returning {@code false} and keeping the wizard open.
      */
     public boolean performFinish()
     {
@@ -101,6 +144,30 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── Yoda Guides Each Piece Of The X-Wing Upward ──────────────────────────
+    // Yoda doesn't lift the whole ship in one block — he identifies each major
+    // component (project, schema, folder, individual part) and lifts each according
+    // to its type.  The processedObjects set ensures he doesn't accidentally lift
+    // the same bolt twice.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Dispatches each selected tree node to the appropriate merge method based on
+     * its runtime type, then registers all newly created target schemas with the
+     * target project.
+     * We track processed objects in a {@link Set} so recursive dependency resolution
+     * doesn't merge the same element twice.  Target schemas are accumulated in a
+     * {@link Map} keyed by name so we reuse the same target schema across multiple
+     * source objects that belong to the same source project.
+     *
+     * @param sourceObjects        the raw array of checked tree nodes from the selection page.
+     * @param errorMessages        a mutable list we append conflict descriptions to.
+     * @param replaceUnknownSyntax if {@code true}, attributes with unrecognised syntax OIDs
+     *                             are given the Directory String syntax.
+     * @param mergeDependencies    if {@code true}, super-types and referenced attributes are
+     *                             recursively included.
+     * @param pullUpAttributes     if {@code true}, must/may attributes from super-classes
+     *                             already in the target are promoted onto the merged object class.
+     */
     private void mergeObjects( Object[] sourceObjects, List<String> errorMessages, boolean replaceUnknownSyntax,
         boolean mergeDependencies, boolean pullUpAttributes )
     {
@@ -185,6 +252,26 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── Yoda Finds The Right Landing Spot ────────────────────────────────────
+    // Before setting the X-wing down, Yoda locates the right clearing — the target
+    // schema named "merge-from-<sourceProject>".  If that schema already exists in
+    // the target (from a previous merge run), he removes the stale version first so
+    // we don't accumulate phantom duplicates.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Finds or creates the target {@link Schema} that will receive merged objects from
+     * the given source project.
+     * The target schema is named {@code "merge-from-<sourceProjectName>"}.  If it already
+     * exists in the target project (leftover from a previous merge), we remove the old
+     * instance so the new merge starts clean.  We also check our local {@code targetSchemas}
+     * map in case we already created it earlier in this same run.
+     *
+     * @param sourceProject  the project the source schema objects are coming from; its name
+     *                       is used to derive the target schema name.
+     * @param targetProject  the currently open project that will receive the merged objects.
+     * @param targetSchemas  accumulator map from schema name to schema instance for this merge run.
+     * @return  the {@link Schema} instance to add merged objects to.
+     */
     private Schema getTargetSchema( Project sourceProject, Project targetProject, Map<String, Schema> targetSchemas )
     {
         String targetSchemaName = "merge-from-" + sourceProject.getName(); //$NON-NLS-1$
@@ -207,8 +294,24 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── Yoda Lifts Each Part Of A Schema ─────────────────────────────────────
+    // The X-wing has many systems: engine, shields, weapons.  Yoda lifts the
+    // attribute-type systems first, then the object-class systems, delegating to
+    // specialised lift operations for each.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Merges all attribute types and object classes and form the given sourceSchema to the targetSchema.
+     * Merges all attribute types and object classes from {@code sourceSchema} into
+     * {@code targetSchema} by delegating each element to the appropriate type-specific
+     * merge method.
+     *
+     * @param sourceSchema       the schema to read elements from.
+     * @param targetProject      the project receiving the merged elements.
+     * @param targetSchema       the schema within the target project to add elements to.
+     * @param processedObjects   set of already-handled objects (prevents double-merging).
+     * @param errorMessages      list to append conflict or warning messages to.
+     * @param replaceUnknownSyntax  whether to swap unrecognised syntax OIDs for Directory String.
+     * @param mergeDependencies  whether to pull in referenced super-types automatically.
+     * @param pullUpAttributes   whether to promote attributes from pre-existing super-classes.
      */
     private void mergeSchema( Schema sourceSchema, Project targetProject, Schema targetSchema,
         Set<Object> processedObjects, List<String> errorMessages, boolean replaceUnknownSyntax,
@@ -230,8 +333,28 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── Yoda Lifts A Single Attribute-Type Component ─────────────────────────
+    // Yoda concentrates on one specific component of the X-wing — an attribute type
+    // definition.  He checks whether it already exists at the landing spot, handles
+    // any conflicts, clones a clean copy, fixes syntax issues if needed, and recursively
+    // lifts any upstream dependencies before setting the clone down.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Merges the given attribute type to the targetSchema.
+     * Merges a single {@link AttributeType} from a source project into the target schema.
+     * We check whether the attribute type (by OID or any alias) already exists in the
+     * target project — if so, we add a conflict message and skip it.  Otherwise we
+     * clone it, optionally fix its syntax, and optionally recurse into its super-type.
+     * The {@code processedObjects} guard prevents infinite loops in cyclic dependency graphs.
+     *
+     * @param sourceAttributeType  the attribute type to merge; we clone rather than reference it.
+     * @param targetProject        the project receiving the clone.
+     * @param targetSchema         the schema within the target project to add the clone to.
+     * @param processedObjects     tracks already-handled objects to avoid double processing.
+     * @param errorMessages        accumulates conflict or substitution notices.
+     * @param replaceUnknownSyntax if {@code true} and the attribute's syntax OID is unknown,
+     *                             we substitute Directory String syntax.
+     * @param mergeDependencies    if {@code true}, we recursively merge the super attribute type.
+     * @param pullUpAttributes     passed through to nested object-class merges (not used here directly).
      */
     private void mergeAttributeType( AttributeType sourceAttributeType, Project targetProject, Schema targetSchema,
         Set<Object> processedObjects, List<String> errorMessages, boolean replaceUnknownSyntax,
@@ -354,8 +477,28 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── Yoda Lifts A Single Object-Class Component ────────────────────────────
+    // Yoda identifies an object class in the swamp and lifts it cleanly: he checks
+    // whether it already exists at the landing site, clones a fresh copy, recursively
+    // brings along super-classes and referenced attribute types (if requested), and
+    // promotes any attributes the target's trimmed super-class is missing.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Merges the given object class to the targetSchema.
+     * Merges a single {@link ObjectClass} from a source project into the target schema.
+     * Similar to {@link #mergeAttributeType} but handles the additional complexity of
+     * super-class hierarchies and must/may attribute lists.
+     * When {@code pullUpAttributes} is true and a super-class already exists in the
+     * target project, we diff the source and target super-class attribute lists and
+     * copy any missing attributes directly onto the merged object class.
+     *
+     * @param sourceObjectClass  the object class to merge; we clone rather than reference it.
+     * @param targetProject      the project receiving the clone.
+     * @param targetSchema       the schema to add the clone to.
+     * @param processedObjects   tracks already-handled objects.
+     * @param errorMessages      accumulates conflict notices.
+     * @param replaceUnknownSyntax  passed through to attribute type merges for referenced attributes.
+     * @param mergeDependencies  if {@code true}, super-classes and referenced attributes are recursively merged.
+     * @param pullUpAttributes   if {@code true}, attributes from trimmed target super-classes are promoted.
      */
     private void mergeObjectClass( ObjectClass sourceObjectClass, Project targetProject, Schema targetSchema,
         Set<Object> processedObjects, List<String> errorMessages, boolean replaceUnknownSyntax,
@@ -498,6 +641,24 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── Yoda Rescues The Missing Gear From The Mud ────────────────────────────
+    // Some parts of the X-wing were buried deeper than the main hull — the target
+    // clearing already has a pad for them, but it doesn't have the extra bolts that
+    // were stuck in the mud.  Yoda pulls those extra bolts out of the source and
+    // attaches them directly to the main hull piece instead.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Promotes must/may attributes from a source super-class onto the target object class
+     * when those attributes are not already provided by the trimmed target super-class.
+     * This prevents attribute loss: if the target project has a slimmer version of a
+     * super-class, the attributes that the source super-class had but the target version
+     * dropped get added directly to the merged object class.
+     *
+     * @param targetObjectClass       the object class being merged into the target; we add
+     *                                promoted attribute names to its must/may lists.
+     * @param sourceSuperObjectClass  the full super-class from the source project.
+     * @param targetSuperObjectClass  the (possibly trimmed) super-class already in the target project.
+     */
     private void pullUpAttributes( ObjectClass targetObjectClass, ObjectClass sourceSuperObjectClass,
         ObjectClass targetSuperObjectClass )
     {
@@ -527,6 +688,21 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── Yoda Gathers The Attribute Inventory From Each Level ─────────────────
+    // To know which bolts are missing, Yoda recursively inventories every component
+    // of the super-class hierarchy — not just the immediate class but everything
+    // it inherits from above.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Recursively collects all must or may attribute names from an object class and
+     * its full super-class hierarchy into the given set.
+     * We recurse because an object class inherits attributes from all its ancestors,
+     * not just its direct parent.
+     *
+     * @param attributeNameList  the set to accumulate attribute names into; modified in place.
+     * @param oc                 the object class to inspect.
+     * @param must               {@code true} to collect must attributes, {@code false} for may.
+     */
     private void fetchAttributes( Set<String> attributeNameList, ObjectClass oc, boolean must )
     {
         List<String> attributeNames = must ? oc.getMustAttributeTypeOids() : oc.getMayAttributeTypeOids();
@@ -541,6 +717,20 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── Yoda Labels Each Component For The Report ─────────────────────────────
+    // After the lift, Yoda gives Luke a manifest: "Component [cn,2.5.4.3] — conflict."
+    // We need a consistent human-readable ID string for each schema object so the
+    // error messages make sense to the user.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Builds a compact identifier string for a schema object combining its alias
+     * names and OID, suitable for inclusion in error messages.
+     * The format is {@code [aliasName1,aliasName2,...,oid]}.
+     *
+     * @param schemaObject  any schema object (attribute type, object class, etc.) whose
+     *                      names and OID we want to display.
+     * @return  a bracket-enclosed string like {@code [cn,commonName,2.5.4.3]}.
+     */
     private String getIdString( AbstractSchemaObject schemaObject )
     {
         StringBuilder sb = new StringBuilder();
@@ -559,8 +749,16 @@ public class MergeSchemasWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── Yoda Settles Into Position Before The Lift ────────────────────────────
+    // Yoda walks to the shore, plants his stick, and takes a breath — nothing to
+    // set up here, just readying himself for the work ahead.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the wizard is launched; nothing to initialise here
+     * since all context comes from the wizard pages.
+     *
+     * @param workbench  the Eclipse workbench — required by {@link IImportWizard}, not used.
+     * @param selection  the current workbench selection — not used; pages handle input.
      */
     public void init( IWorkbench workbench, IStructuredSelection selection )
     {

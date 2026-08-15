@@ -24,8 +24,23 @@ package org.apache.directory.studio.ldapbrowser.core.events;
 import org.apache.directory.studio.ldapbrowser.core.model.IBrowserConnection;
 
 
+// ── CLASS: BrowserConnectionUpdateEvent — HAN SOLO JUMPS TO HYPERSPACE ──────
+// Han Solo pushes the hyperdrive lever and the Millennium Falcon blasts into
+// hyperspace — the ship transitions states dramatically: it was docked, now
+// it's flying; it was in-system, now it's in transit; it was flying, now it
+// drops back to realspace at the target.  Everyone on the bridge knows which
+// phase just happened.
+// This event fires whenever an {@link IBrowserConnection}'s lifecycle changes —
+// opened (we connected to the LDAP server), closed (we disconnected), or the
+// schema was refreshed.  Listeners know which connection and exactly what
+// phase-transition just happened so they can update the UI.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An BrowserConnectionUpdateEvent indicates that an {@link IBrowserConnection} was modified.
+ * Signals that an {@link IBrowserConnection}'s lifecycle state changed.
+ * Fired by the connection management layer whenever a browser connection is
+ * opened, closed, or has its schema reloaded.  Listeners — typically the
+ * Connections view and the LDAP Browser view — respond by refreshing the
+ * connection node's icon and available actions.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -33,7 +48,10 @@ public class BrowserConnectionUpdateEvent
 {
 
     /**
-     * Contains constants to specify the event detail.
+     * The phase-transition codes for a browser connection's lifecycle.
+     * Think of these as the three drive states of the Millennium Falcon:
+     * sub-light (closed), hyperspace jump (opened), and shield recalibration
+     * (schema updated).
      */
     public enum Detail
     {
@@ -54,11 +72,21 @@ public class BrowserConnectionUpdateEvent
     private IBrowserConnection browserConnection;
 
 
+    // ── Han Records Which Ship And Which Drive Phase ──────────────────────────────
+    // "Falcon made the jump to hyperspace — connection: Tatooine run."
+    // Both the ship identity and the drive phase are logged together so the
+    // co-pilot (the listener) has everything in one event object.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BrowserConnectionUpdateEvent.
+     * Creates a new BrowserConnectionUpdateEvent.
      *
-     * @param browserConnection the updated browser connection
-     * @param detail the event detail
+     * <p>For example — fired when a connection is opened:</p>
+     * <pre>
+     *   new BrowserConnectionUpdateEvent(myConn, Detail.BROWSER_CONNECTION_OPENED);
+     * </pre>
+     *
+     * @param browserConnection the connection whose state changed.
+     * @param detail            what happened (OPENED, CLOSED, or SCHEMA_UPDATED).
      */
     public BrowserConnectionUpdateEvent( IBrowserConnection browserConnection, Detail detail )
     {
@@ -67,10 +95,17 @@ public class BrowserConnectionUpdateEvent
     }
 
 
+    // ── Han Hands Over The Ship's ID Badge ───────────────────────────────────────
+    // "Which ship made the jump?" — the co-pilot needs to update the right row
+    // in the fleet display.  This returns the connection object so listeners can
+    // match it against their own references.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the updated browser connection.
+     * Returns the browser connection whose state changed.
+     * Listeners compare this against their registered connections to decide
+     * whether to handle the event.
      *
-     * @return the updated browser connection
+     * @return the {@link IBrowserConnection}; never {@code null}.
      */
     public IBrowserConnection getBrowserConnection()
     {
@@ -78,10 +113,20 @@ public class BrowserConnectionUpdateEvent
     }
 
 
+    // ── Han Reads The Drive-Phase Indicator ──────────────────────────────────────
+    // "Hyperspace jump — OPENED."  The detail tells the listener exactly what
+    // changed so it can update the icon, menu items, or cached data appropriately.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the event detail.
+     * Returns the {@link Detail} constant indicating what changed on the connection.
+     * Listeners typically switch on this value:
+     * <ul>
+     *   <li>{@code BROWSER_CONNECTION_OPENED} — show connected icon, enable actions.</li>
+     *   <li>{@code BROWSER_CONNECTION_CLOSED} — show disconnected icon, disable actions.</li>
+     *   <li>{@code SCHEMA_UPDATED} — refresh schema-dependent UI (auto-complete, etc.).</li>
+     * </ul>
      *
-     * @return the event detail
+     * @return the event detail; never {@code null}.
      */
     public Detail getDetail()
     {

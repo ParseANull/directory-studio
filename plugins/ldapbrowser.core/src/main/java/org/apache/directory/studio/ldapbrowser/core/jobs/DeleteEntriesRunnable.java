@@ -53,17 +53,32 @@ import org.apache.directory.studio.ldapbrowser.core.model.ISearchResult;
 import org.apache.directory.studio.ldapbrowser.core.utils.JNDIUtils;
 
 
+// ── CLASS: DeleteEntriesRunnable — THE DEATH STAR DESTROYS TARGETS ONE BY ONE ─
+// Grand Moff Tarkin aims the Death Star's superlaser at Alderaan.  First he
+// tries to destroy the planet in one shot.  If the planet has a planetary
+// shield (error 66 — the entry has children), he switches to a sustained barrage:
+// finds every moon and outpost (child entries), destroys those first, then
+// fires the killing blow.  Lather, rinse, repeat — and the TreeDelete control
+// lets him blow up the entire system in one shot when the server supports it.
+// This runnable deletes LDAP entries.  It uses an optimistic strategy: try the
+// simple delete first; on LDAP error 66 (NotAllowedOnNonLeaf) do a ONELEVEL
+// search and recursively delete children first.  When done it fires a
+// {@link BulkModificationEvent} and per-search {@link SearchUpdateEvent}s.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to delete entries.
- * 
- * Deletes the entry recursively in a optimistic way:
+ * A background runnable that deletes one or more LDAP entries, recursively if
+ * necessary.  We use an optimistic strategy:
  * <ol>
- * <li>Delete the entry
- * <li>If that fails with error code 66 then perform a one-level search
- *     and start from 1. for each entry. 
+ *   <li>Attempt to delete the entry directly.</li>
+ *   <li>If the server returns error 66 (NotAllowedOnNonLeaf — entry has children),
+ *       do an ONELEVEL search to find the children, recurse into each, then
+ *       retry the top-level delete.</li>
  * </ol>
- *
- * TODO: delete subentries?
+ * Optionally uses the {@code TreeDelete} LDAP control when the server supports
+ * it (deletes an entire subtree in one operation).  After deletion, updates the
+ * browser model (removes from parent, from search results, from cache) and fires
+ * a {@link BulkModificationEvent} plus per-search {@link SearchUpdateEvent}s.
+ * Think of it as the Death Star's optimistic planet-destruction sequence.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -82,10 +97,23 @@ public class DeleteEntriesRunnable implements StudioConnectionBulkRunnableWithPr
     private boolean useTreeDeleteControl;
 
 
+    // ── Grand Moff Tarkin Orders The Strike ───────────────────────────────────
+    // Stores the list of targets and whether to use the TreeDelete control.
+    // Initialises internal tracking sets for deleted entries and affected searches.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DeleteEntriesRunnable. 
-     * 
-     * @param entriesToDelete the entries to delete
+     * Creates a new DeleteEntriesRunnable.
+     *
+     * <p>For example — deleting two entries:</p>
+     * <pre>
+     *   List&lt;IEntry&gt; targets = Arrays.asList(entryA, entryB);
+     *   new StudioBrowserJob(new DeleteEntriesRunnable(targets, false)).execute();
+     * </pre>
+     *
+     * @param entriesToDelete    the entries to delete.
+     * @param useTreeDeleteControl if {@code true} and the server supports the
+     *                           Tree Delete control, delete entire subtrees in
+     *                           one LDAP operation rather than recursing.
      */
     public DeleteEntriesRunnable( final Collection<IEntry> entriesToDelete, boolean useTreeDeleteControl )
     {
@@ -97,8 +125,13 @@ public class DeleteEntriesRunnable implements StudioConnectionBulkRunnableWithPr
     }
 
 
+    // ── One Connection Per Target ─────────────────────────────────────────────
+    // Entries may come from different servers (multi-server browser session).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns one connection per entry to delete.
+     *
+     * @return array of {@link Connection} objects.
      */
     public Connection[] getConnections()
     {
@@ -113,8 +146,13 @@ public class DeleteEntriesRunnable implements StudioConnectionBulkRunnableWithPr
     }
 
 
+    // ── The Mission Name In The Progress Bar ──────────────────────────────────
+    // "Delete entry" (singular) or "Delete entries" (plural).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the display name for this background job.
+     *
+     * @return a localised "Delete entry" or "Delete entries" label.
      */
     public String getName()
     {
@@ -123,8 +161,13 @@ public class DeleteEntriesRunnable implements StudioConnectionBulkRunnableWithPr
     }
 
 
+    // ── Lock Targets During The Strike ────────────────────────────────────────
+    // Prevents a parallel operation from modifying an entry we're deleting.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns all entries to delete as locked objects.
+     *
+     * @return the entries.
      */
     public Object[] getLockedObjects()
     {
@@ -134,8 +177,13 @@ public class DeleteEntriesRunnable implements StudioConnectionBulkRunnableWithPr
     }
 
 
+    // ── If The Strike Fails ────────────────────────────────────────────────────
+    // Singular vs plural error message.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the error message shown if deletion fails.
+     *
+     * @return a localised error string.
      */
     public String getErrorMessage()
     {
@@ -144,8 +192,19 @@ public class DeleteEntriesRunnable implements StudioConnectionBulkRunnableWithPr
     }
 
 
+    // ── The Death Star Fires At Each Target In Sequence ───────────────────────
+    // Loops the targets and calls optimisticDeleteEntryRecursive per entry.
+    // On success: removes from parent entry's children list, removes from any
+    // search results that reference it, and removes from the browser cache.
+    // On cancel: marks the parent's children as uninitialized so the next expand
+    // does a fresh load.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Deletes each entry using the optimistic recursive strategy.  On success
+     * the entry is removed from its parent, from any {@link ISearch} result sets
+     * that reference it, and from the browser model cache.
+     *
+     * @param monitor the Eclipse progress monitor.
      */
     public void run( StudioProgressMonitor monitor )
     {
@@ -224,8 +283,17 @@ public class DeleteEntriesRunnable implements StudioConnectionBulkRunnableWithPr
     }
 
 
+    // ── The Death Star Sends Its After-Action Report ───────────────────────────
+    // We don't know exactly how many sub-entries were deleted (the recursive
+    // algorithm is opaque), so we fire a BulkModificationEvent rather than
+    // individual EntryDeletedEvents (which would cause massive UI thrash).
+    // Also fires SearchUpdateEvent per affected search.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Fires a {@link BulkModificationEvent} and per-affected-search
+     * {@link SearchUpdateEvent}s after deletion.
+     *
+     * @param monitor ignored.
      */
     public void runNotification( StudioProgressMonitor monitor )
     {
@@ -243,23 +311,33 @@ public class DeleteEntriesRunnable implements StudioConnectionBulkRunnableWithPr
     }
 
 
+    // ── The Death Star's Optimistic Firing Sequence ────────────────────────────
+    // Attempts the direct delete.  If the server says "not a leaf — has children"
+    // (error 66), we do a ONELEVEL search to find children, then recursively call
+    // ourselves on each one, then retry the parent delete.  A dummy monitor
+    // absorbs per-child errors until we decide to propagate them.
+    // Static and package-private so RenameEntryRunnable can call it for simulated
+    // renames (rename via copy+delete).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Deletes the entry recursively in a optimistic way:
+     * Deletes an entry recursively using an optimistic strategy.
      * <ol>
-     * <li>Deletes the entry
-     * <li>If that fails then perform a one-level search and call the 
-     * method for each found entry
+     *   <li>Try to delete the entry.</li>
+     *   <li>On LDAP error 66, search for children in batches of 1,000 and
+     *       recursively delete each one, then retry the parent delete.</li>
      * </ol>
-     * 
-     * @param browserConnection the browser connection
-     * @param dn the Dn to delete
-     * @param useManageDsaItControl true to use the ManageDsaIT control
-     * @param useTreeDeleteControl true to use the tree delete control
-     * @param numberOfDeletedEntries the number of deleted entries
-     * @param dummyMonitor the dummy monitor
-     * @param monitor the progress monitor
-     * 
-     * @return the cumulative number of deleted entries
+     * Static so that {@link RenameEntryRunnable} can use it for simulated renames.
+     *
+     * @param browserConnection       the connection.
+     * @param dn                      the DN to delete.
+     * @param useManageDsaItControl   if {@code true}, add the ManageDsaIT control
+     *                                (needed for deleting referral entries).
+     * @param useTreeDeleteControl    if {@code true} and supported, use the
+     *                                TreeDelete control.
+     * @param numberOfDeletedEntries  running count of deleted entries (for progress).
+     * @param dummyMonitor            absorbs per-child errors so we can retry.
+     * @param monitor                 the real progress monitor.
+     * @return the updated number of deleted entries.
      */
     static int optimisticDeleteEntryRecursive( IBrowserConnection browserConnection, Dn dn,
         boolean useManageDsaItControl, boolean useTreeDeleteControl, int numberOfDeletedEntries,
@@ -327,7 +405,7 @@ public class DeleteEntriesRunnable implements StudioConnectionBulkRunnableWithPr
             }
             while ( numberInBatch > 0 && !monitor.isCanceled() && !dummyMonitor.errorsReported() );
 
-            // try to delete the entry again 
+            // try to delete the entry again
             if ( !dummyMonitor.errorsReported() )
             {
                 deleteEntry( browserConnection, dn, false, false, dummyMonitor );
@@ -354,6 +432,22 @@ public class DeleteEntriesRunnable implements StudioConnectionBulkRunnableWithPr
     }
 
 
+    // ── The Death Star Fires A Single Shot ────────────────────────────────────
+    // Sends the LDAP delete request with the appropriate controls.
+    // TreeDelete removes an entire subtree; ManageDsaIT prevents the server
+    // from following a referral when we actually want to delete the referral entry.
+    // ────────────────────────────────────────────────────────────────────────────
+    /**
+     * Sends the LDAP "delete" request for the given DN.  Adds the TreeDelete
+     * and/or ManageDsaIT controls when configured and supported.
+     *
+     * @param browserConnection      the connection.
+     * @param dn                     the DN to delete.
+     * @param useManageDsaItControl  if {@code true}, add the ManageDsaIT control.
+     * @param useTreeDeleteControl   if {@code true}, add the TreeDelete control
+     *                               (server must advertise support).
+     * @param monitor                the progress monitor.
+     */
     static void deleteEntry( IBrowserConnection browserConnection, Dn dn, boolean useManageDsaItControl,
         boolean useTreeDeleteControl, StudioProgressMonitor monitor )
     {

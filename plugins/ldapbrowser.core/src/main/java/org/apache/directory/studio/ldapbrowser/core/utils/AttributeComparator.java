@@ -32,6 +32,23 @@ import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 import org.apache.directory.studio.ldapbrowser.core.model.IValue;
 
 
+// ── CLASS: AttributeComparator — LANDO SORTING THE CLOUD CITY CARGO MANIFEST ─
+// Lando runs Cloud City with military precision: objectClass first, must-attributes
+// next, then user attributes alphabetically, and operational attributes at the end.
+// AttributeComparator embodies that ordering: it sorts IAttribute and IValue objects
+// according to configurable sortBy and sortOrder preferences.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * {@link Comparator} for {@link IAttribute} and {@link IValue} objects.
+ * Sorts by attribute description or value content, with objectClass and
+ * mandatory attributes first, operational attributes last, and configurable
+ * ascending/descending order.
+ *
+ * <p>Think of this as Lando sorting Cloud City's cargo manifest: critical
+ * cargo first, routine cargo by name, and maintenance items last.</p>
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class AttributeComparator implements Comparator<Object>
 {
     private final int sortBy;
@@ -42,6 +59,16 @@ public class AttributeComparator implements Comparator<Object>
     private final boolean operationalAttributesLast;
 
 
+    // ── Lando Initialises The Sorter With Sensible Defaults ──────────────────────
+    // Without explicit configuration, Lando applies the default sort policy:
+    // no explicit sort key (fall back to attribute description), ascending order,
+    // objectClass and must-attributes first, and operational attributes last.
+    // This no-arg constructor is the most common construction path.
+    /**
+     * Creates a new AttributeComparator with default sort settings:
+     * sort by attribute description, ascending, objectClass and must first,
+     * operational attributes last.
+     */
     public AttributeComparator()
     {
         this.sortBy = BrowserCoreConstants.SORT_BY_NONE;
@@ -53,6 +80,21 @@ public class AttributeComparator implements Comparator<Object>
     }
 
 
+    // ── Lando Configures The Sorter With Explicit Cloud City Policy ───────────────
+    // A custom sort policy can be applied when the default ordering is not wanted.
+    // sortBy and sortOrder of SORT_BY_NONE / SORT_ORDER_NONE mean "use the default".
+    // The boolean flags control whether the natural-order overrides are applied.
+    // This constructor is used when the UI preference store provides sort settings.
+    /**
+     * Creates a new AttributeComparator with explicit sort settings.
+     *
+     * @param sortBy the primary sort key, or {@link BrowserCoreConstants#SORT_BY_NONE}
+     * @param defaultSortBy fallback sort key used when sortBy is SORT_BY_NONE
+     * @param sortOrder the sort direction, or {@link BrowserCoreConstants#SORT_ORDER_NONE}
+     * @param defaultSortOrder fallback sort direction used when sortOrder is SORT_ORDER_NONE
+     * @param objectClassAndMustAttributesFirst whether objectClass and must attributes sort first
+     * @param operationalAttributesLast whether operational attributes sort last
+     */
     public AttributeComparator( int sortBy, int defaultSortBy, int sortOrder, int defaultSortOrder, boolean objectClassAndMustAttributesFirst,
         boolean operationalAttributesLast )
     {
@@ -65,6 +107,20 @@ public class AttributeComparator implements Comparator<Object>
     }
 
 
+    // ── Lando Decides The Ordering Of Two Cargo Items On The Manifest ────────────
+    // Lando accepts either two IAttribute or two IValue objects.
+    // For values, if they share an attribute they are compared by value; otherwise
+    // by attribute and then by value, depending on the sort key.
+    // Mixing an attribute and a value throws ClassCastException — Han shoots first.
+    /**
+     * Compares two {@link IAttribute} or two {@link IValue} objects.
+     *
+     * @param o1 the first object
+     * @param o2 the second object
+     * @return a negative, zero, or positive integer as o1 is less than, equal to,
+     *         or greater than o2
+     * @throws ClassCastException if the arguments are not both attributes or both values
+     */
     public int compare( Object o1, Object o2 )
     {
         IAttribute attribute1 = null;
@@ -124,6 +180,11 @@ public class AttributeComparator implements Comparator<Object>
     }
 
 
+    // ── Lando Sorts Two Attributes According To The Cloud City Manifest Rules ─────
+    // When SORT_ORDER_NONE, structural priority rules apply first (objectClass, must,
+    // operational); only then is the description string compared case-insensitively.
+    // When a real sort order is set, the priority rules are bypassed entirely.
+    // Returns lessThan/greaterThan adjusted for ascending or descending order.
     private int compareAttributes( IAttribute attribute1, IAttribute attribute2 )
     {
         if ( this.sortOrder == BrowserCoreConstants.SORT_ORDER_NONE )
@@ -166,6 +227,11 @@ public class AttributeComparator implements Comparator<Object>
     }
 
 
+    // ── Lando Sorts Two Values Within A Cargo Slot ───────────────────────────────
+    // Empty values sort last — a blank slot is less desirable than a filled one.
+    // Non-empty values are compared by their string representation.
+    // The comparison direction is adjusted by getSortOrderOrDefault.
+    // Returns 0 for two empty values (equal in emptiness).
     private int compareValues( IValue value1, IValue value2 )
     {
         if ( value1.isEmpty() && value2.isEmpty() )
@@ -249,6 +315,18 @@ public class AttributeComparator implements Comparator<Object>
     }
 
 
+    // ── Lando Flattens All Entry Values Into A Sorted Manifest ───────────────────
+    // Given an entry, R2-D2 streams all its attribute values into a flat list
+    // and sorts them using the default AttributeComparator settings.
+    // This static helper is a convenience for callers that need a display-ready list.
+    // Returns an empty list if the entry has no attributes.
+    /**
+     * Returns all values of the given entry as a flat sorted list, using default
+     * sort settings (attribute description, ascending, objectClass first).
+     *
+     * @param entry the entry
+     * @return the sorted list of all values
+     */
     public static List<IValue> toSortedValues( IEntry entry )
     {
         return Arrays.stream( entry.getAttributes() ).flatMap( a -> Arrays.stream( a.getValues() ) )

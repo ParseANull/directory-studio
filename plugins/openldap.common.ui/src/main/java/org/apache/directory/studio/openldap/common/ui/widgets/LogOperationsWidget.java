@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.common.ui.widgets;
 
@@ -37,6 +37,23 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 
 
+// ── CLASS: LogOperationsWidget — REBEL INTELLIGENCE MONITORING TRANSMISSIONS ──
+// Picture Rebel Intelligence's monitoring console at Echo Base. The console has
+// three channel groups: Write operations (add, delete, modify, modify-RDN),
+// Read operations (compare, search), and Session operations (abandon, bind,
+// unbind). An "All operations" master switch covers everything at once. Each
+// group header checkbox uses a grayed tri-state when only some of its sub-
+// operations are checked. We fire change listeners whenever any checkbox
+// changes so the parent form stays informed of which transmissions to intercept.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * We provide a hierarchical checkbox widget for selecting which LDAP access-log
+ * operations to monitor. We organise the thirteen individual checkboxes into
+ * three groups (Write, Read, Session) with a master "All operations" checkbox,
+ * and we expose the selection as a {@link List} of {@link LogOperationEnum}
+ * constants. We extend {@link AbstractWidget} so change listeners can be
+ * registered.
+ */
 public class LogOperationsWidget extends AbstractWidget
 {
     // UI widgets
@@ -123,10 +140,18 @@ public class LogOperationsWidget extends AbstractWidget
     };
 
 
+    // ── METHOD: create — BRINGING THE MONITORING CONSOLE ONLINE ──────────────
+    // We build the three-column composite, create all thirteen checkboxes in
+    // their correct groups, and wire up all the listeners so the console is
+    // ready to track which transmissions the administrator wants to intercept.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
+     * We create all SWT controls for this widget inside the given parent. We lay
+     * out a master "All operations" row and three group columns (Write, Read,
+     * Session), each with their own indented sub-operation checkboxes, then
+     * attach all listeners.
      *
-     * @param parent the parent composite
+     * @param parent  the parent {@link Composite}
      */
     public void create( Composite parent )
     {
@@ -214,10 +239,15 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: adapt — PAINTING THE CONSOLE IN ECLIPSE FORMS COLORS ──────────
+    // We adapt all composites to the supplied {@link FormToolkit} so they render
+    // correctly inside Eclipse Forms pages without a white-on-gray background mismatch.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the associated composite.
+     * We adapt all internal composites to the given {@link FormToolkit} so the
+     * widget renders correctly inside Eclipse Forms pages.
      *
-     * @return the composite
+     * @param toolkit  the form toolkit to adapt with, or {@code null} to skip
      */
     public void adapt( FormToolkit toolkit )
     {
@@ -231,10 +261,15 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getControl — HANDING OVER THE CONSOLE PANEL ──────────────────
+    // We return the top-level composite so the parent layout can size and
+    // position the entire monitoring console as a unit.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the primary control associated with this widget.
+     * We return the top-level {@link Control} (the outer composite) for this
+     * widget so the parent layout can size and position it.
      *
-     * @return the primary control associated with this widget.
+     * @return the primary composite control
      */
     public Control getControl()
     {
@@ -242,8 +277,13 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: addListeners — ACTIVATING ALL CHANNEL MONITORS ───────────────
+    // We attach the pre-built listener instances to every checkbox so every
+    // user interaction triggers the correct propagation of state through the
+    // hierarchy.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the listeners to the UI widgets.
+     * We attach our pre-built selection listeners to all thirteen checkboxes.
      */
     private void addListeners()
     {
@@ -263,10 +303,16 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: allOperationsCheckboxesSetSelection — SWEEPING ALL CHANNELS ───
+    // When the master "All operations" switch is thrown we propagate the same
+    // selection value to every group and sub-operation checkbox so the entire
+    // console flips together.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the selection for all operations checkboxes.
+     * We set the selection of every checkbox in the widget to the given value,
+     * clearing the grayed state on the master checkbox first.
      *
-     * @param selection the selection
+     * @param selection  {@code true} to check all, {@code false} to uncheck all
      */
     private void allOperationsCheckboxesSetSelection( boolean selection )
     {
@@ -278,10 +324,15 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: writeOperationsCheckboxesSetSelection — SWITCHING WRITE CHANNEL
+    // We set the Write group header and all four write sub-operation checkboxes
+    // to the given selection value, clearing the grayed state first.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the selection for the 'Write' operations checkboxes.
+     * We set the selection of the Write group header and all four write
+     * sub-operation checkboxes (Add, Delete, Modify, ModifyRDN).
      *
-     * @param selection the selection
+     * @param selection  {@code true} to check all Write checkboxes, {@code false} to uncheck them
      */
     private void writeOperationsCheckboxesSetSelection( boolean selection )
     {
@@ -294,10 +345,15 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: readOperationsCheckboxesSetSelection — SWITCHING READ CHANNEL ─
+    // We set the Read group header and both read sub-operation checkboxes
+    // to the given selection value, clearing the grayed state first.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the selection for the 'Read' operations checkboxes.
+     * We set the selection of the Read group header and both read sub-operation
+     * checkboxes (Compare, Search).
      *
-     * @param selection the selection
+     * @param selection  {@code true} to check all Read checkboxes, {@code false} to uncheck them
      */
     private void readOperationsCheckboxesSetSelection( boolean selection )
     {
@@ -308,10 +364,15 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: sessionOperationsCheckboxesSetSelection — SWITCHING SESSION CHANNEL
+    // We set the Session group header and all three session sub-operation
+    // checkboxes to the given selection value, clearing the grayed state first.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the selection for the 'Session' operations checkboxes.
+     * We set the selection of the Session group header and all three session
+     * sub-operation checkboxes (Abandon, Bind, Unbind).
      *
-     * @param selection the selection
+     * @param selection  {@code true} to check all Session checkboxes, {@code false} to uncheck them
      */
     private void sessionOperationsCheckboxesSetSelection( boolean selection )
     {
@@ -323,8 +384,15 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: checkAllOperationsCheckboxSelectionState — AUDITING THE MASTER SWITCH
+    // After any sub-operation change we recompute whether all nine leaf checkboxes
+    // are checked (full), some are checked (grayed), or none are (unchecked) and
+    // update the master "All operations" checkbox accordingly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Verifies the selection state for the 'All Operations' checkbox.
+     * We recompute the tri-state of the master "All operations" checkbox based
+     * on whether all, some, or none of the nine leaf checkboxes are currently
+     * checked.
      */
     private void checkAllOperationsCheckboxSelectionState()
     {
@@ -343,8 +411,14 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: checkWriteOperationsCheckboxSelectionState — AUDITING WRITE CHANNEL
+    // After any write sub-operation change we recompute the Write group header
+    // tri-state to reflect partial vs. full vs. no selection.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Verifies the selection state for the 'Write Operations' checkbox.
+     * We recompute the tri-state of the "Write operations" group header based
+     * on whether all, some, or none of the four write sub-operation checkboxes
+     * are currently checked (and not grayed).
      */
     private void checkWriteOperationsCheckboxSelectionState()
     {
@@ -359,8 +433,14 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: checkReadOperationsCheckboxSelectionState — AUDITING READ CHANNEL
+    // After any read sub-operation change we recompute the Read group header
+    // tri-state.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Verifies the selection state for the 'Read Operations' checkbox.
+     * We recompute the tri-state of the "Read operations" group header based on
+     * whether all, some, or none of the two read sub-operation checkboxes are
+     * currently checked.
      */
     private void checkReadOperationsCheckboxSelectionState()
     {
@@ -373,8 +453,14 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: checkSessionOperationsCheckboxSelectionState — AUDITING SESSION CHANNEL
+    // After any session sub-operation change we recompute the Session group
+    // header tri-state.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Verifies the selection state for the 'Session Operations' checkbox.
+     * We recompute the tri-state of the "Session operations" group header based
+     * on whether all, some, or none of the three session sub-operation checkboxes
+     * are currently checked.
      */
     private void checkSessionOperationsCheckboxSelectionState()
     {
@@ -387,10 +473,17 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: setInput — LOADING A PREVIOUS INTERCEPT PLAN ─────────────────
+    // We reset all checkboxes and then select the ones that match the supplied
+    // list of operations. After that we recompute all group header tri-states so
+    // the console accurately reflects the loaded configuration.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the input.
+     * We reset all checkboxes and then select the ones corresponding to the
+     * supplied list of {@link LogOperationEnum} values. We finish by
+     * recomputing all group-level tri-states.
      *
-     * @param operationsList the operations list
+     * @param operationsList  the list of operations to select, or {@code null} to clear all
      */
     public void setInput( List<LogOperationEnum> operationsList )
     {
@@ -459,8 +552,13 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: resetAllCheckboxes — CLEARING THE CONSOLE ────────────────────
+    // We clear and un-gray every checkbox so the console returns to a fully
+    // blank state before we load a new intercept plan.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Resets all checkboxes.
+     * We clear the selection and grayed state of all thirteen checkboxes,
+     * returning the widget to a fully unchecked state.
      */
     private void resetAllCheckboxes()
     {
@@ -491,10 +589,20 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: getSelectedOperationsList — READING THE ACTIVE INTERCEPTS ─────
+    // We walk the checkbox hierarchy from the most general (ALL) down to the most
+    // specific sub-operations, emitting the most specific matching constant for
+    // each channel. A group header that is fully and non-grayedly checked emits
+    // its group constant instead of individual sub-constants.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the list of selected operations.
+     * We build and return a list of {@link LogOperationEnum} constants that
+     * correspond to the currently checked (non-grayed) checkboxes. Group
+     * constants (ALL, WRITES, READS, SESSION) are preferred over individual
+     * sub-operation constants when all sub-operations within the group are
+     * selected.
      *
-     * @return the list of selected operations
+     * @return the list of selected {@link LogOperationEnum} values
      */
     public List<LogOperationEnum> getSelectedOperationsList()
     {
@@ -590,12 +698,17 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: isChecked — VERIFYING A CHECKBOX IS TRULY ON ─────────────────
+    // A checkbox can be selected but also grayed (indeterminate), which is
+    // visually checked but logically partial. We only return true if the button
+    // is non-null, not disposed, selected, and not grayed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if a checkbox is checked ('selected' and not 'grayed').
+     * We return {@code true} only if the given checkbox is non-null, not
+     * disposed, selected, and not in the grayed (indeterminate) state.
      *
-     * @param checkbox the checkbox
-     * @return <code>true</code> if the checkbox is checked
-     *         <code>false</code> if not.
+     * @param checkbox  the {@link Button} checkbox to inspect
+     * @return          {@code true} if the checkbox is fully checked
      */
     private boolean isChecked( Button checkbox )
     {
@@ -604,8 +717,13 @@ public class LogOperationsWidget extends AbstractWidget
     }
 
 
+    // ── METHOD: dispose — SHUTTING DOWN THE CONSOLE ───────────────────────────
+    // We dispose the top-level composite and all its children to free SWT
+    // resources when the parent dialog or editor is closed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes all created SWT widgets.
+     * We dispose the top-level composite (and all its child controls) if it has
+     * not already been disposed.
      */
     public void dispose()
     {

@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
  *  distributed with this work for additional information
@@ -6,23 +6,54 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core.model.filter.parser;
 
 
+// ── CLASS: LdapFilterScanner — C-3PO READING THE JAWA PHRASE CHARACTER BY CHARACTER ─
+// C-3PO doesn't read a Jawa phrase all at once — he reads it one character at
+// a time, tracking his position with his mechanical eye.  Each time someone
+// asks "next word?", he peeks forward, classifies what he sees (opening
+// bracket, operator symbol, attribute name, value text, or garbage), assembles
+// the characters into a complete word card, and returns it.  He can also step
+// back one character if he peeked too far, and he skips line-break characters
+// that Jawa senders sometimes insert mid-phrase.
+// LdapFilterScanner is C-3PO's character-by-character eye: a lexical scanner
+// for RFC 4515 LDAP filter strings.  Feed it a filter string via
+// {@link #reset(String)}, then call {@link #nextToken()} repeatedly until you
+// get an EOF token.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The LdapFilterScanner is a scanner for LDAP filters. 
+ * A lexical scanner for LDAP filters (RFC 4515 / RFC 2254 syntax).
+ * Reads a filter string character by character and produces a stream of
+ * {@link LdapFilterToken} values for the {@link LdapFilterParser} to consume.
+ *
+ * <p>LDAP filter ABNF (from RFC 2254):</p>
+ * <pre>
+ *   filter     = "(" filtercomp ")"
+ *   filtercomp = and / or / not / item
+ *   and        = "&amp;" filterlist
+ *   or         = "|" filterlist
+ *   not        = "!" filter
+ *   item       = simple / present / substring / extensible
+ *   extensible = attr [":dn"] [":" matchingrule] ":=" value
+ *              / [":dn"] ":" matchingrule ":=" value
+ * </pre>
+ *
+ * <p>Think of this as C-3PO's character-by-character Jawa phrase reader —
+ * one token at a time, tracking position, with the ability to step back when
+ * he peeked one character too far.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -59,9 +90,6 @@ public class LdapFilterScanner
     // matchingrule = MatchingRuleId from Section 4.1.9 of [1]
     // value = AttributeValue from Section 4.1.6 of [1]
     //
-    // The attr, matchingrule, and value constructs are as described in the
-    // corresponding section of [1] given above.
-    //
     // If a value should contain any of the following characters
     //
     // Character ASCII value
@@ -87,6 +115,7 @@ public class LdapFilterScanner
     private int lastTokenType;
 
 
+    // ── C-3PO Boots Up His Scanner ────────────────────────────────────────────────
     /**
      * Creates a new instance of LdapFilterScanner.
      */
@@ -97,9 +126,12 @@ public class LdapFilterScanner
     }
 
 
+    // ── C-3PO Loads A New Phrase And Rewinds To The Start ────────────────────────
+    // "New Jawa phrase loaded.  Position reset.  Scanning from character 0."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Resets this scanner.
-     * 
+     *
      * @param filter the new filter to scan
      */
     public void reset( String filter )
@@ -110,10 +142,11 @@ public class LdapFilterScanner
     }
 
 
+    // ── C-3PO Reads The Character Under His Eye ───────────────────────────────────
     /**
      * Gets the character at the current position.
-     * 
-     * @return the character at the current position
+     *
+     * @return the character at the current position, or the null character if out of range
      */
     private char currentChar()
     {
@@ -121,10 +154,11 @@ public class LdapFilterScanner
     }
 
 
+    // ── C-3PO Advances His Eye One Character ─────────────────────────────────────
     /**
      * Increments the position counter and gets
-     * the character at that positon.
-     * 
+     * the character at that position.
+     *
      * @return the character at the next position
      */
     private char nextChar()
@@ -134,10 +168,11 @@ public class LdapFilterScanner
     }
 
 
+    // ── C-3PO Steps His Eye Back One Character ───────────────────────────────────
     /**
      * Decrements the position counter and gets
-     * the character at that positon.
-     * 
+     * the character at that position.
+     *
      * @return the character at the previous position
      */
     private char prevChar()
@@ -147,11 +182,12 @@ public class LdapFilterScanner
     }
 
 
+    // ── C-3PO Skips Past Any Embedded Line-Breaks ────────────────────────────────
     /**
      * Increments the position counter as long as there are
-     * line breaks and gets the character at that positon.
-     * 
-     * @return the character at the next position
+     * line breaks and gets the character at that position.
+     *
+     * @return the character at the next non-line-break position
      */
     private char nextNonLinebreakChar()
     {
@@ -160,11 +196,12 @@ public class LdapFilterScanner
     }
 
 
+    // ── C-3PO Steps Back Past Any Embedded Line-Breaks ───────────────────────────
     /**
      * Decrements the position counter as long as there are
-     * line breaks and gets the character at that positon.
-     * 
-     * @return the character at the previous position
+     * line breaks and gets the character at that position.
+     *
+     * @return the character at the previous non-line-break position
      */
     private char prevNonLinebreakChar()
     {
@@ -173,9 +210,14 @@ public class LdapFilterScanner
     }
 
 
+    // ── C-3PO Reads The Next Token From The Phrase ───────────────────────────────
+    // "Scanning forward... '(' = LPAR, '&' after '(' = AND, 'cn' = ATTRIBUTE,
+    // '=' = EQUAL or PRESENT or SUBSTRING, 'Luke' = VALUE, ')' = RPAR,
+    // end of string = EOF, anything else = UNKNOWN."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Gets the next token.
-     * 
+     *
      * @return the next token
      */
     public LdapFilterToken nextToken()

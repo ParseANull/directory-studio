@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifparser.model.container;
@@ -31,17 +31,41 @@ import org.apache.directory.studio.ldifparser.model.LdifPart;
 import org.apache.directory.studio.ldifparser.model.lines.LdifLineBase;
 
 
+// ── CLASS: LdifContainer — DEATH STAR BLUEPRINT SECTION ──────────────────────
+// Each major section of the Death Star blueprint — the main reactor, the
+// docking bay, the superlaser housing — is a self-contained unit that knows
+// where it starts, how long it is, whether all its sub-components are valid,
+// and how to serialise itself back to the original text.
+// LdifContainer is that section abstraction in the LDIF model: an abstract
+// base class holding an ordered list of LdifParts (lines, mod-specs, invalid
+// fragments, EOF markers) and implementing getOffset/getLength, raw/formatted
+// string serialisation, and offset adjustment as final methods.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A base class for any LDIF container.
+ * Abstract base class for every LDIF model "section": records, comments,
+ * separators, mod-specs, version containers, and EOF containers.
+ * Maintains an ordered {@link List} of {@link LdifPart} children.  Provides
+ * final implementations of {@link #getOffset()}, {@link #getLength()},
+ * {@link #toRawString()}, {@link #toFormattedString}, {@link #adjustOffset},
+ * and {@link #getParts()}.  Subclasses must implement {@link #isValid()}.
+ * Think of this as the abstract blueprint-section class — every section knows
+ * its own bounds and can print itself back out.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public abstract class LdifContainer implements LdifPart
 {
-    /** The contained Ldif Parts */
+    /** Ordered list of all {@link LdifPart} children in this container. */
     protected List<LdifPart> ldifParts = new ArrayList<LdifPart>();
 
 
+    // ── CONSTRUCT ─────────────────────────────────────────────────────────────
+    /**
+     * Creates a container with {@code part} as its first child.
+     *
+     * @param part  the initial part (must not be {@code null})
+     * @throws IllegalArgumentException if {@code part} is {@code null}
+     */
     protected LdifContainer( LdifPart part )
     {
         if ( part == null )
@@ -53,12 +77,23 @@ public abstract class LdifContainer implements LdifPart
     }
 
 
+    // ── POSITION ──────────────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns the offset of the first child part.</p>
+     */
     public final int getOffset()
     {
         return ldifParts.get( 0 ).getOffset();
     }
 
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Computed as {@code lastPart.offset + lastPart.length - firstPart.offset}.</p>
+     */
     public final int getLength()
     {
         LdifPart lastPart = getLastPart();
@@ -67,6 +102,15 @@ public abstract class LdifContainer implements LdifPart
     }
 
 
+    // ── ADD AN INVALID PART ───────────────────────────────────────────────────
+    /**
+     * Appends an {@link LdifInvalidPart} to this container's part list.
+     * Called by the parser when it encounters unrecognised text inside a
+     * partially-recognised container.
+     *
+     * @param invalid  the invalid part to append (must not be {@code null})
+     * @throws IllegalArgumentException if {@code invalid} is {@code null}
+     */
     public final void addInvalid( LdifInvalidPart invalid )
     {
         if ( invalid == null )
@@ -78,19 +122,34 @@ public abstract class LdifContainer implements LdifPart
     }
 
 
+    // ── PART ACCESSORS ────────────────────────────────────────────────────────
+    /**
+     * Returns the last part in the container's part list.
+     *
+     * @return the last {@link LdifPart}
+     */
     public final LdifPart getLastPart()
     {
         return ldifParts.get( ldifParts.size() - 1 );
     }
 
 
+    /**
+     * Returns all parts in this container as an array.
+     *
+     * @return array of {@link LdifPart} in document order
+     */
     public final LdifPart[] getParts()
     {
-        return ( LdifPart[] ) ldifParts.toArray( new LdifPart[ldifParts
-            .size()] );
+        return ( LdifPart[] ) ldifParts.toArray( new LdifPart[ldifParts.size()] );
     }
 
 
+    // ── SERIALISATION ─────────────────────────────────────────────────────────
+    /**
+     * Returns a debug-friendly multi-line description showing the class name
+     * followed by each child part.
+     */
     public final String toString()
     {
         StringBuilder sb = new StringBuilder();
@@ -110,6 +169,11 @@ public abstract class LdifContainer implements LdifPart
     }
 
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Concatenates {@link LdifPart#toRawString()} for each child part.</p>
+     */
     public final String toRawString()
     {
         StringBuilder sb = new StringBuilder();
@@ -123,6 +187,11 @@ public abstract class LdifContainer implements LdifPart
     }
 
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Concatenates {@link LdifPart#toFormattedString} for each child part.</p>
+     */
     public final String toFormattedString( LdifFormatParameters formatParameters )
     {
         StringBuilder sb = new StringBuilder();
@@ -136,16 +205,24 @@ public abstract class LdifContainer implements LdifPart
     }
 
 
+    // ── VALIDITY ──────────────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Subclasses implement their own validity rules and typically delegate
+     * to {@link #isAbstractValid()} as their base check.</p>
+     */
     public abstract boolean isValid();
 
 
+    // ── ABSTRACT VALIDITY CHECK ───────────────────────────────────────────────
     /**
-     * true if
-     * <ul>
-     * <li>at least one line
-     * <li>no LdifInvalidPart
-     * <li>all parts are valid
-     * </ul>
+     * Returns {@code true} when the container has at least one part, no
+     * {@link LdifInvalidPart} children, and all parts report valid — stopping
+     * at the first {@link LdifLineBase} found (the container is considered
+     * sufficiently well-formed if its first real line is valid).
+     *
+     * @return {@code true} if the container passes the base validity check
      */
     protected boolean isAbstractValid()
     {
@@ -171,6 +248,14 @@ public abstract class LdifContainer implements LdifPart
     }
 
 
+    // ── INVALID STRING ────────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns {@code "Empty Container"} if the part list is empty, or
+     * the first child's {@link LdifPart#getInvalidString()} for the first
+     * invalid child, or {@code null} if all children are valid.</p>
+     */
     public String getInvalidString()
     {
         if ( ldifParts.isEmpty() )
@@ -190,6 +275,12 @@ public abstract class LdifContainer implements LdifPart
     }
 
 
+    // ── OFFSET ADJUSTMENT ────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Propagates {@code adjustOffset(adjust)} to all child parts.</p>
+     */
     public final void adjustOffset( int adjust )
     {
         for ( LdifPart ldifPart : ldifParts )

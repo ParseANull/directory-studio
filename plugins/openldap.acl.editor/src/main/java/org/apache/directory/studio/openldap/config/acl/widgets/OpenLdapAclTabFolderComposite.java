@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.acl.widgets;
 
@@ -35,10 +35,28 @@ import org.eclipse.swt.widgets.TabItem;
 import org.apache.directory.studio.openldap.config.acl.OpenLdapAclValueWithContext;
 
 
+// ── CLASS: OpenLdapAclTabFolderComposite — GRAND MOFF MANAGING TWO TERMINALS ─
+// Grand Moff Tarkin oversees the Death Star's two command displays: the Visual
+// Editor holotable and the raw Source text terminal. This composite is that
+// command centre. When Tarkin switches from one display to the other, this
+// composite syncs the two views — pushing the Visual model into the Source
+// viewer on a Visual-to-Source switch, and vice versa on a Source-to-Visual
+// switch. The dialog delegates getInput(), format(), and saveWidgetSettings()
+// through here so the currently visible tab always responds.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This composite contains the tabs with visual and source editor.
- * It also manages the synchronization between these two tabs.
- * 
+ * An SWT {@link Composite} containing a {@link TabFolder} with two tabs:
+ * <ol>
+ *   <li><b>Visual Editor</b> (index 0) — the GUI form editor.</li>
+ *   <li><b>Source</b> (index 1) — the JFace SourceViewer text editor.</li>
+ * </ol>
+ * Synchronisation happens on tab switch: switching to Source calls
+ * {@link OpenLdapAclSourceEditorComposite#refresh()}, switching to Visual calls
+ * {@link OpenLdapAclVisualEditorComposite#refresh()}.
+ *
+ * <p>Think of this class as Grand Moff Tarkin toggling between his holotable
+ * and the raw-code terminal — the active view always shows the latest state.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OpenLdapAclTabFolderComposite extends Composite
@@ -69,23 +87,32 @@ public class OpenLdapAclTabFolderComposite extends Composite
 
     /** The source editor composite */
     private OpenLdapAclSourceEditorComposite sourceComposite;
-    
+
     /** The ACL context */
     private OpenLdapAclValueWithContext context;
 
 
+    // ── Constructing the Tab Folder ────────────────────────────────────────────
+    // Grand Moff Tarkin installs both display terminals side by side in the
+    // command room: first the tab folder frame, then the Visual tab, then the
+    // Source tab, then the selection listener that keeps them in sync.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of TabFolderComposite.
+     * Creates a new tab folder composite. Builds the tab folder, the Visual tab
+     * (containing {@link OpenLdapAclVisualEditorComposite}), the Source tab
+     * (containing {@link OpenLdapAclSourceEditorComposite}), and wires the
+     * selection listener that syncs tabs on switch.
      *
-     * @param parent
-     * @param style
+     * @param parent   The parent composite.
+     * @param context  The ACL context shared between the two tabs.
+     * @param style    SWT style bits for the composite.
      */
     public OpenLdapAclTabFolderComposite( Composite parent, OpenLdapAclValueWithContext context, int style )
     {
         super( parent, style );
-        
+
         this.context = context;
-        
+
         GridLayout layout = new GridLayout();
         layout.marginWidth = 0;
         layout.marginHeight = 0;
@@ -99,9 +126,13 @@ public class OpenLdapAclTabFolderComposite extends Composite
     }
 
 
+    // ── Wiring the Tab-Selection Listener ─────────────────────────────────────
+    // Grand Moff Tarkin's aide watches the control panel. The moment the
+    // selection changes she calls tabSelected() to sync the new display.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the listeners.
-     *
+     * Adds a selection listener to the tab folder that calls {@link #tabSelected()}
+     * whenever the user switches tabs.
      */
     private void initListeners()
     {
@@ -115,9 +146,14 @@ public class OpenLdapAclTabFolderComposite extends Composite
     }
 
 
+    // ── Creating the Source Tab ────────────────────────────────────────────────
+    // Tarkin installs the raw text terminal: a bordered composite that fills
+    // with the SourceEditor composite and labels the tab "Source".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the source tab and configures the source editor.
-     *
+     * Creates the Source tab at index {@link #SOURCE_TAB_INDEX}. Builds a
+     * bordered inner container, creates the {@link OpenLdapAclSourceEditorComposite}
+     * inside it, and attaches the container to the tab item.
      */
     private void createSourceTab()
     {
@@ -135,9 +171,14 @@ public class OpenLdapAclTabFolderComposite extends Composite
     }
 
 
+    // ── Creating the Visual Tab ────────────────────────────────────────────────
+    // Tarkin installs the holotable: a grid-layout composite that fills with
+    // the Visual editor and labels the tab "Visual Editor".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the visual tab and the GUI editor.
-     *
+     * Creates the Visual Editor tab at index {@link #VISUAL_TAB_INDEX}. Builds a
+     * grid-layout container, creates the {@link OpenLdapAclVisualEditorComposite}
+     * inside it, and attaches the container to the tab item.
      */
     private void createVisualTab()
     {
@@ -157,9 +198,12 @@ public class OpenLdapAclTabFolderComposite extends Composite
     }
 
 
+    // ── Creating the Tab Folder Frame ─────────────────────────────────────────
+    // The enclosing tab folder fills the composite and anchors both tabs.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the tab folder and the listeners.
-     *
+     * Creates the SWT {@link TabFolder} that hosts both tabs, filling the
+     * composite with {@link SWT#TOP} tab style.
      */
     private void createTabFolder()
     {
@@ -168,9 +212,18 @@ public class OpenLdapAclTabFolderComposite extends Composite
     }
 
 
-    /** 
-     * Called, when a tab is selected. This method manages the synchronization
-     * between visual and source editor.
+    // ── Synchronising Tabs on Switch ─────────────────────────────────────────
+    // When Tarkin switches displays, the newly active terminal refreshes itself
+    // from the model so both views always agree on the current ACL state.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Called when a tab is selected. Synchronises the two editors:
+     * <ul>
+     *   <li>Switching to Source: calls {@link OpenLdapAclSourceEditorComposite#refresh()}
+     *       to push the current model text into the source viewer.</li>
+     *   <li>Switching to Visual: calls {@link OpenLdapAclVisualEditorComposite#refresh()}
+     *       to redraw the visual form from the model.</li>
+     * </ul>
      */
     private void tabSelected()
     {
@@ -187,18 +240,23 @@ public class OpenLdapAclTabFolderComposite extends Composite
     }
 
 
+    // ── Returning the Canonical ACL String From the Active Tab ────────────────
+    // On OK, the dialog asks Tarkin for the canonical ACL string. He delegates
+    // to whichever display is currently active.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the string representation of the ACI item.
-     * A syntax check is performed before returning the input, an 
-     * invalid syntax causes a ParseException.
+     * Returns the canonical ACL string from the currently active tab. Delegates
+     * to {@link OpenLdapAclVisualEditorComposite#getInput()} when the Visual tab
+     * is active, or to {@link OpenLdapAclSourceEditorComposite#getInput()} when
+     * the Source tab is active.
      *
-     * @return the valid string representation of the ACI item
-     * @throws ParseException it the syntax check fails.
+     * @return  The canonical ACL string.
+     * @throws ParseException  If the active tab's content is syntactically invalid.
      */
     public String getInput() throws ParseException
     {
         int index = tabFolder.getSelectionIndex();
-        
+
         if ( index == VISUAL_TAB_INDEX )
         {
             return visualComposite.getInput();
@@ -210,8 +268,15 @@ public class OpenLdapAclTabFolderComposite extends Composite
     }
 
 
+    // ── Triggering the Format Pass Via the Active Tab ─────────────────────────
+    // The Format button in the dialog is only meaningful when the Source tab is
+    // active. Tarkin ignores the button when Visual is shown.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Formats the content.
+     * Runs the formatting pass on the source viewer content. Has no effect when
+     * the Visual Editor tab is active. Delegates to
+     * {@link OpenLdapAclSourceEditorComposite#format()} when the Source tab is
+     * selected.
      */
     public void format()
     {
@@ -222,8 +287,14 @@ public class OpenLdapAclTabFolderComposite extends Composite
     }
 
 
+    // ── Persisting Widget Settings Via the Visual Tab ─────────────────────────
+    // The dialog calls this before closing so the visual composite can persist
+    // any user preferences (e.g. expand/collapse state of the expandable sections).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves widget settings.
+     * Delegates to {@link OpenLdapAclVisualEditorComposite#saveWidgetSettings()} to
+     * persist any widget-level preferences (such as expand/collapse state).
+     * Called by the dialog before it closes.
      */
     public void saveWidgetSettings()
     {

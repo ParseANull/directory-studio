@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.view.wizards;
 
@@ -40,8 +40,25 @@ import org.apache.directory.studio.templateeditor.EntryTemplatePluginUtils;
 import org.apache.directory.studio.templateeditor.view.preferences.PreferencesTemplatesManager;
 
 
+// ── CLASS: ImportTemplatesWizard — EMPEROR'S PLAN TO RECRUIT NEW STANDING ORDERS ──
+// Step by step, the Emperor recruits new standing orders from remote outposts on disk.
+// He presents Luke — the user — with a directory browser and a list of XML template
+// files found there. When Luke commits, each chosen file is parsed and staged in the
+// {@link PreferencesTemplatesManager}. Any files that fail to parse are gathered and
+// reported in a clear error dialog so no bad order sneaks into the system.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the wizard for importing new templates from the disk.
+ * JFace {@link Wizard} that guides the user through importing one or more template
+ * XML files from an on-disk directory into the preferences staging manager. The
+ * templates are staged (not committed) until the user clicks "OK" on the preference
+ * page.
+ *
+ * <p>Think of this as the Emperor recruiting new standing orders:</p>
+ * <pre>
+ *   Step 1 — user browses to a directory and selects XML files
+ *   "Finish" — each file is parsed and staged in PreferencesTemplatesManager
+ *   Failures — reported in an error dialog with the file path
+ * </pre>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -54,9 +71,15 @@ public class ImportTemplatesWizard extends Wizard implements IImportWizard
     private PreferencesTemplatesManager manager;
 
 
+    // ── CONSTRUCTOR: WIRE UP THE STAGING MANAGER ──────────────────────────────────
+    // The Emperor's import plan is given the staging desk so imported templates
+    // land in the staging area rather than the live manager.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ImportTemplatesWizard.
+     * Creates a new {@code ImportTemplatesWizard} that stages imported templates
+     * into the given preferences manager.
      *
+     * @param manager  the preferences staging manager that receives imported templates
      */
     public ImportTemplatesWizard( PreferencesTemplatesManager manager )
     {
@@ -64,6 +87,10 @@ public class ImportTemplatesWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── ADD PAGES: REGISTER THE SINGLE IMPORT PAGE ────────────────────────────────
+    // The Emperor presents the first (and only) step: browse to a directory and
+    // pick which XML files to import.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -74,6 +101,11 @@ public class ImportTemplatesWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── PERFORM FINISH: EXECUTE THE IMPORT PLAN ───────────────────────────────────
+    // The Emperor executes his import plan: for each selected XML file, the staging
+    // manager's addTemplate() is called. Files that fail to parse are added to the
+    // failedTemplates list; at the end a summary error dialog is shown if needed.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -156,6 +188,7 @@ public class ImportTemplatesWizard extends Wizard implements IImportWizard
     }
 
 
+    // ── INIT: NOTHING TO DO ───────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */

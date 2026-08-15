@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.connection.ui;
 
@@ -25,48 +25,92 @@ import org.eclipse.jface.operation.IRunnableContext;
 import org.eclipse.swt.widgets.Composite;
 
 
+// ── CLASS: AbstractConnectionParameterPage — THE FALCON'S DEFAULT COCKPIT BASE ──
+// The ConnectionParameterPage interface (the spec) says every cockpit panel must
+// know its page ID, name, description, dependency, messages, and how to initialise
+// itself.  Most of that bookkeeping is identical across every panel.
+// Rather than duplicating it in NetworkParameterPage, AuthenticationParameterPage,
+// and every other concrete panel, we put it here once.
+// Concrete pages only need to implement the three abstract methods:
+//   createComposite() — paint the SWT widgets
+//   validate()        — check field values and set message/errorMessage
+//   loadParameters()  — populate fields from a ConnectionParameter
+//   initListeners()   — attach SWT listeners to fire connectionPageModified()
+// Think of this as the Falcon's standard instrument panel skeleton — every
+// cockpit section bolts onto the same frame; only the dials inside differ.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * Base implementation of ConnectionParameterPage.
+ * Abstract base class for all {@link ConnectionParameterPage} implementations.
+ * Handles the boilerplate: page identity fields, message fields, modify listener
+ * wiring, and the {@link #init} / {@link #connectionPageModified} lifecycle.
+ *
+ * <p>Subclasses must implement:</p>
+ * <ul>
+ *   <li>{@link #createComposite(Composite)} — build SWT controls.</li>
+ *   <li>{@link #validate()} — check field values; set {@link #message} or
+ *       {@link #errorMessage}.</li>
+ *   <li>{@link #loadParameters(ConnectionParameter)} — populate fields from an
+ *       existing connection parameter.</li>
+ *   <li>{@link #initListeners()} — attach SWT modify/selection listeners that call
+ *       {@link #connectionPageModified()}.</li>
+ * </ul>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public abstract class AbstractConnectionParameterPage implements ConnectionParameterPage
 {
-    /** The page id. */
+    /** The unique page ID set by the extension point registry. */
     protected String pageId;
 
-    /** The page name. */
+    /** The human-readable page name shown in the wizard step list. */
     protected String pageName;
 
-    /** The page description. */
+    /** The short description shown below the wizard title banner. */
     protected String pageDescription;
 
-    /** The page id this page depends on. */
+    /** The ID of the page this page must follow in the wizard. */
     protected String pageDependsOnId;
 
-    /** The runnable context. */
+    /**
+     * The runnable context provided by the host wizard or property page,
+     * used to run long-running operations (e.g., "Check network parameters").
+     */
     protected IRunnableContext runnableContext;
 
-    /** The connection parameter page modify listener. */
+    /** The listener that the host dialog registers to be notified of field changes. */
     protected ConnectionParameterPageModifyListener connectionParameterPageModifyListener;
 
-    /** The message. */
+    /**
+     * A non-blocking informational message; {@code null} means no message.
+     * Set by {@link #validate()}.
+     */
     protected String message;
 
-    /** The error message. */
+    /**
+     * A blocking error message; {@code null} means no error.
+     * Set by {@link #validate()}.  An error prevents the dialog from finishing.
+     */
     protected String errorMessage;
 
-    /** The info message. */
+    /**
+     * An informational notice message; {@code null} means no notice.
+     * Set by {@link #validate()}.
+     */
     protected String infoMessage;
 
-    /** The connection parameter. */
+    /**
+     * The connection parameter the page is currently displaying/editing.
+     * Populated by {@link #init} when editing an existing connection.
+     */
     protected ConnectionParameter connectionParameter;
 
 
+    // ── SET MODIFY LISTENER — REGISTER THE HOST DIALOG'S LISTENER ────────────────
     /**
-     * Sets the connection parameter page modify listener.
-     * 
-     * @param listener the connection parameter page modify listener
+     * Registers the listener that will be notified whenever a field on this page
+     * changes.  Called during {@link #init}.
+     *
+     * @param listener  The modify listener from the host wizard or property page.
      */
     public void setConnectionParameterPageModifyListener( ConnectionParameterPageModifyListener listener )
     {
@@ -74,8 +118,14 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── FIRE CONNECTION PAGE MODIFIED — NOTIFY THE HOST ───────────────────────────
+    // Called by subclasses after any field change.  The host dialog uses the
+    // notification to update its OK/Finish button state.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Fires a connection page modified event when then page was modified.
+     * Notifies the registered modify listener that a field on this page has changed.
+     * Subclasses should call this (indirectly, via {@link #connectionPageModified()})
+     * inside every SWT listener.
      */
     protected void fireConnectionPageModified()
     {
@@ -83,10 +133,9 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── SET RUNNABLE CONTEXT ──────────────────────────────────────────────────────
     /**
-     * Sets the runnable context.
-     * 
-     * @param runnableContext the runnable context
+     * {@inheritDoc}
      */
     public void setRunnableContext( IRunnableContext runnableContext )
     {
@@ -94,8 +143,9 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── GET / SET PAGE ID ─────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#getPageId()
+     * {@inheritDoc}
      */
     public String getPageId()
     {
@@ -104,7 +154,7 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
 
 
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#setPageId(java.lang.String)
+     * {@inheritDoc}
      */
     public void setPageId( String pageId )
     {
@@ -112,8 +162,9 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── GET / SET PAGE NAME ───────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#getPageName()
+     * {@inheritDoc}
      */
     public String getPageName()
     {
@@ -122,7 +173,7 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
 
 
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#setPageName(java.lang.String)
+     * {@inheritDoc}
      */
     public void setPageName( String pageName )
     {
@@ -130,8 +181,9 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── GET / SET PAGE DESCRIPTION ────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#getPageDescription()
+     * {@inheritDoc}
      */
     public String getPageDescription()
     {
@@ -140,7 +192,7 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
 
 
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#setPageDescription(java.lang.String)
+     * {@inheritDoc}
      */
     public void setPageDescription( String pageDescription )
     {
@@ -148,8 +200,9 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── GET / SET PAGE DEPENDS ON ID ──────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#getPageDependsOnId()
+     * {@inheritDoc}
      */
     public String getPageDependsOnId()
     {
@@ -158,7 +211,7 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
 
 
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#setPageDependsOnId(java.lang.String)
+     * {@inheritDoc}
      */
     public void setPageDependsOnId( String pageDependsOnId )
     {
@@ -166,8 +219,9 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── GET ERROR MESSAGE ─────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#getErrorMessage()
+     * {@inheritDoc}
      */
     public String getErrorMessage()
     {
@@ -175,8 +229,9 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── GET MESSAGE ───────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#getMessage()
+     * {@inheritDoc}
      */
     public String getMessage()
     {
@@ -184,8 +239,11 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── IS VALID — NO MESSAGE AND NO ERROR MESSAGE ────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#isValid()
+     * {@inheritDoc}
+     * Returns {@code true} when neither {@link #message} nor {@link #errorMessage}
+     * is set.
      */
     public boolean isValid()
     {
@@ -193,8 +251,9 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── GET INFO MESSAGE ──────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.ui.ConnectionParameterPage#getInfoMessage()
+     * {@inheritDoc}
      */
     public String getInfoMessage()
     {
@@ -202,8 +261,16 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── INIT — THE PAGE LIFECYCLE ENTRY POINT ─────────────────────────────────────
+    // We call createComposite() first so the SWT controls exist, then wire the
+    // modify listener, then load any existing connection parameters, then attach
+    // SWT listeners, and finally run a first validation pass so the page starts
+    // in the correct state.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Creates SWT controls, loads parameters, wires listeners, and runs an initial
+     * validation pass — all in the correct order.
      */
     public final void init( Composite parent, ConnectionParameterPageModifyListener listener,
         ConnectionParameter parameter )
@@ -225,8 +292,14 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── CONNECTION PAGE MODIFIED — VALIDATE THEN NOTIFY ──────────────────────────
+    // Called by each SWT listener (via subclass).  We validate first so that
+    // message/errorMessage are current before we notify the host dialog.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Called when an input field was modified.
+     * Called internally whenever any input field changes.
+     * Runs {@link #validate()} to refresh message state, then fires the modify
+     * listener to let the host dialog update its button states.
      */
     protected final void connectionPageModified()
     {
@@ -235,30 +308,38 @@ public abstract class AbstractConnectionParameterPage implements ConnectionParam
     }
 
 
+    // ── ABSTRACT — SUBCLASS RESPONSIBILITIES ──────────────────────────────────────
+
     /**
-     * Creates the composite.
-     * 
-     * @param parent the parent
+     * Builds and lays out all SWT controls for this page inside the given parent.
+     * Called once during {@link #init}.
+     *
+     * @param parent  The parent SWT composite to add controls to.
      */
     protected abstract void createComposite( Composite parent );
 
 
     /**
-     * Validates the input fields.
+     * Inspects all field values and updates {@link #message} and {@link #errorMessage}
+     * accordingly.  {@code null} means no message/error.
+     * Called after every field change.
      */
     protected abstract void validate();
 
 
     /**
-     * Initializes the fields with the given parameters.
-     * 
-     * @param parameter the connection parameter
+     * Populates the SWT fields from the given {@link ConnectionParameter}.
+     * Called during {@link #init} when editing an existing connection.
+     *
+     * @param parameter  The connection parameters to read from.
      */
     protected abstract void loadParameters( ConnectionParameter parameter );
 
 
     /**
-     * Initializes the listeners.
+     * Attaches SWT modify/selection listeners to all editable fields.
+     * Each listener should call {@link #connectionPageModified()} when triggered.
+     * Called once during {@link #init}, after fields are populated.
      */
     protected abstract void initListeners();
 }

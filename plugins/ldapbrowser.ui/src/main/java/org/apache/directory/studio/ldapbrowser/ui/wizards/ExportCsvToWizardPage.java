@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -32,8 +32,17 @@ import org.eclipse.swt.widgets.Link;
 import org.eclipse.ui.dialogs.PreferencesUtil;
 
 
+// ── CLASS: ExportCsvToWizardPage — YODA SETS DOWN THE X-WING ─────────────────
+// Yoda decides where to set the X-wing down — a specific landing pad with the
+// right surface. The CSV To page picks the landing pad: a .csv or .txt file.
+// It also includes a shortcut link to the CSV text-format preferences so the
+// user can control delimiters and quoting before committing to the export.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the page to select the target CSV file.
+ * The "To" page of the CSV export wizard: picks the destination CSV file.
+ * Extends {@link ExportBaseToPage} with CSV-specific file extension filters
+ * (*.csv, *.txt, *) and a "See Text Formats" hyperlink that opens the CSV
+ * tab of the text-format preference page.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -45,11 +54,14 @@ public class ExportCsvToWizardPage extends ExportBaseToPage
         { "*.csv", "*.txt", "*" }; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
 
+    // ── Yoda Checks the Landing Pad Requirements ──────────────────────────────────
+    // A CSV X-wing can only land on a CSV pad — the wizard icon marks the format.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExportCsvToWizardPage.
-     * 
-     * @param pageName the page name
-     * @param wizard the wizard
+     * Creates a new ExportCsvToWizardPage with the CSV wizard icon set.
+     *
+     * @param pageName  the wizard page name.
+     * @param wizard    the parent export wizard.
      */
     public ExportCsvToWizardPage( String pageName, ExportBaseWizard wizard )
     {
@@ -58,8 +70,19 @@ public class ExportCsvToWizardPage extends ExportBaseToPage
     }
 
 
+    // ── Yoda Surveys the Landing Zone ────────────────────────────────────────────
+    // The landing zone includes the standard file-selector from the base class,
+    // plus a shortcut to the CSV formatting preferences so users can configure
+    // delimiters before they export.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the page UI using the base-class file browser, then adds a
+     * "See Text Formats" hyperlink that opens the CSV tab of the text-format
+     * preference page so the user can confirm delimiter settings before exporting.
+     *
+     * @param parent  the parent composite.
      */
     public void createControl( Composite parent )
     {
@@ -82,8 +105,15 @@ public class ExportCsvToWizardPage extends ExportBaseToPage
     }
 
 
+    // ── The Landing Pad Accepts These Surfaces ────────────────────────────────────
+    // CSV files land on *.csv, *.txt, or * pads.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Returns the file-extension filters for the CSV save dialog.
+     *
+     * @return  {@code ["*.csv", "*.txt", "*"]}.
      */
     protected String[] getExtensions()
     {
@@ -91,8 +121,16 @@ public class ExportCsvToWizardPage extends ExportBaseToPage
     }
 
 
+    // ── The Landing Pad Has a Format Name ────────────────────────────────────────
+    // Error messages say "please enter a CSV file" — not a generic file message.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Returns the localised file-format name "CSV" used in page titles and
+     * error messages.
+     *
+     * @return  the string "CSV".
      */
     protected String getFileType()
     {

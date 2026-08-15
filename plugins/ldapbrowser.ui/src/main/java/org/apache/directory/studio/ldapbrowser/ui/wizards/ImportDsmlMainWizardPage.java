@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
@@ -38,8 +38,24 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Group;
 
 
+// ── CLASS: ImportDsmlMainWizardPage — C-3PO READS THE MISSION BRIEF ──────────
+// C-3PO reads the DSML XML scroll, confirms which LDAP server to send the
+// commands to, and decides whether to capture the server's response in a
+// separate file. This page covers all three decisions: source file, target
+// connection, and optional response capture (with "default" vs. "custom"
+// response file path options).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Main Page of the DSML Import Wizard
+ * The single page of the DSML import wizard. Provides:
+ * <ul>
+ *   <li>A {@link FileBrowserWidget} for selecting the source DSML (.xml) file.</li>
+ *   <li>A {@link BrowserConnectionWidget} for selecting the target connection.</li>
+ *   <li>A "Response" group with a "Save Response" checkbox and radio buttons
+ *       for a default (input-filename + ".response.xml") or custom response path.</li>
+ * </ul>
+ * Validation checks: source file exists and is readable; response file (if enabled)
+ * is not the same file, is not a directory, is writable or overwriteable, and has
+ * a writable parent directory. A connection must also be selected.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -77,13 +93,16 @@ public class ImportDsmlMainWizardPage extends WizardPage
     private String customResponseFileName;
 
 
+    // ── C-3PO Accepts the Assignment ─────────────────────────────────────────────
+    // The page stores the wizard reference to push state back (connection,
+    // filenames, saveResponse flag) as the user edits each widget.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ImportDsmlMainWizardPage.
+     * Creates a new ImportDsmlMainWizardPage with the DSML import icon and
+     * the wizard title as the page title.
      *
-     * @param pageName
-     *          the name of the page
-     * @param wizard
-     *          the wizard the page is attached to
+     * @param pageName  the wizard page name.
+     * @param wizard    the parent DSML import wizard.
      */
     public ImportDsmlMainWizardPage( String pageName, ImportDsmlWizard wizard )
     {
@@ -96,8 +115,24 @@ public class ImportDsmlMainWizardPage extends WizardPage
     }
 
 
+    // ── C-3PO Lays Out the Brief ──────────────────────────────────────────────────
+    // Three areas: DSML source file, target connection, response capture options.
+    // Each widget change pushes its value to the wizard and calls validate().
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the page UI in a three-column grid:
+     * <ul>
+     *   <li>Row 1: "DSML File" label + FileBrowserWidget (*.xml) for the source.</li>
+     *   <li>Row 2: "Import to" label + BrowserConnectionWidget for target connection.</li>
+     *   <li>Rows 3+: a "Response" Group with Save Response checkbox, default/custom
+     *       radio buttons, response FileBrowserWidget (save mode), and overwrite checkbox.</li>
+     * </ul>
+     * The default response filename is the source filename with ".response.xml" appended.
+     * The response FileBrowserWidget starts disabled — enabled only when "use custom" is selected.
+     *
+     * @param parent  the parent composite.
      */
     public void createControl( Composite parent )
     {
@@ -296,8 +331,12 @@ public class ImportDsmlMainWizardPage extends WizardPage
     }
 
 
+    // ── C-3PO Logs the File Selection for Next Time ───────────────────────────────
+    // Persists the chosen directory so the browser opens in the same place next time.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the Dialog Settings of the Page
+     * Saves the dialog settings (source file browser directory) so the
+     * FileBrowserWidget opens in the same directory on the next use.
      */
     public void saveDialogSettings()
     {

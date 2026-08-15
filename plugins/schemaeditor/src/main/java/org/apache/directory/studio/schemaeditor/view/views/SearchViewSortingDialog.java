@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.schemaeditor.view.views;
@@ -38,8 +38,26 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 
 
+// ── CLASS: SearchViewSortingDialog — Palpatine Issuing Order 66 ───────────────
+// In Revenge of the Sith, Emperor Palpatine transmits Order 66 to clone
+// commanders across the galaxy: a specific, precise configuration command that
+// reorganizes everything — who is a target, in what order, immediately. Every
+// commander receives the same instruction and executes it uniformly. The order
+// changes how the whole system behaves.
+// This dialog is that configuration command for the Search View: it lets the user
+// configure how search results should be grouped (attribute types first, object
+// classes first, or mixed) and in what sort order (name or OID, ascending or
+// descending). OK writes the command to the preference store and the Search View
+// reorganizes accordingly — immediately.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the SearchView Sorting Dialog.
+ * A modal dialog for configuring how search results are grouped and sorted in the
+ * Search View. Users choose a grouping mode (attribute types first, object classes
+ * first, or mixed), a sort field (first name or OID), and a sort direction
+ * (ascending or descending). On OK we write all three to the plugin's preference
+ * store, which fires change events that cause the Search View to re-sort immediately.
+ * Think of it as Palpatine's Order 66: a precise configuration command that
+ * reorganizes the whole result set.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -54,11 +72,24 @@ public class SearchViewSortingDialog extends Dialog
     private Button descendingButton;
 
 
+    // ── The Emperor Drafts the Order ─────────────────────────────────────────
+    // Palpatine doesn't transmit an order without first knowing who he's sending
+    // it to — the parent shell binds the dialog to the right window. The constructor
+    // captures that binding so JFace can center and modalize the dialog properly.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SearchViewSortingDialog.
+     * Creates a new sorting dialog bound to the given parent shell.
+     * The parent shell is passed to the JFace {@link Dialog} superclass so this dialog
+     * is modal (nothing in that window responds until OK or Cancel is clicked) and
+     * centered over the parent.
      *
-     * @param parentShell
-     *      the parent shell
+     * <p>For example — the Emperor addresses the right commanders:</p>
+     * <pre>
+     *   new SearchViewSortingDialog(parentShell)
+     *   → super(parentShell)  // "attention: this order targets you"
+     * </pre>
+     *
+     * @param parentShell  the SWT shell that owns this dialog
      */
     public SearchViewSortingDialog( Shell parentShell )
     {
@@ -66,9 +97,19 @@ public class SearchViewSortingDialog extends Dialog
     }
 
 
+    // ── The Order Receives Its Designation ───────────────────────────────────
+    // Order 66 has a name — every order has a designation. configureShell sets
+    // the window title so users see "View Sorting" rather than a generic title
+    // bar when the dialog appears.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Sets the window title for this dialog.
+     * JFace calls this before displaying the dialog. We set it to the localized
+     * "View Sorting" string so the purpose of the dialog is immediately clear.
+     *
+     * @param newShell  the SWT shell for this dialog window
      */
+    @Override
     protected void configureShell( Shell newShell )
     {
         super.configureShell( newShell );
@@ -76,9 +117,30 @@ public class SearchViewSortingDialog extends Dialog
     }
 
 
+    // ── The Order's Contents Are Specified ───────────────────────────────────
+    // Order 66 is detailed: which units, what action, with what priority.
+    // The dialog content area specifies the same level of precision: three
+    // grouping options (AT first, OC first, or mixed), the sort field combo,
+    // and ascending vs. descending radio buttons. Pre-populated from saved prefs.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the dialog's content area with Grouping and Sorting option groups.
+     * The Grouping group has three radio buttons: Attribute Types first, Object Classes
+     * first, or mixed. The Sorting group has a combo for sort field (first name or OID)
+     * and radio buttons for ascending/descending. Pre-filled from preferences.
+     *
+     * <p>For example — the order's contents:</p>
+     * <pre>
+     *   createDialogArea(parent)
+     *     → Grouping: [• AT first] [ OC first] [ Mixed]
+     *     → Sorting:  SortBy:[FirstName v] [• Ascending] [ Descending]
+     *     → initFieldsFromPreferences()
+     * </pre>
+     *
+     * @param parent  the composite to build the dialog area inside
+     * @return        the configured dialog area composite
      */
+    @Override
     protected Control createDialogArea( Composite parent )
     {
         Composite composite = ( Composite ) super.createDialogArea( parent );
@@ -147,8 +209,16 @@ public class SearchViewSortingDialog extends Dialog
     }
 
 
+    // ── The Emperor Reviews the Current Standing Orders ──────────────────────
+    // Before Palpatine issues a new order, he knows what the standing orders are.
+    // This method reads the current saved preferences and pre-selects the matching
+    // radio buttons and combo item so the user sees where things currently stand.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the fields for the stored preferences.
+     * Pre-populates the dialog controls with the currently saved preference values.
+     * We read grouping mode, sort field, and sort order from the preference store and
+     * set the matching radio buttons and combo selection. This way users see their current
+     * configuration when the dialog opens, not some arbitrary default.
      */
     private void initFieldsFromPreferences()
     {
@@ -191,9 +261,23 @@ public class SearchViewSortingDialog extends Dialog
     }
 
 
+    // ── Execute Order 66 ─────────────────────────────────────────────────────
+    // "Execute Order 66." The clone commanders carry out the order the moment it
+    // arrives. buttonPressed handles OK by reading the dialog's final control state
+    // and writing those choices to the preference store — which immediately fires
+    // change events that the Search View picks up to re-sort its results.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Handles button clicks — specifically, saves configuration choices on OK.
+     * When the user clicks OK, we read all control states and write the chosen
+     * grouping mode, sort field, and sort order to the preference store. The store
+     * fires property change events that the Search View controller listens for,
+     * triggering an immediate re-sort of the displayed results. Cancel exits
+     * without saving anything.
+     *
+     * @param buttonId  the ID of the button clicked (from {@link IDialogConstants})
      */
+    @Override
     protected void buttonPressed( int buttonId )
     {
         if ( buttonId == IDialogConstants.OK_ID )

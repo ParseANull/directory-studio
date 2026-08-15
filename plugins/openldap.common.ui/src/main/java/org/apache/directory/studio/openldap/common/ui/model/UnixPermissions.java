@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.common.ui.model;
 
@@ -23,10 +23,23 @@ package org.apache.directory.studio.openldap.common.ui.model;
 import java.text.ParseException;
 import java.util.regex.Pattern;
 
-
+// ── CLASS: UnixPermissions — IMPERIAL ACCESS PASS SYSTEM ─────────────────────
+// Think of this class as the Imperial checkpoint's access pass book. Every
+// pass has three tiers: the owner (the officer who issued it), the group (their
+// unit), and others (everyone else in the galaxy). Each tier can grant three
+// rights: read the manifest (r), write orders on it (w), or execute a command
+// (x). We accept the pass encoded as a four-digit octal string like "0640", as
+// a plain decimal integer like "416", or as a symbolic ten-character notation
+// like "-rw-r-----". The nine boolean fields record exactly which rights are
+// granted.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The class defines an Unix Permissions.
- * 
+ * We model a full set of Unix file-system permissions, covering read, write,
+ * and execute rights for owner, group, and others. We can parse an octal
+ * string (e.g., {@code "0640"}), a decimal integer string (e.g., {@code "416"}),
+ * or a symbolic notation string (e.g., {@code "-rw-r-----"}) into our internal
+ * boolean flags. We can also produce all three representations on demand.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class UnixPermissions
@@ -45,21 +58,33 @@ public class UnixPermissions
     private boolean othersWrite;
     private boolean othersExecute;
 
-
+    // ── CONSTRUCTOR: UnixPermissions() — BLANK ACCESS PASS ───────────────────
+    // We create an empty pass with all nine permission flags set to false — no
+    // rights granted to anyone yet, just like a freshly printed but unstamped
+    // Imperial credential.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of UnixPermissions.
-     *
+     * We create a new {@link UnixPermissions} instance with all permission
+     * flags initialized to {@code false}.
      */
     public UnixPermissions()
     {
     }
 
 
+    // ── CONSTRUCTOR: UnixPermissions(String) — SCANNING AN ACCESS PASS ───────
+    // We read the permission string and decode it into our nine boolean flags.
+    // The string may be octal ("0640"), decimal ("416"), or symbolic
+    // ("-rw-r-----"). If none of these formats match, the checkpoint throws a
+    // ParseException — an unreadable pass gets no entry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of UnixPermissions.
+     * We create a new {@link UnixPermissions} instance by parsing the supplied
+     * permission string. We accept octal (e.g., {@code "0640"}), decimal
+     * (e.g., {@code "416"}), or symbolic (e.g., {@code "-rw-r-----"}) format.
      *
-     * @param s the string
-     * @throws ParseException if an error occurs during the parsing of the string
+     * @param s                the permission string to parse
+     * @throws ParseException  if the format is not recognized
      */
     public UnixPermissions( String s ) throws ParseException
     {
@@ -127,10 +152,16 @@ public class UnixPermissions
     }
 
 
+    // ── METHOD: readOwnerOctalValue — DECODING THE OWNER'S OCTAL STAMP ────────
+    // We interpret the single octal digit for the owner tier and set the three
+    // boolean flags accordingly: bit 2 is read, bit 1 is write, bit 0 is execute.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the owner octal value.
+     * We decode a single octal character representing the owner's permission
+     * bits and set {@link #ownerRead}, {@link #ownerWrite}, and
+     * {@link #ownerExecute} accordingly.
      *
-     * @param ownerValue the owner value
+     * @param ownerValue  the single octal digit character for the owner tier
      */
     private void readOwnerOctalValue( char ownerValue )
     {
@@ -170,10 +201,16 @@ public class UnixPermissions
     }
 
 
+    // ── METHOD: readGroupOctalValue — DECODING THE GROUP'S OCTAL STAMP ────────
+    // We interpret the single octal digit for the group tier and set the three
+    // boolean flags accordingly, just like we do for the owner.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the group octal value.
+     * We decode a single octal character representing the group's permission
+     * bits and set {@link #groupRead}, {@link #groupWrite}, and
+     * {@link #groupExecute} accordingly.
      *
-     * @param groupValue the group value
+     * @param groupValue  the single octal digit character for the group tier
      */
     private void readGroupOctalValue( char groupValue )
     {
@@ -213,10 +250,16 @@ public class UnixPermissions
     }
 
 
+    // ── METHOD: readOthersOctalValue — DECODING THE OTHERS' OCTAL STAMP ───────
+    // We interpret the single octal digit for the others tier and set the three
+    // boolean flags accordingly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the others octal value.
+     * We decode a single octal character representing the others' permission
+     * bits and set {@link #othersRead}, {@link #othersWrite}, and
+     * {@link #othersExecute} accordingly.
      *
-     * @param othersValue the others value
+     * @param othersValue  the single octal digit character for the others tier
      */
     private void readOthersOctalValue( char othersValue )
     {
@@ -256,10 +299,16 @@ public class UnixPermissions
     }
 
 
+    // ── METHOD: readOwnerSymbolicValue — READING THE OWNER'S SYMBOLIC BADGE ───
+    // We read the three-character symbolic string for the owner (e.g., "rw-")
+    // and set the boolean flags for each letter present.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the owner symbolic value.
+     * We parse the three-character symbolic string for the owner tier
+     * (e.g., {@code "rw-"}) and set {@link #ownerRead}, {@link #ownerWrite},
+     * and {@link #ownerExecute} based on the characters present.
      *
-     * @param ownerValue the owner value
+     * @param ownerValue  the three-character symbolic string for the owner tier
      */
     private void readOwnerSymbolicValue( String ownerValue )
     {
@@ -286,10 +335,16 @@ public class UnixPermissions
     }
 
 
+    // ── METHOD: readGroupSymbolicValue — READING THE GROUP'S SYMBOLIC BADGE ───
+    // We read the three-character symbolic string for the group tier and set
+    // the boolean flags exactly as we do for the owner.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the group symbolic value.
+     * We parse the three-character symbolic string for the group tier
+     * (e.g., {@code "r--"}) and set {@link #groupRead}, {@link #groupWrite},
+     * and {@link #groupExecute} based on the characters present.
      *
-     * @param groupValue the group value
+     * @param groupValue  the three-character symbolic string for the group tier
      */
     private void readGroupSymbolicValue( String groupValue )
     {
@@ -316,10 +371,16 @@ public class UnixPermissions
     }
 
 
+    // ── METHOD: readOthersSymbolicValue — READING THE OTHERS' SYMBOLIC BADGE ──
+    // We read the three-character symbolic string for the others tier and set
+    // the boolean flags exactly as we do for the owner and group.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the others symbolic value.
+     * We parse the three-character symbolic string for the others tier
+     * (e.g., {@code "---"}) and set {@link #othersRead}, {@link #othersWrite},
+     * and {@link #othersExecute} based on the characters present.
      *
-     * @param othersValue the others value
+     * @param othersValue  the three-character symbolic string for the others tier
      */
     private void readOthersSymbolicValue( String othersValue )
     {
@@ -346,10 +407,15 @@ public class UnixPermissions
     }
 
 
+    // ── METHOD: getDecimalValue — PRINTING THE DECIMAL PASS CODE ─────────────
+    // We convert our octal string representation to a plain integer so callers
+    // that prefer a numeric database value can get it in one call.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the integer value.
+     * We compute and return the decimal integer value of these permissions by
+     * parsing our octal string representation as base-8.
      *
-     * @return the integer value
+     * @return the decimal integer representation of the permission bits
      */
     public Integer getDecimalValue()
     {
@@ -357,10 +423,17 @@ public class UnixPermissions
     }
 
 
+    // ── METHOD: getOctalValue — PRINTING THE OCTAL PASS CODE ─────────────────
+    // We walk through all nine boolean flags, add up their octal contribution
+    // (owner bits contribute hundreds, group bits contribute tens, others bits
+    // contribute units), and return a zero-padded four-character string like
+    // "0640". This is what the OpenLDAP configuration expects.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the octal value.
-     * 
-     * @return the octal value
+     * We compute and return the zero-padded four-digit octal string for these
+     * permissions (e.g., {@code "0640"}).
+     *
+     * @return the four-character octal representation of the permission bits
      */
     public String getOctalValue()
     {
@@ -440,10 +513,17 @@ public class UnixPermissions
     }
 
 
+    // ── METHOD: getSymbolicValue — PRINTING THE SYMBOLIC BADGE ───────────────
+    // We walk through all nine boolean flags and build the ten-character
+    // symbolic string in the order "-rwxrwxrwx", using '-' for any absent
+    // right. The leading '-' indicates a regular file (not a directory).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the symbolic value (no type included).
-     * 
-     * @return the symbolic value
+     * We build and return the ten-character symbolic permission string
+     * (e.g., {@code "-rw-r-----"}). The leading {@code '-'} represents a
+     * regular file type prefix.
+     *
+     * @return the symbolic representation of the permission bits
      */
     public String getSymbolicValue()
     {
@@ -545,108 +625,254 @@ public class UnixPermissions
     }
 
 
+    // ── METHOD: isGroupExecute — CHECKING GROUP EXECUTE RIGHT ────────────────
+    // We return the group execute flag so callers can read the current state
+    // without modifying it.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We return {@code true} if the group execute permission bit is set.
+     *
+     * @return {@code true} if group execute is granted
+     */
     public boolean isGroupExecute()
     {
         return groupExecute;
     }
 
 
+    // ── METHOD: isGroupRead — CHECKING GROUP READ RIGHT ──────────────────────
+    // We return the group read flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We return {@code true} if the group read permission bit is set.
+     *
+     * @return {@code true} if group read is granted
+     */
     public boolean isGroupRead()
     {
         return groupRead;
     }
 
 
+    // ── METHOD: isGroupWrite — CHECKING GROUP WRITE RIGHT ────────────────────
+    // We return the group write flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We return {@code true} if the group write permission bit is set.
+     *
+     * @return {@code true} if group write is granted
+     */
     public boolean isGroupWrite()
     {
         return groupWrite;
     }
 
 
+    // ── METHOD: isOthersExecute — CHECKING OTHERS EXECUTE RIGHT ──────────────
+    // We return the others execute flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We return {@code true} if the others execute permission bit is set.
+     *
+     * @return {@code true} if others execute is granted
+     */
     public boolean isOthersExecute()
     {
         return othersExecute;
     }
 
 
+    // ── METHOD: isOthersRead — CHECKING OTHERS READ RIGHT ────────────────────
+    // We return the others read flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We return {@code true} if the others read permission bit is set.
+     *
+     * @return {@code true} if others read is granted
+     */
     public boolean isOthersRead()
     {
         return othersRead;
     }
 
 
+    // ── METHOD: isOthersWrite — CHECKING OTHERS WRITE RIGHT ──────────────────
+    // We return the others write flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We return {@code true} if the others write permission bit is set.
+     *
+     * @return {@code true} if others write is granted
+     */
     public boolean isOthersWrite()
     {
         return othersWrite;
     }
 
 
+    // ── METHOD: isOwnerExecute — CHECKING OWNER EXECUTE RIGHT ────────────────
+    // We return the owner execute flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We return {@code true} if the owner execute permission bit is set.
+     *
+     * @return {@code true} if owner execute is granted
+     */
     public boolean isOwnerExecute()
     {
         return ownerExecute;
     }
 
 
+    // ── METHOD: isOwnerRead — CHECKING OWNER READ RIGHT ──────────────────────
+    // We return the owner read flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We return {@code true} if the owner read permission bit is set.
+     *
+     * @return {@code true} if owner read is granted
+     */
     public boolean isOwnerRead()
     {
         return ownerRead;
     }
 
 
+    // ── METHOD: isOwnerWrite — CHECKING OWNER WRITE RIGHT ────────────────────
+    // We return the owner write flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We return {@code true} if the owner write permission bit is set.
+     *
+     * @return {@code true} if owner write is granted
+     */
     public boolean isOwnerWrite()
     {
         return ownerWrite;
     }
 
 
+    // ── METHOD: setGroupExecute — STAMPING THE GROUP EXECUTE RIGHT ───────────
+    // We update the group execute flag to the supplied value, granting or
+    // revoking that right on the access pass.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We set the group execute permission bit to the supplied value.
+     *
+     * @param groupExecute  {@code true} to grant group execute, {@code false} to revoke it
+     */
     public void setGroupExecute( boolean groupExecute )
     {
         this.groupExecute = groupExecute;
     }
 
 
+    // ── METHOD: setGroupRead — STAMPING THE GROUP READ RIGHT ─────────────────
+    // We update the group read flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We set the group read permission bit to the supplied value.
+     *
+     * @param groupRead  {@code true} to grant group read, {@code false} to revoke it
+     */
     public void setGroupRead( boolean groupRead )
     {
         this.groupRead = groupRead;
     }
 
 
+    // ── METHOD: setGroupWrite — STAMPING THE GROUP WRITE RIGHT ───────────────
+    // We update the group write flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We set the group write permission bit to the supplied value.
+     *
+     * @param groupWrite  {@code true} to grant group write, {@code false} to revoke it
+     */
     public void setGroupWrite( boolean groupWrite )
     {
         this.groupWrite = groupWrite;
     }
 
 
+    // ── METHOD: setOthersExecute — STAMPING THE OTHERS EXECUTE RIGHT ──────────
+    // We update the others execute flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We set the others execute permission bit to the supplied value.
+     *
+     * @param othersExecute  {@code true} to grant others execute, {@code false} to revoke it
+     */
     public void setOthersExecute( boolean othersExecute )
     {
         this.othersExecute = othersExecute;
     }
 
 
+    // ── METHOD: setOthersRead — STAMPING THE OTHERS READ RIGHT ───────────────
+    // We update the others read flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We set the others read permission bit to the supplied value.
+     *
+     * @param othersRead  {@code true} to grant others read, {@code false} to revoke it
+     */
     public void setOthersRead( boolean othersRead )
     {
         this.othersRead = othersRead;
     }
 
 
+    // ── METHOD: setOthersWrite — STAMPING THE OTHERS WRITE RIGHT ─────────────
+    // We update the others write flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We set the others write permission bit to the supplied value.
+     *
+     * @param othersWrite  {@code true} to grant others write, {@code false} to revoke it
+     */
     public void setOthersWrite( boolean othersWrite )
     {
         this.othersWrite = othersWrite;
     }
 
 
+    // ── METHOD: setOwnerExecute — STAMPING THE OWNER EXECUTE RIGHT ───────────
+    // We update the owner execute flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We set the owner execute permission bit to the supplied value.
+     *
+     * @param ownerExecute  {@code true} to grant owner execute, {@code false} to revoke it
+     */
     public void setOwnerExecute( boolean ownerExecute )
     {
         this.ownerExecute = ownerExecute;
     }
 
 
+    // ── METHOD: setOwnerRead — STAMPING THE OWNER READ RIGHT ─────────────────
+    // We update the owner read flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We set the owner read permission bit to the supplied value.
+     *
+     * @param ownerRead  {@code true} to grant owner read, {@code false} to revoke it
+     */
     public void setOwnerRead( boolean ownerRead )
     {
         this.ownerRead = ownerRead;
     }
 
 
+    // ── METHOD: setOwnerWrite — STAMPING THE OWNER WRITE RIGHT ───────────────
+    // We update the owner write flag.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * We set the owner write permission bit to the supplied value.
+     *
+     * @param ownerWrite  {@code true} to grant owner write, {@code false} to revoke it
+     */
     public void setOwnerWrite( boolean ownerWrite )
     {
         this.ownerWrite = ownerWrite;

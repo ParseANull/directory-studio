@@ -47,15 +47,24 @@ import org.apache.directory.studio.ldapbrowser.core.model.schema.Schema;
 import org.apache.directory.studio.ldapbrowser.core.utils.Utils;
 
 
+// ── CLASS: DummyEntry — R2-D2'S STAND-IN DROID THAT HOLDS TEMP ATTRIBUTES ────
+// R2-D2 sometimes needs a temporary droid to hold a set of attribute values
+// while an operation is being prepared — like staging cargo before loading it
+// onto the Falcon.  DummyEntry is that staging droid: it holds a DN, a
+// connection for schema lookups, and an in-memory attribute map.  It cannot
+// have children added, its lifecycle flags are all hardwired to safe defaults,
+// and it fires attribute-add/delete events so the UI stays in sync.  Used
+// primarily by the new-entry wizard.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An {@link DummyEntry} is an implementation if {@link IEntry} that doesn't 
- * represent a directory entry. 
- * 
- * Most methods do nothing. It isn't possible to add child entries.
- * It only contains a map for attributes and a connection to retrieve
- * schema information. 
- * 
- * It is used for temporary {@link IEntry} objects, e.g. in the new entry wizard. 
+ * A temporary {@link IEntry} implementation that does not represent a real
+ * directory entry.  Holds a DN, a browser connection (for schema access), and
+ * an in-memory attribute map.  Child management is a no-op; most flag methods
+ * are no-ops or return fixed defaults.  Used by wizards and editors that need
+ * a transient entry object before committing to the directory.
+ *
+ * <p>Think of this as R2-D2's staging droid — holds the attribute payload in
+ * memory so the wizard can build it up before writing it to the server.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -74,16 +83,18 @@ public class DummyEntry implements IEntry, ICompareableEntry
     private Map<String, IAttribute> attributeMap;
 
 
+    // ── No-Arg Constructor For Serialisation ─────────────────────────────────────
     protected DummyEntry()
     {
     }
 
 
+    // ── R2-D2 Creates A Fresh Staging Droid With DN And Schema Connection ─────────
     /**
      * Creates a new instance of DummyEntry.
-     * 
-     * @param dn the Dn
-     * @param browserConnection the browser connection
+     *
+     * @param dn the Dn this temporary entry will use
+     * @param browserConnection the browser connection used for schema lookups
      */
     public DummyEntry( Dn dn, IBrowserConnection browserConnection )
     {
@@ -93,10 +104,11 @@ public class DummyEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── R2-D2 Updates The Staging Droid's DN ─────────────────────────────────────
     /**
      * Sets the Dn.
-     * 
-     * @param dn the new Dn
+     *
+     * @param dn the new Dn for this temporary entry
      */
     public void setDn( Dn dn )
     {

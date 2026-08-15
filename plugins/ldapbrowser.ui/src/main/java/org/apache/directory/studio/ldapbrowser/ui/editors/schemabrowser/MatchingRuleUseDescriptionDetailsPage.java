@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.schemabrowser;
@@ -43,6 +43,22 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: MatchingRuleUseDescriptionDetailsPage — Blueprint: MR-Use Spec ──────
+// A technician selects a matching-rule-use entry — "caseIgnoreMatch applies to
+// cn, sn, l" — and R2-D2 projects the full cross-reference card: which matching
+// rule this is (a hyperlink), whether it is obsolete, and all the attribute types
+// it officially applies to on this server.  This class renders that detail panel.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * The detail page that displays the full specification of a selected matching
+ * rule use description on the right-hand side of the schema browser.
+ * It shows OID and a hyperlink to the corresponding matching rule in a "Details"
+ * section, the obsolete flag in a "Flags" section, and all applicable attribute
+ * types in a collapsible "Applies" section.
+ * Think of this class as R2 projecting the matching-rule-use cross-reference card.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class MatchingRuleUseDescriptionDetailsPage extends SchemaDetailsPage
 {
 
@@ -68,11 +84,15 @@ public class MatchingRuleUseDescriptionDetailsPage extends SchemaDetailsPage
     private Section appliesSection;
 
 
+    // ── R2 Loads The Matching-Rule-Use Detail Module ───────────────────────────────
+    // R2 slots the matching-rule-use cross-reference module into his projection
+    // system, linking it to the master page and toolkit.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of MatchingRuleUseDescriptionDetailsPage.
+     * Creates the matching rule use details page linked to the given master page.
      *
-     * @param schemaPage the master schema page
-     * @param toolkit the toolkit used to create controls
+     * @param schemaPage  the master schema page that owns this detail page
+     * @param toolkit     the JFace forms toolkit
      */
     public MatchingRuleUseDescriptionDetailsPage( SchemaPage schemaPage, FormToolkit toolkit )
     {
@@ -80,9 +100,19 @@ public class MatchingRuleUseDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Builds The Matching-Rule-Use Detail Panel ───────────────────────────────
+    // R2 assembles the display: a Details section with OID and rule hyperlink, a
+    // Flags section for the obsolete indicator, a collapsible Applies section, and
+    // the raw LDIF footer.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the SWT layout for this detail page.
+     * Creates the "Details," "Flags," and "Applies" sections along with the
+     * standard "Raw Schema Definition" section.
+     *
+     * @param detailForm  the scrolled form that parents all sections
      */
+    @Override
     public void createContents( final ScrolledForm detailForm )
     {
 
@@ -139,9 +169,24 @@ public class MatchingRuleUseDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Projects The Full Matching-Rule-Use Card ────────────────────────────────
+    // The officer calls out the entry; R2 fills in the OID, the hyperlink to the
+    // parent matching rule, the obsolete flag, the applies list, and the raw LDIF.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Updates all sections to display the given matching rule use description.
+     * Rebuilds dynamic sections and reflows the form on every call.
+     *
+     * <p>For example — R2 projects the caseIgnoreMatch-use card:</p>
+     * <pre>
+     *   setInput(matchingRuleUse);
+     *   // nameLink → caseIgnoreMatch matching rule page
+     *   // Applies: cn, sn, l, o, ou, ...
+     * </pre>
+     *
+     * @param input  the {@link MatchingRuleUse} to display; null clears the pane
      */
+    @Override
     public void setInput( Object input )
     {
         MatchingRuleUse mrud = null;
@@ -164,12 +209,15 @@ public class MatchingRuleUseDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Fills The Main Identification Fields ────────────────────────────────────
+    // R2 populates the OID, the matching-rule hyperlink, and the description fields,
+    // rebuilt fresh each time for proper multi-line description layout.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the main section. It is newly created
-     * on every input change to ensure a proper layout of 
-     * multilined descriptions. 
+     * Recreates the "Details" section content with OID, matching rule hyperlink,
+     * and description for the given matching rule use.
      *
-     * @param mrud the matching rule use description
+     * @param mrud  the matching rule use to display; null leaves the section empty
      */
     private void createMainContent( MatchingRuleUse mrud )
     {
@@ -222,12 +270,16 @@ public class MatchingRuleUseDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists Which Attribute Types This Rule Applies To ───────────────────────
+    // R2 reads the "APPLIES" list from the matching-rule-use entry and produces
+    // clickable hyperlinks to each applicable attribute type, or a dash if empty.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the applies section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Applies" section with hyperlinks to every attribute type
+     * that this matching rule use declares it applies to.
+     * Rebuilt on every input change.
      *
-     * @param mrud the matching rule use description
+     * @param mrud  the matching rule use whose APPLIES list to display; null clears
      */
     private void createAppliesContents( MatchingRuleUse mrud )
     {

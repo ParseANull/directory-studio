@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration.editor;
 
@@ -51,38 +51,22 @@ import org.eclipse.ui.forms.widgets.TableWrapData;
 import org.eclipse.ui.forms.widgets.TableWrapLayout;
 
 
+// ── CLASS: OverviewPage — Tarkin's Four-Quadrant Tactical Briefing ────────
+// Grand Moff Tarkin stands before the Death Star's central display, four
+// quadrants glowing: comms, encryption, vaults, and Imperial policy — all
+// the critical readings in one room before diving into any specialist wing.
+// This page is that briefing room: the summary tab that shows the highlights
+// of every major server subsystem without making the user dig through tabs.
+// ─────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the General Page of the Server Configuration Editor.
- * 
- * The Overview tab exposes 4 panels, in 2 columns :
- * 
- * <pre>
- * +-------------------------------------------------------------------------------+
- * | +------------------------------------+ +------------------------------------+ |
- * | | .--------------------------------. | | +--------------------------------+ | |
- * | | | LDAP/LDAPS Transport           | | | | Kerberos Server                | | |
- * | | +--------------------------------| | | +--------------------------------+ | |
- * | | | [X] Enabled LDAP server        | | | | [X] Enable Kerberos Server     | | |
- * | | |  Port     : [/////////]        | | | |   Port     : [/////]           | | |
- * | | | [X] Enabled LDAPS server       | | | | [X] Enable Kerberos ChangePwd  | | |
- * | | |  Port     : [/////////]        | | | |   Port     : [/////]           | | |
- * | | | <advanced LDAP/LDAPS config>   | | | | <advanced Kerberos config>     | | |
- * | | +--------------------------------| | | +--------------------------------+ | |
- * | | .--------------------------------. | | +--------------------------------+ | |
- * | | | Partitions                     | | | | Options                        | | |
- * | | +--------------------------------| | | +--------------------------------+ | |
- * | | | +----------------------------+ | | | | [X] Allow anonymous access     | | |
- * | | | | Partition 1                | | | | | [X] Enable Access Control      | | |
- * | | | | Partition 2                | | | | | [X] Password Hidden            | | |
- * | | | | ...                        | | | | |                                | | |
- * | | | +----------------------------+ | | | |                                | | |
- * | | | <advanced partitionsS config>  | | | |                                | | |
- * | | +--------------------------------+ | | +--------------------------------+ | |
- * | +------------------------------------+ +------------------------------------+ |
- * </pre>
- * 
- * We just expose the more frequent parameters in this page.
- * 
+ * The Overview tab of the ApacheDS Server Configuration Editor.
+ * It exposes the most frequently changed settings across four panels —
+ * LDAP/LDAPS transport, Kerberos authentication, Partitions, and Options —
+ * arranged in a two-column layout with hyperlinks into each specialist tab.
+ * Think of this class as Grand Moff Tarkin's tactical briefing room: every
+ * key status indicator visible at once, with a direct line to each department
+ * for the full picture.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OverviewPage extends ServerConfigurationEditorPage
@@ -99,17 +83,17 @@ public class OverviewPage extends ServerConfigurationEditorPage
     private Text ldapPortText;
     private Button enableLdapsCheckbox;
     private Text ldapsPortText;
-    // This link opens the advanced LDAP/LDAPS configuration tab 
+    // This link opens the advanced LDAP/LDAPS configuration tab
     private Hyperlink openLdapConfigurationLink;
-    
+
     /** Kerberos Server controls */
     private Button enableKerberosCheckbox;
     private Text kerberosPortText;
     private Button enableChangePasswordCheckbox;
     private Text changePasswordPortText;
-    // This link opens the advanced kerberos configuration tab 
+    // This link opens the advanced kerberos configuration tab
     private Hyperlink openKerberosConfigurationLink;
-    
+
     /** The Partitions controls */
     private Label partitionsLabel;
     private TableViewer partitionsTableViewer;
@@ -123,7 +107,9 @@ public class OverviewPage extends ServerConfigurationEditorPage
 
     // UI Control Listeners
     /**
-     * The LDAP transport checkbox selection adapter.
+     * Fires when the user ticks or unticks the LDAP server checkbox.
+     * Enables or disables the LDAP server in the model, and toggles
+     * the port text field to match.
      */
     private SelectionAdapter enableLdapCheckboxListener = new SelectionAdapter()
     {
@@ -136,9 +122,11 @@ public class OverviewPage extends ServerConfigurationEditorPage
         }
     };
 
-    
+
     /**
-     * The Ldap port modify listener
+     * Fires whenever the user edits the LDAP port number field.
+     * Parses the text as an integer and pushes it to the transport bean;
+     * quietly ignores the change if the text is not a valid number yet.
      */
     private ModifyListener ldapPortTextListener = new ModifyListener()
     {
@@ -147,7 +135,7 @@ public class OverviewPage extends ServerConfigurationEditorPage
             try
             {
                 int port = Integer.parseInt( ldapPortText.getText() );
-                
+
                 LdapLdapsServersPage.getLdapServerTransportBean( getDirectoryServiceBean() ).setSystemPort( port );
             }
             catch ( NumberFormatException nfe )
@@ -156,10 +144,12 @@ public class OverviewPage extends ServerConfigurationEditorPage
             }
         }
     };
-    
-    
+
+
     /**
-     * The LDAPS transport checkbox selection adapter
+     * Fires when the user ticks or unticks the LDAPS server checkbox.
+     * Enables or disables the LDAPS transport in the model and toggles
+     * the LDAPS port text field accordingly.
      */
     private SelectionAdapter enableLdapsCheckboxListener = new SelectionAdapter()
     {
@@ -172,9 +162,11 @@ public class OverviewPage extends ServerConfigurationEditorPage
         }
     };
 
-    
+
     /**
-     * The Ldaps port modify listener
+     * Fires whenever the user edits the LDAPS port number field.
+     * Parses the text as an integer and pushes it to the LDAPS transport bean;
+     * quietly ignores the change if the value is not a valid integer yet.
      */
     private ModifyListener ldapsPortTextListener = new ModifyListener()
     {
@@ -183,7 +175,7 @@ public class OverviewPage extends ServerConfigurationEditorPage
             try
             {
                 int port = Integer.parseInt( ldapsPortText.getText() );
-                
+
                 LdapLdapsServersPage.getLdapsServerTransportBean( getDirectoryServiceBean() ).setSystemPort( port );
             }
             catch ( NumberFormatException nfe )
@@ -193,9 +185,11 @@ public class OverviewPage extends ServerConfigurationEditorPage
         }
     };
 
-    
+
     /**
-     * The advanced LDAP/LDAPS configuration hyper link adapter
+     * Fires when the user clicks the "Advanced LDAP/LDAPS Configuration" hyperlink.
+     * Navigates the editor to the dedicated LDAP/LDAPS servers page so the user
+     * can configure everything beyond port and enable state.
      */
     private HyperlinkAdapter openLdapConfigurationLinkListener = new HyperlinkAdapter()
     {
@@ -204,10 +198,12 @@ public class OverviewPage extends ServerConfigurationEditorPage
             getServerConfigurationEditor().showPage( LdapLdapsServersPage.class );
         }
     };
-    
-    
+
+
     /**
-     * The Kerberos server selection adpater
+     * Fires when the user ticks or unticks the Kerberos server checkbox.
+     * Enables or disables the KDC in the model and toggles the Kerberos
+     * port text field to match.
      */
     private SelectionAdapter enableKerberosCheckboxListener = new SelectionAdapter()
     {
@@ -220,7 +216,9 @@ public class OverviewPage extends ServerConfigurationEditorPage
     };
 
     /**
-     * The Kerberos port listener
+     * Fires whenever the user edits the Kerberos port field.
+     * Delegates the text value directly to the Kerberos server page helper
+     * which handles parsing and model update.
      */
     private ModifyListener kerberosPortTextListener = new ModifyListener()
     {
@@ -231,7 +229,9 @@ public class OverviewPage extends ServerConfigurationEditorPage
     };
 
     /**
-     * The ChangePassword server selection adapter 
+     * Fires when the user ticks or unticks the Change Password server checkbox.
+     * Updates the Change Password server bean's enabled state in the model and
+     * toggles the Change Password port text field to match.
      */
     private SelectionAdapter enableChangePasswordCheckboxListener = new SelectionAdapter()
     {
@@ -245,7 +245,9 @@ public class OverviewPage extends ServerConfigurationEditorPage
     };
 
     /**
-     * The ChangePassword server port listener
+     * Fires whenever the user edits the Change Password server port field.
+     * Delegates the text value to the Kerberos server page helper which
+     * handles parsing and model update.
      */
     private ModifyListener changePasswordPortTextListener = new ModifyListener()
     {
@@ -256,7 +258,9 @@ public class OverviewPage extends ServerConfigurationEditorPage
     };
 
     /**
-     * The advanced Kerberos configuration hyperlink
+     * Fires when the user clicks the "Advanced Kerberos Configuration" hyperlink.
+     * Navigates the editor to the dedicated Kerberos server page so the user
+     * can configure realms, encryption types, and all the details.
      */
     private HyperlinkAdapter openKerberosConfigurationLinkListener = new HyperlinkAdapter()
     {
@@ -265,10 +269,12 @@ public class OverviewPage extends ServerConfigurationEditorPage
             getServerConfigurationEditor().showPage( KerberosServerPage.class );
         }
     };
-    
-    
+
+
     /**
-     * The advanced Partition configuration hyperlink
+     * Fires when the user clicks the "Advanced Partitions Configuration" hyperlink.
+     * Navigates the editor to the Partitions tab so the user can add, remove,
+     * or fully configure individual partitions.
      */
     private HyperlinkAdapter openPartitionsConfigurationLinkListener = new HyperlinkAdapter()
     {
@@ -277,10 +283,11 @@ public class OverviewPage extends ServerConfigurationEditorPage
             getServerConfigurationEditor().showPage( PartitionsPage.class );
         }
     };
-    
-    
+
+
     /**
-     * The AllowAnonymousAccess checkbox listener
+     * Fires when the user ticks or unticks the "Allow Anonymous Access" checkbox.
+     * Pushes the new boolean directly to the directory service bean.
      */
     private SelectionAdapter allowAnonymousAccessCheckboxListener = new SelectionAdapter()
     {
@@ -289,10 +296,11 @@ public class OverviewPage extends ServerConfigurationEditorPage
             getDirectoryServiceBean().setDsAllowAnonymousAccess( allowAnonymousAccessCheckbox.getSelection() );
         }
     };
-    
-    
+
+
     /**
-     * The AccessControl checkbox listener
+     * Fires when the user ticks or unticks the "Enable Access Control" checkbox.
+     * Pushes the new boolean directly to the directory service bean.
      */
     private SelectionAdapter enableAccessControlCheckboxListener = new SelectionAdapter()
     {
@@ -301,10 +309,11 @@ public class OverviewPage extends ServerConfigurationEditorPage
             getDirectoryServiceBean().setDsAccessControlEnabled( enableAccessControlCheckbox.getSelection() );
         }
     };
-    
-    
+
+
     /**
-     * The HiddenPassword checkbox listener
+     * Fires when the user ticks or unticks the "Enable Hidden Password" checkbox.
+     * Pushes the new boolean directly to the directory service bean.
      */
     private SelectionAdapter enableHiddenPasswordCheckboxListener = new SelectionAdapter()
     {
@@ -315,10 +324,27 @@ public class OverviewPage extends ServerConfigurationEditorPage
     };
 
 
+    // ── Tarkin Enters the Briefing Chamber ───────────────────────────────────
+    // Grand Moff Tarkin strides into the Death Star's central command room
+    // for the first time, ID badge in hand, taking his station at the head
+    // of the briefing table where all four quadrant displays await activation.
+    // This constructor registers the page with the parent editor under its
+    // unique ID so Eclipse Forms can route navigation to us correctly.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of GeneralPage.
+     * Constructs the Overview page and registers it with the parent editor.
+     * We pass our stable page ID and human-readable title up to the base class
+     * so the editor knows where to find us when navigating between tabs.
      *
-     * @param editor the associated editor
+     * <p>For example — Tarkin claims his station:</p>
+     * <pre>
+     *   The Grand Moff scans his credentials across the door panel;
+     *   the briefing room acknowledges him by name and slot.
+     *   From now on, any officer who says "Take me to the Overview"
+     *   gets routed straight here.
+     * </pre>
+     *
+     * @param editor  the parent {@link ServerConfigurationEditor} that owns this page
      */
     public OverviewPage( ServerConfigurationEditor editor )
     {
@@ -326,24 +352,29 @@ public class OverviewPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── Four-Quadrant Tactical Display Assembled ─────────────────────────────
+    // Tarkin watches as the technicians roll in four display panels and bolt
+    // them into the two-column briefing frame — comms on the left, crypto on
+    // the right, vaults bottom-left, policy bottom-right.
+    // We lay out the two-column TableWrapLayout and delegate each quadrant
+    // to its own section-creation helper, then refresh from the live model.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the global Overview Tab. It contains 2 columns, each one of
-     * them having two sections :
-     * 
+     * Builds the full Overview tab UI inside the given parent composite.
+     * We create a two-column {@link TableWrapLayout}, put the LDAP and
+     * Partitions sections in the left column, and the Kerberos and Options
+     * sections in the right column, then populate all controls from the model.
+     *
+     * <p>For example — the briefing room takes shape:</p>
      * <pre>
-     * +-----------------------------------+---------------------------------+
-     * |                                   |                                 |
-     * | LDAP/LDAPS configuration section  | Kerberos/ChangePassword section |
-     * |                                   |                                 |
-     * +-----------------------------------+---------------------------------+
-     * |                                   |                                 |
-     * | Partition section                 | Options configuration section   |
-     * |                                   |                                 |
-     * +-----------------------------------+---------------------------------+
+     *   Left column  : LDAP/LDAPS comms panel, then Partitions vault list.
+     *   Right column : Kerberos auth panel, then Imperial policy options.
+     *   Each panel is its own Section widget, and a final refreshUI() call
+     *   fills every field with the current server configuration values.
      * </pre>
-     * 
-     * @param parent the parent element
-     * @param toolkit the form toolkit
+     *
+     * @param parent   the parent composite provided by the Eclipse Forms framework
+     * @param toolkit  the form toolkit used to create styled widgets
      */
     protected void createFormContent( Composite parent, FormToolkit toolkit )
     {
@@ -376,26 +407,30 @@ public class OverviewPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── Communications Array Panel Configured ───────────────────────────────
+    // An Imperial comms officer patches in the main subspace transceiver bank:
+    // two channels — standard LDAP and the encrypted LDAPS variant — each with
+    // its own enable switch, port control, and an escape hatch to full settings.
+    // We build a four-column Section with enable checkboxes, port text fields,
+    // default-value labels, and a hyperlink to the advanced LDAP/LDAPS tab.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the LDAP and LDAPS Servers section. This section is a grid with 4 columns,
-     * where we configure LDAPa and LDAPS servers.
-     * We can enable or disable those servers, and if they are enabled, we can configure
-     * the port.
-     * 
+     * Builds the LDAP and LDAPS Servers section in the left column.
+     * The section contains an enable/disable checkbox and a port number field
+     * for each of the two transports, plus a hyperlink to the full LDAP/LDAPS
+     * configuration tab for anything more advanced.
+     *
+     * <p>For example — the comms bank comes online:</p>
      * <pre>
-     * .--------------------------------.
-     * | LDAP/LDAPS Transport           |
-     * +--------------------------------|
-     * | [X] Enabled LDAP server        |
-     * |  Port     : [/////////]        |
-     * | [X] Enabled LDAPS server       |
-     * |  Port     : [/////////]        |
-     * | <advanced LDAP/LDAPS config>   |
-     * +--------------------------------|
+     *   Row 1: [X] Enable LDAP server          (checkbox spans all 4 cols)
+     *   Row 2:   [indent] Port: [text] [default hint]
+     *   Row 3: [X] Enable LDAPS server         (checkbox spans all 4 cols)
+     *   Row 4:   [indent] Port: [text] [default hint]
+     *   Row 5: "Advanced LDAP/LDAPS Configuration" hyperlink
      * </pre>
      *
-     * @param toolkit the toolkit
-     * @param parent the parent composite
+     * @param toolkit  the form toolkit for creating styled widgets
+     * @param parent   the left-column composite to place this section inside
      */
     private void createLdapLdapsServersSection( FormToolkit toolkit, Composite parent )
     {
@@ -433,23 +468,28 @@ public class OverviewPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── Encryption and Auth Vault Panel Deployed ─────────────────────────────
+    // The Imperial security division plugs in the Kerberos authentication array
+    // and the password-change relay — two sub-systems that keep enemy agents
+    // out of the Death Star's data network. Each gets its own enable toggle
+    // and port setting, plus a quick exit to the full Kerberos configuration.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Kerberos and Change Password Servers section. As for the LDAP/LDAPS
-     * server, we can configure the Kerberos and ChangePassword ports if they are enabled.
+     * Builds the Kerberos and Change Password Servers section in the right column.
+     * Mirrors the structure of the LDAP section: enable checkbox and port field
+     * for each service, plus a hyperlink to the full Kerberos configuration tab.
+     *
+     * <p>For example — the auth relay comes online:</p>
      * <pre>
-     * +--------------------------------+
-     * | Kerberos Server                |
-     * +--------------------------------+
-     * | [X] Enable Kerberos Server     |
-     * |   Port     : [/////]           |
-     * | [X] Enable Kerberos ChangePwd  |
-     * |   Port     : [/////]           |
-     * | <advanced Kerberos config>     |
-     * +--------------------------------+
+     *   Row 1: [X] Enable Kerberos Server       (checkbox spans all 4 cols)
+     *   Row 2:   [indent] Port: [text] [default hint]
+     *   Row 3: [X] Enable Kerberos Change Pwd   (checkbox spans all 4 cols)
+     *   Row 4:   [indent] Port: [text] [default hint]
+     *   Row 5: "Advanced Kerberos Configuration" hyperlink
      * </pre>
      *
-     * @param toolkit the toolkit
-     * @param parent the parent composite
+     * @param toolkit  the form toolkit for creating styled widgets
+     * @param parent   the right-column composite to place this section inside
      */
     private void createKerberosChangePasswordServersSection( FormToolkit toolkit, Composite parent )
     {
@@ -491,25 +531,30 @@ public class OverviewPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── Vault Registry Panel Installed in Briefing Room ─────────────────────
+    // A junior officer wheels in a compact display showing the names of every
+    // Imperial data vault currently registered — not the full vault spec, just
+    // the roster and a quick count, with a link to the full vault management wing.
+    // We build a single-column Section with a count label, a read-only table
+    // of partition names, and a hyperlink to the Partitions configuration tab.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Partitions section. This is just an informative section, 
-     * where we list the existing partitions.
-     * 
+     * Builds the Partitions summary section in the left column.
+     * This is an informational panel only — we show how many partitions exist
+     * and list their names, but editing happens on the dedicated Partitions tab.
+     * A hyperlink at the bottom jumps the user straight there.
+     *
+     * <p>For example — the vault roster board goes up:</p>
      * <pre>
-     * .--------------------------------.
-     * | Partitions                     |
-     * +--------------------------------|
-     * | +----------------------------+ |
-     * | | Partition 1                | |
-     * | | Partition 2                | |
-     * | | ...                        | |
-     * | +----------------------------+ |
-     * | <advanced partitionsS config>  |
-     * +--------------------------------+
+     *   Label : "There are 3 partitions defined"
+     *   Table : | system  |   (read-only, scrollable)
+     *           | example |
+     *           | ...     |
+     *   Link  : "Advanced Partitions Configuration"
      * </pre>
      *
-     * @param toolkit the toolkit
-     * @param parent the parent composite
+     * @param toolkit  the form toolkit for creating styled widgets
+     * @param parent   the left-column composite to place this section inside
      */
     private void createPartitionsSection( FormToolkit toolkit, Composite parent )
     {
@@ -539,22 +584,28 @@ public class OverviewPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── Imperial Policy Panel Erected in the Briefing Room ──────────────────
+    // The policy officer posts three standing orders on the right-side board:
+    // whether civilians may enter without credentials, whether access control
+    // is actively enforced, and whether passwords are masked in reports.
+    // We build a single-column Section with three checkboxes covering the
+    // most critical directory service security flags.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Options section. This section expose a few critical options that are
-     * generally useful (allow anonymous, or enable control access atm).
-     * 
+     * Builds the Options section in the right column.
+     * Contains three checkboxes for the most commonly toggled security flags:
+     * anonymous access, access control enforcement, and hidden passwords.
+     * More obscure options live on dedicated specialist tabs.
+     *
+     * <p>For example — standing orders posted:</p>
      * <pre>
-     * +--------------------------------+
-     * | Options                        |
-     * +--------------------------------+
-     * | [X] Allow anonymous access     |
-     * | [X] Enable Access Control      |
-     * |                                |
-     * +--------------------------------+
+     *   [X] Allow Anonymous Access   — any rebel can walk in unchallenged
+     *   [X] Enable Access Control    — ACL rules are actively checked
+     *   [X] Password Hidden          — passwords never appear in plain text
      * </pre>
      *
-     * @param toolkit the toolkit
-     * @param parent the parent composite
+     * @param toolkit  the form toolkit for creating styled widgets
+     * @param parent   the right-column composite to place this section inside
      */
     private void createOptionsSection( FormToolkit toolkit, Composite parent )
     {
@@ -579,8 +630,18 @@ public class OverviewPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── Sentries Posted at Every Control Panel ───────────────────────────────
+    // Tarkin gives the order: "Station a guard at every switch, button, and
+    // dial on this briefing room floor." Each sentry knows exactly what to
+    // report back when their control is touched.
+    // We attach all the pre-wired listener instances to their matching widgets,
+    // including dirty-marking so the editor knows when something has changed.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Adds listeners to UI Controls.
+     * Wires all the pre-built listener instances to their matching UI controls.
+     * Every checkbox and text field gets both a dirty listener (so the editor's
+     * Save button lights up) and its dedicated business-logic listener.
+     * Call this after loading data into the widgets to avoid spurious dirty events.
      */
     private void addListeners()
     {
@@ -630,8 +691,18 @@ public class OverviewPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── Sentries Stood Down Before Data Reload ───────────────────────────────
+    // Before the technicians update every readout on the briefing room displays,
+    // Tarkin orders the sentries to stand down — otherwise they would file a
+    // report for every single number that flips during the data refresh cycle.
+    // We detach all listeners before programmatic updates so we don't fire
+    // change events (and mark the editor dirty) when we're just loading data.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * Removes listeners to UI Controls.
+     * Detaches all listener instances from their matching UI controls.
+     * We always call this before programmatically populating widgets with
+     * model data so that the act of loading doesn't trigger dirty events.
+     * Pair every call to this method with a subsequent call to {@link #addListeners()}.
      */
     private void removeListeners()
     {
@@ -681,8 +752,20 @@ public class OverviewPage extends ServerConfigurationEditorPage
     }
 
 
+    // ── Tarkin Reviews the Updated Status Readout ────────────────────────────
+    // A fresh intelligence packet arrives; Tarkin waves the sentries aside,
+    // the technicians update every dial and indicator on all four panels, then
+    // the sentries resume their posts and Tarkin reads the current state.
+    // We pull fresh data from the DirectoryServiceBean, update every widget,
+    // and re-attach listeners so user changes are captured going forward.
+    // ────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reloads all UI controls from the current state of the configuration model.
+     * We first stand down all listeners to prevent spurious dirty events during
+     * the update, then read each transport bean, partition list, and option flag
+     * from the {@link DirectoryServiceBean} and push the values into the widgets,
+     * then reattach the listeners.
+     * This method is a no-op if the page hasn't finished initializing yet.
      */
     protected void refreshUI()
     {
@@ -722,7 +805,7 @@ public class OverviewPage extends ServerConfigurationEditorPage
 
             // Partitions
             List<PartitionBean> partitions = directoryServiceBean.getPartitions();
-            
+
             if ( partitions.size() == 1 )
             {
                 partitionsLabel.setText( Messages.getString( "OverviewPage.ThereIsOnePartitionDefined" ) ); //$NON-NLS-1$
@@ -732,7 +815,7 @@ public class OverviewPage extends ServerConfigurationEditorPage
                 partitionsLabel.setText( NLS.bind(
                     Messages.getString( "OverviewPage.ThereAreXPartitionsDefined" ), partitions.size() ) ); //$NON-NLS-1$
             }
-            
+
             partitionsTableViewer.setInput( partitions.toArray() );
 
             // Options

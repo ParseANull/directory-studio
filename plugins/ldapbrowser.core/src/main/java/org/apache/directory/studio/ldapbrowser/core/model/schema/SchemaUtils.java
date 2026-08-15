@@ -48,8 +48,20 @@ import org.apache.directory.studio.ldapbrowser.core.model.IValue;
 import org.eclipse.osgi.util.NLS;
 
 
+// ── CLASS: SchemaUtils — R2-D2 PLUGGING INTO THE JEDI ARCHIVES COMPUTER ──────
+// R2-D2 is the indispensable sidekick: when you need to cross-reference the Jedi
+// Archives — find all must-attributes, check whether a syntax is binary, walk the
+// object class hierarchy — you call R2-D2.  SchemaUtils is that sidekick: a bag
+// of static helpers that answer questions about schema elements without modifying
+// them, always using the live Schema and BrowserCorePlugin preferences.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Utility class for Schema.
+ * Static utility methods for querying and navigating LDAP schema elements.
+ * Covers name/OID extraction, binary/operational classification, transitive
+ * hierarchy walking, and entry-completeness validation.
+ *
+ * <p>Think of this as R2-D2 plugging into the Jedi Archives computer — every
+ * tricky schema question gets routed through here.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -170,12 +182,16 @@ public class SchemaUtils
     };
 
 
+    // ── R2-D2 Collects Every Alias Name From A Set Of Schema Elements ────────────
+    // R2-D2 iterates the schema object collection and gathers every name alias.
+    // Names are case-insensitively sorted via nameAndOidComparator in a TreeSet.
+    // Used by Schema.parseSchemaRecord to build the extensibleObject may-list.
+    // Returns an empty sorted set when the input collection is empty.
     /**
      * Gets the names of the given schema elements.
-     * 
+     *
      * @param asds the schema elements
-     * 
-     * @return the names
+     * @return the sorted set of all alias names across all elements
      */
     public static Collection<String> getNames( Collection<? extends AbstractSchemaObject> asds )
     {
@@ -188,12 +204,16 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Returns The Same Name Collection As A String Array ─────────────────
+    // A convenience wrapper around getNames for callers that need a String[].
+    // R2-D2 delegates to getNames and converts the sorted set to an array.
+    // The array is sorted in the same case-insensitive order as getNames.
+    // Returns an empty array when the input collection is empty.
     /**
-     * Gets the names of the given schema elements.
-     * 
+     * Gets the names of the given schema elements as a String array.
+     *
      * @param asds the schema elements
-     * 
-     * @return the names
+     * @return the sorted array of all alias names across all elements
      */
     public static String[] getNamesAsArray( Collection<? extends AbstractSchemaObject> asds )
     {
@@ -201,10 +221,16 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Extracts Only The Numeric OIDs From A Schema Collection ────────────
+    // Some callers need the raw OIDs rather than the friendly alias names.
+    // R2-D2 iterates the collection and collects each element's getOid() value.
+    // Duplicates are not filtered; callers should use a Set or de-duplicate.
+    // Returns an empty set when the input collection is empty.
     /**
-     * Get the numeric OIDs of the given schema descriptions.
-     * 
-     * @return the numeric OIDs of the given schema descriptions
+     * Gets the numeric OIDs of the given schema descriptions.
+     *
+     * @param descriptions the schema descriptions
+     * @return the set of numeric OIDs
      */
     public static Collection<String> getNumericOids( Collection<? extends AbstractSchemaObject> descriptions )
     {
@@ -218,12 +244,16 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Builds A Lowercase Set Of All OID And Name Identifiers ─────────────
+    // To do case-insensitive containment checks, R2-D2 gathers every way the
+    // schema element could be referred to: numeric OID + all alias names.
+    // Each identifier is lowercased before adding; null names are skipped.
+    // This set is used extensively by binary/operational classification checks.
     /**
-     * Gets the identifiers of the given schema descriptions.
-     * 
-     * @param asd the schema descriptions
-     * 
-     * @return the identifiers
+     * Gets all lowercase identifiers (OID and names) of the given schema element.
+     *
+     * @param asd the schema description
+     * @return the set of lowercase identifiers
      */
     public static Collection<String> getLowerCaseIdentifiers( AbstractSchemaObject asd )
     {
@@ -246,12 +276,16 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Picks The Most Human-Readable Name For A Schema Element ────────────
+    // When the UI needs to display a schema element, R2-D2 finds the best label.
+    // He prefers the first alias name (e.g. "cn") over the raw OID.
+    // Falls back to getOid() only when no alias names have been defined.
+    // Used by schemaElementNameComparator and by UI display code.
     /**
      * Gets the friendly identifier of the given schema description.
-     * This is the first name, if there is no name the numeric OID is returned.
-     * 
+     * Returns the first name if available, otherwise the numeric OID.
+     *
      * @param asd the schema description
-     * 
      * @return the friendly identifier
      */
     public static String getFriendlyIdentifier( AbstractSchemaObject asd )
@@ -264,12 +298,16 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Filters The Schema For All Operational Attribute Types ──────────────
+    // Operational attributes are the Death Star's automated systems — invisible to
+    // ordinary users but vital to the installation: createTimestamp, entryDN, etc.
+    // R2-D2 iterates the schema and returns only those marked as operational by
+    // the isOperational predicate (usage, well-known set, or dummy flag).
     /**
      * Gets all operational attribute type descriptions.
-     * 
+     *
      * @param schema the schema
-     * 
-     * @return all operational attributes types
+     * @return all operational attribute types
      */
     public static Collection<AttributeType> getOperationalAttributeDescriptions( Schema schema )
     {
@@ -285,12 +323,16 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Filters The Schema For All User-Visible Attribute Types ────────────
+    // User attributes are the blueprint panels that ordinary crew can read:
+    // cn, mail, telephoneNumber — the everyday data fields.
+    // R2-D2 returns only those for which isOperational returns false.
+    // Used by parseSchemaRecord to populate extensibleObject's may-list.
     /**
      * Gets all user (non-operational) attribute type descriptions.
-     * 
+     *
      * @param schema the schema
-     * 
-     * @return all user attributes type descriptions
+     * @return all user attribute type descriptions
      */
     public static Collection<AttributeType> getUserAttributeDescriptions( Schema schema )
     {
@@ -306,18 +348,21 @@ public class SchemaUtils
     }
 
 
+    // ── Mace Windu Tests Whether An Attribute Is A Restricted System Channel ──────
+    // Mace confronts each attribute: "are you a system channel or a user field?"
+    // An attribute is operational if its usage is not USER_APPLICATIONS, if it
+    // appears in the well-known operational set (covering AD/Samba4 gaps), or if
+    // it is a dummy placeholder lacking a real schema declaration.
     /**
      * An attribute type is marked as operational if either
      * <ul>
-     * <li>the usage differs from userApplications or</li>
-     * <li>it is a well-known operational attribute or 
-     *     (we need this because M$ AD and Samba4 don't set the USAGE flag)</li>
-     * <li>it is not declared in the schema and contains the dummy extension</li>
+     * <li>the usage differs from userApplications; or</li>
+     * <li>it is a well-known operational attribute (covering AD/Samba4 gaps); or</li>
+     * <li>it is undeclared in the schema and carries the dummy extension.</li>
      * </ul>
-     * 
+     *
      * @param atd the attribute type description
-     * 
-     * @return true, if is operational
+     * @return {@code true} if the attribute type is operational
      */
     public static boolean isOperational( AttributeType atd )
     {
@@ -327,6 +372,19 @@ public class SchemaUtils
     }
 
 
+    // ── Mace Windu Checks Whether An Attribute Can Be Modified By A User ─────────
+    // Mace confronts the question: "can a user actually write to this field?"
+    // Null ATD, non-user-modifiable flag, or membership in NON_MODIFIABLE set
+    // all trigger an immediate false — Han would shoot before writing those.
+    // Returns true only when all three barriers are cleared.
+    /**
+     * Checks whether the given attribute type can be modified by a user.
+     * Returns {@code false} if the ATD is {@code null}, not user-modifiable,
+     * or in the well-known non-modifiable set.
+     *
+     * @param atd the attribute type description
+     * @return {@code true} if the attribute type is user-modifiable
+     */
     public static boolean isModifiable( AttributeType atd )
     {
         if ( atd == null )
@@ -351,12 +409,17 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Collects Every Mandatory Attribute For An Entry's Object Classes ────
+    // R2-D2 walks every object class of the entry and collects MUST attributes
+    // transitively through the class hierarchy (via getMustATDNamesTransitive).
+    // Each name is then resolved to its AttributeType via the schema lookup.
+    // Returns an empty set when the entry has no object class descriptions.
     /**
-     * Gets the must attribute type descriptions of all object class descriptions of the given entry.
-     * 
-     * param entry the entry
-     * 
-     * @return the must attribute type descriptions of all object class descriptions of the given entry.
+     * Gets the must attribute type descriptions of all object class descriptions
+     * of the given entry (transitively).
+     *
+     * @param entry the entry
+     * @return the must attribute type descriptions
      */
     public static Collection<AttributeType> getMustAttributeTypeDescriptions( IEntry entry )
     {
@@ -379,12 +442,17 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Collects Every Optional Attribute For An Entry's Object Classes ─────
+    // Like getMustAttributeTypeDescriptions but for MAY (optional) attributes.
+    // R2-D2 walks every object class transitively and gathers the may-list names.
+    // Each name is resolved to its AttributeType via the schema lookup.
+    // Returns an empty set when the entry has no object class descriptions.
     /**
-     * Gets the may attribute type descriptions of all object class descriptions of the given entry.
-     * 
+     * Gets the may attribute type descriptions of all object class descriptions
+     * of the given entry (transitively).
+     *
      * @param entry the entry
-     * 
-     * @return the may attribute type descriptions of all object class descriptions of the given entry.
+     * @return the may attribute type descriptions
      */
     public static Collection<AttributeType> getMayAttributeTypeDescriptions( IEntry entry )
     {
@@ -407,12 +475,17 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Returns The Combined Must-And-May Attribute Set For An Entry ────────
+    // For entry-completeness validation, all allowed attributes = MUST union MAY.
+    // R2-D2 delegates to both getMust and getMay helpers and merges the results.
+    // The union is computed in a HashSet to avoid duplicates.
+    // Used by getEntryIncompleteMessages to detect unallowed attributes.
     /**
-     * Gets all attribute type descriptions of all object class descriptions of the given entry.
-     * 
+     * Gets all attribute type descriptions (must and may) of all object class
+     * descriptions of the given entry.
+     *
      * @param entry the entry
-     * 
-     * @return all attribute type descriptions of all object class descriptions of the given entry.
+     * @return all attribute type descriptions
      */
     public static Collection<AttributeType> getAllAttributeTypeDescriptions( IEntry entry )
     {
@@ -424,13 +497,16 @@ public class SchemaUtils
 
 
     ////////////////////////////////////////////////////////
+    // ── Mace Windu Checks Whether A Syntax Carries Readable Text ─────────────────
+    // Mace confronts the syntax: "are your values human-readable text?"
+    // This is simply the logical negation of isBinary(LdapSyntax).
+    // A syntax is a string if it is NOT in the binary syntax OID preferences set.
+    // Used by the value display layer to choose a text vs. hex renderer.
     /**
-     * Checks the pre-defined and user-defined binary syntax OIDs. If this
-     * syntax OID is defined as binary, false is returned..
-     * 
+     * Checks whether the given LDAP syntax carries string (not binary) values.
+     *
      * @param lsd the LDAP syntax description
-     * 
-     * @return false if the syntax is defined as binary
+     * @return {@code false} if the syntax is defined as binary
      */
     public static boolean isString( LdapSyntax lsd )
     {
@@ -438,13 +514,16 @@ public class SchemaUtils
     }
 
 
+    // ── Mace Windu Checks Whether A Syntax Carries Opaque Binary Bytes ───────────
+    // Mace confronts the syntax: "are your values raw binary blobs?"
+    // He queries the BrowserCorePlugin preference store for the user-defined set
+    // of binary syntax OIDs (uppercased for case-insensitive lookup).
+    // Returns true if the syntax OID appears in that preference set.
     /**
-     * Checks the pre-defined and user-defined binary syntax OIDs. If this
-     * syntax OID is defined as binary, true is returned..
-     * 
+     * Checks whether the given LDAP syntax carries binary (not string) values.
+     *
      * @param lsd the LDAP syntax description
-     * 
-     * @return true if the syntax is defined as binary
+     * @return {@code true} if the syntax is defined as binary
      */
     public static boolean isBinary( LdapSyntax lsd )
     {
@@ -455,14 +534,17 @@ public class SchemaUtils
     }
 
 
+    // ── Mace Windu Checks Whether An Attribute Carries Readable Text ─────────────
+    // Mace confronts the attribute: "are your values human-readable text?"
+    // This is simply the logical negation of isBinary(AttributeType, Schema).
+    // Used by the value display layer to choose a text vs. hex renderer.
+    // Returns true for attribute types not flagged as binary in any way.
     /**
-     * Checks the pre-defined and user-defined binary attribute types. If this
-     * attribute type is defined as binary, false is returned..
-     * 
+     * Checks whether the given attribute type carries string (not binary) values.
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return false if the attribute type is defined as binary
+     * @return {@code false} if the attribute type is defined as binary
      */
     public static boolean isString( AttributeType atd, Schema schema )
     {
@@ -470,14 +552,19 @@ public class SchemaUtils
     }
 
 
+    // ── Mace Windu Checks Whether An Attribute Carries Opaque Binary Bytes ───────
+    // Mace runs three checks in order: OID in the binary attribute preference set,
+    // any alias name in that set, and then the attribute's transitive syntax OID
+    // compared against the binary syntax preference set via isBinary(LdapSyntax).
+    // Returns true on the first positive match; returns false if all three pass.
     /**
-     * Checks the pre-defined and user-defined binary attribute types. If this
-     * attribute type is defined as binary, true is returned..
-     * 
+     * Checks whether the given attribute type carries binary (not string) values.
+     * Three checks are performed: binary attribute OID, binary attribute name,
+     * and binary syntax (transitively resolved).
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return true if the attribute type is defined as binary
+     * @return {@code true} if the attribute type is defined as binary
      */
     public static boolean isBinary( AttributeType atd, Schema schema )
     {
@@ -508,13 +595,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Finds All Attribute Types That Use A Given LDAP Syntax ─────────────
+    // The schema browser asks: "which attributes carry values of this syntax?"
+    // R2-D2 walks all attribute types and checks their transitive syntax OID.
+    // Results are sorted by name using schemaElementNameComparator.
+    // Used by the schema browser to populate the "Used By" panel for a syntax.
     /**
-     * Gets all attribute type descriptions using the given syntax description.
-     * 
+     * Gets all attribute type descriptions that use the given syntax description
+     * (transitively, following superior attribute types).
+     *
      * @param lsd the LDAP syntax description
      * @param schema the schema
-     * 
-     * @return all attribute type description using this syntax description
+     * @return the sorted set of attribute type descriptions using this syntax
      */
     public static Collection<AttributeType> getUsedFromAttributeTypeDescriptions( LdapSyntax lsd,
         Schema schema )
@@ -533,14 +625,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Finds All Attribute Types That Use A Given Matching Rule ───────────
+    // The schema browser asks: "which attributes use this matching rule?"
+    // R2-D2 checks equality, substring, and ordering rules for each ATD.
+    // Any match against the rule's lowercase identifiers adds the ATD to the set.
+    // Results are sorted by name using schemaElementNameComparator.
     /**
-     * Gets all attribute type descriptions using the given matching rule description.
-     * 
+     * Gets all attribute type descriptions that use the given matching rule for
+     * equality, substring, or ordering matching (transitively resolved).
+     *
      * @param mrd the matching rule description
      * @param schema the schema
-     * 
-     * @return all attribute type descriptions using this matching rule for
-     * equality, substring or ordering matching
+     * @return the sorted set of attribute type descriptions using this matching rule
      */
     public static Collection<AttributeType> getUsedFromAttributeTypeDescriptions(
         MatchingRule mrd, Schema schema )
@@ -569,15 +665,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Walks Up The ATD Hierarchy To Find The Equality Matching Rule ──────
+    // If the attribute has its own equality OID, R2-D2 returns it immediately.
+    // Otherwise he climbs the superior chain looking for the first inherited one.
+    // The climb stops when there is no superior or the superior is not in schema.
+    // Returns null if no equality matching rule is found anywhere in the chain.
     /**
-     * Gets the equality matching rule description name or OID of the given or the
-     * superior attribute type description.
-     * 
+     * Gets the equality matching rule name or OID of the given attribute type,
+     * walking up the superior chain transitively if not set directly.
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return the equality matching rule description name or OID of the given or the
-     *         superior attribute type description, may be null
+     * @return the equality matching rule name or OID, may be {@code null}
      */
     public static String getEqualityMatchingRuleNameOrNumericOidTransitive( AttributeType atd, Schema schema )
     {
@@ -596,15 +695,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Walks Up The ATD Hierarchy To Find The Substring Matching Rule ─────
+    // If the attribute has its own substring OID, R2-D2 returns it immediately.
+    // Otherwise he climbs the superior chain looking for the first inherited one.
+    // The climb stops when there is no superior or the superior is not in schema.
+    // Returns null if no substring matching rule is found anywhere in the chain.
     /**
-     * Gets the substring matching rule description name or OID of the given or the
-     * superior attribute type description.
-     * 
+     * Gets the substring matching rule name or OID of the given attribute type,
+     * walking up the superior chain transitively if not set directly.
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return the substring matching rule description name or OID of the given or the
-     *         superior attribute type description, may be null
+     * @return the substring matching rule name or OID, may be {@code null}
      */
     public static String getSubstringMatchingRuleNameOrNumericOidTransitive( AttributeType atd, Schema schema )
     {
@@ -623,15 +725,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Walks Up The ATD Hierarchy To Find The Ordering Matching Rule ──────
+    // If the attribute has its own ordering OID, R2-D2 returns it immediately.
+    // Otherwise he climbs the superior chain looking for the first inherited one.
+    // The climb stops when there is no superior or the superior is not in schema.
+    // Returns null if no ordering matching rule is found anywhere in the chain.
     /**
-     * Gets the ordering matching rule description name or OID of the given or the
-     * superior attribute type description.
-     * 
+     * Gets the ordering matching rule name or OID of the given attribute type,
+     * walking up the superior chain transitively if not set directly.
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return the ordering matching rule description name or OID of the given or the
-     *         superior attribute type description, may be null
+     * @return the ordering matching rule name or OID, may be {@code null}
      */
     public static String getOrderingMatchingRuleNameOrNumericOidTransitive( AttributeType atd, Schema schema )
     {
@@ -650,15 +755,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Walks Up The ATD Hierarchy To Find The Syntax OID ─────────────────
+    // If the attribute declares its own syntax OID, R2-D2 returns it immediately.
+    // Otherwise he climbs the superior chain looking for the first inherited syntax.
+    // The climb stops when there is no superior or the superior is not in schema.
+    // Returns null if no syntax OID is found anywhere in the inheritance chain.
     /**
-     * Gets the syntax description OID of the given or the
-     * superior attribute type description.
-     * 
+     * Gets the syntax numeric OID of the given attribute type, walking up the
+     * superior chain transitively if not set directly.
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return the syntax description OID of the given or the
-     *         superior attribute type description, may be null
+     * @return the syntax numeric OID, may be {@code null}
      */
     public static String getSyntaxNumericOidTransitive( AttributeType atd, Schema schema )
     {
@@ -677,15 +785,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Walks Up The ATD Hierarchy To Find The Syntax Length Limit ────────
+    // If the attribute declares its own syntax length (non-zero), R2-D2 returns it.
+    // Otherwise he climbs the superior chain looking for an inherited length.
+    // The climb stops when there is no superior or the superior is not in schema.
+    // Returns -1 if no non-zero syntax length is found in the inheritance chain.
     /**
-     * Gets the syntax length of the given or the
-     * superior attribute type description.
-     * 
+     * Gets the syntax length of the given attribute type, walking up the superior
+     * chain transitively if not set directly.
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return the syntax length of the given or the
-     *         superior attribute type description, may be null
+     * @return the syntax length, or {@code -1} if not set in the hierarchy
      */
     public static long getSyntaxLengthTransitive( AttributeType atd, Schema schema )
     {
@@ -704,17 +815,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Finds All Matching Rule Uses That Apply To An Attribute Type ───────
+    // The schema browser asks: "which matching rule uses reference this attribute?"
+    // R2-D2 iterates the schema's MRUD list, intersecting each rule's applicable
+    // attribute set with the ATD's lowercase identifiers.
+    // Results are returned as sorted rule names using nameAndOidComparator.
     /**
-     * Gets all matching rule description names the given attribute type
-     * description applies to according to the schema's matchin rul use
-     * descritpions.
-     * 
+     * Gets all matching rule description names that the given attribute type
+     * appears in according to the schema's matching rule use descriptions.
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return all matching rule description names this attribute type
-     *         description applies to according to the schema's matching 
-     *         rule use descriptions
+     * @return the sorted set of matching rule description names
      */
     public static Collection<String> getOtherMatchingRuleDescriptionNames( AttributeType atd, Schema schema )
     {
@@ -731,15 +843,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Finds All Attribute Types That Inherit From A Given Superior ────────
+    // The schema browser asks: "which attribute types are derived from this one?"
+    // R2-D2 walks all ATDs and checks if their superiorOid matches any of the
+    // given ATD's lowercase identifiers.
+    // Results are sorted by name using schemaElementNameComparator.
     /**
-     * Gets all attribute type descriptions using the given attribute type
-     * descriptions as superior.
-     * 
+     * Gets all attribute type descriptions that declare the given attribute type
+     * as their superior.
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return all attribute type descriptions using this attribute type
-     *         description as superior
+     * @return the sorted set of derived attribute type descriptions
      */
     public static Collection<AttributeType> getDerivedAttributeTypeDescriptions(
         AttributeType atd, Schema schema )
@@ -757,15 +872,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Finds All Object Classes That Mandate A Given Attribute ────────────
+    // The schema browser asks: "which object classes require this attribute?"
+    // R2-D2 walks all OCDs, collecting their transitive MUST attribute names,
+    // then intersects against the ATD's lowercase identifiers.
+    // Results are sorted by name using schemaElementNameComparator.
     /**
-     * Gets all object class description using the given attribute type
-     * description as must attribute.
-     * 
+     * Gets all object class descriptions that declare the given attribute type
+     * as a mandatory (MUST) attribute (transitively).
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return all object class description using the given attribute type
-     *         description as must attribute
+     * @return the sorted set of object class descriptions using the ATD as must
      */
     public static Collection<ObjectClass> getUsedAsMust( AttributeType atd, Schema schema )
     {
@@ -783,15 +901,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Finds All Object Classes That Allow A Given Attribute ──────────────
+    // The schema browser asks: "which object classes permit (but don't require) this?"
+    // R2-D2 walks all OCDs, collecting their transitive MAY attribute names,
+    // then intersects against the ATD's lowercase identifiers.
+    // Results are sorted by name using schemaElementNameComparator.
     /**
-     * Gets all object class description using the given attribute type
-     * description as may attribute.
-     * 
+     * Gets all object class descriptions that declare the given attribute type
+     * as an optional (MAY) attribute (transitively).
+     *
      * @param atd the attribute type description
      * @param schema the schema
-     * 
-     * @return all object class description using the given attribute type
-     *         description as may attribute
+     * @return the sorted set of object class descriptions using the ATD as may
      */
     public static Collection<ObjectClass> getUsedAsMay( AttributeType atd, Schema schema )
     {
@@ -809,6 +930,11 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Resolves Only The Superior OCDs That Exist In The Schema ───────────
+    // When walking the OCD hierarchy, some superiors may be unknown (dummy).
+    // R2-D2 filters the raw superior OID list to only those the schema has filed.
+    // Unknown superiors are silently skipped to keep the walk bounded.
+    // This private helper is used by the transitive must/may walkers.
     private static Collection<ObjectClass> getExistingSuperiorObjectClassDescription(
         ObjectClass ocd, Schema schema )
     {
@@ -824,13 +950,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Resolves All Direct Superior Object Classes (Including Dummies) ─────
+    // The schema browser asks: "what are this OC's direct parent classes?"
+    // Unlike getExistingSuperiorObjectClassDescription, this method includes dummy
+    // placeholders for unknown superiors so the full declared list is returned.
+    // Each superior OID is resolved via schema.getObjectClassDescription.
     /**
-     * Gets the superior object class descriptions of the given object class description.
-     * 
-     * @param ocd the bject class descriptio
+     * Gets the superior object class descriptions of the given object class
+     * description (including dummy placeholders for unknowns).
+     *
+     * @param ocd the object class description
      * @param schema the schema
-     * 
-     * @return the superior object class descriptions
+     * @return the list of superior object class descriptions
      */
     public static List<ObjectClass> getSuperiorObjectClassDescriptions( ObjectClass ocd,
         Schema schema )
@@ -844,13 +975,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Finds All Object Classes That Inherit From A Given Parent ──────────
+    // The schema browser asks: "which object classes extend this one?"
+    // R2-D2 walks all OCDs, lowercasing their superiorOids list and checking
+    // whether any match the given OCD's identifiers.
+    // Returns a flat list; does not recurse into grandchildren.
     /**
-     * Gets the sub object class descriptions of the given object class description.
-     * 
+     * Gets all object class descriptions that declare the given object class
+     * as a direct superior (i.e. immediate sub-classes).
+     *
      * @param ocd the object class description
      * @param schema the schema
-     * 
-     * @return the sub object class descriptions
+     * @return the list of sub object class descriptions
      */
     public static List<ObjectClass> getSubObjectClassDescriptions( ObjectClass ocd, Schema schema )
     {
@@ -867,15 +1003,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Collects MUST Attribute Names Transitively Up The OC Hierarchy ─────
+    // R2-D2 gathers the OC's own must-list, then recurses into each existing
+    // superior class, accumulating must-names from the full ancestor chain.
+    // The result is a case-insensitively sorted TreeSet with no duplicates.
+    // Used by getMustAttributeTypeDescriptions(IEntry) and entry validation.
     /**
-     * Gets the must attribute type description names of the given
-     * and all superior object class description, transitively.
-     * 
+     * Gets the must attribute type description names of the given and all
+     * superior object class descriptions, transitively.
+     *
      * @param ocd the object class description
      * @param schema the schema
-     * 
-     * @return the must attribute type description names of the given
-     *         and all superior object class description, transitively
+     * @return the sorted set of must attribute type description names
      */
     public static Collection<String> getMustAttributeTypeDescriptionNamesTransitive( ObjectClass ocd,
         Schema schema )
@@ -891,15 +1030,18 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Collects MAY Attribute Names Transitively Up The OC Hierarchy ──────
+    // Like getMustAttributeTypeDescriptionNamesTransitive but for MAY attributes.
+    // R2-D2 gathers the OC's own may-list, then recurses into existing superiors.
+    // The result is a case-insensitively sorted TreeSet with no duplicates.
+    // Used by getMayAttributeTypeDescriptions(IEntry) and entry validation.
     /**
-     * Gets the may attribute type description names of the given
-     * and all superior object class description, transitively.
-     * 
+     * Gets the may attribute type description names of the given and all
+     * superior object class descriptions, transitively.
+     *
      * @param ocd the object class description
      * @param schema the schema
-     * 
-     * @return the may attribute type description names of the given
-     *         and all superior object class description, transitively
+     * @return the sorted set of may attribute type description names
      */
     public static Collection<String> getMayAttributeTypeDescriptionNamesTransitive( ObjectClass ocd,
         Schema schema )
@@ -915,11 +1057,17 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Retrieves The Raw LDIF Line Stored In A Schema Element's Extension ──
+    // When a schema element is parsed, its raw LDIF definition string is stored
+    // as an extension under the key RAW_SCHEMA_DEFINITION_LDIF_VALUE.
+    // R2-D2 extracts the first value from that extension list.
+    // Returns null if the extension is absent or its list is empty.
     /**
-     * Gets the LDIF line of the given schema element, may be null.
+     * Gets the LDIF line of the given schema element stored as a
+     * {@link Schema#RAW_SCHEMA_DEFINITION_LDIF_VALUE} extension.
      *
      * @param asd the schema element
-     * @return the LDIF line of the given schema element, may be null
+     * @return the LDIF line, or {@code null} if not present
      */
     public static String getLdifLine( AbstractSchemaObject asd )
     {
@@ -929,6 +1077,11 @@ public class SchemaUtils
     }
 
 
+    // ── R2-D2 Converts A Name Collection To A Lowercase HashSet ──────────────────
+    // Before containment checks, R2-D2 lowercases all names for case-insensitivity.
+    // Null input is handled gracefully by returning an empty set.
+    // Each name in the input is individually lowercased before adding.
+    // This private helper is used throughout the OCD hierarchy walkers.
     private static Collection<String> toLowerCaseSet( Collection<String> names )
     {
         Set<String> set = new HashSet<String>();
@@ -943,12 +1096,18 @@ public class SchemaUtils
     }
 
 
+    // ── C-3PO Translates A Schema Element Into A Human-Readable String ───────────
+    // C-3PO handles two cases: LdapSyntax uses its description (or OID if blank),
+    // while everything else concatenates its alias names separated by ", ".
+    // An empty schema object returns an empty string — C-3PO stays polite.
+    // Used by schemaElementNameComparator for sorted display in the schema browser.
     /**
      * Gets the string representation of the given schema element.
-     * 
+     * For syntax descriptions: the description text (or OID if blank).
+     * For everything else: the comma-separated alias names.
+     *
      * @param asd the schema element
-     * 
-     * @return the string representation of the given schema element
+     * @return the string representation
      */
     public static String toString( AbstractSchemaObject asd )
     {
@@ -981,19 +1140,20 @@ public class SchemaUtils
     }
 
 
+    // ── Mace Windu Confronts The Entry And Demands It Justify Its Existence ──────
+    // Mace runs the full checklist: objectClass present? structural OC present?
+    // Every MUST attribute present? No unallowed attributes? No empty values?
+    // Each failure generates a localised error message added to the result list.
+    // An empty list means the entry has passed all tests — even Mace is satisfied.
     /**
-     * Checks if the given entry with its attributes is complete and return
-     * useful messages if it is not complete. The following checks are performed:
-     * 
-     * <ul>
-     * <li>The objectClass attribute must be present</li>
-     * <li>A structural object class must be present</li>
-     * <li>All mandatory attributes must be present</li>
-     * <li>All attribute must be allowed according to the object classes</li>
-     * <li>There mustn't be any empty value</li>
-     * </ul>
-     * 
-     * @return a collection with warn messages if the entry is complete, empty if the entry is complete
+     * Checks whether the given entry is complete and returns a collection of
+     * warning messages for each violation found.  An empty collection means the
+     * entry is complete.  Checks: objectClass present, structural object class
+     * present, all mandatory attributes present, no unallowed attributes, no
+     * empty values.
+     *
+     * @param entry the entry to validate
+     * @return a collection of warning messages, empty if the entry is complete
      */
     public static Collection<String> getEntryIncompleteMessages( IEntry entry )
     {

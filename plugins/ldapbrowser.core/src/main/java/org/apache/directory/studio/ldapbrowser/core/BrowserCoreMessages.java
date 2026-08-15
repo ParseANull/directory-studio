@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core;
@@ -24,8 +24,24 @@ package org.apache.directory.studio.ldapbrowser.core;
 import org.eclipse.osgi.util.NLS;
 
 
+// ── CLASS: BrowserCoreMessages — C-3PO TRANSLATING FOR THE REBEL ALLIANCE ────
+// C-3PO is fluent in over six million forms of communication — his entire
+// value is acting as the universal translator between the Rebels and whoever
+// they meet.  He holds all the phrase templates so no one else has to speak
+// alien directly.
+// This class is our C-3PO: it holds every user-facing string the browser core
+// might need to display, loaded from a localized .properties bundle at startup
+// so we can ship translated versions without touching Java source.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class contains most of the Strings used by the Plugin
+ * Provides all user-visible strings for the Browser Core plugin via Eclipse's
+ * NLS (Native Language Support) mechanism.
+ * Each public static field is automatically populated from the corresponding
+ * key in {@code browsercoremessages.properties} when the class is loaded.
+ * We never hard-code UI strings in Java — they all live here so translators
+ * can swap the .properties file without touching code.
+ * Think of this class as C-3PO: the single point of contact for all
+ * human-readable communication in the galaxy.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -34,8 +50,22 @@ public class BrowserCoreMessages extends NLS
     private static final String BUNDLE_NAME = "org.apache.directory.studio.ldapbrowser.core.browsercoremessages"; //$NON-NLS-1$
 
 
+    // ── C-3PO Steps Aside — No Instances, Just Phrases ──────────────────────────
+    // C-3PO doesn't hand himself over to the enemy — he stays back at base
+    // while his phrase book does the talking.
+    // Likewise, we block direct instantiation here because NLS populates the
+    // static fields itself; there is no need for any caller to create an object.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BrowserCoreMessages.
+     * Prevents direct instantiation of this NLS message holder.
+     * Eclipse's NLS framework populates the public static fields reflectively
+     * at class-load time; no caller ever needs to {@code new} this class.
+     *
+     * <p>For example — C-3PO explains protocol:</p>
+     * <pre>
+     *   "Sir, I am fluent in over six million forms of communication,
+     *    but I am not available for adoption. Use the phrase book."
+     * </pre>
      */
     private BrowserCoreMessages()
     {

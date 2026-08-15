@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.widgets;
 
@@ -37,10 +37,22 @@ import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.TabItem;
 
 
+// ── CLASS: ACIItemTabFolderComposite — GRAND MOFF'S DUAL-VIEW BRIDGE ──────────
+// The Grand Moff's editing console has two views of the same directive:
+// a structured visual form and a raw ACI text source.  Switching between them
+// triggers a round-trip: visual → parse-to-text or text → parse-to-visual.
+// If either parse fails an error dialog appears and the user is returned to the
+// safe view.  ACIItemTabFolderComposite manages that dual-view bridge.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This composite contains the tabs with visual and source editor.
- * It also manages the synchronization between these two tabs.
- * 
+ * SWT {@link Composite} hosting a {@link TabFolder} with two tabs:
+ * the Visual editor ({@link ACIItemVisualEditorComposite}) and the Source
+ * editor ({@link ACIItemSourceEditorComposite}).
+ * Manages bidirectional synchronisation on tab switch and exposes a unified
+ * {@code getInput()} / {@code setInput(String)} interface to the dialog.
+ * Think of this as the Grand Moff's dual-view bridge: flip between the form
+ * and the raw text, parse on every switch, show an error and snap back if
+ * anything goes wrong.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -62,11 +74,17 @@ public class ACIItemTabFolderComposite extends Composite
     private ACIItemSourceEditorComposite sourceComposite;
 
 
+    // ── CONSTRUCT THE DUAL-VIEW BRIDGE ────────────────────────────────────────
+    // The two-tab layout is built: visual tab first (index 0), source tab
+    // second (index 1); then the tab-switch listener is installed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of TabFolderComposite.
+     * Creates a new {@code ACIItemTabFolderComposite}.
+     * Builds the tab folder, creates the visual and source tabs, and wires
+     * the tab-selection listener that synchronises them.
      *
-     * @param parent
-     * @param style
+     * @param parent  the parent composite
+     * @param style   SWT style bits
      */
     public ACIItemTabFolderComposite( Composite parent, int style )
     {
@@ -84,9 +102,13 @@ public class ACIItemTabFolderComposite extends Composite
     }
 
 
+    // ── WIRE THE TAB-SWITCH LISTENER ──────────────────────────────────────────
+    // When the officer clicks a tab the listener fires tabSelected() which
+    // handles the round-trip parse.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the listeners.
-     *
+     * Installs the tab-selection listener that triggers synchronisation
+     * between the visual and source editors on every tab switch.
      */
     private void initListeners()
     {
@@ -101,9 +123,13 @@ public class ACIItemTabFolderComposite extends Composite
     }
 
 
+    // ── BUILD THE SOURCE TAB ──────────────────────────────────────────────────
+    // The source tab wraps ACIItemSourceEditorComposite in its own container
+    // so the editor fills the tab page.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the source tab and configures the source editor.
-     *
+     * Creates the source tab, instantiates the {@link ACIItemSourceEditorComposite},
+     * and adds the tab to the tab folder at {@link #SOURCE_TAB_INDEX}.
      */
     private void createSourceTab()
     {
@@ -125,9 +151,12 @@ public class ACIItemTabFolderComposite extends Composite
     }
 
 
+    // ── BUILD THE VISUAL TAB ──────────────────────────────────────────────────
+    // The visual tab wraps ACIItemVisualEditorComposite in its own container.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the visual tab and the GUI editor.
-     *
+     * Creates the visual tab, instantiates the {@link ACIItemVisualEditorComposite},
+     * and adds the tab to the tab folder at {@link #VISUAL_TAB_INDEX}.
      */
     private void createVisualTab()
     {
@@ -147,9 +176,9 @@ public class ACIItemTabFolderComposite extends Composite
     }
 
 
+    // ── CREATE THE TAB FOLDER ─────────────────────────────────────────────────
     /**
-     * Creates the tab folder and the listeners.
-     *
+     * Instantiates the {@link TabFolder} with tabs at the top.
      */
     private void createTabFolder()
     {
@@ -158,9 +187,16 @@ public class ACIItemTabFolderComposite extends Composite
     }
 
 
-    /** 
-     * Called, when a tab is selected. This method manages the synchronization
-     * between visual and source editor.
+    // ── HANDLE TAB SWITCH ─────────────────────────────────────────────────────
+    // Switching to source: serialise the visual editor to ACI text and load it.
+    // Switching to visual: parse the source text and load the visual editor.
+    // On either parse failure: show an error dialog and return to the safe tab.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Called when the officer clicks a tab.
+     * Synchronises the editors: on switch-to-source, serialises the visual model;
+     * on switch-to-visual, parses the source text.
+     * On parse failure shows an error dialog and returns to the previous tab.
      */
     private void tabSelected()
     {
@@ -205,11 +241,24 @@ public class ACIItemTabFolderComposite extends Composite
     }
 
 
+    // ── SET INPUT TO BOTH EDITORS ─────────────────────────────────────────────
+    // The dialog calls this when it opens to pre-fill both views from the
+    // existing ACI string.  If the string fails to parse as ACI, the source
+    // tab is activated so the officer can see the raw text and fix it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the input to both the source editor and to the visual editor.
-     * If the syntax is invalid the source editor is activated. 
+     * Loads {@code input} into both the source editor and the visual editor.
+     * If the visual editor cannot parse the input, shows an error dialog and
+     * activates the source tab.
      *
-     * @param input The string representation of the ACI item
+     * <p>For example — the dialog opens with an existing ACI item:</p>
+     * <pre>
+     *   tabFolder.setInput(existingAciString);
+     *   // → source editor shows raw text
+     *   // → visual editor populates all four sub-tabs from parsed ACI
+     * </pre>
+     *
+     * @param input  the ACI string to load
      */
     public void setInput( String input )
     {
@@ -233,13 +282,17 @@ public class ACIItemTabFolderComposite extends Composite
     }
 
 
+    // ── GET INPUT FROM THE ACTIVE EDITOR ──────────────────────────────────────
+    // The dialog calls this on Format or Check Syntax to get the current value.
+    // We delegate to whichever tab is currently active.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the string representation of the ACI item.
-     * A syntax check is performed before returning the input, an 
-     * invalid syntax causes a ParseException.
+     * Returns the ACI string from the currently active tab.
+     * Performs a syntax check before returning; throws {@link ParseException}
+     * if the current content is invalid.
      *
-     * @return the valid string representation of the ACI item
-     * @throws ParseException it the syntax check fails.
+     * @return the valid ACI string from the active editor
+     * @throws ParseException  if the active editor's content fails to parse
      */
     public String getInput() throws ParseException
     {
@@ -257,10 +310,15 @@ public class ACIItemTabFolderComposite extends Composite
     }
 
 
+    // ── SET THE CONNECTION CONTEXT ────────────────────────────────────────────
+    // The context (connection + entry + ACI string) is needed by the visual
+    // and source editors for schema-driven content assist.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the context.
-     * 
-     * @param context the context
+     * Passes the {@link ACIItemValueWithContext} to both editors so they can
+     * use the connection's schema for content assist.
+     *
+     * @param context  the value context carrying connection and entry information
      */
     public void setContext( ACIItemValueWithContext context )
     {
@@ -269,8 +327,10 @@ public class ACIItemTabFolderComposite extends Composite
     }
 
 
+    // ── FORMAT THE SOURCE EDITOR CONTENT ──────────────────────────────────────
     /**
-     * Formats the content.
+     * Triggers pretty-printing in the source editor.
+     * The visual editor does not currently support formatting.
      */
     public void format()
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 
 package org.apache.directory.studio.schemaeditor.view.editors.objectclass;
@@ -84,8 +84,23 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: ObjectClassEditorOverviewPage — LUKE'S BINARY SUNSET ON TATOOINE ──
+// Luke Skywalker stands at the edge of the Lars moisture farm as the twin suns
+// sink toward the desert horizon — the full sweep of Tatooine laid out before
+// him, every moisture vaporator, every dune, the whole picture at once.
+// This page is that view: it lays out everything about an object class in a
+// single scrollable form — aliases, OID, schema, description, superior classes,
+// class type (ABSTRACT/AUXILIARY/STRUCTURAL), obsolete flag, mandatory
+// attributes, and optional attributes — all visible and editable at a glance.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is the Overview Page of the Object Class Editor
+ * The Overview page inside the {@link ObjectClassEditor}.
+ * It presents all properties of an LDAP {@link ObjectClass} in a structured,
+ * form-based GUI with sections for general information and attribute lists.
+ * Users can edit names, OID, description, superiors, class type, and attribute
+ * type memberships directly, with real-time validation of the OID field.
+ * Think of it as Luke's horizon view — everything is spread out in front of you
+ * so you can understand the object class without reading raw schema syntax.
  */
 public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
 {
@@ -813,10 +828,20 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     };
 
 
+    // ── Luke Steps Outside to Watch the Suns ──────────────────────────────────
+    // Luke steps through the dome door of the Lars homestead, finds his spot
+    // on the ridge, and looks out at both suns simultaneously — the full
+    // panorama. This constructor sets up the page's tab label, grabs a reference
+    // to the schema handler so we can react to external schema changes, and
+    // registers our listener so the view stays current as the schema evolves.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Default constructor.
-     * 
-     * @param editor the associated editor
+     * Creates the Overview page and registers it with the parent editor and the schema handler.
+     * We hook into the schema handler here so the page can refresh itself whenever an
+     * attribute type, object class, or schema is added, modified, or removed externally —
+     * keeping the displayed data consistent with the live schema state.
+     *
+     * @param editor  the parent {@link ObjectClassEditor} that owns this page
      */
     public ObjectClassEditorOverviewPage( ObjectClassEditor editor )
     {
@@ -826,8 +851,25 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Takes in the Full Horizon ────────────────────────────────────────
+    // Luke stands on the ridge and the whole landscape unfolds: left section
+    // for the moisture vaporators (general information), right sections for
+    // the mandatory crops and optional trade goods (attribute sections).
+    // This method builds the complete form layout — general information section
+    // at the top, then mandatory and optional attribute sections side by side.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the entire Overview page UI.
+     * We create three sections: a full-width "General Information" section
+     * containing names, OID, schema, description, superiors, class type, and
+     * obsolete flag; then a two-column row with "Mandatory Attributes" on the
+     * left and "Optional Attributes" on the right.
+     * After building the widgets, we populate them from the working object class
+     * and attach all event listeners.
+     *
+     * @param managedForm  the Eclipse Forms managed form hosting this page
      */
     protected void createFormContent( IManagedForm managedForm )
     {
@@ -863,13 +905,22 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Scans the Left Horizon — General Details ─────────────────────────
+    // Luke's eyes sweep across the left side of the horizon — the homestead
+    // itself, identifying it by name, coordinates, schema document, a description
+    // plaque, the list of parent moisture farms it inherits from, its category
+    // (ABSTRACT/AUXILIARY/STRUCTURAL), and whether it's been decommissioned.
+    // This method builds the General Information section with all those fields.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the General Information Section.
+     * Builds the "General Information" form section.
+     * This section contains: Aliases (text + button), OID, Schema (hyperlink),
+     * Description, Superior Classes (table with add/remove), Class Type (combo),
+     * and Obsolete (checkbox). It's laid out as a two-column grid inside an
+     * expanded Eclipse Forms section widget.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the FormToolKit to use
+     * @param parent   the parent composite to attach the section to
+     * @param toolkit  the {@link FormToolkit} used to create styled widgets
      */
     private void createGeneralInformationSection( Composite parent, FormToolkit toolkit )
     {
@@ -966,13 +1017,21 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Looks at the Left Crop Section — Required Harvests ───────────────
+    // On the left side of Luke's horizon view are the moisture vaporators that
+    // must run — the mandatory infrastructure without which the farm can't exist.
+    // This method builds the "Mandatory Attributes" section: a table listing
+    // all the MUST attribute types for this object class, with Add and Remove
+    // buttons so the user can manage the list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Mandatory Attributes Section.
+     * Builds the "Mandatory Attributes" form section.
+     * This section contains a table listing all MUST (required) attribute types
+     * for the object class, along with Add and Remove buttons.
+     * Double-clicking a row navigates to the attribute type's own editor.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the FormToolKit to use
+     * @param parent   the parent composite (typically the bottom two-column composite)
+     * @param toolkit  the {@link FormToolkit} used to create styled widgets
      */
     private void createMandatoryAttributesSection( Composite parent, FormToolkit toolkit )
     {
@@ -1014,13 +1073,21 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Looks at the Right Crop Section — Optional Harvests ─────────────
+    // On the right side of Luke's horizon are the trade goods the farm might
+    // produce — not strictly required, but available if conditions allow.
+    // This method builds the "Optional Attributes" section: a table listing
+    // all the MAY attribute types for this object class, with Add and Remove
+    // buttons so the user can manage the list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Optional Attributes Section.
+     * Builds the "Optional Attributes" form section.
+     * This section contains a table listing all MAY (optional) attribute types
+     * for the object class, along with Add and Remove buttons.
+     * Double-clicking a row navigates to the attribute type's own editor.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the FormToolKit to use
+     * @param parent   the parent composite (typically the bottom two-column composite)
+     * @param toolkit  the {@link FormToolkit} used to create styled widgets
      */
     private void createOptionalAttributesSection( Composite parent, FormToolkit toolkit )
     {
@@ -1062,8 +1129,22 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Reads Every Label on the Horizon ─────────────────────────────────
+    // Luke takes a mental inventory of everything in view: the farm's name
+    // tags, the OID coordinates of each unit, the schema document, the
+    // description plaque, the list of ancestor farms, the classification
+    // type, the obsolete flag, and every attribute in every table.
+    // This method pushes all of those values from the working object class
+    // into the corresponding UI widgets.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Populates every widget in the Overview page from the current working object class.
+     * We read the modified object class (which holds all in-progress edits) and push
+     * each field value into the corresponding widget — aliases, OID, schema name,
+     * description, superiors, class type, obsolete flag, mandatory attributes,
+     * and optional attributes.
      */
     protected void fillInUiFields()
     {
@@ -1112,8 +1193,14 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Scans the Ancestor Line on the Horizon ───────────────────────────
+    // Luke identifies the chain of moisture farms this homestead descends from —
+    // each one listed in the superiors table so the inheritance chain is visible.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Fills in the Superiors Table.
+     * Refreshes the Superiors table from the working object class's superior OID list.
+     * We hand the list of superior OID strings to the table viewer; the content
+     * provider resolves each one to an {@link ObjectClass} object (or a stub).
      */
     private void fillInSuperiorsTable()
     {
@@ -1124,8 +1211,15 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Reads the Farm Classification Placard ────────────────────────────
+    // Each moisture farm on Tatooine is classified as a primary installation,
+    // a support facility, or a planning concept — Luke reads the placard and
+    // populates the combo with those three options.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Class Type Combo
+     * Populates the Class Type combo with the three valid LDAP object class types.
+     * The three options are ABSTRACT (index 0), AUXILIARY (index 1), and STRUCTURAL (index 2),
+     * in that order. We load labels from the NLS message bundle.
      */
     private void initClassTypeCombo()
     {
@@ -1135,8 +1229,15 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Selects the Right Classification Placard ─────────────────────────
+    // Luke reads the object class's current classification and points to the
+    // corresponding option in the combo — ABSTRACT means "planning concept,"
+    // AUXILIARY means "support facility," STRUCTURAL means "primary installation."
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Fills in the Class Type Combo
+     * Selects the correct item in the Class Type combo based on the working object class type.
+     * ABSTRACT selects index 0, AUXILIARY selects index 1, STRUCTURAL selects index 2.
+     * This is called during UI initialization and after external schema changes.
      */
     private void fillInClassType()
     {
@@ -1157,8 +1258,15 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Counts the Required Vaporator Units ──────────────────────────────
+    // Luke counts the moisture vaporators that must be running — the mandatory
+    // resources without which the farm cannot function — and lists them
+    // in the left-hand section of his mental map.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Mandatory Attributes Table
+     * Refreshes the Mandatory Attributes table from the working object class's MUST list.
+     * We hand the list of MUST attribute type OID strings to the table viewer; the
+     * content provider resolves each one to an {@link AttributeType} (or a stub).
      */
     private void fillInMandatoryAttributesTable()
     {
@@ -1169,8 +1277,15 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Counts the Optional Trade Goods ─────────────────────────────────
+    // Luke scans the right side of his horizon: the optional extras the farm
+    // might produce — each one listed in the optional attributes table but
+    // not strictly required for the farm to be viable.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the Optional Attributes Table
+     * Refreshes the Optional Attributes table from the working object class's MAY list.
+     * We hand the list of MAY attribute type OID strings to the table viewer; the
+     * content provider resolves each one to an {@link AttributeType} (or a stub).
      */
     private void fillInOptionalAttributesTable()
     {
@@ -1181,8 +1296,18 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Attaches His Sensors to Every Station ────────────────────────────
+    // Luke doesn't just look passively — he wires up sensors to every station
+    // on the horizon so any change triggers an update. Every widget on this page
+    // gets a listener so user edits are immediately reflected in the working copy.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Attaches all event listeners to the page's widgets.
+     * Each listener updates the working object class when the user edits a field,
+     * then calls {@link #setEditorDirty()} to mark the editor as having unsaved changes.
+     * We also add a mouse wheel filter to suppress accidental scrolling on Combo widgets.
      */
     protected void addListeners()
     {
@@ -1208,8 +1333,19 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Detaches His Sensors ─────────────────────────────────────────────
+    // When Luke goes inside for dinner, he deactivates the external sensors —
+    // no point reacting to wind changes when you're not watching the horizon.
+    // We do the same before a UI refresh so our listeners don't fire on our own
+    // programmatic changes, and when the page is disposed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Removes all event listeners from the page's widgets.
+     * This is called before a programmatic UI refresh (to suppress spurious events)
+     * and on page disposal to prevent memory leaks and stale callbacks.
+     * We also remove the mouse wheel filter added in {@link #addListeners()}.
      */
     protected void removeListeners()
     {
@@ -1235,8 +1371,18 @@ public class ObjectClassEditorOverviewPage extends AbstractObjectClassEditorPage
     }
 
 
+    // ── Luke Walks Back Inside — Sunset Over ──────────────────────────────────
+    // When the twin suns have set and the viewing is done, Luke turns away from
+    // the horizon and goes back inside — deregistering from the environment so
+    // there's no lingering connection to the now-dark landscape.
+    // We do the same: remove our schema handler listener before the page is torn down.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Cleans up this page when it is disposed.
+     * We remove our {@link SchemaHandlerListener} from the schema handler to
+     * prevent stale callbacks and memory leaks after the editor tab is closed.
      */
     public void dispose()
     {

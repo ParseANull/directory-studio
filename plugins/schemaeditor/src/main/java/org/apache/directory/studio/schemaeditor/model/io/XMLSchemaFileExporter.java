@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 package org.apache.directory.studio.schemaeditor.model.io;
 
@@ -40,8 +40,21 @@ import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
 
 
+// ── CLASS: XMLSchemaFileExporter — Yoda Lifting Schema into XML Form ──────────
+// Luke's X-wing is buried in the Dagobah swamp — it's real, it's intact, but
+// it's in the wrong form.  Yoda uses the Force to transform it from "sunken
+// object" to "airworthy ship" without changing a single bolt.  This class does
+// the same: it takes fully-formed Schema objects and lifts them into pretty-printed
+// XML — attribute types, object classes, matching rules, and syntaxes all
+// serialised into a form that can be saved, shared, and re-imported later.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to export a Schema file into the XML Format.
+ * Converts {@link Schema} objects into Apache Directory Studio's own XML format,
+ * which is used for project save files and export operations.
+ * All four schema element types are supported: attribute types, object classes,
+ * matching rules, and syntaxes.  The output is UTF-8 pretty-printed XML.
+ * Think of this class as Yoda: it takes something real but in the wrong form
+ * (Java objects) and transforms it into something usable (XML on disk).
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -83,15 +96,17 @@ public class XMLSchemaFileExporter
     private static final String USAGE_TAG = "usage"; //$NON-NLS-1$
 
 
+    // ── Yoda Lifts One X-Wing into Flight-Ready Form ──────────────────────────
+    // One schema, one focused effort — Yoda raises it from Java memory into a
+    // pretty-printed XML string ready to be written to a .lsd file.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Converts the given schema to its source code representation
-     * in XML file format.
+     * Converts a single {@link Schema} to its Studio XML representation.
+     * The result is a UTF-8 pretty-printed XML string with a {@code <schema>} root.
      *
-     * @param schema
-     *      the schema to convert
-     * @return
-     *      the corresponding source code representation
-     * @throws IOException
+     * @param schema  the schema to convert — must not be null
+     * @return        the XML string
+     * @throws IOException  if the internal ByteArrayOutputStream somehow fails to write
      */
     public static String toXml( Schema schema ) throws IOException
     {
@@ -116,15 +131,18 @@ public class XMLSchemaFileExporter
     }
 
 
+    // ── Yoda Lifts a Whole Squadron at Once ──────────────────────────────────
+    // Multiple schemas, one concentrated effort — Yoda raises them all under a
+    // shared {@code <schemas>} wrapper, pretty-printed as a single XML string.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Converts the given schemas to their source code representation
-     * in one XML file format.
+     * Converts an array of {@link Schema} objects to a single XML string with a
+     * {@code <schemas>} root element.
+     * Used when exporting multiple schemas in one file (e.g. for project backups).
      *
-     * @param schemas
-     *      the array of schemas to convert
-     * @return
-     *      the corresponding source code representation
-     * @throws IOException
+     * @param schemas  the schemas to convert — may be empty but not null
+     * @return         the XML string
+     * @throws IOException  if serialisation fails
      */
     public static String toXml( Schema[] schemas ) throws IOException
     {
@@ -148,14 +166,18 @@ public class XMLSchemaFileExporter
     }
 
 
+    // ── Yoda Raises a Fleet and Docks Them Under One Canopy ──────────────────
+    // Multiple X-wings raised and parked neatly under a {@code <schemas>} hangar
+    // element — this is the shared helper that both toXml(Schema[]) and
+    // ProjectsExporter use to add schema lists into a parent DOM branch.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Add the XML representation of the given schemas
-     * to the given branch.
+     * Adds a {@code <schemas>} element containing one {@code <schema>} child per
+     * entry in the array to the given DOM branch.
+     * This is the shared building block used by both single-file and project exports.
      *
-     * @param schemas
-     *      the schemas
-     * @param branch
-     *      the branch
+     * @param schemas  the schemas to add — may be null (produces an empty element)
+     * @param branch   the DOM branch to attach to
      */
     public static void addSchemas( Schema[] schemas, Branch branch )
     {
@@ -171,14 +193,18 @@ public class XMLSchemaFileExporter
     }
 
 
+    // ── Yoda Raises a Single Ship and Stows Its Cargo ────────────────────────
+    // One schema is lifted into a {@code <schema>} DOM element, its name recorded
+    // as an attribute, and each category of schema object (attribute types, object
+    // classes, matching rules, syntaxes) stowed as a child group.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Add the XML representation of the given schema
-     * to the given branch.
+     * Adds a {@code <schema>} element to the given DOM branch.
+     * Emits child groups for attribute types, object classes, matching rules,
+     * and syntaxes — only the groups that have at least one element are written.
      *
-     * @param schema
-     *      the schema
-     * @param branch
-     *      the branch
+     * @param schema  the schema to serialise — must not be null
+     * @param branch  the DOM branch to attach to
      */
     public static void addSchema( Schema schema, Branch branch )
     {
@@ -239,13 +265,16 @@ public class XMLSchemaFileExporter
     }
 
 
+    // ── Yoda Lifts an Attribute-Type Component into XML Form ─────────────────
+    // One fuselage panel — an attribute type — raised and placed precisely into
+    // the DOM tree, every property as a child element or attribute.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the given attribute type to its root Element.
+     * Adds an {@code <attributetype>} element to the given root element, encoding
+     * all properties of the given {@link AttributeType} as child elements and attributes.
      *
-     * @param at
-     *      the attribute type
-     * @param root
-     *      the root Element
+     * @param at    the attribute type to serialise — must not be null
+     * @param root  the parent element to add to
      */
     private static void toXml( AttributeType at, Element root )
     {
@@ -367,13 +396,16 @@ public class XMLSchemaFileExporter
     }
 
 
+    // ── Yoda Lifts an Object-Class Hull Section into XML Form ─────────────────
+    // Another component — an object class — raised and serialised precisely:
+    // OID, aliases, description, superiors, type, obsolete flag, must/may lists.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the given object class to its root Element.
+     * Adds an {@code <objectclass>} element to the given root element, encoding
+     * all properties of the given {@link ObjectClass} as child elements and attributes.
      *
-     * @param oc
-     *      the object class to convert
-     * @param root
-     *      the root Element
+     * @param oc    the object class to serialise — must not be null
+     * @param root  the parent element to add to
      */
     private static void toXml( ObjectClass oc, Element root )
     {
@@ -456,13 +488,15 @@ public class XMLSchemaFileExporter
     }
 
 
+    // ── Yoda Lifts a Matching-Rule Component into XML Form ────────────────────
+    // A matching rule — OID, aliases, description, obsolete, syntax OID —
+    // raised and placed into a {@code <matchingrule>} element.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds the given matching rule to its root Element.
+     * Adds a {@code <matchingrule>} element to the given root element.
      *
-     * @param mr
-     *      the matching rule to convert
-     * @param root
-     *      the root Element
+     * @param mr    the matching rule to serialise — must not be null
+     * @param root  the parent element to add to
      */
     private static void toXml( MatchingRule mr, Element root )
     {
@@ -512,16 +546,15 @@ public class XMLSchemaFileExporter
     }
 
 
+    // ── Yoda Lifts a Syntax Pod into XML Form ────────────────────────────────
+    // A syntax definition — OID, aliases, description, obsolete, human-readable —
+    // raised and placed into a {@code <syntax>} element.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Converts the given syntax to its source code representation
-     * in XML file format.
+     * Adds a {@code <syntax>} element to the given root element.
      *
-     * @param syntax
-     *      the syntax to convert
-     * @param root
-     *      the root Element
-     * @return
-     *      the corresponding source code representation
+     * @param syntax  the syntax to serialise — must not be null
+     * @param root    the parent element to add to
      */
     private static void toXml( LdapSyntax syntax, Element root )
     {

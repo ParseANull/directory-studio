@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -59,9 +59,15 @@ import org.apache.directory.studio.openldap.syncrepl.SyncRepl;
 import org.apache.directory.studio.openldap.syncrepl.Type;
 
 
+// Like Leia's hologram flickering to life with urgent intelligence from the
+// Rebel fleet — bringing the administrator a focused briefing on replication
+// options: what type of sync to use, how often to poll, how to retry on
+// failure, how long to keep the connection alive, how to handle size and time
+// limits, whether to validate schema, and whether to enable delta SyncRepl
+// with its log source, base DN, and filter — we project this dialog.
 /**
  * The ReplicationOptionsDialog is used to edit the replication options of a SyncRepl consumer.
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ReplicationOptionsDialog extends Dialog
@@ -111,7 +117,7 @@ public class ReplicationOptionsDialog extends Dialog
         {
             // Getting the retry value
             String retryValue = null;
-            
+
             if ( syncRepl != null )
             {
                 Retry retry = syncRepl.getRetry();
@@ -168,11 +174,15 @@ public class ReplicationOptionsDialog extends Dialog
     };
 
 
+    // Like Leia's hologram appearing for the first time — projecting fresh
+    // replication intelligence from scratch when no prior SyncRepl object is
+    // available, defaulting to a new empty SyncRepl, and storing the browser
+    // connection for later DN and filter widget use — we create the dialog.
     /**
      * Creates a new instance of OverlayDialog.
-     * 
+     *
      * @param parentShell the parent shell
-     * @param index the index
+     * @param syncRepl the syncRepl to edit (or {@code null} to start with defaults)
      * @param browserConnection the connection
      */
     public ReplicationOptionsDialog( Shell parentShell, SyncRepl syncRepl, IBrowserConnection browserConnection )
@@ -192,6 +202,9 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia transmitting a clean blank intelligence packet when there is
+    // nothing yet to report — giving us a default SyncRepl configuration with
+    // all fields at their initial values — we create and return an empty SyncRepl.
     /**
      * Creates a default SyncRepl configuration.
      *
@@ -203,6 +216,10 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram labelling itself so the recipient immediately knows
+    // which briefing packet he is looking at — setting the shell title to
+    // "Replication Options" so there is no ambiguity about what this dialog covers —
+    // we configure the shell title here.
     /**
      * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
      */
@@ -214,6 +231,10 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram concluding its transmission — once the administrator
+    // clicks OK we save every widget value back into the SyncRepl object so the
+    // updated configuration is ready for the caller to retrieve via getSyncRepl() —
+    // we persist the settings before delegating to the super okPressed.
     /**
      * {@inheritDoc}
      */
@@ -226,6 +247,10 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram unfolding its full briefing inside a scrollable
+    // viewport — creating the scrolled composite, adding the replication-consumer
+    // options group and the delta-SyncRepl group, then loading all current values
+    // from the SyncRepl object — we assemble the complete dialog content area.
     /**
      * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
      */
@@ -254,8 +279,15 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram laying out the core replication parameters in one
+    // section — replication type, poll interval spinners, retry configuration
+    // with an Edit button, keep-alive spinners, size limit, time limit, network
+    // timeout, operation timeout, and schema-checking toggle — we build the
+    // Replication Consumer group.
     /**
-     * Creates the replication consumer group.
+     * Creates the replication consumer group containing replication type,
+     * interval spinners, retry field, keep-alive spinners, size limit, time limit,
+     * network timeout, timeout, and schema-checking checkbox.
      *
      * @param parent the parent composite
      */
@@ -333,6 +365,17 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram spelling out the polling schedule — exactly how many
+    // days, hours, minutes, and seconds the consumer should wait between
+    // refresh-only polls — we build the interval sub-panel with four spinners
+    // and column labels below them.
+    /**
+     * Creates the interval composites with four spinners (Days, Hours, Minutes,
+     * Seconds) and their column header labels for configuring the replication
+     * poll interval.
+     *
+     * @param parent the parent composite
+     */
     private void createIntervalComposites( Composite parent )
     {
         // Interval Label Composite
@@ -378,6 +421,17 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram detailing the connection-keepalive parameters —
+    // how long the idle connection should be maintained, how many keepalive
+    // probes to send, and at what interval — we create the three keepalive
+    // spinners with their column labels.
+    /**
+     * Creates the keep-alive composites with three spinners (Idle, Probes,
+     * Interval) and their column header labels for configuring the TCP keep-alive
+     * behaviour of the provider connection.
+     *
+     * @param parent the parent composite
+     */
     private void createKeepAliveComposites( Composite parent )
     {
         // Keep Alive Label Composite
@@ -417,6 +471,17 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram appending a second section specifically about
+    // delta-SyncRepl — the enable toggle, the sync-data source selector
+    // (access log vs. change log), the log base DN picker, and the log filter —
+    // we create the Delta SyncRepl Configuration group.
+    /**
+     * Creates the "Delta SyncRepl Configuration" group containing an enable
+     * checkbox, a sync-data source combo (Access Log / Change Log), a log base
+     * DN entry widget, and a log filter widget.
+     *
+     * @param parent the parent composite
+     */
     private void createDeltaSyncReplGroup( Composite parent )
     {
         // Replication Provider Group
@@ -471,8 +536,15 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram decoding the stored SyncRepl intelligence and
+    // populating each widget with the corresponding setting — replication type,
+    // interval spinners, retry string, keep-alive spinners, size and time limits,
+    // timeout fields, schema checking, delta-SyncRepl data source, log base DN,
+    // and log filter — we initialize the UI from the SyncRepl object.
     /**
-     * Initializes the dialog using the SyncRepl object.
+     * Initializes the dialog using the SyncRepl object, populating all widgets
+     * from the current {@link SyncRepl} state and then calling
+     * {@link #addListeners()} once the widgets are ready.
      */
     private void initFromSyncRepl()
     {
@@ -598,10 +670,14 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram summarising the retry schedule in a single line —
+    // reading the Retry object out of the SyncRepl and formatting it as a
+    // display string, or reporting "(none)" when no retry configuration exists —
+    // we return the current retry value as a human-readable string.
     /**
      * Gets the retry value.
      *
-     * @return the retry value
+     * @return the retry value as a string, or {@code "(none)"} if no retry is configured
      */
     private String getRetryValue()
     {
@@ -619,8 +695,14 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram activating its response sensors so it can detect
+    // when the administrator changes a field and immediately react by enabling
+    // or disabling dependent controls, we wire up the edit-retry button and the
+    // delta-SyncRepl enable checkbox listeners.
     /**
-     * Adds listeners.
+     * Adds listeners to the retry edit button, integer-only text fields, and
+     * the delta-SyncRepl enable checkbox so that UI interactions are handled
+     * correctly throughout the dialog.
      */
     private void addListeners()
     {
@@ -633,8 +715,15 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram encoding all the intelligence from the briefing panel
+    // back into the data packet — reading every widget's current value and writing
+    // it into the SyncRepl object so it can be transmitted to the caller — we
+    // save all fields from the dialog into the SyncRepl.
     /**
-     * Saves the content of the dialog to the SyncRepl object.
+     * Saves the content of the dialog to the SyncRepl object, writing all
+     * configured options including replication type, interval, keep-alive,
+     * size limit, time limit, timeouts, schema checking, sync data, log base
+     * DN, and log filter.
      */
     private void saveToSyncRepl()
     {
@@ -765,10 +854,14 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram reading the replication-type selector and returning
+    // the currently chosen Type enum value — Refresh And Persist or Refresh Only —
+    // so the save logic can write it into the SyncRepl without caring about the
+    // viewer machinery, we extract the selection here.
     /**
      * Gets the replication type.
      *
-     * @return the replication type
+     * @return the replication type currently selected in the combo viewer, or {@code null} if none
      */
     private Type getReplicationType()
     {
@@ -783,10 +876,15 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram reading the four interval spinners and packaging
+    // their days/hours/minutes/seconds values into an Interval object — returning
+    // null when all four are zero because an all-zero interval means "no interval
+    // configured" — we build the interval for the SyncRepl.
     /**
      * Gets the interval.
      *
-     * @return the interval
+     * @return an {@link Interval} built from the four spinner values, or {@code null}
+     *         if all spinners are zero
      */
     private Interval getInterval()
     {
@@ -804,10 +902,14 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram reading the three keepalive spinners and packaging
+    // them into a KeepAlive object — returning null when all three are zero —
+    // we build the keep-alive configuration for the SyncRepl.
     /**
      * Gets the keep alive.
      *
-     * @return the keep alive
+     * @return a {@link KeepAlive} built from the idle, probes, and interval spinner values,
+     *         or {@code null} if all three are zero
      */
     private KeepAlive getKeepAlive()
     {
@@ -824,10 +926,14 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram translating the schema-checking toggle state into
+    // the ON/OFF enum the SyncRepl model expects — enabled checkbox means ON,
+    // anything else means OFF — we return the appropriate SchemaChecking value.
     /**
      * Gets the schema checking.
      *
-     * @return the schema checking
+     * @return {@link SchemaChecking#ON} when the checkbox is selected,
+     *         {@link SchemaChecking#OFF} otherwise
      */
     private SchemaChecking getSchemaChecking()
     {
@@ -842,10 +948,15 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram reading the sync-data source selector and returning
+    // the chosen SyncData value — but only if the delta-SyncRepl feature is
+    // actually enabled; otherwise we return null to signal "no delta mode" —
+    // we build the SyncData for the SyncRepl.
     /**
      * Gets the sync data.
      *
-     * @return the sync data
+     * @return the selected {@link SyncData} value when delta SyncRepl is enabled,
+     *         or {@code null} when it is disabled
      */
     private SyncData getSyncData()
     {
@@ -863,6 +974,9 @@ public class ReplicationOptionsDialog extends Dialog
     }
 
 
+    // Like Leia's hologram being retrieved after the briefing — handing the
+    // updated SyncRepl back to the caller so it can be stored in the configuration
+    // model — we return the dialog's SyncRepl value.
     /**
      * Gets the SyncRepl value.
      *

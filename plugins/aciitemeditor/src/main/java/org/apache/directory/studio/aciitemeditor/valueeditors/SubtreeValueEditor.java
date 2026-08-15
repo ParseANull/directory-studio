@@ -29,20 +29,40 @@ import org.apache.directory.studio.valueeditors.ValueEditorManager;
 import org.eclipse.swt.widgets.Shell;
 
 
+// ── CLASS: SubtreeValueEditor — ISB SECURE-ZONE SELECTOR ─────────────────────
+// The ISB terminal for the "subtree" protected-item (or user-class) row opens
+// the full SubtreeSpecificationDialog so the officer can define the precise
+// slice of the directory to which the ACI item applies: base DN, depth limits,
+// exclusions, and an optional filter.
+// SubtreeValueEditor is the IValueEditor that opens that terminal.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * ACI item editor specific value editor to edit the SubtreeSpecification.
+ * {@link AbstractDialogStringValueEditor} for the {@code subtreeSpecification}
+ * attribute in the ACI visual editor.
+ * Opens a {@link SubtreeSpecificationDialog} when activated and stores the
+ * serialised subtree specification string as the new cell value.
+ * Think of this as the ISB secure-zone selector: parse the existing spec,
+ * open the full editor, store the confirmed result.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SubtreeValueEditor extends AbstractDialogStringValueEditor
 {
+    /** Convenience constant for empty-string comparisons used by the dialog. */
+    static final String EMPTY = ""; //$NON-NLS-1$
+
     private boolean refinementOrFilterVisible;
 
     private boolean useLocalName;
 
 
+    // ── FULL-FEATURE CONSTRUCTOR ──────────────────────────────────────────────
+    // Default constructor used by the ValueEditorManager via reflection;
+    // both refinement/filter and local-name mode are enabled.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Default constructor, used by the {@link ValueEditorManager}.
+     * Default constructor used by the {@link ValueEditorManager}.
+     * Enables both the refinement/filter panel and local-name mode.
      */
     public SubtreeValueEditor()
     {
@@ -51,11 +71,16 @@ public class SubtreeValueEditor extends AbstractDialogStringValueEditor
     }
 
 
+    // ── CONFIGURABLE CONSTRUCTOR ──────────────────────────────────────────────
+    // Used by ACI composite widgets that want to control which panels are shown
+    // and whether the base DN is displayed as a local or absolute name.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Default constructor, used by the {@link ValueEditorManager}.
+     * Creates a {@code SubtreeValueEditor} with explicit control over the
+     * optional panels.
      *
-     * @param refinementOrFilterVisible true if the refinement or filter widget should be visible
-     * @param useLocalName true to use local name for the base
+     * @param refinementOrFilterVisible  {@code true} to show the refinement/filter panel
+     * @param useLocalName               {@code true} to show the base DN as a local name
      */
     public SubtreeValueEditor( boolean refinementOrFilterVisible, boolean useLocalName )
     {
@@ -64,8 +89,24 @@ public class SubtreeValueEditor extends AbstractDialogStringValueEditor
     }
 
 
+    // ── OPEN THE SUBTREE SPECIFICATION DIALOG ─────────────────────────────────
+    // The ISB terminal opens the full SubtreeSpecificationDialog pre-filled from
+    // the wrapper.  If the officer confirms, we store the serialised spec string.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.valueeditors.AbstractDialogValueEditor#openDialog(org.eclipse.swt.widgets.Shell)
+     * Opens a {@link SubtreeSpecificationDialog} and, if the user confirms,
+     * stores the returned specification string as the new cell value.
+     *
+     * <p>For example — opening from the subtree protected-item row:</p>
+     * <pre>
+     *   cellEditor.activate();
+     *   // → SubtreeSpecificationDialog opens pre-filled
+     *   // user adjusts base and minimum depth
+     *   // → setValue("{ base \"ou=people\", minimum 1 }") is called
+     * </pre>
+     *
+     * @param shell  the parent SWT shell
+     * @return       {@code true} if the user confirmed a non-null specification
      */
     protected boolean openDialog( Shell shell )
     {
@@ -86,9 +127,17 @@ public class SubtreeValueEditor extends AbstractDialogStringValueEditor
     }
 
 
+    // ── BUILD THE RAW VALUE WRAPPER ───────────────────────────────────────────
+    // We extract the connection, entry DN, and string value from the IValue
+    // and wrap them in a SubtreeSpecificationValueWrapper for the dialog.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.valueeditors.AbstractDialogStringValueEditor#getRawValue(
-     *          org.apache.directory.studio.ldapbrowser.core.model.IValue)
+     * Returns a {@link SubtreeSpecificationValueWrapper} containing the
+     * connection, subentry DN, and specification string from {@code value}.
+     * Returns {@code null} if the super class returns a non-string raw value.
+     *
+     * @param value  the LDAP attribute value to wrap
+     * @return       the wrapper, or {@code null}
      */
     public Object getRawValue( IValue value )
     {
@@ -103,9 +152,13 @@ public class SubtreeValueEditor extends AbstractDialogStringValueEditor
         return null;
     }
 
+    // ── CLASS: SubtreeSpecificationValueWrapper — CONNECTION + DN + SPEC BUNDLE
+    // A private DTO that carries the three contextual pieces to the dialog so
+    // it can pre-populate the base DN entry widget and the spec parser.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * The SubtreeSpecificationValueWrapper is used to pass contextual
-     * information to the opened SubtreeSpecificationDialog.
+     * Private DTO that bundles the browser connection, subentry DN, and raw
+     * subtree specification string for use by {@link SubtreeSpecificationDialog}.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -121,15 +174,13 @@ public class SubtreeValueEditor extends AbstractDialogStringValueEditor
         private String subtreeSpecification;
 
 
+        // ── BUNDLE THE THREE PIECES ───────────────────────────────────────────
         /**
-         * Creates a new instance of SubtreeSpecificationValueWrapper.
+         * Creates a new {@code SubtreeSpecificationValueWrapper}.
          *
-         * @param connection
-         *      the connection
-         * @param subentryDn
-         *      the Dn of the subentry
-         * @param subtreeSpecification
-         *      the subtreeSpecification
+         * @param connection             the browser connection for DN browsing
+         * @param subentryDn             the DN of the subentry owning the attribute
+         * @param subtreeSpecification   the raw subtree specification string
          */
         private SubtreeSpecificationValueWrapper( IBrowserConnection connection, Dn subentryDn,
             String subtreeSpecification )
@@ -140,6 +191,7 @@ public class SubtreeValueEditor extends AbstractDialogStringValueEditor
         }
 
 
+        // ── STRING REPRESENTATION ─────────────────────────────────────────────
         /**
          * {@inheritDoc}
          */

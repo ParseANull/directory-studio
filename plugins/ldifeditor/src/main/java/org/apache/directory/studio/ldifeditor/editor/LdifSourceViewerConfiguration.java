@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor;
@@ -52,47 +52,80 @@ import org.eclipse.jface.text.source.SourceViewerConfiguration;
 import org.eclipse.swt.graphics.RGB;
 
 
+// ── CLASS: LdifSourceViewerConfiguration — C-3PO'S ANNOTATION ENGINE ─────────
+// C-3PO takes the raw LDIF transmission feed, routes each token to the right
+// colour channel, pops up escape-route suggestions when asked, and flags errors
+// in the margin — all without touching the raw text.
+// LdifSourceViewerConfiguration wires all of those features together:
+// syntax highlighting (presentation reconciler + damager-repairer), content
+// assist (LdifCompletionProcessor), annotation hover, text hover, the
+// incremental reconciler for error annotations, and the LDIF auto-edit strategy
+// for line continuation.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class enables the features of the editor (Syntax coloring, code completion, etc.)
+ * Eclipse {@link SourceViewerConfiguration} for the LDIF editor.
+ * Configures syntax highlighting ({@link LdifDamagerRepairer}),
+ * content assist ({@link LdifCompletionProcessor} / {@link DialogContentAssistant}),
+ * annotation hover ({@link LdifAnnotationHover}), text hover ({@link LdifTextHover}),
+ * incremental reconciling ({@link LdifReconcilingStrategy}), double-click strategy
+ * ({@link LdifDoubleClickStrategy}), and auto-edit strategy
+ * ({@link LdifAutoEditStrategy}).
+ * Think of this as C-3PO's complete annotation engine: colours, proposals,
+ * hover cards, and error markers — all assembled in one place.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
 {
+    /** The LDIF editor context. */
     private ILdifEditor editor;
 
     // Error hover and annotations
+    /** Hover that shows annotation messages in the ruler area. */
     private LdifAnnotationHover annotationHover;
 
+    /** Hover that shows annotation messages over the text. */
     private LdifTextHover textHover;
 
     // Presentation Reconciler (syntax highlight)
+    /** The presentation reconciler that drives syntax highlighting. */
     private PresentationReconciler presentationReconciler;
 
+    /** The damager-repairer that applies token colours. */
     private LdifDamagerRepairer damagerRepairer;
 
     // Content Assistent
+    /** Whether content assist is enabled for this configuration. */
     private boolean contentAssistEnabled;
 
+    /** The content assistant (lazy-created). */
     private ContentAssistant contentAssistant;
 
+    /** The completion processor that generates proposals. */
     private IContentAssistProcessor contentAssistProcessor;
 
+    /** Custom double-click strategy. */
     private LdifDoubleClickStrategy doubleClickStrategy;
 
     // Asynchronous Reconciler (annotations)
+    /** The asynchronous reconciler that triggers error annotations. */
     private MonoReconciler reconciler;
 
+    /** The reconciling strategy that computes error annotations. */
     private LdifReconcilingStrategy reconcilingStrategy;
 
+    /** Auto-edit strategies (indent + LDIF line continuation). */
     private IAutoEditStrategy[] autoEditStrategies;
 
 
+    // ── CONSTRUCT THE CONFIGURATION ───────────────────────────────────────────
+    // C-3PO reports to the annotation station and notes whether proposal
+    // generation is needed.
     /**
-     * Creates a new instance of LdifSourceViewerConfiguration.
+     * Creates a new {@code LdifSourceViewerConfiguration}.
      *
-     * @param editor
-     * @param contentAssistEnabled
+     * @param editor               the LDIF editor context
+     * @param contentAssistEnabled {@code true} to enable content assist
      */
     public LdifSourceViewerConfiguration( ILdifEditor editor, boolean contentAssistEnabled )
     {
@@ -103,15 +136,16 @@ public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── OVERRIDE A TOKEN COLOUR AT RUNTIME ───────────────────────────────────
+    // The syntax-colour preference page calls this to apply a live preview
+    // change without restarting the editor.
     /**
-     * Overwrites the style set in preference store
+     * Overrides the colour and style for the token category identified by {@code key},
+     * then forces the presentation reconciler to repaint by updating the damager-repairer.
      *
-     * @param key
-     *      the key
-     * @param rgb
-     *      the color
-     * @param style
-     *      the stule
+     * @param key    the preference key (e.g. {@code PREFERENCE_LDIFEDITOR_SYNTAX_COMMENT})
+     * @param rgb    the new colour
+     * @param style  the new SWT font style
      */
     public void setTextAttribute( String key, RGB rgb, int style )
     {
@@ -119,8 +153,12 @@ public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── REPORT THE PARTITIONING ID ────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns the LDIF partitioning ID from
+     * {@link LdifDocumentSetupParticipant#LDIF_PARTITIONING}.</p>
      */
     public String getConfiguredDocumentPartitioning( ISourceViewer sourceViewer )
     {
@@ -128,8 +166,12 @@ public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── REPORT THE SUPPORTED CONTENT TYPES ───────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns {@link IDocument#DEFAULT_CONTENT_TYPE} and
+     * {@link LdifPartitionScanner#LDIF_RECORD}.</p>
      */
     public String[] getConfiguredContentTypes( ISourceViewer sourceViewer )
     {
@@ -138,8 +180,11 @@ public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── RETURN THE DOUBLE-CLICK STRATEGY ─────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns the {@link LdifDoubleClickStrategy} (lazy-created).</p>
      */
     public ITextDoubleClickStrategy getDoubleClickStrategy( ISourceViewer sourceViewer, String contentType )
     {
@@ -151,8 +196,14 @@ public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── BUILD THE PRESENTATION RECONCILER ────────────────────────────────────
+    // C-3PO installs one damager-repairer for both the default partition and
+    // the LDIF_RECORD partition — the same rule set applies throughout.
     /**
      * {@inheritDoc}
+     *
+     * <p>Creates a {@link PresentationReconciler} with a single
+     * {@link LdifDamagerRepairer} registered for both content types.</p>
      */
     public IPresentationReconciler getPresentationReconciler( ISourceViewer sourceViewer )
     {
@@ -175,8 +226,14 @@ public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── BUILD THE INCREMENTAL RECONCILER ─────────────────────────────────────
+    // C-3PO wires up the background reconciler that fires error annotations
+    // 500 ms after each keystroke.
     /**
      * {@inheritDoc}
+     *
+     * <p>Creates a {@link MonoReconciler} backed by {@link LdifReconcilingStrategy}
+     * with a 500 ms delay (lazy-created).</p>
      */
     public IReconciler getReconciler( ISourceViewer sourceViewer )
     {
@@ -203,8 +260,16 @@ public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── BUILD THE CONTENT ASSISTANT ───────────────────────────────────────────
+    // R2-D2 pops up an escape-route list on Ctrl+Space if content assist is
+    // enabled; returns null otherwise.
     /**
      * {@inheritDoc}
+     *
+     * <p>Creates a {@link DialogContentAssistant} backed by
+     * {@link LdifCompletionProcessor} if content assist is enabled.
+     * Auto-insert, auto-activation, and delay are read from the preference store.
+     * Returns {@code null} if content assist is disabled.</p>
      */
     public IContentAssistant getContentAssistant( ISourceViewer sourceViewer )
     {
@@ -245,8 +310,11 @@ public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── RETURN THE ANNOTATION HOVER ───────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns the {@link LdifAnnotationHover} (lazy-created).</p>
      */
     public IAnnotationHover getAnnotationHover( ISourceViewer sourceViewer )
     {
@@ -258,8 +326,11 @@ public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── RETURN THE TEXT HOVER ─────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns the {@link LdifTextHover} (lazy-created).</p>
      */
     public ITextHover getTextHover( ISourceViewer sourceViewer, String contentType )
     {
@@ -271,8 +342,13 @@ public class LdifSourceViewerConfiguration extends SourceViewerConfiguration
     }
 
 
+    // ── RETURN THE AUTO-EDIT STRATEGIES ──────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Returns an array of two strategies: a
+     * {@link DefaultIndentLineAutoEditStrategy} and an
+     * {@link LdifAutoEditStrategy} (lazy-created).</p>
      */
     public IAutoEditStrategy[] getAutoEditStrategies( ISourceViewer sourceViewer, String contentType )
     {

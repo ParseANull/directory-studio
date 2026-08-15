@@ -25,18 +25,43 @@ import org.apache.directory.studio.openldap.config.acl.OpenLdapAclValueWithConte
 import org.apache.directory.studio.openldap.config.acl.model.AclWhoClauseStar;
 
 
+// ── CLASS: WhoClauseStarComposite — TARKIN GRANTING ACCESS TO ALL REQUESTORS ─
+// Grand Moff Tarkin applies the ACL rule to every requestor: "by *". The star
+// who-clause requires no additional configuration, so this composite is a no-op
+// leaf that stores the clause reference only.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * 
+ * A clause composite for the wildcard ({@code *}) who-clause ("by *"). No SWT
+ * controls are required — this is a no-op leaf that stores the clause reference only.
+ *
+ * <p>Think of this class as Grand Moff Tarkin matching every requestor — the
+ * catch-all clause that follows all specific rules.</p>
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class WhoClauseStarComposite extends AbstractWhoClauseComposite<AclWhoClauseStar>
 {
+    // ── Constructor With Explicit Clause ──────────────────────────────────────
+    /**
+     * Creates a new star who-clause composite with an explicit clause.
+     *
+     * @param context               The ACL context.
+     * @param clause                The wildcard who-clause to store.
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhoClauseStarComposite( OpenLdapAclValueWithContext context, AclWhoClauseStar clause, Composite visualEditorComposite )
     {
         super( context, clause, visualEditorComposite );
     }
 
 
+    // ── Constructor Without Explicit Clause ───────────────────────────────────
+    /**
+     * Creates a new star who-clause composite with a default {@link AclWhoClauseStar} instance.
+     *
+     * @param context               The ACL context.
+     * @param visualEditorComposite The visual editor composite.
+     */
     public WhoClauseStarComposite( OpenLdapAclValueWithContext context, Composite visualEditorComposite )
     {
         super( context, new AclWhoClauseStar(), visualEditorComposite );

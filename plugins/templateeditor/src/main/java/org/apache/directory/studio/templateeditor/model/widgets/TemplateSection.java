@@ -6,43 +6,61 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.model.widgets;
 
 
+// ── CLASS: TemplateSection — C-3PO DECODING A GROUPED COMMUNIQUÉ SECTION ─────────
+// In the Imperial communiqué, a section directive groups a set of related
+// sub-directives under a titled heading. C-3PO notes the title, the optional
+// description, how many columns to use inside the section, whether all columns
+// must be equal width, and whether the section can be collapsed by the user
+// (expandable/expanded flags). Sections map to Eclipse Forms API Section widgets.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements a template section.
+ * Model object for a template section widget. Sections are titled, collapsible
+ * containers that group related widgets under a heading in the editor form.
+ * They store a title, an optional description, layout flags (column count and
+ * equal-width columns), and expand/collapse state.
+ *
+ * <p>Think of this as a C-3PO-decoded grouped communiqué section:</p>
+ * <pre>
+ *   section.setTitle( "Identity" );
+ *   section.setNumberOfColumns( 2 );
+ *   section.setExpandable( true );
+ *   section.setExpanded( true );
+ * </pre>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class TemplateSection extends AbstractTemplateWidget
 {
-    /** The default number of columns value */
+    /** The default number of columns — single-column layout by default. */
     public static int DEFAULT_NUMBER_OF_COLUMNS = 1;
 
-    /** The default equals columns value */
+    /** The default equal-columns flag — natural column widths by default. */
     public static boolean DEFAULT_EQUAL_COLUMNS = false;
 
-    /** The default expandable value */
+    /** The default expandable flag — sections are not collapsible by default. */
     public static boolean DEFAULT_EXPANDABLE = false;
 
-    /** The default expanded value */
+    /** The default expanded flag — sections start fully open by default. */
     public static boolean DEFAULT_EXPANDED = true;
 
-    /** The default title value */
+    /** The default title — {@code null} means no title is shown. */
     public static String DEFAULT_TITLE = null;
 
-    /** The default description value */
+    /** The default description — {@code null} means no description is shown. */
     public static String DEFAULT_DESCRIPTION = null;
 
     /** The number of columns of the layout */
@@ -64,11 +82,15 @@ public class TemplateSection extends AbstractTemplateWidget
     private String description = DEFAULT_DESCRIPTION;
 
 
+    // ── CONSTRUCTOR: REGISTER THE SECTION COMMUNIQUÉ ──────────────────────────────
+    // C-3PO receives a new grouped directive and files it inside the parent
+    // communiqué. The template parser sets title, description, and flags from XML.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of TemplateSection.
+     * Creates a new {@code TemplateSection} and registers it as a child of the
+     * given parent widget.
      *
-     * @param parent
-     *      the parent element
+     * @param parent  the enclosing widget (form or composite)
      */
     public TemplateSection( TemplateWidget parent )
     {
@@ -76,11 +98,14 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── GET DESCRIPTION: THE SECTION'S SUBTITLE TEXT ──────────────────────────────
+    // C-3PO reads the description field — an optional paragraph shown below the
+    // section title to explain what the group contains.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the description.
+     * Returns the optional description text shown below the section's title.
      *
-     * @return
-     *      the description
+     * @return the description, or {@code null} if not set
      */
     public String getDescription()
     {
@@ -88,11 +113,14 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── GET NUMBER OF COLUMNS: HOW MANY COLUMNS INSIDE THE SECTION ────────────────
+    // C-3PO reads the column-count field — the grid layout used inside this section
+    // to arrange its child widgets.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the number of columns.
+     * Returns the number of grid columns inside this section's content area.
      *
-     * @return
-     *      the number of columns
+     * @return column count; defaults to {@code 1}
      */
     public int getNumberOfColumns()
     {
@@ -100,11 +128,14 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── GET TITLE: THE SECTION HEADING ────────────────────────────────────────────
+    // C-3PO reads the title field — the bold heading displayed at the top of the
+    // section widget.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the title.
+     * Returns the section's title heading text.
      *
-     * @return
-     *      the title
+     * @return the title, or {@code null} if not set
      */
     public String getTitle()
     {
@@ -112,12 +143,14 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── IS EQUAL COLUMNS: UNIFORM COLUMN WIDTHS ───────────────────────────────────
+    // C-3PO checks whether all columns inside the section must be the same width.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the columns are equals in width.
+     * Returns {@code true} if all columns inside this section should be forced to
+     * the same width.
      *
-     * @return
-     *      <code>true</code> if the columns are equals in width,
-     *      <code>false</code> if not
+     * @return the equal-columns flag; defaults to {@code false}
      */
     public boolean isEqualColumns()
     {
@@ -125,12 +158,15 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── IS EXPANDABLE: CAN THE SECTION COLLAPSE ───────────────────────────────────
+    // C-3PO checks whether the communiqué allows the user to collapse and expand
+    // the section by clicking its title bar.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the section is expandable.
+     * Returns {@code true} if the user can collapse and expand this section by
+     * clicking its title bar.
      *
-     * @return
-     *      <code>true</code> if the section is expandable,
-     *      <code>false</code> if not
+     * @return the expandable flag; defaults to {@code false}
      */
     public boolean isExpandable()
     {
@@ -138,12 +174,14 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── IS EXPANDED: CURRENT EXPAND STATE ────────────────────────────────────────
+    // C-3PO checks the current expand state — whether the section body is visible.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the section is expanded.
+     * Returns {@code true} if this section should start in the expanded (open) state.
+     * Only meaningful when {@link #isExpandable()} is {@code true}.
      *
-     * @return
-     *      <code>true</code> if the section is expanded,
-     *      <code>false</code> if not
+     * @return the expanded flag; defaults to {@code true}
      */
     public boolean isExpanded()
     {
@@ -151,11 +189,11 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── SET DESCRIPTION ───────────────────────────────────────────────────────────
     /**
-     * Sets the description.
+     * Sets the optional description text shown below the section title.
      *
-     * @param description
-     *      the description
+     * @param description  the description text, or {@code null} for none
      */
     public void setDescription( String description )
     {
@@ -163,11 +201,11 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── SET EQUAL COLUMNS ─────────────────────────────────────────────────────────
     /**
-     * Sets the flag that indicates if the columns are equals in width.
+     * Sets whether all columns inside the section should be forced to equal widths.
      *
-     * @param equalColumns
-     *      the flag that indicates if the columns are equals in width
+     * @param equalColumns  {@code true} for uniform columns; {@code false} for natural widths
      */
     public void setEqualColumns( boolean equalColumns )
     {
@@ -175,11 +213,11 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── SET EXPANDABLE ────────────────────────────────────────────────────────────
     /**
-     * Sets the flag that indicates if the section is expandable.
+     * Sets whether the user can collapse and expand this section.
      *
-     * @param expandable
-     *      the flag that indicates if the section is expandable
+     * @param expandable  {@code true} to allow collapsing; {@code false} for always-open
      */
     public void setExpandable( boolean expandable )
     {
@@ -187,11 +225,12 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── SET EXPANDED ──────────────────────────────────────────────────────────────
     /**
-     * Sets the flag that indicates if the section is expanded.
+     * Sets the initial expand state. Only meaningful when {@link #isExpandable()} is
+     * {@code true}.
      *
-     * @param expanded
-     *      the flag that indicates if the section is expanded
+     * @param expanded  {@code true} to start expanded; {@code false} to start collapsed
      */
     public void setExpanded( boolean expanded )
     {
@@ -199,11 +238,11 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── SET NUMBER OF COLUMNS ─────────────────────────────────────────────────────
     /**
-     * Sets the number of columns.
+     * Sets the number of grid columns inside this section's content area.
      *
-     * @param numberOfColumns
-     *      the number of columns
+     * @param numberOfColumns  the column count (must be &gt;= 1)
      */
     public void setNumberOfColumns( int numberOfColumns )
     {
@@ -211,11 +250,11 @@ public class TemplateSection extends AbstractTemplateWidget
     }
 
 
+    // ── SET TITLE ─────────────────────────────────────────────────────────────────
     /**
-     * Sets the title.
+     * Sets the section's title heading text.
      *
-     * @param title
-     *      the title
+     * @param title  the title text, or {@code null} for no title
      */
     public void setTitle( String title )
     {

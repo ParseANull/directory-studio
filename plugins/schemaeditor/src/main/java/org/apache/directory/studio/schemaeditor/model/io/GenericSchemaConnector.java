@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
- * 
+ *
  */
 package org.apache.directory.studio.schemaeditor.model.io;
 
@@ -52,15 +52,43 @@ import org.apache.directory.studio.schemaeditor.model.Schema;
 import org.eclipse.osgi.util.NLS;
 
 
+// ── CLASS: GenericSchemaConnector — Han's Fallback Hyperspace Route ───────────
+// When Han doesn't know anything about the destination planet he uses the
+// standard subspace beacon approach: he reads the root DSE for the
+// subschemaSubentry pointer, then reads that one special entry to get all the
+// schema data in one big subschema blob.  It's the RFC 4512 way — any LDAP
+// server that follows the standard should respond.  This is the last resort
+// connector, suitable for everything that isn't specifically ApacheDS.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A Generic Schema Connector, suitable for all LDAP servers.
+ * A generic {@link SchemaConnector} that reads schema from any RFC 4512-compliant
+ * LDAP server by fetching the subschema subentry.
+ * We find the subschema DN via the root DSE's {@code subschemaSubentry} attribute,
+ * then read that entry for attribute types, object classes, matching rules, and syntaxes.
+ * This is the fallback — it works with virtually any LDAP server, unlike the
+ * ApacheDS connector which relies on ApacheDS's DIT-based schema layout.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class GenericSchemaConnector extends AbstractSchemaConnector implements SchemaConnector
 {
+    // ── Han Reads the Root DSE's Nav Beacon and Jumps ────────────────────────
+    // Han pings the root DSE for the subschemaSubentry pointer, then jumps
+    // straight to that DN and reads the single subschema entry that contains
+    // everything: attribute types, object classes, syntaxes, matching rules.
+    // We parse each section in turn, creating a single Schema object that holds
+    // the full schema published by the server.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Imports the schema from any RFC 4512-compliant LDAP server using the
+     * subschema subentry approach.
+     * We look up {@code subschemaSubentry} from the root DSE, then read that
+     * entry for all schema element attributes.
+     *
+     * @param project  the project to populate — its connection must be open
+     * @param monitor  progress monitor
+     * @throws SchemaConnectorException  if the server can't be reached or the
+     *                                   schema data can't be parsed
      */
     public void importSchema( Project project, StudioProgressMonitor monitor )
         throws SchemaConnectorException
@@ -89,7 +117,7 @@ public class GenericSchemaConnector extends AbstractSchemaConnector implements S
         String schemaDn = getSubschemaSubentry( wrapper, monitor );
         StudioSearchResultEnumeration answer = wrapper.search( schemaDn, "(objectclass=subschema)", constraintSearch, //$NON-NLS-1$
             DEREF_ALIAS_METHOD, HANDLE_REFERALS_METHOD, null, monitor, null );
-        
+
         if ( answer != null )
         {
             try
@@ -119,8 +147,18 @@ public class GenericSchemaConnector extends AbstractSchemaConnector implements S
     }
 
 
+    // ── Han Checks Whether the Beacon is Reachable ───────────────────────────
+    // Before committing to the generic route, Han checks whether the root DSE
+    // actually advertises a subschemaSubentry attribute — if it does, we can
+    // use this connector; if not, we can't.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Tests whether the server advertises a {@code subschemaSubentry} attribute
+     * in its root DSE — if it does, this generic connector can handle it.
+     *
+     * @param connection  the LDAP connection to probe
+     * @param monitor     progress monitor
+     * @return            true if a subschema subentry DN was found
      */
     public boolean isSuitableConnector( Connection connection, StudioProgressMonitor monitor )
     {
@@ -128,6 +166,19 @@ public class GenericSchemaConnector extends AbstractSchemaConnector implements S
     }
 
 
+    // ── Han Reads the Subspace Beacon DN from the Root DSE ───────────────────
+    // Han pings the root DSE asking for the subschemaSubentry attribute and reads
+    // back the DN of the special schema entry.  If the attribute is absent or
+    // multi-valued the server doesn't follow the standard, so we return null.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Reads the {@code subschemaSubentry} attribute from the root DSE.
+     * Returns null if the attribute is absent, multi-valued, or unreadable.
+     *
+     * @param wrapper  the connection wrapper to search with
+     * @param monitor  progress monitor for the search
+     * @return         the subschema subentry DN, or null if not found
+     */
     private static String getSubschemaSubentry( ConnectionWrapper wrapper, StudioProgressMonitor monitor )
     {
         SearchControls constraintSearch = new SearchControls();
@@ -158,7 +209,7 @@ public class GenericSchemaConnector extends AbstractSchemaConnector implements S
                     }
 
                     String subschemaSubentry = null;
-                    
+
                     try
                     {
                         subschemaSubentry = subschemaSubentryAttribute.getString();
@@ -181,6 +232,26 @@ public class GenericSchemaConnector extends AbstractSchemaConnector implements S
     }
 
 
+    // ── Han Opens the Cargo Manifest and Unpacks Everything ──────────────────
+    // Han reads the subschema subentry — one massive cargo manifest — and
+    // walks through each section: attribute types, object classes, syntaxes,
+    // matching rules.  He parses each line-item description string and builds
+    // the corresponding schema object.  Anything he can't parse he logs and
+    // counts; too many errors and he throws so the caller knows.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Parses a subschema subentry into schema objects and populates the given Schema.
+     * Each multi-valued LDAP attribute (attributeTypes, objectClasses, etc.) contains
+     * RFC 4512 description strings; we parse each one and add it to the schema.
+     * If parsing fails for individual entries we log and count them; if the count
+     * is non-zero at the end we throw a SchemaConnectorException.
+     *
+     * @param schema   the Schema to populate
+     * @param wrapper  the connection wrapper (unused here, kept for signature consistency)
+     * @param entry    the subschema subentry to parse
+     * @param monitor  progress monitor
+     * @throws SchemaConnectorException  if any elements could not be parsed
+     */
     private static void getSchema( Schema schema, ConnectionWrapper wrapper, Entry entry,
         StudioProgressMonitor monitor ) throws SchemaConnectorException
     {
@@ -298,7 +369,7 @@ public class GenericSchemaConnector extends AbstractSchemaConnector implements S
         for ( AttributeType at : schema.getAttributeTypes() )
         {
             String syntaxOid = at.getSyntaxOid();
-            
+
             if ( ( syntaxOid != null ) && ( schema.getSyntax( syntaxOid ) == null ) )
             {
                 LdapSyntax impl = new LdapSyntax( syntaxOid );
@@ -368,6 +439,21 @@ public class GenericSchemaConnector extends AbstractSchemaConnector implements S
     }
 
 
+    // ── Han Creates Placeholder Crates for Missing Matching Rules ─────────────
+    // If a cargo rule is referenced in the manifest but no crate arrived for it,
+    // Han creates a dummy placeholder crate so the manifest stays consistent.
+    // We create stub MatchingRule objects for any rule names referenced by
+    // attribute types but not found in the schema's matching-rule list.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Creates dummy {@link MatchingRule} stubs for any matching rule names that are
+     * referenced by attribute types but not present in the schema.
+     * This is necessary because some LDAP servers don't publish all their matching
+     * rules in the subschema subentry.
+     *
+     * @param schema            the schema to check and potentially add stubs to
+     * @param matchingRuleNames  the matching rule names (equality, ordering, substring) to check
+     */
     private static void checkMatchingRules( Schema schema, String... matchingRuleNames )
     {
         for ( String matchingRuleName : matchingRuleNames )
@@ -385,8 +471,17 @@ public class GenericSchemaConnector extends AbstractSchemaConnector implements S
     }
 
 
+    // ── Han Parks the Falcon — Export Not Yet Wired ──────────────────────────
+    // Same situation as the ApacheDS connector: Han lands but nobody has wired
+    // up the export bay yet.  Placeholder for a future implementation.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Exports the project's schema to the connected LDAP server.
+     * Not yet implemented — placeholder for a future feature.
+     *
+     * @param project  the project to export
+     * @param monitor  progress monitor
+     * @throws SchemaConnectorException  not currently thrown, declared for the interface
      */
     public void exportSchema( Project project, StudioProgressMonitor monitor )
         throws SchemaConnectorException

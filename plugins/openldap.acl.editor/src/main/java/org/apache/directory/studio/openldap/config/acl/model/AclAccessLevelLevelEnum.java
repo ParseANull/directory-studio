@@ -20,9 +20,21 @@
 package org.apache.directory.studio.openldap.config.acl.model;
 
 
+// ── CLASS: AclAccessLevelLevelEnum — DEATH STAR CLEARANCE TIERS ──────────────
+// Grand Moff Tarkin's access control matrix has eight tiers: from "manage"
+// (full administrative control) down to "none" (no access whatsoever). Each
+// tier corresponds to exactly one keyword OpenLDAP recognises in an ACL rule.
+// This enum encodes those eight tiers and converts them to their wire-format
+// strings when we need to write an ACL back to the directory server.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * TODO AclAccessLevelLevelEnum.
- * 
+ * The set of named access levels OpenLDAP recognises in a "by" clause — from
+ * most-powerful ({@code manage}) to most-restrictive ({@code none}). Each
+ * constant serialises to the exact keyword OpenLDAP expects in the ACL text.
+ * Think of this enum as the Death Star's security clearance tiers — each rank
+ * grants a precisely specified amount of access, and Tarkin's system recognises
+ * exactly eight.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public enum AclAccessLevelLevelEnum
@@ -36,8 +48,25 @@ public enum AclAccessLevelLevelEnum
     DISCLOSE,
     NONE;
 
+
+    // ── Rendering the Clearance Tier as a Wire-Format Keyword ─────────────────
+    // When Tarkin drafts a security directive he doesn't write "WRITE", he
+    // writes "write" — lower-case, exactly as the protocol specifies. We do
+    // the same when serialising ACL rules back to OpenLDAP's text format.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the lower-case keyword that OpenLDAP uses in ACL text for this
+     * level. We use this when serialising an {@link AclAccessLevel} to a string
+     * — the output goes straight into the ACL rule being built.
+     *
+     * <p>For example — Tarkin stamping the clearance level onto a directive:</p>
+     * <pre>
+     *   AclAccessLevelLevelEnum.READ.toString()   // → "read"
+     *   AclAccessLevelLevelEnum.MANAGE.toString() // → "manage"
+     *   AclAccessLevelLevelEnum.NONE.toString()   // → "none"
+     * </pre>
+     *
+     * @return  The OpenLDAP keyword for this access level.
      */
     public String toString()
     {

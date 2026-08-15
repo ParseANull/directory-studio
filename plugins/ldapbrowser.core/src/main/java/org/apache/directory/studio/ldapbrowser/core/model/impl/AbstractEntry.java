@@ -55,13 +55,29 @@ import org.apache.directory.studio.ldapbrowser.core.utils.Utils;
 import org.eclipse.search.ui.ISearchPageScoreComputer;
 
 
+// ── CLASS: AbstractEntry — PARTIAL DEATH STAR BLUEPRINT (ABSTRACT BASE) ──────
+// The Death Star's blueprints don't describe just one Death Star — they define
+// the template every Death Star is built from: structural sections, power
+// couplings, trench layout.  Each concrete Death Star fills in the unique bits
+// (which sector it occupies, what its serial number is).  AbstractEntry is that
+// master blueprint: it handles everything common to all directory entries —
+// managing children, attributes, and flag bits — while leaving the entry's DN
+// and parent pointer for the concrete subclass (Entry, DummyEntry, etc.) to
+// supply.  Children and attributes are stored off-entry in BrowserConnection
+// maps so we don't bloat each entry object in memory.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
  * Base implementation of the {@link IEntry} interface.
- * 
- * The class is optimized to save memory. It doesn't hold members to 
- * its children or attributes. Instead the {@link ChildrenInfo} and 
- * {@link AttributeInfo} instances are stored in a map in the 
- * {@link BrowserConnection} instance.
+ *
+ * <p>Optimised to save memory — children and attributes are NOT stored on the
+ * entry itself.  Instead, {@link ChildrenInfo} and {@link AttributeInfo} live
+ * in maps inside {@link BrowserConnection} and are looked up on demand.
+ * Behavioural flags (alias, referral, subentry, etc.) are packed into a single
+ * {@code int} field.</p>
+ *
+ * <p>Think of this as the master Death Star blueprint: every concrete entry
+ * subclass inherits the structural logic from here and only has to fill in its
+ * own DN, parent pointer, and RDN.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -93,8 +109,11 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     protected IAttribute objectClassAttribute;
 
 
+    // ── Blueprint Constructor — Sets The "Has Children" Hint By Default ──────────
     /**
      * Creates a new instance of AbstractEntry.
+     * Initialises the flags field with {@code HAS_CHILDREN_HINT_FLAG} set so
+     * the tree view shows an expand arrow before we have loaded the children.
      */
     protected AbstractEntry()
     {
@@ -102,22 +121,28 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Concrete Subclass Fills In The Parent Pointer ────────────────────────────
     /**
      * Sets the parent entry.
-     * 
+     *
      * @param newParent the new parent entry
      */
     protected abstract void setParent( IEntry newParent );
 
 
+    // ── Concrete Subclass Fills In The RDN ───────────────────────────────────────
     /**
      * Sets the Rdn.
-     * 
+     *
      * @param newRdn the new Rdn
      */
     protected abstract void setRdn( Rdn newRdn );
 
 
+    // ── Lando Assigns A New Platform Resident To This Sector ─────────────────────
+    // "Cloud City has a new resident.  Log them in the children registry and
+    // fire an EntryAdded event so the rest of the galaxy knows."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -139,6 +164,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Lando Removes A Resident From The Platform Registry ──────────────────────
     /**
      * {@inheritDoc}
      */
@@ -161,6 +187,11 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Han Shoots First If The Attribute Belongs To Someone Else ────────────────
+    // Before accepting a new attribute onto this entry's blueprint, we check that
+    // it actually belongs here.  If it doesn't, we throw immediately — no waiting
+    // around for Greedo to pull his blaster.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -203,6 +234,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Han Shoots First If The Attribute Is Already Gone ────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -244,6 +276,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Mark This Entry As A Real Directory Node ─────────────────
     /**
      * {@inheritDoc}
      */
@@ -260,6 +293,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Mace Windu Checks: Is This Entry Really An Alias? ────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -281,6 +315,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Mark Or Clear The Alias Bit ───────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -297,6 +332,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Mace Windu Checks: Is This Entry A Referral? ─────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -318,6 +354,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Mark Or Clear The Referral Bit ───────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -334,6 +371,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Mace Windu Checks: Is This A Subentry? ───────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -355,6 +393,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Mark Or Clear The Subentry Bit ───────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -371,10 +410,15 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Obi-Wan Senses A Disturbance And Notifies The Force ──────────────────────
+    // Any time we add a child, delete an attribute, or change a flag, we fire
+    // an event through EventRegistry — like Obi-Wan sensing a disturbance and
+    // broadcasting it to every listener tuned to the Force.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Triggers firing of the modification event.
-     * 
-     * @param event
+     *
+     * @param event the modification event to broadcast to all registered listeners
      */
     private void entryModified( EntryModificationEvent event )
     {
@@ -382,6 +426,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint: Read The Entry's Relative Distinguished Name ──────────────────
     /**
      * {@inheritDoc}
      */
@@ -392,6 +437,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Mace Windu Checks: Have The Entry's Attributes Been Loaded? ──────────────
     /**
      * {@inheritDoc}
      */
@@ -402,6 +448,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── R2-D2 Flags Whether The Attribute Map Is Fully Loaded ─────────────────────
     /**
      * {@inheritDoc}
      */
@@ -429,6 +476,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Should Operational Attributes Be Loaded? ─────────────────
     /**
      * {@inheritDoc}
      */
@@ -438,6 +486,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Set Whether Operational Attributes Should Be Loaded ──────
     /**
      * {@inheritDoc}
      */
@@ -454,6 +503,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Should Alias Entries Be Fetched? ─────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -463,6 +513,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Set The Fetch-Aliases Preference ─────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -479,6 +530,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Should Referral Entries Be Followed? ─────────────────────
     /**
      * {@inheritDoc}
      */
@@ -488,6 +540,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Set The Fetch-Referrals Preference ───────────────────────
     /**
      * {@inheritDoc}
      */
@@ -504,6 +557,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Should Subentries Be Fetched? ────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -513,6 +567,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Set The Fetch-Subentries Preference ──────────────────────
     /**
      * {@inheritDoc}
      */
@@ -529,6 +584,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Lando Lists All Residents Of This Cloud City Section ─────────────────────
     /**
      * {@inheritDoc}
      */
@@ -550,6 +606,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── R2-D2 Looks Up A Single Attribute By Description ─────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -577,6 +634,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Lando Gathers An Attribute And All Its Subtypes Into One Package ─────────
     /**
      * {@inheritDoc}
      */
@@ -614,6 +672,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── R2-D2 Flags Whether The Children Map Has Been Loaded ─────────────────────
     /**
      * {@inheritDoc}
      */
@@ -644,6 +703,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Mace Windu Checks: Has The Children List Been Loaded? ────────────────────
     /**
      * {@inheritDoc}
      */
@@ -654,6 +714,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Lando Lists All Child Residents Of This Platform Section ─────────────────
     /**
      * {@inheritDoc}
      */
@@ -686,6 +747,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Lando Counts The Residents In This Platform Section ──────────────────────
     /**
      * {@inheritDoc}
      */
@@ -707,6 +769,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── R2-D2 Flags: More Children Exist Beyond The Current Page ─────────────────
     /**
      * {@inheritDoc}
      */
@@ -724,6 +787,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Mace Windu Checks: Are There More Children Beyond The Loaded Page? ───────
     /**
      * {@inheritDoc}
      */
@@ -734,6 +798,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Clone Trooper: Store The "Load First Page" Job For Later Execution ───────
     /**
      * {@inheritDoc}
      */
@@ -753,6 +818,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Clone Trooper: Retrieve The "Load First Page" Job ────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -763,6 +829,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Clone Trooper: Store The "Load Next Page" Job For Later Execution ────────
     /**
      * {@inheritDoc}
      */
@@ -782,6 +849,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Clone Trooper: Retrieve The "Load Next Page" Job ─────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -792,6 +860,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Flag: Set The "Has Children" Hint For Tree Display ─────────────
     /**
      * {@inheritDoc}
      */
@@ -808,6 +877,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Mace Windu Checks: Does This Entry Have Any Children? ────────────────────
     /**
      * {@inheritDoc}
      */
@@ -817,6 +887,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint: Get The Optional Filter Applied To This Entry's Children ──────
     /**
      * {@inheritDoc}
      */
@@ -826,6 +897,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint: Set The Filter That Restricts Which Children Are Shown ────────
     /**
      * {@inheritDoc}
      */
@@ -835,6 +907,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Mace Windu Checks: Does This Entry Have A Parent? ────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -844,10 +917,11 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── R2-D2 Gets The Connection Handle To Look Things Up ────────────────────────
     /**
      * Gets the browser connection implementation.
-     * 
-     * @return the browser connection implementation
+     *
+     * @return the browser connection implementation cast to {@link BrowserConnection}
      */
     private BrowserConnection getBrowserConnectionImpl()
     {
@@ -855,6 +929,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Prints Its DN As A String ───────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -864,6 +939,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Hash Code Is Derived From Its DN ───────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -873,6 +949,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Mace Windu Checks: Is This The Same Entry (DN + Connection)? ─────────────
     /**
      * {@inheritDoc}
      */
@@ -899,6 +976,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── R2-D2 Plugs In And Adapts This Entry To Any Requested Interface ──────────
     /**
      * {@inheritDoc}
      */
@@ -926,6 +1004,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Blueprint Returns Its Full LDAP URL ───────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -935,6 +1014,7 @@ public abstract class AbstractEntry implements IEntry, ICompareableEntry
     }
 
 
+    // ── Jedi Archives: List All ObjectClass Descriptions For This Entry ──────────
     /**
      * {@inheritDoc}
      */

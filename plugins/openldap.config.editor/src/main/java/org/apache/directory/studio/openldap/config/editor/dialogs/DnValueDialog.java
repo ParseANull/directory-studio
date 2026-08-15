@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -39,9 +39,16 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 
+// Like Princess Leia transmitting a single precise coordinate to
+// the Rebellion — just the one thing that needs to be right —
+// we present a focused dialog with a single text field for the DN,
+// validate it live, and only allow confirmation when it parses cleanly.
 /**
- * The DnValueDialog is used to edit a DN
- * 
+ * A dialog for entering or editing a single Distinguished Name (DN) value.
+ * We validate the DN as the operator types, turning the text red if the
+ * DN is malformed, and disabling the OK button until a valid DN is provided.
+ *
+ * <p>The dialog layout looks like this:
  * <pre>
  * +---------------------------------------+
  * | .-----------------------------------. |
@@ -50,9 +57,8 @@ import org.eclipse.swt.widgets.Text;
  * |                                       |
  * |  (cancel)                       (OK)  |
  * +---------------------------------------+
- * 
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DnValueDialog extends AddEditDialog<DnWrapper>
@@ -60,19 +66,25 @@ public class DnValueDialog extends AddEditDialog<DnWrapper>
     // UI widgets
     /** The DN Text */
     private Text dnText;
-    
+
+    // Like Leia keying up the hologram projector with the RESIZE flag
+    // so whoever receives the transmission can adjust the view,
+    // we create the dialog with a resizable shell style so the
+    // operator can expand the text field if their DN is long.
     /**
-     * Create a new instance of the String
-     * 
-     * @param parentShell The parent Shell
+     * Creates a new DnValueDialog attached to the given parent shell.
+     * We apply the RESIZE style so the operator can widen the dialog
+     * to comfortably fit long DN strings.
+     *
+     * @param parentShell the parent shell this dialog belongs to
      */
     public DnValueDialog( Shell parentShell )
     {
         super( parentShell );
         super.setShellStyle( super.getShellStyle() | SWT.RESIZE );
     }
-    
-    
+
+
     /**
      * The listener for the DN Text
      */
@@ -80,7 +92,7 @@ public class DnValueDialog extends AddEditDialog<DnWrapper>
         {
             Display display = dnText.getDisplay();
             Button okButton = getButton( IDialogConstants.OK_ID );
-            
+
             // This button might be null when the dialog is called.
             if ( okButton == null )
             {
@@ -90,7 +102,7 @@ public class DnValueDialog extends AddEditDialog<DnWrapper>
             try
             {
                 Dn dn = new Dn( dnText.getText() );
-            
+
                 getEditedElement().setDn( dn );
                 okButton.setEnabled( true );
                 dnText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
@@ -101,10 +113,15 @@ public class DnValueDialog extends AddEditDialog<DnWrapper>
                 dnText.setForeground( display.getSystemColor( SWT.COLOR_RED ) );
             }
         };
-    
-    
+
+
+    // Like Leia labeling the hologram projector so the recipient knows
+    // this is the "DN" transmission and not something else, we stamp
+    // the dialog shell with the "DN" title before it becomes visible.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to "DN".
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -114,8 +131,15 @@ public class DnValueDialog extends AddEditDialog<DnWrapper>
     }
 
 
+    // Like Leia's hologram projecting the single crucial message field —
+    // just the DN input box, nothing extra — we build the dialog area
+    // here with a clean labeled text field and wire up the live-validation
+    // listener so the operator gets immediate feedback.
     /**
-     * Create the Dialog for DnValue :
+     * Builds the dialog content area with a labeled DN text field.
+     * We attach the modify listener so the field turns red and the
+     * OK button disables whenever the entered DN is syntactically invalid.
+     *
      * <pre>
      * +---------------------------------------+
      * | .-----------------------------------. |
@@ -124,7 +148,10 @@ public class DnValueDialog extends AddEditDialog<DnWrapper>
      * |                                       |
      * |  (cancel)                       (OK)  |
      * +---------------------------------------+
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     * </pre>
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -148,22 +175,28 @@ public class DnValueDialog extends AddEditDialog<DnWrapper>
         addListeners();
 
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // Like the hologram operator loading the existing target coordinates
+    // before opening the transmission so the operator starts from the
+    // right position, we pre-populate the DN text field with whatever
+    // the current DnWrapper already holds.
     /**
-     * Initializes the UI from the String
+     * Initializes the DN text field from the current {@link DnWrapper},
+     * pre-populating it with the existing DN string (or leaving it
+     * blank if the DN is null).
      */
     protected void initDialog()
     {
         DnWrapper editedElement = getEditedElement();
-        
+
         if ( editedElement != null )
         {
             Dn dn = editedElement.getDn();
-            
+
             if ( dn == null )
             {
                 dnText.setText( "" );
@@ -176,8 +209,12 @@ public class DnValueDialog extends AddEditDialog<DnWrapper>
     }
 
 
+    // Like Leia starting a new transmission from scratch with an empty
+    // message container, we seed the edited element with an empty DN
+    // so the operator's first keystroke goes into a fresh wrapper.
     /**
-     * Add a new Element that will be edited
+     * Seeds the dialog with an empty {@link DnWrapper} when the operator
+     * is adding a brand-new DN value rather than editing an existing one.
      */
     public void addNewElement()
     {
@@ -185,15 +222,30 @@ public class DnValueDialog extends AddEditDialog<DnWrapper>
     }
 
 
+    // Like handing the operator a pre-addressed but unsent transmission
+    // to edit and resend, we take an existing DnWrapper and set it
+    // directly as the edited element — no clone needed since Dn is immutable.
+    /**
+     * Sets the given {@link DnWrapper} as the element to edit.
+     * Since {@link Dn} is immutable, no cloning is necessary here.
+     *
+     * @param editedElement the existing DN wrapper to load into the dialog for editing
+     */
     public void addNewElement( DnWrapper editedElement )
     {
         // No need to clone, the Dn is immutable
         setEditedElement( editedElement );
     }
 
-    
+
+    // Like connecting the hologram receiver to the transmission line
+    // so incoming signals update the display immediately, we wire
+    // the modify listener to the DN text field so every keystroke
+    // triggers live validation.
     /**
-     * Adds listeners.
+     * Attaches the modify listener to the DN text field so the dialog
+     * validates the DN on every keystroke and updates the OK button
+     * and text color accordingly.
      */
     private void addListeners()
     {

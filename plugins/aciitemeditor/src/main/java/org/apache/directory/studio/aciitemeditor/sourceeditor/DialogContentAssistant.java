@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.aciitemeditor.sourceeditor;
 
@@ -40,9 +40,22 @@ import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.texteditor.ITextEditorActionDefinitionIds;
 
 
+// ── CLASS: DialogContentAssistant — R2-D2 PLUGGING INTO ANY PANEL ─────────────
+// R2-D2 can plug his data cable into different types of socket: a standard
+// text-entry panel, a drop-down combo, or a full SourceViewer terminal.
+// He also registers a keyboard shortcut so the user can summon him with Ctrl+Space,
+// and he disconnects cleanly when the panel loses focus.
+// DialogContentAssistant is that adaptable plug: it wraps a
+// SubjectControlContentAssistant so it can attach to Text, Combo, or ITextViewer.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Content Assistant Dialog used in the ACI Item 
- * Source Editor for displaying proposals
+ * A {@link SubjectControlContentAssistant} that can be installed on
+ * {@link Text} widgets, {@link Combo} widgets, or a full {@link ITextViewer}.
+ * Manages a Ctrl+Space keyboard handler binding that is activated when the
+ * target control gains focus and deactivated when it loses focus.
+ * Think of this class as R2-D2 with a universal data cable: he plugs into
+ * whatever panel is active, registers his Ctrl+Space shortcut, and disconnects
+ * politely when the panel goes dark.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -55,8 +68,13 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     private boolean possibleCompletionsVisible;
 
 
+    // ── INITIALISE R2-D2'S DATA CABLE ────────────────────────────────────────
+    // R2-D2 powers up with his completion popup flag cleared — no proposals
+    // are showing yet.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DialogContentAssistant.
+     * Creates a new {@code DialogContentAssistant} with the proposal popup
+     * initially hidden.
      */
     public DialogContentAssistant()
     {
@@ -65,11 +83,23 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── PLUG INTO A TEXT WIDGET ───────────────────────────────────────────────
+    // R2-D2 inserts his data cable into a standard Text panel, registers the
+    // focus listener, and wraps the widget in a TextContentAssistSubjectAdapter
+    // so the superclass can talk to it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Installs content assist support on the given subject.
+     * Installs content-assist support on the given {@link Text} widget.
+     * Adds this instance as a focus listener and wraps {@code text} in a
+     * {@link TextContentAssistSubjectAdapter} before delegating to the superclass.
      *
-     * @param text
-     *      the one who requests content assist
+     * <p>For example — attaching to a DN text field in a dialog:</p>
+     * <pre>
+     *   DialogContentAssistant assistant = new DialogContentAssistant();
+     *   assistant.install(dnTextField);
+     * </pre>
+     *
+     * @param text  the text widget that will host the content-assist popup
      */
     public void install( Text text )
     {
@@ -79,11 +109,22 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── PLUG INTO A COMBO WIDGET ──────────────────────────────────────────────
+    // R2-D2 inserts his data cable into a Combo drop-down panel — same pattern
+    // as Text but with a ComboContentAssistSubjectAdapter.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Installs content assist support on the given subject.
+     * Installs content-assist support on the given {@link Combo} widget.
+     * Adds this instance as a focus listener and wraps {@code combo} in a
+     * {@link ComboContentAssistSubjectAdapter}.
      *
-     * @param combo
-     *      the one who requests content assist
+     * <p>For example — attaching to an attribute-type combo:</p>
+     * <pre>
+     *   DialogContentAssistant assistant = new DialogContentAssistant();
+     *   assistant.install(attributeTypeCombo);
+     * </pre>
+     *
+     * @param combo  the combo widget that will host the content-assist popup
      */
     public void install( Combo combo )
     {
@@ -93,6 +134,10 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── PLUG INTO A FULL TEXT VIEWER ──────────────────────────────────────────
+    // R2-D2 connects to the full SourceViewer terminal. He also installs a
+    // TraverseListener so ESC dismisses the popup without closing the dialog.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -117,6 +162,10 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── DISCONNECT CLEANLY ────────────────────────────────────────────────────
+    // When the panel shuts down, R2-D2 deactivates the Ctrl+Space handler,
+    // removes the focus listener, and delegates the rest to the superclass.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -139,6 +188,10 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── TRACK POPUP VISIBILITY (RESTORE SIZE) ────────────────────────────────
+    // When the proposal popup re-appears, R2-D2 marks it as visible so the
+    // TraverseListener knows to intercept ESC.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -149,6 +202,10 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── SHOW THE PROPOSALS POPUP ──────────────────────────────────────────────
+    // R2-D2 beeps and shows his list of suggestions; we mark the popup as
+    // visible before delegating to the superclass.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -159,6 +216,10 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── TRACK POPUP CLOSURE ───────────────────────────────────────────────────
+    // When the proposal list closes, R2-D2 clears the visibility flag so ESC
+    // resumes normal traversal.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -169,6 +230,10 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── REGISTER THE CTRL+SPACE SHORTCUT ON FOCUS GAIN ───────────────────────
+    // R2-D2 activates his Ctrl+Space handler the moment the panel gains focus
+    // so the user can invoke proposals at any time while editing.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -192,6 +257,10 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── DEREGISTER THE SHORTCUT ON FOCUS LOSS ────────────────────────────────
+    // When the panel goes dark, R2-D2 deactivates his Ctrl+Space handler so it
+    // does not fire for other panels that gain focus.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */

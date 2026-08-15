@@ -55,9 +55,27 @@ import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.contexts.IContextService;
 
 
+// ── CLASS: NewEntryAttributesWizardPage — LUKE FILLS IN HIS JEDI KNIGHT PROFILE
+// After Luke's lightsaber is built and his position in the Force is established,
+// he sits down with a data slate to fill in every field of his Jedi Knight
+// profile: first name, rank, midi-chlorian count — all the "must" fields have
+// to be filled or the Alliance records office will send it back with a warning.
+// This wizard page embeds a full entry-editor widget so the user can type values
+// for every required and optional attribute of the new entry.  When you arrive
+// on this page, the mandatory attributes are automatically added with empty
+// placeholders, and the editor pops open on the first empty field right away.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The NewEntryAttributesWizardPage is used to fill the attributes of
- * the new entry.
+ * The final page of {@link NewEntryWizard} and {@link EditEntryWizard} — lets
+ * the user fill in the attribute values for the prototype entry.
+ * When the page becomes visible, any "must" attributes required by the selected
+ * object classes are automatically added with empty placeholder values, and the
+ * in-line editor opens on the first empty one.
+ * A warning is shown (not a blocker) if any required attributes are still empty
+ * when the user tries to finish.
+ * Think of this page as Luke filling in every field of his Jedi Knight profile
+ * data slate — required fields show up automatically, and he can't hand it in
+ * until each one has something in it.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -83,11 +101,33 @@ public class NewEntryAttributesWizardPage extends WizardPage implements EntryUpd
     private IContextActivation contextActivation;
 
 
+    // ── Luke Opens the Jedi Profile Form for the First Time ───────────────────
+    // Luke takes the data slate from the Alliance records officer, finds his
+    // name pre-filled from the previous pages, and the editor immediately
+    // jumps to the first blank required field so he knows exactly where to start.
+    // We wire a page-changed listener on the wizard dialog to do exactly that:
+    // when this page becomes the active one, find the first empty value and open
+    // its inline editor automatically.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of NewEntryAttributesWizardPage.
+     * Creates a new {@code NewEntryAttributesWizardPage} and wires a
+     * {@link IPageChangedListener} on the wizard dialog.
+     * When this page becomes visible via the dialog's page-change mechanism,
+     * the listener locates the first empty attribute value in the prototype entry
+     * and automatically opens the default cell editor on it — so the user lands
+     * immediately on something they need to fill in.
      *
-     * @param pageName the page name
-     * @param wizard the wizard
+     * <p>For example — Luke receives the data slate, cursor already on the first blank field:</p>
+     * <pre>
+     *   for ( IAttribute attr : prototypeEntry.getAttributes() ) {
+     *     for ( IValue val : attr.getValues() ) {
+     *       if ( val.isEmpty() ) { openDefaultEditorAction.run(); return; }
+     *     }
+     *   }
+     * </pre>
+     *
+     * @param pageName  Internal wizard page identifier.
+     * @param wizard    The parent {@link NewEntryWizard} coordinating all pages.
      */
     public NewEntryAttributesWizardPage( String pageName, NewEntryWizard wizard )
     {
@@ -135,8 +175,27 @@ public class NewEntryAttributesWizardPage extends WizardPage implements EntryUpd
     }
 
 
+    // ── Luke Hands the Slate Back — Session Is Over ────────────────────────────
+    // When the wizard is closed or navigated away for good, Luke returns the
+    // data slate and all the borrowed equipment is returned to storage.
+    // We unregister the entry-update listener, dispose the widget and listener,
+    // and deactivate the keyboard shortcut context so nothing leaks.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Releases all resources held by this page: the entry-editor widget,
+     * action group, configuration, universal listener, and the Eclipse keyboard
+     * context activation.
+     * Safe to call multiple times — checks for null before each disposal.
+     *
+     * <p>For example — Luke returns the data slate and pens to the records office:</p>
+     * <pre>
+     *   EventRegistry.removeEntryUpdateListener( this );
+     *   universalListener.dispose();
+     *   mainWidget.dispose();
+     *   actionGroup.dispose();
+     *   configuration.dispose();
+     *   contextService.deactivateContext( contextActivation );
+     * </pre>
      */
     public void dispose()
     {
@@ -164,12 +223,29 @@ public class NewEntryAttributesWizardPage extends WizardPage implements EntryUpd
     }
 
 
+    // ── Luke Sees the Form — Required Fields Appear on the Slate ─────────────
+    // When Luke flips to this page, the records officer adds blank lines for
+    // all the "must" attributes his profile now requires (based on the object
+    // classes he picked two pages back).  If he navigated back and changed
+    // object classes, stale empty required fields are cleaned out first.
+    // When the page is hidden, the editor is cleared so it doesn't hold stale data.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called when this page is shown or hidden.
+     * On becoming visible: removes stale empty "must" attribute values left over
+     * from previous visits, adds fresh empty placeholders for all currently
+     * required "must" attributes, loads the prototype into the viewer, re-validates,
+     * and sets focus to the viewer.
+     * On being hidden: clears the viewer and marks the page incomplete.
      *
-     * This implementation initializes the must attributes of the
-     * prototype entry and initializes the entry widget when this
-     * page becomes visible.
+     * <p>For example — Luke flips to the attributes form; required fields auto-appear:</p>
+     * <pre>
+     *   // 1. Remove empty must-attr placeholders from previous visits
+     *   // 2. Add fresh empty placeholders for current must attrs
+     *   // 3. Load prototype into viewer → user fills values
+     * </pre>
+     *
+     * @param visible  {@code true} when this page is being shown, {@code false} when hidden.
      */
     public void setVisible( boolean visible )
     {
@@ -241,8 +317,23 @@ public class NewEntryAttributesWizardPage extends WizardPage implements EntryUpd
     }
 
 
+    // ── Checking Whether Luke's Profile Is Complete ────────────────────────────
+    // The Alliance records officer runs a completeness check on the slate: are
+    // all required fields filled?  If something is missing, a warning badge
+    // appears — Luke is told what's still blank but can still click Finish.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if the prototype entry is completed.
+     * Checks whether the prototype entry satisfies all schema requirements.
+     * If any "must" attributes are missing values, a WARNING message is shown
+     * on the page (not an error — the user can still finish if they want).
+     * The page is always marked complete once the prototype is non-null.
+     *
+     * <p>For example — the records officer reads the completeness report on Luke's slate:</p>
+     * <pre>
+     *   Collection&lt;String&gt; msgs = SchemaUtils.getEntryIncompleteMessages( prototype );
+     *   if ( !msgs.isEmpty() ) { setMessage( joinedMessages, WARNING ); }
+     *   setPageComplete( true );
+     * </pre>
      */
     private void validate()
     {
@@ -273,8 +364,29 @@ public class NewEntryAttributesWizardPage extends WizardPage implements EntryUpd
     }
 
 
+    // ── The Data Slate Form Is Constructed ────────────────────────────────────
+    // The Alliance records officer assembles the form: the main entry-editor
+    // widget (the table of attribute rows), a toolbar with add/delete/edit
+    // buttons, and the context menu — then wires the entry-update listener so
+    // every change to the prototype triggers a re-validation automatically.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all the SWT controls for this page — creates the
+     * {@link EntryEditorWidget} with its toolbar, menus, and context menu;
+     * activates the dialog keyboard shortcuts; and registers an
+     * {@link EntryUpdateListener} so any change to the prototype triggers
+     * {@link #validate()}.
+     *
+     * <p>For example — the data slate form is assembled with all its editing tools:</p>
+     * <pre>
+     *   configuration = new EntryEditorWidgetConfiguration();
+     *   mainWidget    = new EntryEditorWidget( configuration );
+     *   actionGroup   = new EntryEditorWidgetActionGroupWithAttribute( ... );
+     *   universalListener = new EntryEditorWidgetUniversalListener( ... );
+     *   EventRegistry.addEntryUpdateListener( this, ... );
+     * </pre>
+     *
+     * @param parent  The parent composite supplied by the wizard dialog.
      */
     public void createControl( Composite parent )
     {
@@ -310,8 +422,25 @@ public class NewEntryAttributesWizardPage extends WizardPage implements EntryUpd
     }
 
 
+    // ── A Field Changes — Alliance Office Re-Checks the Slate ─────────────────
+    // Luke writes something into a field on the data slate — the Alliance records
+    // system automatically re-runs its completeness check and updates the warning
+    // banner if the entry is now complete (or newly incomplete).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by the {@link EventRegistry} whenever the prototype entry is modified.
+     * Re-validates the page only if the event targets our prototype and the page
+     * control is currently visible and not yet disposed.
+     *
+     * <p>For example — Luke fills in a field; the records system re-checks for completeness:</p>
+     * <pre>
+     *   if ( event.getModifiedEntry() == wizard.getPrototypeEntry()
+     *        &amp;&amp; !isDisposed() &amp;&amp; getControl().isVisible() ) {
+     *     validate();
+     *   }
+     * </pre>
+     *
+     * @param event  The modification event; we check whether it targets our prototype.
      */
     public void entryUpdated( EntryModificationEvent event )
     {
@@ -322,10 +451,22 @@ public class NewEntryAttributesWizardPage extends WizardPage implements EntryUpd
     }
 
 
+    // ── Has Luke Already Handed Back the Slate? ────────────────────────────────
+    // A quick sanity check — if the data slate has already been returned
+    // (the configuration is null, meaning dispose() was called), we treat the
+    // page as disposed and skip any re-validation.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if is disposed.
+     * Returns {@code true} if this page has been disposed (i.e. {@link #dispose()}
+     * was already called).
+     * Used internally to guard against stale event callbacks after the wizard closes.
      *
-     * @return true, if is disposed
+     * <p>For example — has Luke already returned the data slate to the records office?</p>
+     * <pre>
+     *   if ( isDisposed() ) return; // nothing to validate, form is gone
+     * </pre>
+     *
+     * @return  {@code true} if the widget configuration is {@code null} (disposed).
      */
     private boolean isDisposed()
     {

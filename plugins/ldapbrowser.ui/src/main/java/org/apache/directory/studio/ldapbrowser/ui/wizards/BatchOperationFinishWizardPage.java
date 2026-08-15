@@ -6,22 +6,21 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.wizards;
 
 
-import org.apache.directory.studio.common.ui.widgets.BaseWidgetUtils;
 import org.apache.directory.studio.ldapbrowser.ui.BrowserUIPlugin;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
@@ -34,8 +33,27 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 
 
+// ── CLASS: BatchOperationFinishWizardPage — LUKE FIRES THE PROTON TORPEDO ────
+// Luke is at the Death Star exhaust port. He's chosen the target, loaded the
+// torpedo, and defined the attack run. Now he has to decide: fire directly on
+// the connection (execute immediately), open the result in the LDIF editor
+// to review, save it to a file, or put it on the clipboard for later use.
+// This page is that final decision — four radio buttons, and then the trigger.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Finish page of the Batch Operation Wizard.
+ * Final page of the batch operation wizard: lets the user choose how to deliver
+ * the generated LDIF change records.
+ * Four execution methods are available:
+ * <ul>
+ *   <li>Execute on connection — runs the LDIF immediately against the server.</li>
+ *   <li>Generate LDIF in editor — opens the LDIF in the workspace LDIF editor.</li>
+ *   <li>Generate LDIF to file — saves the LDIF to a user-chosen file.</li>
+ *   <li>Generate LDIF to clipboard — copies the LDIF to the system clipboard.</li>
+ * </ul>
+ * The last-used settings are persisted in the dialog settings so the page
+ * re-opens in a sensible state.
+ * Think of Luke at the exhaust port: the torpedo is ready, now he chooses
+ * how to fire it.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -50,10 +68,15 @@ public class BatchOperationFinishWizardPage extends WizardPage
         + ".continueOnError"; //$NON-NLS-1$
 
     // Execution Method Values
+    /** Sentinel: no execution method chosen. */
     public final static int EXECUTION_METHOD_NONE = -1;
+    /** Execute the LDIF directly on the server connection. */
     public final static int EXECUTION_METHOD_ON_CONNECTION = 0;
+    /** Open the generated LDIF in the workspace LDIF editor. */
     public final static int EXECUTION_METHOD_LDIF_EDITOR = 1;
+    /** Save the generated LDIF to a file. */
     public final static int EXECUTION_METHOD_LDIF_FILE = 2;
+    /** Copy the generated LDIF to the system clipboard. */
     public final static int EXECUTION_METHOD_LDIF_CLIPBOARD = 3;
 
     // UI widgets
@@ -74,10 +97,16 @@ public class BatchOperationFinishWizardPage extends WizardPage
     };
 
 
+    // ── Luke Surveys the Launch Console ──────────────────────────────────────────
+    // Luke steps up to the launch console and reads the labels: "Fire direct",
+    // "Preview in editor", "Save to file", "Copy to clipboard." He starts
+    // incomplete; a choice must be made before the Finish button activates.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of BatchOperationFinishWizardPage.
+     * Creates a new BatchOperationFinishWizardPage, starting incomplete.
+     * The user must select an execution method before the wizard can finish.
      *
-     * @param pageName the page name
+     * @param pageName  the wizard page name.
      */
     public BatchOperationFinishWizardPage( String pageName )
     {
@@ -88,8 +117,21 @@ public class BatchOperationFinishWizardPage extends WizardPage
     }
 
 
+    // ── Luke Reads the Console Layout ────────────────────────────────────────────
+    // The console has two top-level options ("Execute on connection" and "Generate
+    // LDIF") with sub-options under each. The "Continue on error" checkbox only
+    // makes sense when executing directly.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Builds the page UI: two top-level radio buttons with sub-options.
+     * "Execute on connection" has a "continue on error" sub-checkbox.
+     * "Generate LDIF" has three sub-radios: in-editor, in-file, in-clipboard.
+     * The page reads the last-used settings from dialog settings so it
+     * reopens in the previously chosen state.
+     *
+     * @param parent  the parent composite.
      */
     public void createControl( Composite parent )
     {
@@ -220,10 +262,18 @@ public class BatchOperationFinishWizardPage extends WizardPage
     }
 
 
+    // ── Luke Checks Which Trigger He's Chosen ────────────────────────────────────
+    // Luke reads the selected launch mode so the wizard knows how to deliver
+    // the assembled LDIF.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the execution method.
+     * Returns the currently selected execution method constant.
+     * Returns {@code EXECUTION_METHOD_NONE} if neither top-level radio is
+     * selected (shouldn't happen in practice).
      *
-     * @return the execution method
+     * @return  one of {@code EXECUTION_METHOD_ON_CONNECTION},
+     *          {@code EXECUTION_METHOD_LDIF_EDITOR}, {@code EXECUTION_METHOD_LDIF_FILE},
+     *          {@code EXECUTION_METHOD_LDIF_CLIPBOARD}, or {@code EXECUTION_METHOD_NONE}.
      */
     public int getExecutionMethod()
     {
@@ -251,10 +301,16 @@ public class BatchOperationFinishWizardPage extends WizardPage
     }
 
 
+    // ── Luke Checks the Error-Recovery Mode ──────────────────────────────────────
+    // Should we keep firing even if one torpedo misfires? This flag tells the
+    // LDIF executor whether to stop on the first error or press on.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the continue on error flag.
+     * Returns whether the "continue on error" checkbox is selected.
+     * When {@code true}, the LDIF executor will process all entries even if some
+     * fail, rather than aborting at the first error.
      *
-     * @return the continue on error flag
+     * @return  {@code true} if execution should continue past errors.
      */
     public boolean getContinueOnError()
     {
@@ -262,8 +318,14 @@ public class BatchOperationFinishWizardPage extends WizardPage
     }
 
 
+    // ── Luke Logs His Launch Mode ─────────────────────────────────────────────────
+    // After firing, Luke records which launch mode he used so next time the
+    // console starts in the same configuration.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the dialog settings.
+     * Saves the selected execution method and continue-on-error flag to the
+     * plugin's dialog settings so the page re-opens in the same state.
+     * Called by the wizard in {@code performFinish()}.
      */
     public void saveDialogSettings()
     {

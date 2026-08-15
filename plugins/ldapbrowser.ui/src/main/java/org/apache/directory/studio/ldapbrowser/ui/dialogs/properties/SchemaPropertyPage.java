@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.dialogs.properties;
@@ -45,9 +45,25 @@ import org.eclipse.ui.IWorkbenchPropertyPage;
 import org.eclipse.ui.dialogs.PropertyPage;
 
 
+// ── CLASS: SchemaPropertyPage — LUKE'S BINARY SUNSET ON TATOOINE ──────────────
+// Luke watches both suns set and understands the full landscape — where Tatooine
+// sits, what rules govern it, how it came to be.  The LDAP schema is the set of
+// rules that governs a directory: what object classes exist, what attributes they
+// allow, what syntax each attribute must follow.
+// This property page shows the full schema landscape: where the schema entry lives
+// in the directory (DN), when it was created and last modified, and where the
+// local schema cache file is stored — plus a Reload button so Luke can re-fetch
+// the schema if the server's rules have changed.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Property page to shows some meta information of the schema and the 
- * schema cache. 
+ * Eclipse property page displaying schema metadata and cache information for
+ * an LDAP connection.
+ * Shows the schema entry's DN, createTimestamp, modifyTimestamp, and the local
+ * cache file's path, last-modified date, and size.
+ * A "Reload Schema" button lets the user re-fetch schema from the server without
+ * closing the page.
+ * Think of this page as Luke's binary sunset — understanding the rules that govern
+ * the directory before committing to any structural changes.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -76,8 +92,20 @@ public class SchemaPropertyPage extends PropertyPage implements IWorkbenchProper
     private Text cacheSizeText;
 
 
+    // ── LUKE STEPS OUT TO THE VIEWPOINT ───────────────────────────────────────
+    // Luke arrives at his usual spot without any tools or configuration panels —
+    // just the view and a pair of eyes.  No Apply, no Defaults, just read and
+    // optionally trigger a reload.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Instantiates a new schema property page.
+     * Creates the property page and suppresses the Default and Apply buttons.
+     * The schema page is primarily informational; the only action is reloading
+     * the schema, which is done via a dedicated button rather than Apply.
+     *
+     * <p>For example — Luke arrives at the viewpoint unencumbered:</p>
+     * <pre>
+     *   noDefaultAndApplyButton() → clean display with one explicit Reload action
+     * </pre>
      */
     public SchemaPropertyPage()
     {
@@ -86,8 +114,33 @@ public class SchemaPropertyPage extends PropertyPage implements IWorkbenchProper
     }
 
 
+    // ── LUKE SURVEYS THE SCHEMA LANDSCAPE ─────────────────────────────────────
+    // Luke's panorama has two sections: the horizon (schema information from the
+    // live server: DN, create and modify timestamps) and the local cache (where
+    // the schema is stored on disk, how big it is, when it was last updated).
+    // A Reload button in the schema information section lets Luke fetch the latest
+    // rules without leaving the viewpoint.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the property page UI: a "Schema Information" group with DN, create
+     * timestamp, modify timestamp, and a Reload Schema button, and a "Schema Cache"
+     * group with the local cache file path, date, and size.
+     * Calls {@link #update(IBrowserConnection)} immediately to populate all fields.
+     *
+     * <p>For example — Luke's two-panel schema panorama:</p>
+     * <pre>
+     *   Schema Information:
+     *     Schema DN: cn=schema
+     *     Create Timestamp: 2025-05-04T00:00:00Z
+     *     Modify Timestamp: 2025-08-01T12:00:00Z  [Reload Schema]
+     *   Schema Cache:
+     *     Cache Location: ~/.eclipse/.../schema-cache.xml
+     *     Cache Date: August 1, 2025, 12:00 PM
+     *     Cache Size: 256 kB
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse's property dialog.
+     * @return        The top-level composite we built.
      */
     protected Control createContents( Composite parent )
     {
@@ -142,8 +195,21 @@ public class SchemaPropertyPage extends PropertyPage implements IWorkbenchProper
     }
 
 
+    // ── LUKE SIGNALS FOR A FRESH SCHEMA READING ───────────────────────────────
+    // When the rules have changed — new object classes added, attributes renamed —
+    // Luke wants an updated view.  He triggers a reload from the server and then
+    // repaints the panorama with the fresh data.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reloads schema.
+     * Fetches the schema from the LDAP server via {@link ReloadSchemaRunnable},
+     * then calls {@link #update(IBrowserConnection)} to refresh all text fields.
+     * Triggered by the "Reload Schema" button click.
+     *
+     * <p>For example — Luke signals for a fresh schema reading:</p>
+     * <pre>
+     *   ReloadSchemaRunnable runs → schema re-fetched from server →
+     *   update(connection) → all timestamps and cache info refreshed
+     * </pre>
      */
     private void reloadSchema()
     {
@@ -154,10 +220,28 @@ public class SchemaPropertyPage extends PropertyPage implements IWorkbenchProper
     }
 
 
+    // ── LUKE REPAINTS THE SCHEMA PANORAMA ─────────────────────────────────────
+    // After a reload — or on first display — Luke repaints every field from the
+    // live schema and the cache file on disk.  If the schema isn't loaded yet,
+    // the DN and timestamp fields show dashes, and the button label changes from
+    // "Reload Schema" to "Load Schema."
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the text fields.
-     * 
-     * @param browserConnection the connection
+     * Refreshes all text fields from the given connection's schema and the local
+     * cache file.
+     * Silently skips the update if the DN text widget is disposed (dialog closed).
+     * If the cache file doesn't exist all cache fields display {@code "-"}.
+     *
+     * <p>For example — Luke repaints the full schema panorama:</p>
+     * <pre>
+     *   schema loaded  → dnText=cn=schema, timestamps populated, button="Reload Schema"
+     *   schema not yet → dnText="-", timestamps="-", button="Load Schema"
+     *   cache exists   → path, date, size fields populated
+     *   cache absent   → all cache fields="-"
+     * </pre>
+     *
+     * @param browserConnection  The LDAP connection whose schema to display;
+     *                           may be {@code null} if the element didn't adapt.
      */
     private void update( IBrowserConnection browserConnection )
     {
@@ -230,10 +314,23 @@ public class SchemaPropertyPage extends PropertyPage implements IWorkbenchProper
     }
 
 
+    // ── LUKE CHECKS IF THE VIEWPOINT IS STILL ACCESSIBLE ─────────────────────
+    // If a sandstorm swept through and destroyed the viewpoint, Luke can't use it.
+    // We check whether the root text widget has been disposed so callers know
+    // whether they can still push updates to this page.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Checks if is disposed.
-     * 
-     * @return true, if is disposed
+     * Returns {@code true} if the page's DN text widget has been disposed,
+     * indicating the property dialog was closed.
+     * Callers use this to guard against pushing updates to a dead page.
+     *
+     * <p>For example — Luke checks if the viewpoint survived the sandstorm:</p>
+     * <pre>
+     *   dialog still open → dnText.isDisposed() = false → isDisposed() = false
+     *   dialog closed     → dnText.isDisposed() = true  → isDisposed() = true
+     * </pre>
+     *
+     * @return  {@code true} if the root text widget has been disposed.
      */
     public boolean isDisposed()
     {

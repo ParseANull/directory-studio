@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?pde version="3.5"?>
 
-<product name="Apache Directory Studio" uid="org.apache.directory.studio.product" id="org.apache.directory.studio.rcp.product" application="org.apache.directory.studio.rcp.application" version="2.0.0.qualifier" useFeatures="true" includeLaunchers="true">
+<product name="Apache Directory Studio" uid="org.apache.directory.studio.product" id="org.apache.directory.studio.rcp.product" application="org.apache.directory.studio.rcp.application" version="2026.8.14.qualifier" useFeatures="true" includeLaunchers="true">
 
    <aboutInfo>
       <image path="/org.apache.directory.studio.rcp/resources/pictures/product_lg.gif"/>
@@ -27,11 +27,17 @@
 #/usr/lib/jvm/java-11-openjdk/bin/java
       </programArgs>
       <vmArgs>-Dosgi.requiredJavaVersion=11
+-Djdk.tls.client.protocols=TLSv1.2
 ###
 #Uncomment_to_configure_heap_memory
 #https://directory.apache.org/studio/faqs.html#how-to-increase-the-heap-memory
 #-Xms1g
 #-Xmx2g
+###
+#For_TLS_1.0/1.1_only_servers,_replace_the_line_above_with:
+#-Djdk.tls.client.protocols=TLSv1,TLSv1.1,TLSv1.2,TLSv1.3
+#and_add:
+#-Djdk.tls.disabledAlgorithms=RC4,DES,MD5withRSA,DSA,3DES_EDE_CBC
       </vmArgs>
       <vmArgsMac>-XstartOnFirstThread -Dorg.eclipse.swt.internal.carbon.smallFonts
       </vmArgsMac>
@@ -254,15 +260,15 @@ http://www.apache.org/licenses/
       <feature id="org.eclipse.e4.rcp"/>
       <feature id="org.eclipse.emf.common"/>
       <feature id="org.eclipse.platform"/>
-      <feature id="org.eclipse.ecf.filetransfer.feature"/>
+      <!-- org.eclipse.ecf.filetransfer.feature, org.eclipse.ecf.core.ssl.feature, and
+           org.eclipse.ecf.filetransfer.ssl.feature were removed from Eclipse 2026-06 SimRel;
+           filetransfer bundles are pulled in transitively by p2 features -->
       <feature id="org.eclipse.equinox.p2.core.feature"/>
-      <feature id="org.eclipse.ecf.core.ssl.feature"/>
       <feature id="org.eclipse.ecf.core.feature"/>
       <feature id="org.eclipse.help"/>
       <feature id="org.eclipse.equinox.p2.rcp.feature"/>
       <feature id="org.eclipse.equinox.p2.user.ui"/>
       <feature id="org.eclipse.equinox.p2.extras.feature"/>
-      <feature id="org.eclipse.ecf.filetransfer.ssl.feature"/>
    </features>
 
    <configurations>

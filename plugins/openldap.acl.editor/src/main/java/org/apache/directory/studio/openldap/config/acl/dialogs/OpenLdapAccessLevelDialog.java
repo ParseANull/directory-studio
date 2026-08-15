@@ -52,7 +52,29 @@ import org.apache.directory.studio.openldap.config.acl.model.AclAccessLevelPrivM
 import org.apache.directory.studio.openldap.config.acl.model.AclAccessLevelPrivilegeEnum;
 
 
+// ── CLASS: OpenLdapAccessLevelDialog — GRAND MOFF SETTING IMPERIAL CLEARANCES ─
+// A Grand Moff sits at his terminal and assigns clearance levels to the who-
+// clauses in an ACL. He has two modes: a named level (manage/write/read/…) or
+// a custom set of privilege bits (+r, =wrc, -x, …). He may also tick "Self",
+// which appends the self modifier. This dialog models exactly that terminal:
+// two radio buttons to choose mode, a combo for named level, checkboxes for
+// custom privileges, and a modifier group for the operator. The OK button is
+// locked until the selection is valid (a real level selected, or at least one
+// privilege checked).
+// ─────────────────────────────────────────────────────────────────────────────
 /**
+ * A modal dialog for editing an {@link AclAccessLevel} — the "access level"
+ * sub-clause of a who-clause. Offers two modes:
+ * <ol>
+ *   <li>Named level (manage/write/read/search/compare/auth/disclose/none)</li>
+ *   <li>Custom privilege bits with a modifier (=/+/−) and individual privilege
+ *       checkboxes (auth/compare/search/read/write)</li>
+ * </ol>
+ * An optional "Self" checkbox adds the {@code self} modifier before the level.
+ * Think of this class as the Grand Moff's clearance assignment terminal — he
+ * picks a rank or builds a custom set of clearances, then stamps it on the
+ * who-clause.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OpenLdapAccessLevelDialog extends Dialog
@@ -90,10 +112,25 @@ public class OpenLdapAccessLevelDialog extends Dialog
     private Button privilegeWriteCheckbox;
 
 
+    // ── Creating the Dialog with an Existing Access Level ─────────────────────
+    // The Grand Moff opens the terminal pre-loaded with the current clearance
+    // level so the officer can see what is already set before making changes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of OpenLdapAccessLevelDialog.
+     * Creates a new access level dialog, pre-populated from the given
+     * {@link AclAccessLevel}. Uses the active workbench window's shell as the
+     * parent.
      *
-     * @param accessLevel the access level
+     * <p>For example — opening the dialog to edit an existing level:</p>
+     * <pre>
+     *   OpenLdapAccessLevelDialog dlg = new OpenLdapAccessLevelDialog(whoClause.getAccessLevel());
+     *   if (dlg.open() == Dialog.OK) {
+     *       whoClause.setAccessLevel(dlg.getAccessLevel());
+     *   }
+     * </pre>
+     *
+     * @param accessLevel  The access level to edit; may be {@code null} (the dialog
+     *                     will create a new one internally in that case).
      */
     public OpenLdapAccessLevelDialog( AclAccessLevel accessLevel )
     {
@@ -102,8 +139,14 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Configuring the Dialog Shell ───────────────────────────────────────────
+    // The terminal window gets its title and icon before it opens.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Sets the dialog window title to "Access Level Editor" and applies the
+     * plugin's editor icon.
+     *
+     * @param shell  The shell to configure.
      */
     protected void configureShell( Shell shell )
     {
@@ -113,8 +156,16 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Adding the OK and Cancel Buttons ──────────────────────────────────────
+    // The OK button starts disabled — it only lights up once the Grand Moff has
+    // made a valid selection.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.dialogs.Dialog#createButtonsForButtonBar(org.eclipse.swt.widgets.Composite)
+     * Adds the OK and Cancel buttons to the button bar. OK is not the default
+     * button — it stays disabled until the selection is valid (either a real
+     * named level is chosen or at least one privilege checkbox is checked).
+     *
+     * @param parent  The button bar composite.
      */
     protected void createButtonsForButtonBar( Composite parent )
     {
@@ -123,6 +174,17 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Building the Dialog Contents and Running Initial Validation ───────────
+    // After all widgets are created, run validate() immediately so the OK button
+    // starts in the correct enabled/disabled state.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Creates all dialog contents and immediately runs {@link #validate()} so
+     * the OK button reflects the initial state of the pre-loaded access level.
+     *
+     * @param parent  The parent composite.
+     * @return        The top-level control.
+     */
     protected Control createContents( Composite parent )
     {
         Control control = super.createContents( parent );
@@ -134,7 +196,15 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Saving the Access Level When the Officer Clicks OK ────────────────────
+    // The Grand Moff reads the terminal state and stamps the access level:
+    // self flag, named level or custom privileges with a modifier.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Commits the dialog selections to the {@link AclAccessLevel} model when
+     * the user clicks OK. Copies self-flag, named level (or clears it for custom
+     * mode), privilege modifier, and privilege bits into the access level bean.
+     *
      * {@inheritDoc}
      */
     protected void okPressed()
@@ -180,10 +250,16 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Reading Which Privilege Modifier Is Selected ──────────────────────────
+    // Checks which of the three modifier radio buttons is selected and returns
+    // the corresponding enum value. Returns null if none is selected.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the privilege modifier.
+     * Returns the {@link AclAccessLevelPrivModifierEnum} corresponding to whichever
+     * modifier radio button is selected (Equal/Plus/Minus), or {@code null} if none
+     * is selected.
      *
-     * @return the privilege modifier
+     * @return  The selected modifier enum, or {@code null}.
      */
     private AclAccessLevelPrivModifierEnum getPrivilegeModifier()
     {
@@ -204,8 +280,14 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Reading Which Privilege Checkboxes Are Checked ────────────────────────
+    // The Grand Moff reads each checkbox and adds the corresponding privilege
+    // to the access level model.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds privileges.
+     * Adds each checked privilege checkbox's corresponding
+     * {@link AclAccessLevelPrivilegeEnum} to the access level.
+     * Called only when custom privileges mode is active.
      */
     private void addPrivileges()
     {
@@ -242,15 +324,23 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Building the Main Dialog Area ──────────────────────────────────────────
+    // The officer assembles the two groups — Self and Level/Privileges — then
+    // initialises the widgets from the stored access level and hooks up listeners.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Builds the main dialog body. Creates the Self checkbox group and the
+     * Level / Custom Privileges group, initialises widget state from the stored
+     * {@link AclAccessLevel}, then attaches all change listeners.
+     *
      * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     * @param parent  The parent composite.
+     * @return        The top-level control for the dialog body.
      */
     protected Control createDialogArea( Composite parent )
     {
         Composite composite = ( Composite ) super.createDialogArea( parent );
         GridData gd = new GridData( SWT.FILL, SWT.FILL, true, true );
-        //        gd.widthHint = convertHorizontalDLUsToPixels( IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH ) * 4 / 3;
-        //        gd.heightHint = convertVerticalDLUsToPixels( IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH ) * 4 / 3;
         composite.setLayoutData( gd );
 
         // Creating UI
@@ -271,8 +361,16 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Validating the Current Selection ──────────────────────────────────────
+    // The Grand Moff's validation gate: if "Level" mode is active the combo
+    // must have a real level selected; if "Custom" mode is active at least one
+    // privilege must be checked.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Validates the dialog.
+     * Enables or disables the OK button based on the current widget state.
+     * In level mode OK is enabled only when a real {@link AclAccessLevelLevelEnum}
+     * is selected (not the placeholder). In custom mode OK is enabled when at
+     * least one privilege checkbox is checked.
      */
     private void validate()
     {
@@ -299,10 +397,16 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Creating the Self Checkbox Group ──────────────────────────────────────
+    // The "Self" checkbox determines whether the access level applies to the
+    // entity itself or to all matching entities.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the self group.
+     * Creates the Self checkbox group at the top of the dialog.
+     * When Self is checked, the access level is prefixed with {@code self} in
+     * the output ACL text.
      *
-     * @param parent the parent composite
+     * @param parent  The parent composite.
      */
     private void createSelfGroup( Composite parent )
     {
@@ -315,10 +419,16 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Creating the Level and Privileges Group ────────────────────────────────
+    // The main section of the dialog: two radio buttons (Level vs Custom), a
+    // combo for the named level, modifier radio buttons, and privilege checkboxes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the level and privileges group.
+     * Creates the "Access Level and Privilege(s)" group containing the Level/
+     * Custom radio buttons, the level combo viewer, modifier radio buttons
+     * (Equal/Add/Delete), and individual privilege checkboxes.
      *
-     * @param parent the parent composite
+     * @param parent  The parent composite.
      */
     private void createLevelAndPrivilegesGroup( Composite parent )
     {
@@ -368,7 +478,6 @@ public class OpenLdapAccessLevelDialog extends Dialog
             }
         } );
         levelComboViewer.setInput( levels );
-        //        levelComboViewer.setSelection( new StructuredSelection( currentClauseSelection ) ); TODO
 
         // Custom privileges radio button
         customPrivilegesRadioButton = BaseWidgetUtils.createRadiobutton( levelAndPrivilegesGroup,
@@ -411,11 +520,16 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Creating an Indentation Label for Nested Radio Buttons ────────────────
+    // A small spacer label that indents the modifier and privilege subgroups so
+    // they appear visually nested under the "Custom Privilege(s)" radio button.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds some space to indent radio buttons.
+     * Adds a blank label with a 10px horizontal indent to the given parent.
+     * Used to visually indent the modifier and privilege sub-groups so they appear
+     * nested below the "Custom Privilege(s)" radio button.
      *
-     * @param parent the parent
-     * @param span the horizontal span
+     * @param parent  The composite to add the indent label to.
      */
     public static void createRadioIndent( Composite parent )
     {
@@ -426,6 +540,16 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Initialising Widgets from the Stored Access Level ─────────────────────
+    // When the terminal opens the Grand Moff sees the current clearance settings
+    // already selected. If the level is null we create a new empty access level.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Initialises all dialog widgets from the stored {@link AclAccessLevel}. If
+     * {@code accessLevel} is {@code null} a fresh one is created. Sets the self
+     * checkbox, selects the level combo item or privilege modifier buttons, ticks
+     * the appropriate privilege checkboxes, and toggles the radio buttons.
+     */
     private void initWithAccessLevel()
     {
         // Creating a boolean to indicate if the level is used (rather than the privileges)
@@ -491,8 +615,14 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Enabling or Disabling Mode-Specific Widgets ────────────────────────────
+    // When the officer switches between Level and Custom modes, the irrelevant
+    // widgets are disabled so they cannot be accidentally edited.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the enable/disable state for buttons
+     * Enables or disables the level combo and the privilege modifier/checkbox
+     * widgets based on whether the Level or Custom Privileges radio button is
+     * currently selected. Keeps the two mode groups mutually exclusive in the UI.
      */
     private void setButtonsEnableDisableState()
     {
@@ -510,8 +640,15 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Attaching Change Listeners to All Interactive Widgets ─────────────────
+    // Every interactive widget fires setButtonsEnableDisableState() or
+    // validate() when changed, keeping the OK button in sync at all times.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds listeners to the UI widgets.
+     * Attaches selection listeners to the Level/Custom radio buttons, the level
+     * combo viewer, and all privilege modifier/checkbox buttons. Each listener
+     * calls {@link #setButtonsEnableDisableState()} and/or {@link #validate()} so
+     * the OK button tracks validity in real time.
      */
     private void addListeners()
     {
@@ -555,18 +692,29 @@ public class OpenLdapAccessLevelDialog extends Dialog
     }
 
 
+    // ── Retrieving the Updated Access Level After OK ───────────────────────────
+    // The who-clause widget retrieves the updated access level from here so it
+    // can update its model.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the ACL Access Level value.
-     * 
-     * @return the ACL Access Level value
+     * Returns the {@link AclAccessLevel} after the dialog has been confirmed.
+     * The caller should invoke this only after {@code open()} returns {@code OK}.
+     *
+     * @return  The updated access level bean.
      */
     public AclAccessLevel getAccessLevel()
     {
         return accessLevel;
     }
 
+    // ── Placeholder for the "Select an Access Level" Combo Item ───────────────
+    // The first item in the level combo is this placeholder — selecting it keeps
+    // OK disabled because it is not a real level enum.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * A private object for the first row of the access level combo viewer.
+     * A marker object for the first (placeholder) item in the level combo viewer.
+     * Its label is {@code "< Access Level >"} and its presence in the combo
+     * selection keeps the OK button disabled.
      */
     private class AccessLevelComboViewerName
     {

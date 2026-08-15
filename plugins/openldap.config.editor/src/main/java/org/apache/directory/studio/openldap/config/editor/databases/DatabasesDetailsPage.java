@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.databases;
 
@@ -99,193 +99,31 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: DatabasesDetailsPage — Luke's Binary Sunset ────────────────────────
+// Luke stands at the edge of the moisture farm, watching the twin suns sink
+// below the horizon, sensing the full weight of everything that lies ahead.
+// That moment of seeing the big picture is exactly what this class does:
+// it's the right-hand details page that presents everything about a selected
+// database — general identity, limits, security, access control, overlays,
+// replication, and backend-specific settings — all at once, in one unified view.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Details Page of the Server Configuration Editor for the Database type. 
- * We have 6 sections to manage :
+ * The details page for a selected database in the OpenLDAP Server Configuration Editor.
+ * Implements {@link IDetailsPage} (JFace Forms) so that the master/details block
+ * can show it whenever a {@link DatabaseWrapper} is selected in the left-hand list.
+ * We manage six (plus one backend-specific) collapsible sections:
  * <ul>
- * <li>general :</li>
- *   <ul>
- *     <li>olcSuffix(DN, SV/MV)</li>
- *     <li>olcRootDN(DN, SV)</li>
- *     <li>olcRootPw(String, SV)</li>
- *     <li></li>
- *   </ul>
- * <li>limits :</li>
- *   <ul>
- *     <li>olcSizeLimit(String, SV)</li>
- *     <li>olcTimeLimit(String, MV)</li>
- *     <li>olcLimits(String, MV, Ordered)</li>
- *     <li>olcMaxDerefDepth(Integer, SV)</li>
- *   </ul>
- * <li>security :</li>
- *   <ul>
- *     <li>olcHidden(Boolean)</li>
- *     <li>olcReadOnly(Boolean)</li>
- *     <li>olcRequires(String, MV)</li>
- *     <li>olcRestrict(String, MV)</li>
- *     <li>olcSecurity(String, MV)</li>
- *   </ul>
- * <li>access</li>
- *   <ul>
- *     <li>olcAccess(String, MV, Ordered)</li>
- *     <li>olcAddContentAcl(Boolean)</li>
- *   </ul>
- * <li>replication :</li>
- *   <ul>
- *     <li>olcMirrorMode(Boolean)</li>
- *     <li>olcSyncrepl(String, MV, Ordered)</li>
- *     <li>olcSyncUseSubentry(Boolean)</li>
- *     <li>olcUpdateDN(DN, SV)</li>
- *     <li>olcUpdateRef(String, MV)</li>
- *     <li>olcReplica(String, MV, Ordered)</li>
- *     <li>olcReplicaArgsFile(String, SV)</li>
- *     <li>olcReplicaPidFile(String, SV)</li>
- *     <li>olcReplicationInterval(Integer, SV)</li>
- *     <li>olcReplogFile(String, SV)</li>
- *   </ul>
- * <li>options :</li>
- *   <ul>
- *     <li>olcLastMod(Boolean)</li>
- *     <li>olcMonitoring(Boolean)</li>
- *     <li>olcPlugin(String, MV)</li>
- *     <li>olcExtraArgs(String, MV)</li>
- *     <li>olcSchemaDN(DN, SV)</li>
- *     <li>olcSubordinate(String, SV)</li>
- *   </ul>
+ * <li>General — suffix DN, root DN, root password</li>
+ * <li>Limits — size limit, max deref depth, time limits table, limits table</li>
+ * <li>Security — hidden flag, read-only flag, require conditions, restrict operations, SSF table</li>
+ * <li>Access — add-content-ACL checkbox, ACL table (partially stubbed)</li>
+ * <li>Overlays — overlay list with Add / Edit / Delete buttons</li>
+ * <li>Replication Consumers — SyncRepl list with Add / Edit / Delete buttons</li>
+ * <li>Database-Specific Settings — dynamically constructed from the database type</li>
  * </ul>
- * 
- * <pre>
- * +--------------------------------------------------------+
- * | .----------------------------------------------------. |
- * | |V XXXX Database general                             | |
- * | +----------------------------------------------------+ |
- * | | Root DN :       [ ] none [///////////////////////] | |
- * | | Root password : [ ] none [///////////////////////] | |
- * | | Suffix :                                           | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Edit...) | |
- * | |   |                                    | (Delete)  | |
- * | |   +------------------------------------+           | |
- * | +----------------------------------------------------+ |
- * |                                                        |
- * | .----------------------------------------------------. |
- * | |V XXXX Database limits                              | |
- * | +----------------------------------------------------+ |
- * | | Size limit : [//////////] (Edit...)                | |
- * | | Max Deref Depth : [///]                            | |
- * | | Timelimit :                                        | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Edit...) | |
- * | |   |                                    | (Delete)  | |
- * | |   +------------------------------------+           | |
- * | | Limits :                                           | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Edit...) | |
- * | |   |                                    | (Delete)  | |
- * | |   |                                    | --------  | |
- * | |   |                                    | (Up...)   | |
- * | |   |                                    | (Down...) | |
- * | |   +------------------------------------+           | |
- * | +----------------------------------------------------+ |
- * |                                                        |
- * | .----------------------------------------------------. |
- * | |V XXXX Database security                            | |
- * | +----------------------------------------------------+ |
- * | | Hidden : [ ]                       Read Only : [ ] | |
- * | | Requires :                                         | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Delete)  | |
- * | |   |                                    |           | |
- * | |   +------------------------------------+           | |
- * | | Restrict :                                         | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Delete)  | |
- * | |   |                                    |           | |
- * | |   +------------------------------------+           | |
- * | | Security Strength Factors :                        | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Edit...) | |
- * | |   |                                    | (Delete)  | |
- * | |   +------------------------------------+           | |
- * | +----------------------------------------------------+ |
- * |                                                        |
- * | .----------------------------------------------------. |
- * | |V XXXX Database access                              | |
- * | +----------------------------------------------------+ |
- * | | Add content ACL : [ ]                              | |
- * | | ACLs :                                             | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Edit...) | |
- * | |   |                                    | (Delete)  | |
- * | |   |                                    | --------  | |
- * | |   |                                    | (Up...)   | |
- * | |   |                                    | (Down...) | |
- * | |   +------------------------------------+           | |
- * | +----------------------------------------------------+ |
- * |                                                        |
- * | .----------------------------------------------------. |
- * | |V XXXX Database replication                         | |
- * | +----------------------------------------------------+ |
- * | | MirrorMode :    [ ]     Use Subentry : [ ]         | |
- * | | Replication Interval :  [///]                      | |
- * | | Replication Args[fileo:e[////////////////////////] | |
- * | | Replication PID file :  [////////////////////////] | |
- * | | Replication Log file :  [////////////////////////] | |
- * | | Update DN : [-------------------------->] (Browse) | |
- * | | Update References :                                | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Edit...) | |
- * | |   |                                    | (Delete)  | |
- * | |   +------------------------------------+           | |
- * | | Replicas :                                         | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Edit...) | |
- * | |   |                                    | (Delete)  | |
- * | |   |                                    | --------  | |
- * | |   |                                    | (Up...)   | |
- * | |   |                                    | (Down...) | |
- * | |   +------------------------------------+           | |
- * | | Syncrepls :                                        | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Edit...) | |
- * | |   |                                    | (Delete)  | |
- * | |   |                                    | --------  | |
- * | |   |                                    | (Up...)   | |
- * | |   |                                    | (Down...) | |
- * | |   +------------------------------------+           | |
- * | +----------------------------------------------------+ |
- * |                                                        |
- * | .----------------------------------------------------. |
- * | |V XXXX Database options                             | |
- * | +----------------------------------------------------+ |
- * | | Last Modification : [ ] Monitoring : [ ]           | |
- * | | Schema DN : [-------------------------->] (Browse) | |
- * | | Subordinate : [//////////////////////////////////] | |
- * | | Plugins :                                          | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Edit...) | |
- * | |   |                                    | (Delete)  | |
- * | |   +------------------------------------+           | |
- * | | Extras Arguments :                                 | |
- * | |   +------------------------------------+           | |
- * | |   |                                    | (Add...)  | |
- * | |   |                                    | (Edit...) | |
- * | |   |                                    | (Delete)  | |
- * | |   +------------------------------------+           | |
- * | +----------------------------------------------------+ |
- * +--------------------------------------------------------+
- * </pre>
+ * Think of this page as Luke watching the twin suns: every dimension of the
+ * database's configuration is visible, and we can zoom in on any one of them.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DatabasesDetailsPage implements IDetailsPage
@@ -324,7 +162,7 @@ public class DatabasesDetailsPage implements IDetailsPage
     private Composite parentComposite;
     private FormToolkit toolkit;
     //private ComboViewer databaseTypeComboViewer;
-    
+
     // UI General sesstings widgets
     /** The olcSuffixDN attribute */
     private TableWidget<DnWrapper> suffixDnTableWidget;
@@ -338,7 +176,7 @@ public class DatabasesDetailsPage implements IDetailsPage
     // UI limits settings widgets
     /** The olcSizeLimit */
     private Text sizeLimitText;
-    
+
     /** The SizeLimit edit Button */
     private Button sizeLimitEditButton;
 
@@ -360,16 +198,16 @@ public class DatabasesDetailsPage implements IDetailsPage
 
     /** The olcHidden attribute */
     private Button hiddenButton;
-    
+
     /** The olcRequires parameter */
     private TableWidget<RequireConditionEnum> requireConditionTableWidget;
 
     /** The olcRestrict parameter */
     private TableWidget<RestrictOperationEnum> restrictOperationTableWidget;
-    
+
     /** The olcSecurity table widget */
     private TableWidget<SsfWrapper> securityTableWidget;
-    
+
     // The Access UI Widgets
     /** The olcAddContentAcl Button */
     private Button addContentAclCheckbox;
@@ -392,23 +230,23 @@ public class DatabasesDetailsPage implements IDetailsPage
 
     /** The olcMirrorMode flag */
     private BooleanWithDefaultWidget mirrorModeBooleanWithDefaultWidget;
-    
+
     /** The olcDisabled flag (only available in OpenDLAP 2.4.36) */
     private BooleanWithDefaultWidget disabledBooleanWithDefaultWidget;
-    
+
     /** The olcLastMod flag */
     private BooleanWithDefaultWidget lastModBooleanWithDefaultWidget;
-    
+
     /** The olMonitoring flag */
     private BooleanWithDefaultWidget monitoringBooleanWithDefaultWidget;
-    
+
     /** The Syncrepl consumer part */
     private TableViewer replicationConsumersTableViewer;
     private Button addReplicationConsumerButton;
     private Button editReplicationConsumerButton;
     private Button deleteReplicationConsumerButton;
-    
-    
+
+
     /**
      * The olcSuffixDn listener
      *
@@ -417,17 +255,17 @@ public class DatabasesDetailsPage implements IDetailsPage
         public void widgetModified( WidgetModifyEvent e )
         {
             List<String> suffixDns = new ArrayList<String>();
-            
+
             for ( DnWrapper dnWrapper : suffixDnTableWidget.getElements() )
             {
                 suffixDns.add( dnWrapper.toString() );
             }
-            
+
             getConfiguration().getGlobal().setOlcRequires( requires );
         }
     };
-    
-    
+
+
     /**
      * The listener for the sizeLimit Text
      */
@@ -441,7 +279,7 @@ public class DatabasesDetailsPage implements IDetailsPage
             if ( dialog.open() == OverlayDialog.OK )
             {
                 String newSizeLimitStr = dialog.getNewLimit();
-                
+
                 if ( newSizeLimitStr != null )
                 {
                     sizeLimitText.setText( newSizeLimitStr );
@@ -452,17 +290,17 @@ public class DatabasesDetailsPage implements IDetailsPage
 
     // Listeners
     /**
-     * A listener for changes on the Overlay table 
+     * A listener for changes on the Overlay table
      */
     private ISelectionChangedListener overlaysTableViewerSelectionChangedListener = event -> updateOverlaysTableButtonsState();
 
     /**
-     * A listener for selections on the Overlay table 
+     * A listener for selections on the Overlay table
      */
     private IDoubleClickListener overlaysTableViewerDoubleClickListener = event -> editOverlayButtonAction();
 
     /**
-     * A listener for the Overlay table Add button 
+     * A listener for the Overlay table Add button
      */
     private SelectionListener addOverlayButtonListener = new SelectionAdapter()
     {
@@ -474,7 +312,7 @@ public class DatabasesDetailsPage implements IDetailsPage
     };
 
     /**
-     * A listener for the Overlay table Edit button 
+     * A listener for the Overlay table Edit button
      */
     private SelectionListener editOverlayButtonListener = new SelectionAdapter()
     {
@@ -486,7 +324,7 @@ public class DatabasesDetailsPage implements IDetailsPage
     };
 
     /**
-     * A listener for the Overlay table Delete button 
+     * A listener for the Overlay table Delete button
      */
     private SelectionListener deleteOverlayButtonListener = new SelectionAdapter()
     {
@@ -498,19 +336,19 @@ public class DatabasesDetailsPage implements IDetailsPage
     };
 
     /**
-     * A listener for changes on the Replication Consumers table 
+     * A listener for changes on the Replication Consumers table
      */
     private ISelectionChangedListener replicationConsumersTableViewerSelectionChangedListener = event ->
             updateReplicationConsumersTableButtonsState();
 
     /**
-     * A listener for selections on the Replication Consumers table 
+     * A listener for selections on the Replication Consumers table
      */
     private IDoubleClickListener replicationConsumersTableViewerDoubleClickListener = event ->
             editReplicationConsumerButtonAction();
 
     /**
-     * A listener for the Replication Consumers table Add button 
+     * A listener for the Replication Consumers table Add button
      */
     private SelectionListener addReplicationConsumerButtonListener = new SelectionAdapter()
     {
@@ -522,7 +360,7 @@ public class DatabasesDetailsPage implements IDetailsPage
     };
 
     /**
-     * A listener for the Replication Consumers table Edit button 
+     * A listener for the Replication Consumers table Edit button
      */
     private SelectionListener editReplicationConsumerButtonListener = new SelectionAdapter()
     {
@@ -534,7 +372,7 @@ public class DatabasesDetailsPage implements IDetailsPage
     };
 
     /**
-     * A listener for the Replication Consumers table Delete button 
+     * A listener for the Replication Consumers table Delete button
      */
     private SelectionListener deleteReplicationConsumerButtonListener = new SelectionAdapter()
     {
@@ -569,7 +407,7 @@ public class DatabasesDetailsPage implements IDetailsPage
                         databaseSpecificDetailsBlock = new BerkeleyDbDatabaseSpecificDetailsBlock<OlcBdbConfig>(
                             instance, newBdbDatabase, browserConnection );
                         break;
-                        
+
                     case HDB:
                         OlcHdbConfig newHdbDatabase = new OlcHdbConfig();
                         copyDatabaseProperties( database, newHdbDatabase );
@@ -598,9 +436,7 @@ public class DatabasesDetailsPage implements IDetailsPage
                     //                        OlcLDAPConfig newLdapDatabase = new OlcLDAPConfig();
                     //                        copyDatabaseProperties( database, newLdapDatabase );
                     //                        databaseWrapper.setDatabase( newLdapDatabase );
-                    //                        // databaseSpecificDetailsBlock = new LdapDatabaseSpecificDetailsBlock( newLdapDatabase ); // TODO
-                    //                        break;
-                        
+
                     case NULL:
                         OlcNullConfig newNullDatabase = new OlcNullConfig();
                         copyDatabaseProperties( database, newNullDatabase );
@@ -608,7 +444,7 @@ public class DatabasesDetailsPage implements IDetailsPage
                         databaseSpecificDetailsBlock = new NullDatabaseSpecificDetailsBlock( instance,
                             newNullDatabase );
                         break;
-                        
+
                     case RELAY:
                         OlcRelayConfig newRelayDatabase = new OlcRelayConfig();
                         copyDatabaseProperties( database, newRelayDatabase );
@@ -616,14 +452,14 @@ public class DatabasesDetailsPage implements IDetailsPage
                         databaseSpecificDetailsBlock = new RelayDatabaseSpecificDetailsBlock( instance,
                             newRelayDatabase, browserConnection );
                         break;
-                        
+
                     case NONE:
                         OlcDatabaseConfig newNoneDatabase = new OlcDatabaseConfig();
                         copyDatabaseProperties( database, newNoneDatabase );
                         databaseWrapper.setDatabase( newNoneDatabase );
                         databaseSpecificDetailsBlock = null;
                         break;
-                        
+
                     default:
                         break;
                 }
@@ -635,39 +471,39 @@ public class DatabasesDetailsPage implements IDetailsPage
         }
     };
 
-    
-    /** 
-     * The modify listener which set the editor dirty 
+
+    /**
+     * The modify listener which set the editor dirty
      **/
     private WidgetModifyListener dirtyWidgetModifyListener = event -> setEditorDirty();
 
-    
-    /** 
-     * The modify listener which set the editor dirty 
+
+    /**
+     * The modify listener which set the editor dirty
      **/
     private SelectionListener dirtySelectionListener = new SelectionListener()
     {
-        
+
         @Override
         public void widgetSelected( SelectionEvent e )
         {
             setEditorDirty();
         }
-        
+
         @Override
         public void widgetDefaultSelected( SelectionEvent e )
         {
             // TODO Auto-generated method stub
         }
     };
-    
-    
+
+
     /**
      * A modify listener for text zones when they have been modified
      */
     protected ModifyListener dirtyModifyListener = event -> setEditorDirty();
 
-    
+
     /**
      * The olcHidden listener
      */
@@ -680,7 +516,7 @@ public class DatabasesDetailsPage implements IDetailsPage
         }
     };
 
-    
+
     /**
      * The olcReadOnly listener
      */
@@ -692,61 +528,68 @@ public class DatabasesDetailsPage implements IDetailsPage
             setEditorDirty();
         }
     };
-    
-    
+
+
     /**
      * The olcRequires listener
      */
     private WidgetModifyListener requireConditionListener = event ->
         {
             List<String> requires = new ArrayList<>();
-            
+
             for ( RequireConditionEnum requireCondition : requireConditionTableWidget.getElements() )
             {
                 requires.add( requireCondition.getName() );
             }
-            
+
             //getConfiguration().getGlobal().setOlcRequires( requires );
         };
-    
-    
+
+
     /**
      * The olcRestrict listener
      */
     private WidgetModifyListener restrictOperationListener = event ->
         {
             List<String> restricts = new ArrayList<>();
-            
+
             for ( RestrictOperationEnum restrictOperation : restrictOperationTableWidget.getElements() )
             {
                 restricts.add( restrictOperation.getName() );
             }
-            
+
             //getConfiguration().getGlobal().setOlcRestrict( restricts );
         };
-    
-    
+
+
     /**
      * The olcSecurity listener
      */
     private WidgetModifyListener securityListener = event ->
         {
             List<String> ssfWrappers = new ArrayList<>();
-            
+
             for ( SsfWrapper ssfWrapper : securityTableWidget.getElements() )
             {
                 ssfWrappers.add( ssfWrapper.toString() );
             }
-            
+
             //getConfiguration().getGlobal().setOlcSecurity( ssfWrappers );
         };
 
 
+    // ── Open the Twin-Sun Overview ─────────────────────────────────────────────
+    // Luke steps to the edge and takes in the full horizon. We record a self-
+    // reference (used by inner listeners), link to the master/details block
+    // (our navigation partner), and grab the browser connection for entry pickers.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of PartitionDetailsPage.
+     * Constructs the details page and links it to the given master/details block.
+     * We store a self-reference so inner anonymous listeners can call back to us,
+     * and we resolve the {@link IBrowserConnection} from the plugin's connection
+     * manager so entry-picker widgets can browse the live LDAP tree.
      *
-     * @param pmdb
-     *      the associated Master Details Block
+     * @param pmdb  the {@link DatabasesMasterDetailsBlock} that owns this details page
      */
     public DatabasesDetailsPage( DatabasesMasterDetailsBlock pmdb )
     {
@@ -759,19 +602,19 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Lay Out the Full Horizon View ─────────────────────────────────────────
+    // Luke surveys every system at once: general identity, limits, security,
+    // access, overlays, replication consumers, and the backend-specific panel.
+    // We build all seven sections in order inside the parent composite.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Database general configuration panel. We have 8 sections :
-     * <ul>
-     * <li>General</li>
-     * <li>Limits</li>
-     * <li>Security</li>
-     * <li>Access</li>
-     * <li>Overlays</li>
-     * <li>Replication</li>
-     * <li>Options</li>
-     * <li>Specific</li>
-     * </ul>
-     * {@inheritDoc}
+     * Creates all UI sections inside the given parent composite.
+     * We build eight sections in this order: General Settings, Limits Settings,
+     * Security Settings, Access Settings, Overlay Settings, Replication Consumers
+     * Settings, and Database-Specific Settings.
+     * The Options section is currently commented out.
+     *
+     * @param parent  the parent composite provided by the JFace Forms framework
      */
     public void createContents( Composite parent )
     {
@@ -789,31 +632,23 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Build the Identity Panel ──────────────────────────────────────────────
+    // The first sweep of the horizon: who is this database? Root DN, root
+    // password, and the suffix DN table (a database can serve multiple suffixes).
+    // The root-DN and password fields also show information tooltips.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the General Settings Section. This will expose the following attributes :
+     * Creates the "General Settings" section exposing three attributes:
      * <ul>
-     * <li>olcRootDN</li>
-     * <li>olcRootPW</li>
-     * <li>olcSuffix</li>
+     * <li>{@code olcRootDN} — the root DN that bypasses access controls</li>
+     * <li>{@code olcRootPW} — the root password</li>
+     * <li>{@code olcSuffix} — one or more suffix DNs served by this database</li>
      * </ul>
-     * 
-     * <pre>
-     * .----------------------------------------------------.
-     * |V XXXX Database general                             |
-     * +----------------------------------------------------+
-     * | Root DN :       [ ] none [///////////////////////] |
-     * | Root password : [ ] none [///////////////////////] |
-     * | Suffix :                                           |
-     * |   +------------------------------------+           |
-     * |   |                                    | (Add...)  |
-     * |   |                                    | (Edit...) |
-     * |   |                                    | (Delete)  |
-     * |   +------------------------------------+           |
-     * +----------------------------------------------------+
-     * </pre>
+     * Each active field has a tooltip decoration with a description taken
+     * from the OpenLDAP documentation.
      *
-     * @param parent the parent composite
-     * @param toolkit the toolkit to use
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createGeneralSettingsSection( Composite parent, FormToolkit toolkit )
     {
@@ -906,7 +741,7 @@ public class DatabasesDetailsPage implements IDetailsPage
         schemaDnTextDecoration.setImage( OpenLdapConfigurationPlugin.getDefault().getImageDescriptor(
             OpenLdapConfigurationPluginConstants.IMG_INFORMATION ).createImage() );
         schemaDnTextDecoration.setMarginWidth( 4 );
-        schemaDnTextDecoration.setDescriptionText( 
+        schemaDnTextDecoration.setDescriptionText(
             "Specify the distinguished name for the subschema subentry that controls the entries on this server" );
 
         // mirrorMode
@@ -922,7 +757,7 @@ public class DatabasesDetailsPage implements IDetailsPage
         mirrorModeCheckboxDecoration.setMarginWidth( 4 );
         mirrorModeCheckboxDecoration
             .setDescriptionText( "Sets the database in MirrorMode. This is only useful in a Multi-Master configuration" );
-        
+
         // disabled (only in OpenLDAP 2.4.36)
         if ( browserConnection.getSchema().hasAttributeTypeDescription( "olcDisabled" ) )
         {
@@ -938,8 +773,8 @@ public class DatabasesDetailsPage implements IDetailsPage
             disabledCheckboxDecoration.setMarginWidth( 4 );
             disabledCheckboxDecoration.setDescriptionText( "Disable this Database" );
         }
-        
-        // The olcLastMod parameter : Controls whether slapd will automatically maintain the 
+
+        // The olcLastMod parameter : Controls whether slapd will automatically maintain the
         // modifiersName, modifyTimestamp, creatorsName, and createTimestamp attributes for entries
         toolkit.createLabel( composite, "Last Modifier:" );
         lastModBooleanWithDefaultWidget = new BooleanWithDefaultWidget();
@@ -952,7 +787,7 @@ public class DatabasesDetailsPage implements IDetailsPage
             OpenLdapConfigurationPluginConstants.IMG_INFORMATION ).createImage() );
         lastModCheckboxDecoration.setMarginWidth( 4 );
         lastModCheckboxDecoration.setDescriptionText( "Controls whether slapd will automatically maintain the modifiersName, modifyTimestamp, creatorsName, and createTimestamp attributes for entries" );
-        
+
         // The olcMonitoring parameter
         toolkit.createLabel( composite, "Monitoring:" );
         monitoringBooleanWithDefaultWidget = new BooleanWithDefaultWidget();
@@ -967,43 +802,24 @@ public class DatabasesDetailsPage implements IDetailsPage
         monitoringCheckboxDecoration.setDescriptionText( "Controls whether monitoring is enabled for this database" );
         */
     }
-    
-    
+
+
+    // ── Build the Quota Panel ─────────────────────────────────────────────────
+    // The second sweep: what are the operational limits? Size limit (with an
+    // Edit dialog button), max dereference depth, a time-limits table, and a
+    // user-specific limits table with ordered entries.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Limits Settings Section. This will expose the following attributes :
-     *   <ul>
-     *     <li>olcSizeLimit(String, SV)</li>
-     *     <li>olcTimeLimit(String, MV)</li>
-     *     <li>olcLimits(String, MV, Ordered)</li>
-     *     <li>olcMaxDerefDepth(Integer, SV)</li>
-     *   </ul>
-     * 
-     * <pre>
-     * .----------------------------------------------------.
-     * |V XXXX Database limits                              |
-     * +----------------------------------------------------+
-     * | Size limit : [//////////] (Edit...)                | 
-     * | Max Deref Depth : [///]                            |
-     * | Timelimit :                                        |
-     * |   +------------------------------------+           |
-     * |   |                                    | (Add...)  |
-     * |   |                                    | (Edit...) |
-     * |   |                                    | (Delete)  |
-     * |   +------------------------------------+           |
-     * | Limits :                                           |
-     * |   +------------------------------------+           |
-     * |   |                                    | (Add...)  |
-     * |   |                                    | (Edit...) |
-     * |   |                                    | (Delete)  |
-     * |   |                                    | --------  |
-     * |   |                                    | (Up...)   |
-     * |   |                                    | (Down...) |
-     * |   +------------------------------------+           |
-     * +----------------------------------------------------+
-     * </pre>
-     * 
-     * @param parent the parent composite
-     * @param toolkit the toolkit to use
+     * Creates the "Limits Settings" section exposing:
+     * <ul>
+     * <li>{@code olcSizeLimit} — max entries returned, editable via {@link SizeLimitDialog}</li>
+     * <li>{@code olcMaxDerefDepth} — max alias dereference chain length</li>
+     * <li>{@code olcTimeLimit} — per-operation time limits (multi-value, ordered table)</li>
+     * <li>{@code olcLimits} — per-entity limits (multi-value, ordered table)</li>
+     * </ul>
+     *
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createLimitsSettingsSection( Composite parent, FormToolkit toolkit )
     {
@@ -1017,32 +833,32 @@ public class DatabasesDetailsPage implements IDetailsPage
         gl.marginRight = 18;
         composite.setLayout( gl );
         section.setClient( composite );
-        
+
         // The olcSizeLimit parameter.
-        toolkit.createLabel( composite, 
+        toolkit.createLabel( composite,
             Messages.getString( "OpenLDAPMasterDetail.SizeLimit" ) ); //$NON-NLS-1$
         sizeLimitText = toolkit.createText( composite, "" );
         sizeLimitText.setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false ) );
 
         // The SizeLimit edit button
-        sizeLimitEditButton = BaseWidgetUtils.createButton( composite, 
+        sizeLimitEditButton = BaseWidgetUtils.createButton( composite,
             Messages.getString( "OpenLDAPMasterDetail.Edit" ), 1 ); //$NON-NLS-1$
         sizeLimitEditButton.setLayoutData( new GridData( SWT.RIGHT, SWT.CENTER, false, false ) );
         sizeLimitEditButton.addSelectionListener( sizeLimitEditSelectionListener );
-        
+
         // The olcMaxDerefDepth edit button
-        toolkit.createLabel( composite, 
+        toolkit.createLabel( composite,
             Messages.getString( "OpenLDAPMasterDetail.MaxDerefDepth" ) ); //$NON-NLS-1$
         maxDerefDepthText = BaseWidgetUtils.createIntegerText( toolkit, composite,
             "Specifies the maximum number of aliases to dereference when trying to resolve an entry" );
         maxDerefDepthText.setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false ) );
-        
+
         // The olcTimeLimit parameter
-        Label timeLimitLabel = toolkit.createLabel( composite, 
+        Label timeLimitLabel = toolkit.createLabel( composite,
             Messages.getString( "OpenLDAPMasterDetail.TimeLimit" ) ); //$NON-NLS-1$
         timeLimitLabel.setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false, 5, 1 ) );
-        
-        timeLimitTableWidget = new TableWidget<>( 
+
+        timeLimitTableWidget = new TableWidget<>(
             new TimeLimitDecorator( composite.getShell() ) );
 
         timeLimitTableWidget.createWidgetWithEdit( composite, toolkit );
@@ -1050,57 +866,36 @@ public class DatabasesDetailsPage implements IDetailsPage
         addModifyListener( timeLimitTableWidget, timeLimitListener );
 
         // The olcLimits parameter.
-        Label limitsLabel = toolkit.createLabel( composite, 
+        Label limitsLabel = toolkit.createLabel( composite,
             Messages.getString( "OpenLDAPMasterDetail.Limits" ) ); //$NON-NLS-1$
         limitsLabel.setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false, 5, 1 ) );
-        
-        limitsTableWidget = new TableWidget<>( 
+
+        limitsTableWidget = new TableWidget<>(
             new LimitsDecorator( composite.getShell(), "Limits" ) );
 
         limitsTableWidget.createOrderedWidgetWithEdit( composite, toolkit );
         limitsTableWidget.getControl().setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false, 5, 1 ) );
         addModifyListener( limitsTableWidget, limitsListener );
     }
-    
-    
+
+
+    // ── Build the Security Panel ──────────────────────────────────────────────
+    // The third sweep: who can do what? Hidden and read-only flags sit side
+    // by side. Below them are the require-conditions table, restrict-operations
+    // table, and the SSF (Security Strength Factors) table.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Security Settings Section. This will expose the following attributes :
-     *   <ul>
-     *     <li>olcHidden(Boolean, SV)</li>
-     *     <li>olcReadOnly(Boolean, SV)</li>
-     *     <li>olcRequires(String, MV, Ordered)</li>
-     *     <li>olcRestrict(Integer, SV)</li>
-     *     <li>olcSecurity</li>
-     *   </ul>
-     * 
-     * <pre>
-     * .----------------------------------------------------.
-     * |V XXXX Database security                            |
-     * +----------------------------------------------------+
-     * | Hidden : [ ]                       Read Only : [ ] |
-     * | Requires :                                         |
-     * |   +------------------------------------+           |
-     * |   |                                    | (Add...)  |
-     * |   |                                    | (Delete)  |
-     * |   |                                    |           |
-     * |   +------------------------------------+           |
-     * | Restrict :                                         |
-     * |   +------------------------------------+           |
-     * |   |                                    | (Add...)  |
-     * |   |                                    | (Delete)  |
-     * |   |                                    |           |
-     * |   +------------------------------------+           |
-     * | Security Strength Factors :                        |
-     * |   +------------------------------------+           |
-     * |   |                                    | (Add...)  |
-     * |   |                                    | (Edit...) |
-     * |   |                                    | (Delete)  |
-     * |   +------------------------------------+           |
-     * +----------------------------------------------------+
-     * </pre>
-     * 
-     * @param parent the parent composite
-     * @param toolkit the toolkit to use
+     * Creates the "Security Settings" section exposing:
+     * <ul>
+     * <li>{@code olcHidden} — hides the database from monitoring tools</li>
+     * <li>{@code olcReadOnly} — makes the database read-only</li>
+     * <li>{@code olcRequires} — pre-conditions required before any operation</li>
+     * <li>{@code olcRestrict} — operations that are completely forbidden</li>
+     * <li>{@code olcSecurity} — minimum Security Strength Factor requirements</li>
+     * </ul>
+     *
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createSecuritySettingsSection( Composite parent, FormToolkit toolkit )
     {
@@ -1116,17 +911,17 @@ public class DatabasesDetailsPage implements IDetailsPage
         section.setClient( securityComposite );
 
         // The OlcHidden button
-        hiddenButton = BaseWidgetUtils.createCheckbox( securityComposite, 
+        hiddenButton = BaseWidgetUtils.createCheckbox( securityComposite,
             Messages.getString( "OpenLDAPMasterDetail.Hidden" ), 2 );
         hiddenButton.addSelectionListener( hiddenButtonSelectionListener );
 
         // The OlcReadOnly button
-        readOnlyButton = BaseWidgetUtils.createCheckbox( securityComposite, 
+        readOnlyButton = BaseWidgetUtils.createCheckbox( securityComposite,
             Messages.getString( "OpenLDAPMasterDetail.ReadOnly" ), 2 );
         readOnlyButton.addSelectionListener( readOnlyButtonSelectionListener );
-        
+
         // The olcRequires parameter label
-        Label requireConditionLabel = toolkit.createLabel( securityComposite, 
+        Label requireConditionLabel = toolkit.createLabel( securityComposite,
             Messages.getString( "OpenLDAPMasterDetail.RequireCondition" ) ); //$NON-NLS-1$
         requireConditionLabel.setLayoutData( new GridData( SWT.FILL, SWT.FILL, false, false, 2, 1 ) );
 
@@ -1136,7 +931,7 @@ public class DatabasesDetailsPage implements IDetailsPage
         restrictOperationLabel.setLayoutData( new GridData( SWT.FILL, SWT.FILL, false, false, 2, 1 ) );
 
         // The olcRequires parameter table
-        requireConditionTableWidget = new TableWidget<>( 
+        requireConditionTableWidget = new TableWidget<>(
             new RequireConditionDecorator( securityComposite.getShell() ) );
 
         requireConditionTableWidget.createWidgetNoEdit( securityComposite, toolkit );
@@ -1144,17 +939,17 @@ public class DatabasesDetailsPage implements IDetailsPage
         addModifyListener( requireConditionTableWidget, requireConditionListener );
 
         // The olcRestrict parameter table
-        restrictOperationTableWidget = new TableWidget<>( 
+        restrictOperationTableWidget = new TableWidget<>(
             new RestrictOperationDecorator( securityComposite.getShell() ) );
 
         restrictOperationTableWidget.createWidgetNoEdit( securityComposite, toolkit );
         restrictOperationTableWidget.getControl().setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false, 2, 1 ) );
         addModifyListener( restrictOperationTableWidget, restrictOperationListener );
-        
+
         // The olcSecurity parameter table
         Label securityLabel = toolkit.createLabel( securityComposite, Messages.getString( "OpenLDAPMasterDetail.Security" ) ); //$NON-NLS-1$
         securityLabel.setLayoutData( new GridData( SWT.FILL, SWT.FILL, false, false, 4, 1 ) );
-        
+
         securityTableWidget = new TableWidget<>( new SsfDecorator( securityComposite.getShell() ) );
 
         securityTableWidget.createWidgetWithEdit( securityComposite, toolkit );
@@ -1163,32 +958,20 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Build the Access Control Panel ────────────────────────────────────────
+    // The fourth sweep: who is allowed in and on what terms? The Add-Content-ACL
+    // checkbox and the ACL table (currently stub-commented until the decorator
+    // is ready) define what can be done with newly added entries.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Access Settings Section. This will expose the following attributes :
-     *   <ul>
-     *     <li>olcAccess(String, MV, Ordered)</li>
-     *     <li>olcAddContentAcl(Boolean)</li>
-     *   </ul>
-     * 
-     * <pre>
-     * .----------------------------------------------------.
-     * |V XXXX Database access                              |
-     * +----------------------------------------------------+
-     * | Add content ACL : [ ]                              |
-     * | ACLs :                                             |
-     * |   +------------------------------------+           |
-     * |   |                                    | (Add...)  |
-     * |   |                                    | (Edit...) |
-     * |   |                                    | (Delete)  |
-     * |   |                                    | --------  |
-     * |   |                                    | (Up...)   |
-     * |   |                                    | (Down...) |
-     * |   +------------------------------------+           |
-     * +----------------------------------------------------+
-     * </pre>
-     * 
-     * @param parent the parent composite
-     * @param toolkit the toolkit to use
+     * Creates the "Access Settings" section exposing:
+     * <ul>
+     * <li>{@code olcAddContentAcl} — whether the ACL applies to new-entry content</li>
+     * <li>{@code olcAccess} — ordered ACL table (currently a UI stub, commented out)</li>
+     * </ul>
+     *
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createAccessSettingsSection( Composite parent, FormToolkit toolkit )
     {
@@ -1202,17 +985,17 @@ public class DatabasesDetailsPage implements IDetailsPage
         gl.marginRight = 18;
         accessComposite.setLayout( gl );
         accessSection.setClient( accessComposite );
-        
+
         // The olcAddContentAcl Button
         addContentAclCheckbox = BaseWidgetUtils.createCheckbox( accessComposite, "Add Content ACL", 2 );
-        
+
         // The olcAccess Table
-        Label aclsLabel = toolkit.createLabel( accessComposite, 
+        Label aclsLabel = toolkit.createLabel( accessComposite,
             Messages.getString( "OpenLDAPMasterDetail.ACLs" ) ); //$NON-NLS-1$
         aclsLabel.setLayoutData( new GridData( SWT.FILL, SWT.NONE, true, false, 4, 1 ) );
-        
+
         /*
-        aclsTableWidget = new TableWidget<StringValueWrapper>( 
+        aclsTableWidget = new TableWidget<StringValueWrapper>(
             new LimitsDecorator( accessComposite.getShell(), "ACLs" ) );
 
         aclsTableWidget.createOrderedWidgetWithEdit( accessComposite, toolkit );
@@ -1220,14 +1003,21 @@ public class DatabasesDetailsPage implements IDetailsPage
         addModifyListener( aclsTableWidget, aclsListener );
         */
     }
-    
+
+
+    // ── Build the Overlay Management Panel ────────────────────────────────────
+    // The fifth sweep: which modules augment this database? The overlays panel
+    // shows a list of attached overlay modules with Add, Edit, and Delete buttons.
+    // Double-clicking an overlay opens its edit dialog.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Overlay Settings Section
+     * Creates the "Overlays Settings" section — a {@link TableViewer} listing
+     * the overlays attached to the selected database, alongside Add, Edit,
+     * and Delete buttons. The table uses a custom label provider that
+     * resolves the overlay type name via {@link OverlayDialog#getOverlayType}.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the toolkit to use
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createOverlaySettingsSection( Composite parent, FormToolkit toolkit )
     {
@@ -1277,11 +1067,17 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Translate the Overlay Object to a Human-Readable Name ─────────────────
+    // Luke needs to label each system on the horizon. We ask the OverlayDialog
+    // to resolve the overlay type and return its display name.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the overlay text.
+     * Returns the display name for the given overlay by delegating to
+     * {@link OverlayDialog#getOverlayType(OlcOverlayConfig)}.
+     * Used as the label provider for the overlays table viewer.
      *
-     * @param overlay the overlay
-     * @return the text corresponding to the overlay
+     * @param overlay  the overlay config object to name
+     * @return         the human-readable overlay type name
      */
     private String getOverlayText( OlcOverlayConfig overlay )
     {
@@ -1289,11 +1085,18 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Build the Database-Specific Settings Container ────────────────────────
+    // The last dynamic panel on the horizon: a placeholder composite that will
+    // be populated at runtime with the right backend-specific block (BDB, MDB,
+    // LDIF, null, relay, or frontend controls).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Database Specific Settings Section
+     * Creates the "Database Specific Settings" section — an empty collapsible
+     * section whose client composite will be populated dynamically by
+     * {@link #updateDatabaseSpecificSettingsSection()} whenever the selection changes.
      *
-     * @param parent the parent composite
-     * @param toolkit the toolkit to use
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createDatabaseSpecificSettingsSection( Composite parent, FormToolkit toolkit )
     {
@@ -1314,13 +1117,18 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Build the Replication Consumers Panel ─────────────────────────────────
+    // The sixth sweep of the horizon: which upstream providers feed this replica?
+    // The replication consumers table lists SyncRepl strings with Add, Edit,
+    // and Delete buttons. Double-clicking opens the replication dialog.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the Replication Consumers Settings Section
+     * Creates the "Replication Consumers Settings" section — a {@link TableViewer}
+     * listing all {@code olcSyncrepl} values, formatted by {@link #getReplicationConsumerText},
+     * alongside Add, Edit, and Delete buttons.
      *
-     * @param parent
-     *      the parent composite
-     * @param toolkit
-     *      the toolkit to use
+     * @param parent   the parent composite
+     * @param toolkit  the JFace Forms toolkit
      */
     private void createReplicationConsumersSettingsSection( Composite parent, FormToolkit toolkit )
     {
@@ -1370,11 +1178,19 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Parse a SyncRepl String into a Short Summary ──────────────────────────
+    // The replication consumer table needs a human-readable label for each
+    // raw SyncRepl string. We parse it with SyncReplParser and format a
+    // short summary: rid, provider URL, and search base.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the replication consumer text.
+     * Formats a raw {@code olcSyncrepl} string into a short summary label.
+     * We parse the string with {@link SyncReplParser} and build a line of the form
+     * {@code rid=N provider=ldap://... searchBase="dc=..." (and more options)}.
+     * If parsing fails, we fall back to returning the raw string unchanged.
      *
-     * @param syncReplValue the replication consumer value
-     * @return the text corresponding to the replication consumer
+     * @param syncReplValue  the raw SyncRepl configuration string
+     * @return               a human-readable summary, or the original string on parse failure
      */
     private String getReplicationConsumerText( String syncReplValue )
     {
@@ -1422,8 +1238,18 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Respond to a New Database Selection ───────────────────────────────────
+    // The user clicked a different row in the master list. Luke shifts his
+    // gaze to the new sun on the horizon. We extract the selected wrapper
+    // and call refresh() to repopulate all seven sections.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by the JFace Forms framework whenever the master list selection changes.
+     * We extract the selected {@link DatabaseWrapper} from the structured selection
+     * and trigger a full UI refresh to show the new database's details.
+     *
+     * @param part       the form part that fired the selection event
+     * @param selection  the new selection (expected to contain one {@link DatabaseWrapper})
      */
     public void selectionChanged( IFormPart part, ISelection selection )
     {
@@ -1442,8 +1268,24 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Write the Current State Back to the Model ─────────────────────────────
+    // Luke stores his observations in the record. We read every active UI
+    // control and push the values back into the underlying OlcDatabaseConfig.
+    // Most sections are partially stubbed; the ones that are wired push suffix
+    // DNs, root DN, root password, and the backend-specific block.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Commits the current UI state to the {@link OlcDatabaseConfig} model.
+     * Active (non-commented-out) fields that are committed:
+     * <ul>
+     * <li>Suffix DNs from the table widget</li>
+     * <li>Root DN from the entry widget</li>
+     * <li>Root password from the password widget (only if non-empty)</li>
+     * <li>The database-specific block (delegates to its own {@code commit})</li>
+     * <li>The {@code olcDisabled} flag (only if the schema has that attribute)</li>
+     * </ul>
+     *
+     * @param onSave  {@code true} on a full editor save; {@code false} for page-change commits
      */
     public void commit( boolean onSave )
     {
@@ -1456,7 +1298,7 @@ public class DatabasesDetailsPage implements IDetailsPage
             List<DnWrapper> dnWrappers = suffixDnTableWidget.getElements();
             Dn[] suffixDns = new Dn[dnWrappers.size()];
             int pos = 0;
-            
+
             for ( DnWrapper dnWrapper : dnWrappers )
             {
                 suffixDns[pos++] = dnWrapper.getDn();
@@ -1474,7 +1316,7 @@ public class DatabasesDetailsPage implements IDetailsPage
             {
                 database.setOlcRootPW( rootPassword );
             }
-            
+
             // Schema DN
             //database.setOlcSchemaDN( schemaDnEntryWidget.getDn() );
 
@@ -1489,28 +1331,28 @@ public class DatabasesDetailsPage implements IDetailsPage
             {
                 databaseSpecificDetailsBlock.commit( onSave );
             }
-            
+
             // MirrorMode
             //database.setOlcMirrorMode( mirrorModeBooleanWithDefaultWidget.getValue() );
-            
+
             // Disabled
             if ( browserConnection.getSchema().hasAttributeTypeDescription( "olcDisabled" ) )
             {
                 database.setOlcDisabled( disabledBooleanWithDefaultWidget.getValue() );
             }
-            
+
             // LastMod
             //database.setOlcLastMod( lastModBooleanWithDefaultWidget.getValue() );
-            
+
             // AddAclContent
             //database.setOlcAddContentAcl( addContentAclBooleanWithDefaultWidget.getValue() );
-            
+
             // Monitoring
             if ( ( database instanceof OlcHdbConfig ) || ( database instanceof OlcBdbConfig ) )
             {
                 //database.setOlcMonitoring( monitoringBooleanWithDefaultWidget.getValue() );
             }
-            
+
             // MaxDerefDepth
             //if ( ( maxDerefDepthText.getText() != null ) && ( maxDerefDepthText.getText().length() > 0 ) )
             {
@@ -1520,16 +1362,29 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Release Resources ─────────────────────────────────────────────────────
+    // Luke leaves the horizon. Nothing to clean up here; resources are managed
+    // by the Eclipse Forms framework.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Disposes any resources held by this details page.
+     * Currently a no-op — all widget lifecycle is managed by the
+     * Eclipse Forms framework and the SWT parent composite.
      */
     public void dispose()
     {
     }
 
 
+    // ── Receive the Form Toolkit ──────────────────────────────────────────────
+    // Before any UI is built, the framework hands us the toolkit we need
+    // to create styled widgets. We store it for use in createContents().
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by the JFace Forms framework before {@link #createContents} to hand
+     * us the {@link FormToolkit}. We store it for use when building the UI.
+     *
+     * @param form  the managed form that owns this details page
      */
     public void initialize( IManagedForm form )
     {
@@ -1537,8 +1392,13 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Report Whether We Have Unsaved Changes ────────────────────────────────
+    // Luke knows whether he has recorded any changes since the last save.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the current dirty state of this details page.
+     *
+     * @return  {@code true} if any field has been modified since the last save
      */
     public boolean isDirty()
     {
@@ -1546,8 +1406,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Report Whether Our Data is Stale ─────────────────────────────────────
+    // Luke checks whether the horizon has changed while he wasn't looking.
+    // We always return false — stale detection is not implemented here.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Indicates whether the page's data is out of date relative to the model.
+     * Always returns {@code false} — stale detection is not implemented.
+     *
+     * @return  {@code false} always
      */
     public boolean isStale()
     {
@@ -1555,8 +1422,13 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Move Focus to the Page ────────────────────────────────────────────────
+    // Luke shifts his attention to the nearest control. Currently a no-op
+    // since we don't have a designated first-focus widget.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Moves keyboard focus into this details page.
+     * Currently a no-op — the suffix text field focus-request is commented out.
      */
     public void setFocus()
     {
@@ -1564,8 +1436,17 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Accept Input Programmatically ─────────────────────────────────────────
+    // If someone tries to push a model object directly into the form, we
+    // decline. Selection-driven input via selectionChanged() is the only
+    // supported pathway.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Attempts to set the form's current input to the given object.
+     * We do not support direct form input — the page is driven by selection events.
+     *
+     * @param input  the proposed new input object (ignored)
+     * @return       {@code false} always — input must come through selection
      */
     public boolean setFormInput( Object input )
     {
@@ -1573,8 +1454,19 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Repopulate Every Panel from the Selected Database ─────────────────────
+    // Luke scans the full horizon again. We remove all listeners, pull
+    // every value from the selected database into the UI, determine which
+    // backend-specific block to show, and then re-attach listeners.
+    // Frontend and Config databases get special treatment (some fields disabled).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reloads all UI controls from the currently selected {@link DatabaseWrapper}.
+     * For the {@code frontend} and {@code config} special databases, some fields
+     * are disabled. For regular databases, all fields are enabled. We also determine
+     * the correct {@link DatabaseSpecificDetailsBlock} subclass to show based on
+     * the concrete type of the selected {@link OlcDatabaseConfig}.
+     * Listeners are detached before and re-attached after the update.
      */
     public void refresh()
     {
@@ -1596,7 +1488,7 @@ public class DatabasesDetailsPage implements IDetailsPage
                 //readOnlyBooleanWithDefaultWidget.setEnabled( false );
                 //hiddenBooleanWithDefaultWidget.setEnabled( false );
                 //mirrorModeBooleanWithDefaultWidget.setEnabled( false );
-                
+
                 // Disabled
                 if ( browserConnection.getSchema().hasAttributeTypeDescription( "olcDisabled" ) )
                 {
@@ -1618,13 +1510,13 @@ public class DatabasesDetailsPage implements IDetailsPage
                 //readOnlyBooleanWithDefaultWidget.setEnabled( false );
                 //hiddenBooleanWithDefaultWidget.setEnabled( false );
                 //mirrorModeBooleanWithDefaultWidget.setEnabled( true );
-                
+
                 // Disabled
                 if ( browserConnection.getSchema().hasAttributeTypeDescription( "olcDisabled" ) )
                 {
                     disabledBooleanWithDefaultWidget.setEnabled( false );
                 }
-                
+
                 //lastModBooleanWithDefaultWidget.setEnabled( false );
                 //addContentAclBooleanWithDefaultWidget.setEnabled( false );
                 //monitoringBooleanWithDefaultWidget.setEnabled( false );
@@ -1640,16 +1532,16 @@ public class DatabasesDetailsPage implements IDetailsPage
                 //readOnlyBooleanWithDefaultWidget.setEnabled( true );
                 //hiddenBooleanWithDefaultWidget.setEnabled( true );
                 //mirrorModeBooleanWithDefaultWidget.setEnabled( true );
-                
+
                 // Disabled
                 if ( browserConnection.getSchema().hasAttributeTypeDescription( "olcDisabled" ) )
                 {
                     disabledBooleanWithDefaultWidget.setEnabled( true );
                 }
-                
+
                 //lastModBooleanWithDefaultWidget.setEnabled( true );
                 //addContentAclBooleanWithDefaultWidget.setEnabled( true );
-                
+
                 if ( ( database instanceof OlcHdbConfig ) || ( database instanceof OlcBdbConfig ) )
                 {
                     //monitoringBooleanWithDefaultWidget.setEnabled( true );
@@ -1658,21 +1550,21 @@ public class DatabasesDetailsPage implements IDetailsPage
                 {
                     //monitoringBooleanWithDefaultWidget.setEnabled( false );
                 }
-                
+
                 //maxDerefDepthText.setEnabled( true );
             }
 
             // Suffixes
             suffixDnTableWidget.getElements().clear();
-            
+
             List<Dn> suffixesDnList = database.getOlcSuffix();
             List<DnWrapper> dnWrappers = new ArrayList<>();
-            
+
             for ( Dn dn : suffixesDnList )
             {
                 dnWrappers.add( new DnWrapper( dn ) );
             }
-            
+
             suffixDnTableWidget.setElements( dnWrappers );
 
             // Root DN
@@ -1689,10 +1581,10 @@ public class DatabasesDetailsPage implements IDetailsPage
 
             // Hidden
             //hiddenBooleanWithDefaultWidget.setValue( database.getOlcHidden() );
-            
+
             // Mirror Mode
             //mirrorModeBooleanWithDefaultWidget.setValue( database.getOlcMirrorMode() );
-            
+
             // Disabled
             if ( browserConnection.getSchema().hasAttributeTypeDescription( "olcDisabled" ) )
             {
@@ -1701,7 +1593,7 @@ public class DatabasesDetailsPage implements IDetailsPage
 
             // LastMod
             //lastModBooleanWithDefaultWidget.setValue( database.getOlcLastMod() );
-            
+
             // AddAclContent
             //addContentAclBooleanWithDefaultWidget.setValue( database.getOlcAddContentAcl() );
 
@@ -1710,7 +1602,7 @@ public class DatabasesDetailsPage implements IDetailsPage
             {
                 //monitoringBooleanWithDefaultWidget.setValue( database.getOlcMonitoring() );
             }
-            
+
             //maxDerefDepthText.setText( database.getOlcMaxDerefDepth() == null ? "" : Integer.toString( database.getOlcMaxDerefDepth() ) );
 
             // Overlays
@@ -1804,8 +1696,14 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Reload the Overlays Table ─────────────────────────────────────────────
+    // Luke updates the overlay row on his horizon scan — we read the current
+    // overlay list from the database and feed it into the table viewer.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes overlays table viewer.
+     * Reloads the overlays table viewer from the current database's overlay list.
+     * If no database is selected, the table is cleared.
+     * Always calls {@link #updateOverlaysTableButtonsState()} after updating.
      */
     private void refreshOverlaysTableViewer()
     {
@@ -1822,8 +1720,12 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Enable/Disable the Overlay Buttons Based on Selection ─────────────────
+    // Luke can only edit or delete an overlay when one is selected.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the state of the overlays table buttons.
+     * Enables the Edit and Delete overlay buttons only when an item is selected
+     * in the overlays table viewer. Called after every table refresh.
      */
     private void updateOverlaysTableButtonsState()
     {
@@ -1834,8 +1736,14 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Reload the Replication Consumers Table ────────────────────────────────
+    // Luke updates the replication-consumers row on his horizon scan — we read
+    // the OlcSyncrepl list from the database and feed it into the table viewer.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Refreshes replication consumers table viewer.
+     * Reloads the replication consumers table viewer from the current database's
+     * {@code olcSyncrepl} list. If no database is selected, the table is cleared.
+     * Always calls {@link #updateReplicationConsumersTableButtonsState()} after updating.
      */
     private void refreshReplicationConsumersTableViewer()
     {
@@ -1852,8 +1760,12 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Enable/Disable the Replication Buttons Based on Selection ────────────
+    // Luke can only edit or delete a replication consumer when one is selected.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the state of the replication consumers table buttons.
+     * Enables the Edit and Delete replication consumer buttons only when an item
+     * is selected in the replication consumers table viewer.
      */
     private void updateReplicationConsumersTableButtonsState()
     {
@@ -1864,8 +1776,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Attach All Dirty Listeners to Every Active Widget ─────────────────────
+    // Luke activates his attention: every control on the horizon gets a
+    // change detector. Any user edit will propagate the "dirty" signal up.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds listeners to UI widgets.
+     * Attaches dirty listeners and action listeners to every active UI widget.
+     * Called at the end of {@link #refresh()} after all values are loaded.
+     * Conditionally attaches the {@code olcDisabled} listener when the schema
+     * advertises that attribute.
      */
     private void addListeners()
     {
@@ -1879,14 +1798,14 @@ public class DatabasesDetailsPage implements IDetailsPage
         addModifyListener( maxDerefDepthText, dirtyModifyListener );
         addModifyListener( timeLimitTableWidget, dirtyWidgetModifyListener );
         addModifyListener( limitsTableWidget, dirtyWidgetModifyListener );
-        
-        
+
+
         // TODO...
         //addModifyListener( schemaDnEntryWidget, dirtyWidgetModifyListener );
         //addModifyListener( readOnlyBooleanWithDefaultWidget, dirtyWidgetModifyListener );
         //addModifyListener( hiddenBooleanWithDefaultWidget, dirtyWidgetModifyListener );
         //addModifyListener( mirrorModeBooleanWithDefaultWidget, dirtyWidgetModifyListener );
-        
+
         if ( browserConnection.getSchema().hasAttributeTypeDescription( "olcDisabled" ) )
         {
             addModifyListener( disabledBooleanWithDefaultWidget, dirtyWidgetModifyListener );
@@ -1914,8 +1833,14 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Detach All Dirty Listeners Before Programmatic Updates ────────────────
+    // Luke turns off his attention before he updates his own records, to avoid
+    // false "changed" signals. We remove every listener symmetrically.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes listeners from UI widgets.
+     * Detaches all dirty listeners and action listeners from every active UI widget.
+     * Called at the start of {@link #refresh()} before any values are loaded,
+     * so that programmatic updates do not trigger spurious dirty signals.
      */
     private void removeListeners()
     {
@@ -1930,13 +1855,13 @@ public class DatabasesDetailsPage implements IDetailsPage
         removeModifyListener( timeLimitTableWidget, dirtyWidgetModifyListener );
         removeModifyListener( limitsTableWidget, dirtyWidgetModifyListener );
 
-        
+
         removeModifyListener( suffixDnTableWidget, dirtyWidgetModifyListener );
         //removeModifyListener( schemaDnEntryWidget, dirtyWidgetModifyListener );
         //removeModifyListener( readOnlyBooleanWithDefaultWidget, dirtyWidgetModifyListener );
         //removeModifyListener( hiddenBooleanWithDefaultWidget, dirtyWidgetModifyListener );
         //removeModifyListener( mirrorModeBooleanWithDefaultWidget, dirtyWidgetModifyListener );
-        
+
         if ( browserConnection.getSchema().hasAttributeTypeDescription( "olcDisabled" ) )
         {
             removeModifyListener( disabledBooleanWithDefaultWidget, dirtyWidgetModifyListener );
@@ -1964,8 +1889,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Clear the Backend-Specific Block ─────────────────────────────────────
+    // When a new database is selected, the old backend panel must be torn down
+    // before the new one is built. We dispose and null out the composite.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes the inner specific settings composite.
+     * Disposes the inner composite that holds the current backend-specific
+     * settings block, if it exists and has not already been disposed.
+     * Clears the reference so the next call to {@link #updateDatabaseSpecificSettingsSection}
+     * starts with a clean slate.
      */
     private void disposeSpecificSettingsComposite()
     {
@@ -1978,8 +1910,18 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Swap in the Right Backend-Specific Panel ──────────────────────────────
+    // Luke sees a new system on the horizon and updates the right-side readout.
+    // We dispose the old block content, create new content from the new block,
+    // refresh it, re-layout, and show/hide the section based on whether the
+    // selected database type has a specific block.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the database specific settings section.
+     * Rebuilds the "Database Specific Settings" section to match the newly selected
+     * database type. Disposes the previous block's composite, creates the new block's
+     * content inside the section composite, calls the block's {@code refresh()},
+     * forces a layout pass on the parent, and shows or hides the section based on
+     * whether a non-null {@link DatabaseSpecificDetailsBlock} was found.
      */
     private void updateDatabaseSpecificSettingsSection()
     {
@@ -2002,8 +1944,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Add a New Overlay to This Database ────────────────────────────────────
+    // Luke opens the overlay module bay and lets the user pick a new overlay
+    // type. If confirmed, we assign the next ordering prefix and attach it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Action launched when the add overlay button is clicked.
+     * Opens the {@link OverlayDialog} in "add" mode. If the user confirms,
+     * we assign the new overlay an {@code {n}} ordering prefix via
+     * {@link #getNewOverlayOrderingValue()}, attach it to the database,
+     * refresh the overlay table, and mark the editor dirty.
      */
     private void addOverlayButtonAction()
     {
@@ -2030,10 +1979,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Pick the Next Overlay Ordering Slot ──────────────────────────────────
+    // We need a unique ordering prefix for the new overlay — always one higher
+    // than the current maximum.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the new overlay ordering value.
+     * Returns the ordering prefix to use for a newly added overlay.
+     * Always {@code getMaxOverlayOrderingValue() + 1}.
      *
-     * @return the new overlay ordering value
+     * @return  the next available overlay ordering integer
      */
     private int getNewOverlayOrderingValue()
     {
@@ -2041,10 +1995,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Find the Highest Overlay Ordering Prefix ──────────────────────────────
+    // We scan all existing overlays to find the one with the largest ordering
+    // number, so new overlays can be placed after all existing ones.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the maximum ordering value.
+     * Returns the largest ordering prefix currently in use among all overlays
+     * attached to the selected database. Returns {@code -1} if there are no overlays.
      *
-     * @return the maximum ordering value
+     * @return  the maximum overlay ordering prefix, or {@code -1} if none
      */
     private int getMaxOverlayOrderingValue()
     {
@@ -2072,9 +2031,14 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Edit the Selected Overlay ─────────────────────────────────────────────
+    // Luke opens the selected module's configuration panel. We open the
+    // OverlayDialog pre-populated with the selected overlay's current config.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Action launched when the edit overlay button is clicked, or
-     * when the overlays table viewer is double-clicked.
+     * Opens the {@link OverlayDialog} pre-populated with the currently selected overlay.
+     * If the user confirms, we refresh the overlay table and mark the editor dirty.
+     * Also triggered by double-clicking a row in the overlays table.
      */
     private void editOverlayButtonAction()
     {
@@ -2097,8 +2061,13 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Remove the Selected Overlay ───────────────────────────────────────────
+    // Luke decommissions the selected module after asking for confirmation.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Action launched when the delete overlay button is clicked.
+     * Prompts the user to confirm deletion of the selected overlay.
+     * On confirmation, removes the overlay from the database, refreshes the
+     * overlay table, and marks the editor dirty.
      */
     private void deleteOverlayButtonAction()
     {
@@ -2122,12 +2091,18 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Check Whether This Is the Frontend Database ───────────────────────────
+    // The frontend pseudo-database has no ordering prefix (prefix == -1) and
+    // its olcDatabase value is exactly "frontend". Luke checks the horizon
+    // label to see if this is the universal intake deck.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the given database is the frontend one.
+     * Returns {@code true} if the given database is the OpenLDAP frontend pseudo-database.
+     * The frontend has no ordering prefix (returned as {@code -1}) and its type name
+     * is {@code "frontend"} (case-insensitive).
      *
-     * @param database the database
-     * @return <code>true</code> if the given database if the frontend one,
-     *         <code>false</code> if not.
+     * @param database  the database to test
+     * @return          {@code true} if this is the frontend database
      */
     private boolean isFrontendDatabase( OlcDatabaseConfig database )
     {
@@ -2144,12 +2119,18 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Check Whether This Is the Config Database ─────────────────────────────
+    // The cn=config database has ordering prefix 0 and type name "config".
+    // Luke checks whether this system on the horizon is the self-configuration
+    // system — the Empire managing itself.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Indicates if the given database is the config one.
+     * Returns {@code true} if the given database is the OpenLDAP config database.
+     * The config database has ordering prefix {@code 0} and type name {@code "config"}
+     * (case-insensitive).
      *
-     * @param database the database
-     * @return <code>true</code> if the given database if the config one,
-     *         <code>false</code> if not.
+     * @param database  the database to test
+     * @return          {@code true} if this is the config ({@code cn=config}) database
      */
     private boolean isConfigDatabase( OlcDatabaseConfig database )
     {
@@ -2166,8 +2147,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Add a New Replication Consumer ────────────────────────────────────────
+    // Luke opens the replication docking bay. The user defines a new SyncRepl
+    // provider connection; we serialize it and add it to the database.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Action launched when the add replication consumer button is clicked.
+     * Opens the {@link ReplicationConsumerDialog} in "add" mode.
+     * If the user confirms, we serialize the resulting {@link SyncRepl} to a string,
+     * add it to the database's {@code olcSyncrepl} list, refresh the table, select
+     * the new row, and mark the editor dirty.
      */
     private void addReplicationConsumerButtonAction()
     {
@@ -2186,7 +2174,7 @@ public class DatabasesDetailsPage implements IDetailsPage
 
                     databaseWrapper.getDatabase().addOlcSyncrepl( newSyncReplValue );
                     refreshReplicationConsumersTableViewer();
-                    
+
                     replicationConsumersTableViewer.setSelection( new StructuredSelection( newSyncReplValue ) );
                     setEditorDirty();
                 }
@@ -2195,9 +2183,16 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Edit the Selected Replication Consumer ────────────────────────────────
+    // Luke opens the selected consumer's docking config for editing. We strip
+    // any ordering prefix before parsing, pass the parsed SyncRepl to the dialog,
+    // and if confirmed, write the updated string back (restoring the prefix if present).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Action launched when the edit replication consumer button is clicked, or
-     * when the replication consumers table viewer is double-clicked.
+     * Opens the {@link ReplicationConsumerDialog} pre-populated with the currently
+     * selected SyncRepl value. Strips any {@code {n}} ordering prefix before parsing,
+     * restores it when writing the updated value back. Shows an error dialog if
+     * parsing fails. Also triggered by double-clicking a row.
      */
     private void editReplicationConsumerButtonAction()
     {
@@ -2264,8 +2259,14 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Remove the Selected Replication Consumer ──────────────────────────────
+    // Luke decommissions the selected upstream provider after confirmation.
+    // We remove the raw string from the database and refresh the table.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Action launched when the delete replication consumer button is clicked.
+     * Prompts the user to confirm deletion of the selected replication consumer.
+     * On confirmation, removes the SyncRepl string from the database's
+     * {@code olcSyncrepl} list, refreshes the table, and marks the editor dirty.
      */
     private void deleteReplicationConsumerButtonAction()
     {
@@ -2283,9 +2284,9 @@ public class DatabasesDetailsPage implements IDetailsPage
                 if ( databaseWrapper != null )
                 {
                     OlcDatabaseConfig databaseConfig = databaseWrapper.getDatabase();
-                    
+
                     if( databaseConfig != null )
-                    { 
+                    {
                         List<String> newOlcSynrepls = databaseConfig.getOlcSyncrepl();
                         newOlcSynrepls.remove( syncReplValue );
                         databaseConfig.setOlcSyncrepl( newOlcSynrepls );
@@ -2298,11 +2299,16 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Null-Safe Listener Attachment for Text Controls ───────────────────────
+    // Luke attaches a change detector to a text field. We guard against null
+    // or disposed widgets before calling addModifyListener.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a modify listener to the given Text.
+     * Null-safely attaches a {@link ModifyListener} to the given {@link Text} control.
+     * Does nothing if either argument is null or the Text has been disposed.
      *
-     * @param text the Text control
-     * @param listener the listener
+     * @param text      the Text control to watch
+     * @param listener  the listener to attach
      */
     protected void addModifyListener( Text text, ModifyListener listener )
     {
@@ -2313,11 +2319,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Null-Safe Listener Attachment for TableWidget ─────────────────────────
+    // Luke attaches a change detector to a table widget.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a modify listener to the given TableWidget.
+     * Null-safely attaches a {@link WidgetModifyListener} to the given {@link TableWidget}.
+     * Does nothing if either argument is null.
      *
-     * @param table the Text control
-     * @param listener the listener
+     * @param tabelWidget  the table widget to watch
+     * @param listener     the listener to attach
      */
     protected void addModifyListener( TableWidget<?> tabelWidget, WidgetModifyListener listener )
     {
@@ -2328,11 +2338,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Null-Safe Listener Attachment for AbstractWidget ──────────────────────
+    // Luke attaches a change detector to an abstract widget (entry, password, etc.).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a modify listener to the given BrowserWidget.
+     * Null-safely attaches a {@link WidgetModifyListener} to the given {@link AbstractWidget}.
+     * Does nothing if either argument is null.
      *
-     * @param widget the widget
-     * @param listener the listener
+     * @param widget    the widget to watch
+     * @param listener  the listener to attach
      */
     protected void addModifyListener( AbstractWidget widget, WidgetModifyListener listener )
     {
@@ -2341,49 +2355,53 @@ public class DatabasesDetailsPage implements IDetailsPage
             widget.addWidgetModifyListener( listener );
         }
     }
-    
-    
+
+
     /**
      * The olcTimeLimit listener
      */
     private WidgetModifyListener timeLimitListener = event ->
         {
             List<String> timeLimits = new ArrayList<>();
-            
+
             for ( TimeLimitWrapper timeLimitWrapper : timeLimitTableWidget.getElements() )
             {
                 timeLimits.add( timeLimitWrapper.toString() );
             }
-            
+
             OlcDatabaseConfig databaseConfig = databaseWrapper.getDatabase();
 
             databaseConfig.setOlcTimeLimit( timeLimits );
         };
-    
-    
+
+
     /**
      * The olcLimits listener
      */
     private WidgetModifyListener limitsListener = event ->
         {
             List<String> limits = new ArrayList<>();
-            
+
             for ( LimitsWrapper limitWrapper : limitsTableWidget.getElements() )
             {
                 limits.add( limitWrapper.toString() );
             }
-            
+
             OlcDatabaseConfig databaseConfig = databaseWrapper.getDatabase();
 
             databaseConfig.setOlcLimits( limits );
         };
 
 
+    // ── Null-Safe Selection Listener Attachment for Buttons ───────────────────
+    // Luke wires a selection detector to a button.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a selection listener to the given Button.
+     * Null-safely attaches a {@link SelectionListener} to the given {@link Button}.
+     * Does nothing if any argument is null or the Button has been disposed.
      *
-     * @param button the Button control
-     * @param listener the listener
+     * @param button    the Button to watch
+     * @param listener  the listener to attach
      */
     protected void addSelectionListener( Button button, SelectionListener listener )
     {
@@ -2394,11 +2412,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Null-Safe Selection-Changed Listener Attachment for Viewers ───────────
+    // Luke wires a selection-changed detector to a JFace viewer.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a selection changed listener to the given Viewer.
+     * Null-safely attaches an {@link ISelectionChangedListener} to the given {@link Viewer}.
+     * Does nothing if any argument is null or the viewer's control has been disposed.
      *
-     * @param viewer the Viewer control
-     * @param listener the listener
+     * @param viewer    the Viewer to watch
+     * @param listener  the listener to attach
      */
     protected void addSelectionChangedListener( Viewer viewer, ISelectionChangedListener listener )
     {
@@ -2409,11 +2431,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Null-Safe Double-Click Listener Attachment for TableViewers ───────────
+    // Luke wires a double-click detector to a table viewer.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a double-click listener to the given Viewer.
+     * Null-safely attaches an {@link IDoubleClickListener} to the given {@link TableViewer}.
+     * Does nothing if any argument is null or the viewer's control has been disposed.
      *
-     * @param viewer the Viewer control
-     * @param listener the listener
+     * @param viewer    the TableViewer to watch
+     * @param listener  the listener to attach
      */
     protected void addDoubleClickListener( TableViewer viewer, IDoubleClickListener listener )
     {
@@ -2424,11 +2450,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Null-Safe Modify Listener Removal for Text Controls ───────────────────
+    // Luke removes a change detector from a text field.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a modify listener to the given Text.
+     * Null-safely removes a {@link ModifyListener} from the given {@link Text} control.
+     * Does nothing if any argument is null or the Text has been disposed.
      *
-     * @param text the Text control
-     * @param listener the listener
+     * @param text      the Text control
+     * @param listener  the listener to remove
      */
     protected void removeModifyListener( Text text, ModifyListener listener )
     {
@@ -2439,11 +2469,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Null-Safe Modify Listener Removal for AbstractWidget ──────────────────
+    // Luke removes a change detector from an abstract widget.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds a modify listener to the given BrowserWidget.
+     * Null-safely removes a {@link WidgetModifyListener} from the given {@link AbstractWidget}.
+     * Does nothing if any argument is null.
      *
-     * @param widget the widget
-     * @param listener the listener
+     * @param widget    the widget
+     * @param listener  the listener to remove
      */
     protected void removeModifyListener( AbstractWidget widget, WidgetModifyListener listener )
     {
@@ -2454,11 +2488,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Null-Safe Selection Listener Removal for Buttons ─────────────────────
+    // Luke removes a selection detector from a button.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a selection listener to the given Button.
+     * Null-safely removes a {@link SelectionListener} from the given {@link Button}.
+     * Does nothing if any argument is null or the Button has been disposed.
      *
-     * @param button the Button control
-     * @param listener the listener
+     * @param button    the Button
+     * @param listener  the listener to remove
      */
     protected void removeSelectionListener( Button button, SelectionListener listener )
     {
@@ -2469,11 +2507,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Null-Safe Selection-Changed Listener Removal for Viewers ─────────────
+    // Luke removes a selection-changed detector from a JFace viewer.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a selection changed listener to the given Button.
+     * Null-safely removes an {@link ISelectionChangedListener} from the given {@link Viewer}.
+     * Does nothing if any argument is null or the viewer's control has been disposed.
      *
-     * @param viewer the Viewer
-     * @param listener the listener
+     * @param viewer    the Viewer
+     * @param listener  the listener to remove
      */
     protected void removeSelectionChangedListener( Viewer viewer, ISelectionChangedListener listener )
     {
@@ -2484,11 +2526,15 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Null-Safe Double-Click Listener Removal for TableViewers ─────────────
+    // Luke removes a double-click detector from a table viewer.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Removes a selection changed listener to the given Button.
+     * Null-safely removes an {@link IDoubleClickListener} from the given {@link TableViewer}.
+     * Does nothing if any argument is null or the viewer's control has been disposed.
      *
-     * @param viewer the TableViewer
-     * @param listener the listener
+     * @param viewer    the TableViewer
+     * @param listener  the listener to remove
      */
     protected void removeDoubleClickListener( TableViewer viewer, IDoubleClickListener listener )
     {
@@ -2499,8 +2545,14 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Propagate the Dirty Signal Upward ────────────────────────────────────
+    // Luke records that something has changed on the horizon. We delegate
+    // up to the master/details block, which propagates it to the editor.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the associated editor dirty.
+     * Marks this details page's content as dirty by delegating to
+     * {@link DatabasesMasterDetailsBlock#setEditorDirty()}, which in turn
+     * marks the parent editor dirty and enables the Save button.
      */
     public void setEditorDirty()
     {
@@ -2508,11 +2560,20 @@ public class DatabasesDetailsPage implements IDetailsPage
     }
 
 
+    // ── Copy Common Database Properties to a New Typed Instance ──────────────
+    // When the database type changes, we create a new typed model object and
+    // copy every common attribute across so no settings are lost. Luke transfers
+    // his notes from one datapad to another before reformatting the first.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Copies database properties from one instance to the other.
+     * Copies all common {@link OlcDatabaseConfig} properties from one instance to another.
+     * The {@code olcDatabase} type suffix is preserved from the destination instance;
+     * only the ordering prefix is carried over from the original.
+     * All other standard attributes (access, limits, security, replication, etc.) are
+     * shallow-copied from original to destination.
      *
-     * @param original the original database
-     * @param destination the destination database
+     * @param original     the source database to copy from
+     * @param destination  the target database to copy into
      */
     private void copyDatabaseProperties( OlcDatabaseConfig original, OlcDatabaseConfig destination )
     {

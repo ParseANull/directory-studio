@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.apacheds.configuration.editor;
 
@@ -41,9 +41,21 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.forms.editor.FormEditor;
 
 
+// ── CLASS: ServerConfigurationEditor — THE DEATH STAR COMMAND CENTER ─────────
+// Grand Moff Tarkin surveys every workstation on the Death Star's command deck —
+// six panels, one unified view of the station's status and configuration.
+// This class is that command center: a multi-page FormEditor where each tab is
+// a workstation, and we're the officer who keeps them all in sync, loads the
+// config from disk (or a live connection), and saves it back when asked.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Server Configuration Editor. This editor expose
- * 6 pages into a form with 6 tags :
+ * The central multi-page editor for ApacheDS server configuration.
+ * It hosts six tabs — Overview, LDAP/LDAPS, Kerberos, Partitions,
+ * Password Policies, and Replication — and manages the full lifecycle of
+ * loading, displaying, and saving the server configuration.
+ * Think of this class as the Death Star command center: six workstations
+ * (pages), one officer (this class) keeping the whole station running.
+ * This editor expose 6 pages into a form with 6 tags :
  * <ul>
  * <li>Overview : the basic configuration</li>
  * <li>LDAP/LDAPS : the configuration for the LDAP/S server</li>
@@ -51,7 +63,7 @@ import org.eclipse.ui.forms.editor.FormEditor;
  * <li>Partitions : The partitions configuration</li>
  * <li>PasswordPolicy : The password policy configuration</li>
  * <li>Replication : The replicationconfiguration</li>
- * </ul> 
+ * </ul>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -78,8 +90,22 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
 
 
 
+    // ── Powering Up The Command Deck ──────────────────────────────────────────
+    // Admiral Ozzel strides onto the bridge and takes his post, initialising
+    // every display panel before the crew gets to work.
+    // We do the same: register the editor with its site, name it after the
+    // input file, flag brand-new configs as dirty right away, and kick off
+    // the background job to load the config data.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Initialises the editor — wires it into the Eclipse workbench, names it
+     * after its input file, and fires off the background job to load the config.
+     * If the input is a brand-new (unsaved) configuration, we immediately mark
+     * the editor dirty so Eclipse knows to prompt for a save on close.
+     *
+     * @param site   the editor site Eclipse provides
+     * @param input  the file or connection the editor is opening
+     * @throws PartInitException  if Eclipse can't register the editor site
      */
     public void init( IEditorSite site, IEditorInput input ) throws PartInitException
     {
@@ -89,7 +115,7 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
         // Checking if the input is a new server configuration file
         if ( input instanceof NewServerConfigurationInput )
         {
-            // New server configuration file have a dirty state 
+            // New server configuration file have a dirty state
             // set to true since they are not saved yet
             setDirty( true );
         }
@@ -100,8 +126,17 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Scanning The Sector For Intelligence ──────────────────────────────────
+    // R2-D2 slots into the X-wing's navicomputer and starts pulling coordinates
+    // from the server before anyone has even sat in the cockpit.
+    // We create and schedule a LoadConfigurationRunnable job here — config
+    // parsing happens in the background so the UI stays responsive.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Reads the configuration
+     * Spins up a background job to load the server config from disk or a
+     * live LDAP connection — whichever the editor input points to.
+     * The job calls back into {@link #configurationLoaded} or
+     * {@link #configurationLoadFailed} when it finishes.
      */
     private void readConfiguration()
     {
@@ -112,8 +147,19 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Officer On Deck Reports In ────────────────────────────────────────────
+    // A new officer steps up to their workstation on the command deck and the
+    // displays instantly update to show the latest tactical picture.
+    // We call refreshUI() on whichever page just became active so it always
+    // shows fresh data from the current config bean.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse whenever the user switches tabs.
+     * We tell the newly-selected page to refresh its UI from the config bean
+     * so it's always showing the latest values — even if another page changed
+     * something while this one was hidden.
+     *
+     * @param event  the page-change event carrying the newly-selected page object
      */
     public void pageChanged( PageChangedEvent event )
     {
@@ -126,8 +172,17 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Assembling The Battle Station ─────────────────────────────────────────
+    // Imperial engineers bolt the loading bay into the Death Star frame first —
+    // a placeholder while the real systems finish powering up behind the scenes.
+    // We add just a LoadingPage here; the real config pages arrive once the
+    // background load job finishes and calls us back.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Adds the initial pages to the editor.
+     * We only add the {@link LoadingPage} right now — a "please wait" screen —
+     * and the real config pages get swapped in by
+     * {@link #hideLoadingPageAndDisplayConfigPages()} once the config is ready.
      */
     protected void addPages()
     {
@@ -144,18 +199,26 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── One Tab Means No Tab ──────────────────────────────────────────────────
+    // While the Death Star is still under construction there's only one chamber —
+    // no need to label it, everyone knows where they are.
+    // When we have exactly one page (the loading screen), we collapse the tab
+    // bar to zero height so it doesn't look weird; with multiple pages we
+    // restore it to its natural height.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Shows or hides the tab folder depending on
-     * the number of pages.
+     * Shows or hides the tab strip depending on how many pages are loaded.
+     * With a single page (the loading screen) the tab strip is pointless and
+     * visually noisy, so we zero its height. With multiple pages we restore it.
      */
     private void showOrHideTabFolder()
     {
         Composite container = getContainer();
-        
+
         if ( container instanceof CTabFolder )
         {
             CTabFolder folder = ( CTabFolder ) container;
-            
+
             if ( getPageCount() == 1 )
             {
                 folder.setTabHeight( 0 );
@@ -164,14 +227,25 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
             {
                 folder.setTabHeight( -1 );
             }
-            
+
             folder.layout( true, true );
         }
     }
 
 
+    // ── Transmitting The Battle Plans ─────────────────────────────────────────
+    // General Dodonna relays the Death Star attack coordinates to every
+    // starfighter — pages are confirmed ready first, then the master plan is
+    // written out to the target.
+    // We flush all pages that need pre-save work, then schedule a
+    // SaveConfigurationRunnable job to write the config back to its source.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves the editor. Flushes any page-specific state (e.g., partition edits)
+     * and then launches a background job to persist the config to its source
+     * (a local file or a live LDAP connection).
+     *
+     * @param monitor  Eclipse progress monitor for the save operation
      */
     public void doSave( IProgressMonitor monitor )
     {
@@ -185,8 +259,16 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Copying The Plans To A New Disk ──────────────────────────────────────
+    // Leia copies the Death Star plans to a new data chip and hands it to R2-D2
+    // — the original stays on the ship, the new copy heads out into the galaxy.
+    // We wrap the real save-as logic in an IRunnableWithProgress so Eclipse can
+    // show a spinner while we work through the file dialog and write.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Eclipse's entry point for the "File &rarr; Save As..." action.
+     * Wraps {@link #doSaveAs(IProgressMonitor)} in a progress runner so the
+     * user sees a busy indicator while we write the config to its new location.
      */
     public void doSaveAs()
     {
@@ -218,11 +300,20 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Filing The New Co-ordinates ────────────────────────────────────────────
+    // Once Leia's chip reaches the Rebel base, it's logged under a new reference
+    // number — the old one is retired and the new path is official from now on.
+    // We flush pages, delegate the actual write to ServerConfigurationEditorUtils,
+    // then update our input and clear the dirty flag if all went well.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Performs the "Save as..." action.
+     * The real "Save As" implementation — flushes pages, opens a file picker,
+     * writes the config to the chosen path, then rewires the editor to point
+     * at the new file so future saves go there automatically.
      *
-     * @param monitor the monitor to use
-     * @throws Exception
+     * @param monitor  progress monitor for the save
+     * @return {@code true} if the user picked a path and the write succeeded
+     * @throws Exception  if writing the config file fails
      */
     public boolean doSaveAs( IProgressMonitor monitor ) throws Exception
     {
@@ -233,9 +324,9 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
         IEditorInput newInput = ServerConfigurationEditorUtils.saveAs( monitor, getSite().getShell(),
             getEditorInput(), getConfigWriter(), getConfiguration(), true );
 
-        // Checking if the 'save as' is successful 
+        // Checking if the 'save as' is successful
         boolean success = newInput != null;
-        
+
         if ( success )
         {
             // Setting the new input to the editor
@@ -258,10 +349,20 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Making Sure Everyone Filed Their Report ────────────────────────────────
+    // Before the Death Star can fire, every station officer must confirm
+    // readiness — the Partitions page in particular needs to flush any pending
+    // structural edits before the main save job runs.
+    // We call doSave() on the partitions page (on the UI thread) to commit any
+    // in-progress changes.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Saves the pages.
+     * Asks each page that needs special pre-save work to flush its state.
+     * Currently only the partitions page requires this — it manages its own
+     * internal edits that aren't automatically reflected in the config bean
+     * until it gets a chance to commit them.
      *
-     * @param monitor the monitor
+     * @param monitor  progress monitor passed through to each page's save
      */
     private void doSavePages( final IProgressMonitor monitor )
     {
@@ -278,8 +379,18 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── The Plans Can Always Leave The Station ────────────────────────────────
+    // The Empire wants those plans on every Star Destroyer — copies are always
+    // allowed, no questions asked.
+    // We unconditionally return true so Eclipse enables the "Save As..." menu
+    // item for this editor type.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Tells Eclipse that "Save As..." is always allowed for this editor.
+     * We always return {@code true} — config files can always be saved to
+     * a different location.
+     *
+     * @return always {@code true}
      */
     public boolean isSaveAsAllowed()
     {
@@ -287,8 +398,18 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Is The Station Still Under Construction? ──────────────────────────────
+    // An Imperial inspector checks whether the Death Star still has unsaved
+    // blueprints on the drafting table before signing off on final completion.
+    // We return our dirty flag so Eclipse knows whether to show the save prompt
+    // when the user tries to close the editor.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reports whether the editor has unsaved changes.
+     * Eclipse calls this constantly to decide whether to enable the save action
+     * and show the asterisk (*) in the editor tab title.
+     *
+     * @return {@code true} if there are unsaved changes
      */
     public boolean isDirty()
     {
@@ -296,10 +417,18 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Raising The Alert Status ──────────────────────────────────────────────
+    // When a gunner fires the superlaser, the station goes to battle stations —
+    // every display on the command deck updates to show combat readiness.
+    // We flip our dirty flag and fire a PROP_DIRTY property change on the UI
+    // thread so Eclipse updates the save button and title asterisk immediately.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the 'dirty' flag.
+     * Sets the editor's dirty (unsaved-changes) flag and notifies Eclipse.
+     * The notification goes out on the UI thread via asyncExec so this method
+     * is safe to call from background jobs without causing thread violations.
      *
-     * @param dirty the 'dirty' flag
+     * @param dirty  {@code true} to mark the editor as having unsaved changes
      */
     public void setDirty( boolean dirty )
     {
@@ -315,10 +444,18 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Pulling Up The Station Schematics ─────────────────────────────────────
+    // An engineer at the command console calls up the Death Star's full technical
+    // readout — every beam emitter, every exhaust port, everything in one object.
+    // We hand back our configuration object so pages and utilities can read or
+    // modify the config bean stored inside it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the configuration.
+     * Returns the current server configuration.
+     * The {@link Configuration} wraps the ApacheDS config bean plus the
+     * underlying LDAP partition it was loaded from.
      *
-     * @return the configuration
+     * @return the loaded configuration, or {@code null} if not yet loaded
      */
     public Configuration getConfiguration()
     {
@@ -326,10 +463,18 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Installing New Station Software ──────────────────────────────────────
+    // Imperial technicians upload a fresh firmware image to the Death Star's
+    // targeting computer — the old settings are quietly overwritten.
+    // We store the new configuration so all pages will use it on their next
+    // refresh cycle.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the configuration.
+     * Replaces the current configuration with a new one.
+     * Normally called by the background load job via {@link #configurationLoaded},
+     * but can also be used to inject a freshly-reset config.
      *
-     * @param configuration the configuration
+     * @param configuration  the new configuration to store
      */
     public void setConfiguration( Configuration configuration )
     {
@@ -337,10 +482,19 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Rebooting All Station Systems ─────────────────────────────────────────
+    // Darth Vader orders a full station reset — every workstation clears its
+    // old display and re-renders from the updated tactical database.
+    // We store the new config, mark the editor dirty, then tell every page to
+    // refresh so the UI instantly reflects the changes across all six tabs.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Resets the configuration and refresh the UI.
+     * Swaps in a new configuration and forces every page to re-render.
+     * Used when the user picks "Reset to defaults" or imports a new config —
+     * we want all six pages to redisplay from the fresh bean immediately
+     * rather than waiting for the user to click each tab.
      *
-     * @param configuration the configuration
+     * @param configuration  the replacement configuration to apply
      */
     public void resetConfiguration( Configuration configuration )
     {
@@ -357,11 +511,19 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Hyperspace Jump Successful ────────────────────────────────────────────
+    // The navicomputer reports "jump complete" and the crew rushes to their
+    // stations — the mission can now begin in earnest.
+    // The background load job calls us here when it finishes successfully; we
+    // stash the config and replace the loading screen with the real pages.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called by the job responsible for loading the 
-     * configuration when it has been fully and correctly loaded.
+     * Called by the background load job when the config has been read
+     * successfully from its source (file or live connection).
+     * We store the configuration and swap the loading screen for the real
+     * six-page editor layout.
      *
-     * @param configuration the configuration
+     * @param configuration  the freshly loaded configuration
      */
     public void configurationLoaded( Configuration configuration )
     {
@@ -371,15 +533,23 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── The Hyperdrive Is Down ────────────────────────────────────────────────
+    // The Millennium Falcon's motivator fails mid-jump — Han bangs on the
+    // console and the crew gets an error panel instead of their destination.
+    // The load job calls us here when it hits an error; we clear the dirty flag
+    // (there's nothing to save yet) and hand off to the error page display.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called by the job responsible for loading the
-     * configuration when it failed to load it.
+     * Called by the background load job when it could not read the config.
+     * We clear the dirty flag (a failed load means there's nothing new to
+     * save) and display an error page with the exception details so the user
+     * knows what went wrong.
      *
-     * @param exception the exception
+     * @param exception  the exception that caused the load to fail
      */
     public void configurationLoadFailed( Exception exception )
     {
-        // Overriding the default dirty setting 
+        // Overriding the default dirty setting
         // (especially in the case of a new configuration file)
         setDirty( false );
 
@@ -387,8 +557,16 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── The Loading Bay Doors Open ────────────────────────────────────────────
+    // The Death Star's loading bay doors finally slide open — the real hangar
+    // with all six TIE fighter bays is revealed behind them.
+    // We yank the loading page out, replace it with all six real config pages,
+    // then jump to page zero (Overview) so the user lands somewhere sensible.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Hides the loading page and displays the standard configuration pages.
+     * Removes the loading spinner page and installs the real configuration
+     * pages — Overview, LDAP/LDAPS, Kerberos, Partitions, Password Policies,
+     * and Replication — then activates the first one.
      */
     private void hideLoadingPageAndDisplayConfigPages()
     {
@@ -424,11 +602,19 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Closing The Blast Doors On A Disaster ─────────────────────────────────
+    // When something catastrophic goes wrong in the reactor bay, the blast doors
+    // slam shut and an alarm panel replaces the normal status display.
+    // We ditch the loading screen and show an ErrorPage so the user sees the
+    // exact exception and can decide how to respond.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Hides the loading page and displays the error page.
+     * Removes the loading page and replaces it with an {@link ErrorPage}
+     * that displays the exception to the user.
+     * The error page gives enough detail for the user (or a developer) to
+     * understand what went wrong and whether the file can be recovered.
      *
-     * @param exception
-     *      the exception
+     * @param exception  the exception to display on the error page
      */
     private void hideLoadingPageAndDisplayErrorPage( Exception exception )
     {
@@ -451,10 +637,19 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Switching To A Specific Workstation ───────────────────────────────────
+    // Tarkin wants to see the superlaser controls — the duty officer finds that
+    // workstation by name and brings it to the front of the main display.
+    // We walk the pages list to find the first page that is an instance of the
+    // requested class and make it active.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Set a particular page as active if it is found in the pages vector.
+     * Makes the page matching the given class the active (visible) tab.
+     * Useful for programmatic navigation — e.g., jumping straight to the
+     * Partitions page from a link on the Overview page.
      *
-     * @param pageClass the class of the page
+     * @param pageClass  the class of the page to show; no-op if {@code null}
+     *                   or if no page of that class is found
      */
     public void showPage( Class<?> pageClass )
     {
@@ -465,7 +660,7 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
                 if ( pageClass.isInstance( page ) )
                 {
                     setActivePage( pages.indexOf( page ) );
-                    
+
                     return;
                 }
             }
@@ -473,11 +668,19 @@ public class ServerConfigurationEditor extends FormEditor implements IPageChange
     }
 
 
+    // ── Loading The Torpedo Firing Solution ───────────────────────────────────
+    // The targeting computer assembles the precise firing solution from the
+    // Death Star's current configuration data before committing to a shot.
+    // We build a ConfigWriter from the current schema manager and config bean
+    // so callers can serialise the in-memory config to LDIF entries.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the configuration writer.
+     * Builds and returns a {@link ConfigWriter} for the current configuration.
+     * The ConfigWriter knows how to turn the in-memory config bean into LDIF
+     * entries that can be written to a file or pushed to a live LDAP server.
      *
-     * @return the configuration writer
-     * @throws Exception
+     * @return a freshly built ConfigWriter loaded with the current config bean
+     * @throws Exception  if the schema manager is not available
      */
     public ConfigWriter getConfigWriter() throws Exception
     {

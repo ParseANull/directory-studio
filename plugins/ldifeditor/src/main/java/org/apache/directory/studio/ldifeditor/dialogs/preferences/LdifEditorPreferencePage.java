@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.dialogs.preferences;
@@ -41,8 +41,18 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.dialogs.PreferencesUtil;
 
 
+// ── CLASS: LdifEditorPreferencePage — REBEL CONSOLE SETTINGS PANEL ────────────
+// Before the Battle of Yavin the Alliance ops team adjusts the main console:
+// they configure how the war-room displays fold records, what happens on
+// double-click, and what the execute command does if an entry already exists.
+// LdifEditorPreferencePage is that settings panel for the LDIF editor: folding,
+// double-click behaviour, and execute options all live here.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The main preference page of the LDIF editor.
+ * Main Eclipse {@link PreferencePage} for the LDIF editor.
+ * Controls folding (enable, initially fold comments / records / wrapped lines),
+ * double-click behaviour, and execute options (update if exists, continue on error).
+ * Think of this as the Rebel ops team's main console settings panel.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -76,8 +86,11 @@ public class LdifEditorPreferencePage extends PreferencePage implements IWorkben
     private Button continueOnErrorButton;
 
 
+    // ── CONSTRUCT THE PREFERENCE PAGE ─────────────────────────────────────────
+    // The ops officer reports to the console and sets the preference store.
     /**
-     * Creates a new instance of LdifEditorPreferencePage.
+     * Creates a new {@code LdifEditorPreferencePage} and binds it to the
+     * LDIF editor preference store.
      */
     public LdifEditorPreferencePage()
     {
@@ -86,6 +99,7 @@ public class LdifEditorPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── INITIALISE ────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -94,8 +108,14 @@ public class LdifEditorPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── BUILD THE PAGE CONTENTS ───────────────────────────────────────────────
+    // The ops team wires up two navigation links (text editor, text formats),
+    // then creates three groups: Folding, Double-Click Behaviour, and Execute Options.
     /**
      * {@inheritDoc}
+     *
+     * <p>Creates navigation links to related preference pages, then three groups:
+     * Folding, Double-Click Behaviour, and Execute Options.</p>
      */
     protected Control createContents( Composite parent )
     {
@@ -199,8 +219,12 @@ public class LdifEditorPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── ENABLE / DISABLE SUB-OPTIONS ──────────────────────────────────────────
+    // When folding is turned off the "initially fold X" sub-options grey out;
+    // when it is turned back on they become active again.
     /**
-     * Enables/disables widgets dependent if options are selected.
+     * Enables or disables the "initially fold" sub-options based on whether
+     * folding itself is enabled.
      */
     private void checkEnabled()
     {
@@ -211,8 +235,12 @@ public class LdifEditorPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── SAVE PREFERENCES ──────────────────────────────────────────────────────
+    // The ops officer files the updated settings into the preference store.
     /**
      * {@inheritDoc}
+     *
+     * <p>Persists all settings to the preference store.</p>
      */
     public boolean performOk()
     {
@@ -237,8 +265,13 @@ public class LdifEditorPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── RESTORE DEFAULTS ──────────────────────────────────────────────────────
+    // The quartermaster resets the console to factory configuration.
     /**
      * {@inheritDoc}
+     *
+     * <p>Reloads default values from the preference store into all controls
+     * and re-evaluates enabled states.</p>
      */
     protected void performDefaults()
     {

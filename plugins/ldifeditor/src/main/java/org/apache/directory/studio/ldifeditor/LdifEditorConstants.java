@@ -6,23 +6,32 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.ldifeditor;
 
 
+// ── CLASS: LdifEditorConstants — REBEL SIGNAL CODEBOOK ───────────────────────
+// Every unit in the Alliance uses the same agreed-upon call-signs and
+// frequencies so there is no confusion across the fleet.
+// LdifEditorConstants is that codebook: every action ID, preference key,
+// template context-type ID, and image path is defined exactly once here
+// and referenced everywhere else.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Constants for the LDIF editor.
- * Final reference -> class shouldn't be extended
+ * Shared constants for the LDIF Editor plugin.
+ * Contains action IDs, preference keys, template context-type IDs, and image
+ * paths used throughout the plugin.
+ * Final reference — class should not be extended.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -46,13 +55,13 @@ public final class LdifEditorConstants
     public static final String ACTION_ID_EDIT_ATTRIBUTE_DESCRIPTION = LdifEditorActivator.getDefault()
         .getPluginProperties().getString( "Cmd_EditAttributeDescription_id" ); //$NON-NLS-1$
 
-    public static final String ACTION_ID_FORMAT_LDIF_DOCUMENT = 
+    public static final String ACTION_ID_FORMAT_LDIF_DOCUMENT =
         "org.apache.directory.studio.ldifeditor.editor.actions.FormatLdifDocumentAction"; //$NON-NLS-1$
 
-    public static final String ACTION_ID_FORMAT_LDIF_RECORD = 
+    public static final String ACTION_ID_FORMAT_LDIF_RECORD =
         "org.apache.directory.studio.ldifeditor.editor.actions.FormatLdifRecordAction"; //$NON-NLS-1$
 
-    public static final String ACTION_ID_EXECUTE_LDIF = 
+    public static final String ACTION_ID_EXECUTE_LDIF =
         "org.apache.directory.studio.ldifeditor.editor.ExecuteLdifAction"; //$NON-NLS-1$
 
     public static final String NEW_WIZARD_NEW_LDIF_FILE = LdifEditorActivator.getDefault().getPluginProperties()
@@ -172,6 +181,6 @@ public final class LdifEditorConstants
 
     public static final String CONTENTASSIST_ACTION = "org.apache.directory.studio.ldapbrowser.ContentAssist"; //$NON-NLS-1$
 
-    public static final String PREFERENCEPAGEID_TEXTFORMATS = 
+    public static final String PREFERENCEPAGEID_TEXTFORMATS =
         "org.apache.directory.studio.ldapbrowser.preferences.TextFormatsPreferencePage"; //$NON-NLS-1$
 }

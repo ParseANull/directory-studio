@@ -35,27 +35,67 @@ import org.apache.directory.studio.valueeditors.AbstractDialogStringValueEditor;
 import org.eclipse.swt.widgets.Shell;
 
 
+// ── CLASS: DnValueEditor — C-3PO COMPUTING THE FULL CHAIN OF COMMAND ─────────
+// When Admiral Piett asks C-3PO for the full title and chain of command for
+// an officer, C-3PO doesn't just say "Commander" — he navigates the Imperial
+// hierarchy and returns the full DN: "cn=Piett,ou=Admirals,o=Empire".
+// In single-select mode C-3PO verifies one officer's credentials; in multi-select
+// mode (when adding a fresh record) he can batch-enroll an entire squad at once,
+// writing each DN as its own attribute value.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Implementation of IValueEditor for syntax 1.3.6.1.4.1.1466.115.121.1.12
- * (Distinguished Name).
+ * Value editor for LDAP Distinguished Name syntax
+ * (OID 1.3.6.1.4.1.1466.115.121.1.12).
+ * A Distinguished Name (DN) is the full hierarchical path to an LDAP entry,
+ * like {@code "cn=John,ou=People,dc=example,dc=com"}.
+ * When editing an existing DN value we open a single-select DN picker dialog.
+ * When adding a brand-new value (empty placeholder), we open the dialog in
+ * multi-select mode so the user can add several members to a group in one step;
+ * if more than one is chosen, we write the extras directly via
+ * {@link CompoundModification} to avoid going through the cell-editor path twice.
+ * Think of this as C-3PO's chain-of-command resolver — he navigates the hierarchy
+ * and returns the full canonical path.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class DnValueEditor extends AbstractDialogStringValueEditor
 {
 
+    // ── C-3PO Opens the Chain-of-Command Lookup Console ──────────────────────
+    // Admiral Piett asks C-3PO to update the "member" attribute for a group.
+    // If the slot is empty (new entry), C-3PO offers a multi-select roster so
+    // the Admiral can enroll multiple officers in one ceremony.  If a DN is
+    // already set, single-select mode lets him correct one name at a time.
+    // We branch on whether the current value is an empty placeholder to decide
+    // which mode to open DnDialog in.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Opens a {@link DnDialog} for the user to browse the directory and pick a DN.
+     * Two modes:
+     * <ul>
+     *   <li><strong>Multi-select</strong> — used when the current value is an empty
+     *       placeholder (a newly added slot).  The user can pick multiple DNs at
+     *       once; the first goes through the cell-editor path, the rest are written
+     *       directly via {@link CompoundModification}.</li>
+     *   <li><strong>Single-select</strong> — used for existing (non-empty) values.
+     *       The chosen DN replaces the current one.</li>
+     * </ul>
+     * Returns {@code true} if the cell-editor path should commit a new value;
+     * {@code false} if cancelled, or if all values were committed directly
+     * (multi-select with more than one DN chosen).
      *
-     * When the value being edited is an empty placeholder (a newly added value),
-     * the dialog opens in multi-select mode so the user can pick several DNs at
-     * once (e.g. to add multiple members to a group).  If more than one DN is
-     * chosen, the additional values are written directly via
-     * {@link CompoundModification} and the cell-editor path is bypassed.
+     * <p>For example — C-3PO updates the group's member list:</p>
+     * <pre>
+     *   // Empty slot: multi-select mode opens
+     *   boolean changed = editor.openDialog(shell);
+     *   // If the user picks 3 DNs, 2 are written directly; changed == false
+     * </pre>
      *
-     * For existing (non-empty) values the dialog opens in the original
-     * single-select mode.
+     * @param shell  The parent SWT shell for the DnDialog.
+     * @return       {@code true} if a single DN was set via the cell-editor;
+     *               {@code false} otherwise.
      */
+    @Override
     protected boolean openDialog( Shell shell )
     {
         Object value = getValue();
@@ -130,17 +170,30 @@ public class DnValueEditor extends AbstractDialogStringValueEditor
     }
 
 
+    // ── C-3PO Prepares a DN Lookup Packet for an Attribute Hierarchy ─────────
+    // C-3PO receives a whole attribute hierarchy (multiple values, or an empty
+    // attribute) and decides which DN to pre-load in the dialog.  An attribute
+    // with no values gets a null DN (blank picker); one with exactly one value
+    // gets that DN pre-selected.  Everything else returns null (not editable here).
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns a {@link DnValueEditorRawValueWrapper} encoding the browsing
+     * connection and current DN string for the given attribute hierarchy.
+     * This is used when the editor is invoked from the attribute-hierarchy context
+     * (e.g. the table's read-only display path).
+     * Returns {@code null} if the hierarchy has zero attributes, or more than one
+     * value (we only handle single-value DN attributes here).
      *
-     * Returns a DnValueEditorRawValueWrapper with the connection of
-     * the attribute hierarchy and a null Dn if there are no values
-     * in attributeHierarchy.
+     * <p>For example — C-3PO builds a lookup packet:</p>
+     * <pre>
+     *   Object raw = editor.getRawValue(hierarchy);
+     *   // raw is a DnValueEditorRawValueWrapper with the current DN pre-loaded
+     * </pre>
      *
-     * Returns a DnValueEditorRawValueWrapper with the connection of
-     * the attribute hierarchy and a Dn if there is one value
-     * in attributeHierarchy.
+     * @param attributeHierarchy  The attribute hierarchy from the browser model.
+     * @return                    A wrapper with connection and DN, or {@code null}.
      */
+    @Override
     public Object getRawValue( AttributeHierarchy attributeHierarchy )
     {
         if ( attributeHierarchy == null )
@@ -164,14 +217,30 @@ public class DnValueEditor extends AbstractDialogStringValueEditor
     }
 
 
+    // ── C-3PO Prepares a DN Lookup Packet for a Single Value ─────────────────
+    // C-3PO is handed an individual attribute value (the cell-editor path) and
+    // wraps it in a packet containing the LDAP connection and the DN string plus
+    // the original IValue object, so the dialog knows whether it's editing a
+    // fresh empty slot or an existing DN.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns a {@link DnValueEditorRawValueWrapper} for the given single
+     * attribute value.  The wrapper carries the connection (needed for the DN
+     * browser), the current DN string, and the original {@link IValue} reference
+     * so {@link #openDialog} can detect whether the value is an empty placeholder
+     * and switch to multi-select mode.
      *
-     * Returns a DnValueEditorRawValueWrapper with the connection of
-     * the value and a Dn built from the given value.  The IValue itself is
-     * stored in the wrapper so that {@link #openDialog} can detect whether
-     * the value is an empty placeholder and act accordingly.
+     * <p>For example — C-3PO wraps a member value for editing:</p>
+     * <pre>
+     *   Object raw = editor.getRawValue(memberValue);
+     *   // raw is a DnValueEditorRawValueWrapper with ivalue set
+     * </pre>
+     *
+     * @param value  The LDAP attribute value to wrap.
+     * @return       A {@code DnValueEditorRawValueWrapper}, or {@code null} if
+     *               the value is not a string-type DN.
      */
+    @Override
     public Object getRawValue( IValue value )
     {
         Object o = super.getRawValue( value );
@@ -184,9 +253,20 @@ public class DnValueEditor extends AbstractDialogStringValueEditor
         return null;
     }
 
+    // ── CLASS: DnValueEditorRawValueWrapper — C-3PO'S MISSION BRIEFING PACKET ─
+    // Before C-3PO opens the DN picker dialog he assembles a briefing packet:
+    // the LDAP connection (so the picker can browse the live directory), the
+    // current DN string (to pre-select in the browser), and a reference to the
+    // original IValue (to distinguish new empty slots from existing values).
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * The DnValueEditorRawValueWrapper is used to pass contextual
-     * information to the opened DnDialog.
+     * Internal transfer object that carries contextual data into the
+     * {@link DnDialog}: the browser connection, the current DN string, and
+     * (optionally) the original {@link IValue} being edited.
+     * The {@link IValue} is set only when the wrapper comes from the cell-editor
+     * path ({@link DnValueEditor#getRawValue(IValue)}); it is {@code null} when
+     * the wrapper comes from the display path
+     * ({@link DnValueEditor#getRawValue(AttributeHierarchy)}).
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -206,11 +286,16 @@ public class DnValueEditor extends AbstractDialogStringValueEditor
         private IValue ivalue;
 
 
+        // ── C-3PO Assembles the Display-Path Briefing Packet ─────────────────
+        // When showing a DN in the table (not editing), C-3PO only needs the
+        // connection and the current DN string — no IValue reference needed.
+        // ────────────────────────────────────────────────────────────────────────
         /**
-         * Creates a new instance of DnValueEditorRawValueWrapper (display path).
+         * Creates a wrapper for the display path (no original IValue needed).
+         * Used by {@link DnValueEditor#getRawValue(AttributeHierarchy)}.
          *
-         * @param connection the connection
-         * @param dn the Dn
+         * @param connection  The LDAP browser connection for the directory browse.
+         * @param dn          The current DN string to pre-select, or {@code null}.
          */
         private DnValueEditorRawValueWrapper( IBrowserConnection connection, String dn )
         {
@@ -218,12 +303,17 @@ public class DnValueEditor extends AbstractDialogStringValueEditor
         }
 
 
+        // ── C-3PO Assembles the Full Cell-Editor Briefing Packet ─────────────
+        // When the user actually edits a DN cell, C-3PO includes the original
+        // IValue so the dialog can tell whether this is a fresh empty slot.
+        // ────────────────────────────────────────────────────────────────────────
         /**
-         * Creates a new instance of DnValueEditorRawValueWrapper (cell-editor path).
+         * Creates a wrapper for the cell-editor path (includes the original IValue).
+         * Used by {@link DnValueEditor#getRawValue(IValue)}.
          *
-         * @param connection the connection
-         * @param dn the Dn
-         * @param ivalue the IValue being edited
+         * @param connection  The LDAP browser connection for the directory browse.
+         * @param dn          The current DN string to pre-select, or {@code null}.
+         * @param ivalue      The original attribute value being edited.
          */
         private DnValueEditorRawValueWrapper( IBrowserConnection connection, String dn, IValue ivalue )
         {
@@ -233,9 +323,17 @@ public class DnValueEditor extends AbstractDialogStringValueEditor
         }
 
 
+        // ── C-3PO Reads the DN String From His Notes ─────────────────────────
+        // C-3PO needs to hand the DN string to the JFace cell editor as a plain
+        // String (toString is what JFace calls).  An absent DN renders as empty.
+        // ────────────────────────────────────────────────────────────────────────
         /**
-         * {@inheritDoc}
+         * Returns the DN string so that JFace's cell editor can use this wrapper
+         * directly as a string value.  Returns an empty string if the DN is null.
+         *
+         * @return  The DN string, or {@code ""} if {@code dn} is {@code null}.
          */
+        @Override
         public String toString()
         {
             return dn == null ? "" : dn; //$NON-NLS-1$

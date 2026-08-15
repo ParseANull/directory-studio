@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.widget;
 
@@ -42,15 +42,48 @@ import org.apache.directory.studio.schemaeditor.model.difference.SyntaxLengthDif
 import org.apache.directory.studio.schemaeditor.model.difference.UsageDifference;
 
 
+// ── CLASS: TypeSorter — CLONE TROOPERS EXECUTE ORDER 66 ─────────────────────
+// When Order 66 goes out, every clone trooper executes it according to their
+// assigned priority. The troopers closest to their targets act first (low weight);
+// those still on their way act later (high weight). Each trooper's assignment is
+// baked into the Imperial command structure — ADDED troopers deploy before MODIFIED
+// ones, who deploy before REMOVED ones, within each property category.
+// Our TypeSorter assigns the same kind of deployment weight to each PropertyDifference
+// so the table presents additions first, modifications in the middle, removals last —
+// mirroring the natural lifecycle of a schema change.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to compare, group and sort Differences by 'Type'
+ * A {@link Comparator} that sorts {@link PropertyDifference} objects by change type
+ * (ADDED, then MODIFIED, then REMOVED) across all property categories. Within each
+ * change type, property categories are also ranked so aliases come before descriptions,
+ * which come before superior references, and so on.
+ * Think of it as the clone trooper deployment order: each trooper (difference) has a
+ * pre-assigned execution number, and we line them up so additions happen first,
+ * modifications second, and removals last.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class TypeSorter implements Comparator<PropertyDifference>
 {
+    // ── TWO TROOPERS CHECK THEIR DEPLOYMENT NUMBERS ───────────────────────────────
+    // Two clone troopers compare their execution orders: whichever has the lower
+    // number deploys first. We subtract the weights and let the sign decide the order.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Compares two {@link PropertyDifference} objects by their type-based sort weight.
+     * ADDED changes sort before MODIFIED, which sort before REMOVED, with further
+     * ordering within each change type by property category.
+     *
+     * <p>For example — two troopers check their orders:</p>
+     * <pre>
+     *   AliasDifference(ADDED) weight = 1
+     *   AliasDifference(REMOVED) weight = 25
+     *   compare(addedAlias, removedAlias)  →  1 - 25 = -24  →  ADDED sorts first
+     * </pre>
+     *
+     * @param diff1  the first property difference
+     * @param diff2  the second property difference
+     * @return       negative if diff1 sorts before diff2, positive if after, 0 if equal weight
      */
     public int compare( PropertyDifference diff1, PropertyDifference diff2 )
     {
@@ -58,13 +91,29 @@ public class TypeSorter implements Comparator<PropertyDifference>
     }
 
 
+    // ── READING EACH TROOPER'S DEPLOYMENT NUMBER ──────────────────────────────────
+    // Imperial command assigns a unique deployment number to every trooper based on
+    // their mission type and target priority. ADDED missions are in the 1-11 range
+    // (strike first), MODIFIED in the 12-24 range (consolidate), REMOVED in the
+    // 25-35 range (clean up). Unrecognised missions get 0 and deploy at the front.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the weight of the given difference
+     * Returns the numeric sort weight for the given {@link PropertyDifference}. The
+     * weight groups all ADDED changes in the low range (1-11), MODIFIED in the middle
+     * (12-24), and REMOVED in the high range (25-35), with further ordering within
+     * each range by property category. Unknown types return 0.
      *
-     * @param diff
-     *      the difference
-     * @return
-     *      the weight of the difference
+     * <p>For example — reading the deployment roster:</p>
+     * <pre>
+     *   AliasDifference(ADDED)          →  1
+     *   DescriptionDifference(ADDED)    →  2
+     *   DescriptionDifference(MODIFIED) →  12
+     *   AliasDifference(REMOVED)        →  25
+     *   OptionalATDifference(REMOVED)   →  35
+     * </pre>
+     *
+     * @param diff  the property difference whose weight we need
+     * @return      an integer sort weight; lower means earlier in the list
      */
     private int getWeight( PropertyDifference diff )
     {

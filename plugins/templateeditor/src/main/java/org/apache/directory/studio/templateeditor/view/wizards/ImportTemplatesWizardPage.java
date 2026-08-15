@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor.view.wizards;
 
@@ -52,9 +52,19 @@ import org.apache.directory.studio.templateeditor.EntryTemplatePlugin;
 import org.apache.directory.studio.templateeditor.EntryTemplatePluginConstants;
 
 
+// ── CLASS: ImportTemplatesWizardPage — EMPEROR'S RECRUITMENT STEP ─────────────────
+// Step 1 of the Emperor's plan to recruit new standing orders: Luke — the user —
+// must pick an outpost directory where the XML template files live, and then select
+// which of the discovered files to bring into the Empire. The directory picker
+// triggers an automatic scan for .xml files, populating the checkbox table below.
+// Nothing is committed until "Finish" is clicked, and the "Finish" button stays
+// locked until at least one file is ticked.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the wizard page for the wizard for importing new 
- * templates from the disk.
+ * The single page of the {@link ImportTemplatesWizard}. Provides a directory
+ * browser that scans for {@code .xml} files and a checkbox table listing the
+ * discovered files. The "Finish" button is only enabled when at least one file
+ * is checked.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -68,8 +78,12 @@ public class ImportTemplatesWizardPage extends AbstractWizardPage
     private Button templateFilesTableDeselectAllButton;
 
 
+    // ── CONSTRUCTOR: INITIALISE THE PAGE ──────────────────────────────────────────
+    // The Emperor's import step is named, titled, described, and given a banner
+    // image so the user knows exactly what this step does.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ImportTemplatesWizardPage.
+     * Creates a new {@code ImportTemplatesWizardPage} with no pre-selected files.
      */
     public ImportTemplatesWizardPage()
     {
@@ -81,6 +95,12 @@ public class ImportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── CREATE CONTROL: BUILD THE WIZARD PAGE UI ──────────────────────────────────
+    // The Emperor lays out his two-part import form: the "From Directory" group
+    // (directory text + Browse button) and the "Template Files" group (checkbox
+    // table + Select All / Deselect All). Changing the directory triggers a rescan;
+    // ticking files triggers page-completion validation.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -190,8 +210,10 @@ public class ImportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── INIT FIELDS: CLEAR ERROR AND BLOCK FINISH ─────────────────────────────────
     /**
-     * Initializes the UI Fields.
+     * Sets the initial UI state: no error message, page incomplete (the user must
+     * select a directory and tick at least one file before "Finish" is enabled).
      */
     private void initFields()
     {
@@ -200,8 +222,16 @@ public class ImportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── CHOOSE FROM DIRECTORY: OPEN DIRECTORY BROWSER ────────────────────────────
+    // The Emperor's courier opens a native directory dialog so Luke can pick the
+    // outpost folder. Once chosen, the table is automatically scanned for .xml files
+    // and populated.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the 'Browse...' button is selected.
+     * Opens a native {@link DirectoryDialog} so the user can browse to an import
+     * folder. Pre-fills the filter path from the current text field or the saved
+     * dialog preference. On selection, updates the text field and triggers a rescan
+     * via {@link #fillInTemplatesTable}.
      */
     private void chooseFromDirectory()
     {
@@ -227,11 +257,16 @@ public class ImportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── FILL IN TEMPLATES TABLE: SCAN DIRECTORY FOR XML FILES ────────────────────
+    // The Emperor's scout scans the chosen outpost directory for any .xml files and
+    // populates the template-files table with the results so Luke can tick the ones
+    // to recruit.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Fills in the templates table with the files found in the given path.
+     * Scans the given directory for {@code .xml} files and populates the template
+     * files table. Clears the table first; does nothing if the path does not exist.
      *
-     * @param path
-     *      the path to search schema files in
+     * @param path  the directory path to scan
      */
     private void fillInTemplatesTable( String path )
     {
@@ -258,8 +293,14 @@ public class ImportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── DIALOG CHANGED: VALIDATE AND UPDATE PAGE COMPLETION ───────────────────────
+    // The Emperor checks whether the plan can proceed: at least one template file
+    // must be ticked before "Finish" is allowed. Without a selection, the step is
+    // blocked with an error message.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the user modifies something in the UI.
+     * Validates the current UI state and updates the error message and page-completion
+     * flag. Called whenever the user changes any field.
      */
     private void dialogChanged()
     {
@@ -275,11 +316,12 @@ public class ImportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── GET SELECTED TEMPLATE FILES: RETURN CHECKED FILES AS AN ARRAY ─────────────
     /**
-     * Gets the selected template files.
+     * Returns the {@link File} objects currently checked in the wizard's table
+     * as a typed array.
      *
-     * @return
-     *      the selected templates files
+     * @return the checked template files (may be empty)
      */
     public File[] getSelectedTemplateFiles()
     {
@@ -295,8 +337,10 @@ public class ImportTemplatesWizardPage extends AbstractWizardPage
     }
 
 
+    // ── SAVE DIALOG SETTINGS: PERSIST THE DIRECTORY PREFERENCE ───────────────────
     /**
-     * Saves the dialog settings.
+     * Persists the chosen import directory to the plugin preference store so it
+     * is offered as the default path next time the wizard is opened.
      */
     public void saveDialogSettings()
     {

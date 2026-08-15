@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.views.browser;
@@ -24,10 +24,23 @@ package org.apache.directory.studio.ldapbrowser.ui.views.browser;
 import org.eclipse.swt.dnd.DragSourceListener;
 
 
+// ── CLASS: DragListener — HAN SHOOTS FIRST ───────────────────────────────────
+// In the Mos Eisley cantina, Greedo sits across from Han Solo and things get
+// tense. Han, ever the decisive one, acts first — he handles the situation
+// before it gets messy. Drag-and-drop in a tree view is similarly decisive:
+// when the user starts dragging, you need to immediately determine what's
+// being dragged, wrap it up, and hand it off before the OS framework
+// asks what to do with it. This class was meant to be that decisive handler.
+// (It's a stub — the DnD support was stubbed out and never completed.)
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the {@link DragSourceListener} for the browser view.
- * 
- * TODO: The code isn't working yet, just a test implementation.
+ * Placeholder for the drag-source listener in the LDAP browser view.
+ * This class was intended to handle drag events (dragStart, dragSetData, dragFinished)
+ * when users drag entries, searches, or search results from the browser tree.
+ * The implementation is commented out and not yet functional — DnD support
+ * was never completed in this part of the codebase.
+ * Think of Han Solo in the cantina: ready to act decisively, but the scene
+ * hasn't played out yet.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -36,7 +49,7 @@ public class DragListener /* implements DragSourceListener */
 
     // private Clipboard systemClipboard;
     // private InternalClipboard internalClipboard;
-    //    
+    //
     // public DragListener(Shell shell, Clipboard systemClipboard,
     // InternalClipboard internalClipboard) {
     // super(shell, "Drag", null, null);
@@ -50,7 +63,7 @@ public class DragListener /* implements DragSourceListener */
     // }
     // protected void updateEnabledState() {
     // }
-    //    
+    //
     // public void dragStart(DragSourceEvent event) {
     // //System.out.println("dragStart: " + event);
     //
@@ -106,7 +119,7 @@ public class DragListener /* implements DragSourceListener */
     // BrowserTransfer.getInstance().isSupportedType(event.dataType));
     // //System.out.println("dragSetDataE: " +
     // TextTransfer.getInstance().isSupportedType(event.dataType));
-    //        
+    //
     // if (BrowserTransfer.getInstance().isSupportedType(event.dataType)) {
     // event.data = this.internalClipboard.getClass().getName();
     // }
@@ -147,7 +160,7 @@ public class DragListener /* implements DragSourceListener */
     // else {
     // event.data = null;
     // }
-    //        
+    //
     // //System.out.println("dragSetData2: " + event);
     // }
     //

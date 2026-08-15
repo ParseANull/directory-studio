@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.ldapbrowser.ui.dialogs.preferences;
 
@@ -53,9 +53,22 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.dialogs.PreferencesUtil;
 
 
+// ── CLASS: EntryEditorsPreferencePage — PALPATINE ISSUES ORDER 66 ────────────
+// Palpatine's Order 66 directive told every clone which Jedi to trust and in
+// what priority — the ones highest on the list were hunted first.  This preference
+// page does the same for entry editors: it lets you rank which editor plugins
+// Eclipse will open first when the user double-clicks an LDAP entry, and whether
+// to respect the application-wide "open mode" or fall back to historical behavior.
+// Like Order 66, getting the priority order wrong here has immediate and visible
+// consequences — the wrong editor opens and the user gets confused.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The entry editors preference page contains settings 
- * for the Entry Editors.
+ * Eclipse preference page for configuring entry editor plugin priority and open mode.
+ * It lets users choose between "historical behavior" (each entry editor picks its
+ * own tab) and "application-wide open mode," and reorder the registered entry
+ * editor extensions by priority.
+ * Think of this page as Palpatine's priority matrix — entries at the top of the
+ * list get activated first when the user opens a directory entry.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -79,8 +92,24 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     private Button restoreDefaultsEntryEditorsButton;
 
 
+    // ── PALPATINE OPENS THE ORDER 66 BRIEFING ROOM ────────────────────────────
+    // Before Palpatine can issue his directives, someone has to set up the briefing
+    // room — title on the door, preference store connected, description on the
+    // board so every clone knows what this session is about.
+    // We do the same: set the page title, wire up the plugin preference store,
+    // and put a description on the page so users know what they're configuring.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EntryEditorsPreferencePage.
+     * Constructs the preference page, setting its title and description from NLS
+     * strings and wiring it to the BrowserUI plugin's preference store.
+     * Eclipse calls this when the user navigates to this page in the Preferences dialog.
+     *
+     * <p>For example — Palpatine prepares the briefing:</p>
+     * <pre>
+     *   door label: "Entry Editors"
+     *   board description: "Configure which editor opens for a selected entry"
+     *   store: BrowserUIPlugin.getDefault().getPreferenceStore()
+     * </pre>
      */
     public EntryEditorsPreferencePage()
     {
@@ -90,8 +119,27 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── PALPATINE READS THE CURRENT DEPLOYMENT STATUS ─────────────────────────
+    // Before issuing new orders, Palpatine consults the current state — how many
+    // clones are deployed, what mode they're operating in — so his directives
+    // reflect reality rather than assumption.
+    // We load the current openMode and useUserPriority preference values here so
+    // the UI renders the right radio button and editor order when the page opens.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Loads the current open mode and user-priority preference values from the
+     * plugin's preference store.
+     * Eclipse calls this once when the preference page is initialized; the values
+     * we load here drive which radio button is selected in {@link #createContents}.
+     *
+     * <p>For example — Palpatine checks the current deployment status:</p>
+     * <pre>
+     *   openMode = PREFERENCE_ENTRYEDITORS_OPEN_MODE  (historical or app-wide)
+     *   useUserPriority = PREFERENCE_ENTRYEDITORS_USE_USER_PRIORITIES
+     * </pre>
+     *
+     * @param workbench  The Eclipse workbench — we don't use it directly but must
+     *                   accept it because we implement {@link IWorkbenchPreferencePage}.
      */
     public void init( IWorkbench workbench )
     {
@@ -103,8 +151,33 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── PALPATINE CONSTRUCTS THE PRIORITY BRIEFING BOARD ─────────────────────
+    // The Emperor's briefing room has two sections: "Open Mode" (how clones should
+    // react when an enemy is sighted) and "Entry Editors" (the ranked list of who
+    // gets called first).  Each section has controls for adjusting priorities,
+    // and a description area so commanders know why each editor is in the list.
+    // We build the equivalent UI here: two radio buttons for open mode and a
+    // sortable table of registered entry editor extensions.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the preference page UI: an "Open Mode" group with two radio buttons
+     * and an "Entry Editors" group with a sortable table of registered editor
+     * plugins plus Up / Down / Restore Defaults buttons.
+     * Selecting a row in the table shows its description at the bottom.
+     *
+     * <p>For example — Palpatine lays out the priority board:</p>
+     * <pre>
+     *   Open Mode group:
+     *     ○ Historical Behavior  (each editor manages its own tab)
+     *     ● Application-Wide Setting  (Eclipse controls the tab strategy)
+     *   Entry Editors group:
+     *     [TableViewer: Single-tab Editor | Multi-tab Editor | LDIF Editor]
+     *     [Up] [Down] [Restore Defaults]
+     *     Description: "Shows entry attributes in a simple table view."
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse's preference dialog.
+     * @return        The top-level composite we constructed.
      */
     protected Control createContents( Composite parent )
     {
@@ -287,8 +360,22 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── PALPATINE APPLIES CUSTOM CLONE RANKINGS ───────────────────────────────
+    // When a commander has reorganized the clone battalions by their own criteria,
+    // Palpatine respects those rankings rather than reverting to the original list.
+    // We load the user's custom editor ordering from preferences and display it
+    // in the table so the page reflects the user's deliberate choices.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sorts the entry editors using the user's priority.
+     * Loads and displays the entry editors sorted by the user's saved priority order.
+     * We also store the sorted list locally so the Up/Down buttons can manipulate it
+     * without re-querying the manager.
+     *
+     * <p>For example — Palpatine uses the commander's custom deployment order:</p>
+     * <pre>
+     *   user's saved order: [LDIF Editor, Multi-tab, Single-tab]
+     *   table shows that order instead of the plugin default
+     * </pre>
      */
     private void sortEntryEditorsByUserPriority()
     {
@@ -301,8 +388,23 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── PALPATINE RESTORES THE ORIGINAL DEPLOYMENT ORDER ─────────────────────
+    // When no commander has customized anything, Palpatine falls back to the
+    // original order defined in the imperial charter — the plugin's default ranking.
+    // We load the factory-default ordering from the entry editor manager so users
+    // who haven't tweaked anything see a sensible, deterministic list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sorts the entry editors using the default priority.
+     * Loads and displays the entry editors sorted by their default (plugin-declared)
+     * priority order.
+     * Called on first page open when no user customization exists, and when the
+     * user clicks "Restore Defaults."
+     *
+     * <p>For example — Palpatine reads from the original imperial charter:</p>
+     * <pre>
+     *   default order: [Single-tab, Multi-tab, LDIF Editor]
+     *   that's what the table shows until the user reorders things
+     * </pre>
      */
     private void sortEntryEditorsByDefaultPriority()
     {
@@ -315,11 +417,27 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── PALPATINE PROMOTES OR DEMOTES A CLONE UNIT ───────────────────────────
+    // Order 66 had a priority list — Palpatine could move any clone battalion
+    // higher or lower in the deployment sequence.  Up = higher priority (acts
+    // first), Down = lower priority.
+    // We swap the selected editor with its neighbor in {@code sortedEntryEditorsList}
+    // and refresh the table to show the new order.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Moves the currently selected entry editor.
+     * Moves the currently selected entry editor one position up or down in the
+     * sorted list, then refreshes the table and updates the button states.
+     * Also sets {@code useUserPriority = true} so we know to persist this custom
+     * order when the user clicks OK.
      *
-     * @param direction
-     *      the direction (up or down)
+     * <p>For example — Palpatine promotes the LDIF editor above the table editor:</p>
+     * <pre>
+     *   selected: LDIF Editor (index 2) → direction UP → swapped with index 1 →
+     *   table refreshed → Up/Down buttons re-evaluated for new position
+     * </pre>
+     *
+     * @param direction  {@code UP} to increase priority (move toward index 0),
+     *                   {@code DOWN} to decrease it.
      */
     private void moveSelectedEntryEditor( MoveEntryEditorDirectionEnum direction )
     {
@@ -364,11 +482,27 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── PALPATINE CHECKS WHICH UNITS CAN STILL BE RERANKED ───────────────────
+    // After a unit is promoted or demoted, Palpatine re-checks the board: the top
+    // unit can't be promoted further, the bottom unit can't be demoted further,
+    // so the corresponding buttons must be disabled to prevent invalid moves.
+    // We enable/disable Up and Down based on the selected editor's position in
+    // the sorted list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the state of the buttons.
+     * Enables or disables the Up and Down buttons based on where the given editor
+     * sits in the sorted list.
+     * Up is disabled when the editor is already first (index 0); Down is disabled
+     * when it's last (index == size - 1).
      *
-     * @param entryEditor
-     *      the selected entry editor
+     * <p>For example — Palpatine checks rank limits:</p>
+     * <pre>
+     *   selected editor at index 0 → Up disabled, Down enabled
+     *   selected editor at index 2 of 3 → Up enabled, Down disabled
+     * </pre>
+     *
+     * @param entryEditor  The currently selected entry editor extension whose
+     *                     position in the list determines button states.
      */
     private void updateButtonsState( EntryEditorExtension entryEditor )
     {
@@ -383,8 +517,23 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── PALPATINE REFRESHES THE BUTTON STATUS FOR CURRENT SELECTION ───────────
+    // When Palpatine needs to refresh the board without knowing which unit is
+    // selected, he looks at the current selection and re-evaluates from there.
+    // We overload updateButtonsState to pull the selection from the viewer rather
+    // than requiring the caller to pass the editor explicitly.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the state of the buttons.
+     * Re-evaluates the Up/Down button states based on whatever is currently
+     * selected in the table viewer.
+     * Called after restore-defaults operations when we need to reset button states
+     * without knowing which editor ends up selected.
+     *
+     * <p>For example — Palpatine re-checks the board after a reset:</p>
+     * <pre>
+     *   viewer selection queried → first element extracted →
+     *   updateButtonsState(entryEditor) called with that element
+     * </pre>
      */
     private void updateButtonsState()
     {
@@ -398,9 +547,11 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
         }
     }
 
+    // ── INTERNAL ENUM: Direction for moving entry editors ──────────────────────
     /**
-     * This enum is used to determine in which direction the entry editor
-     * should be moved.
+     * Direction enum used internally by {@link #moveSelectedEntryEditor}.
+     * UP means increase priority (move toward index 0 in the list),
+     * DOWN means decrease it.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -410,8 +561,26 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── PALPATINE TRANSMITS THE UPDATED ORDER 66 ─────────────────────────────
+    // When the briefing is done and the commander clicks OK, Palpatine transmits
+    // the finalized directives to every clone in the galaxy via the holographic
+    // network — the preference store.  Every plugin that reads these preferences
+    // will now activate according to the new priority list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves the current UI state back to the plugin's preference store.
+     * Persists open mode, the user-priority flag, and (if user-priority is active)
+     * the ordered list of editor IDs joined by the priorities separator.
+     *
+     * <p>For example — Palpatine transmits the final directives:</p>
+     * <pre>
+     *   openMode = HISTORICAL_BEHAVIOR → stored
+     *   useUserPriority = true → stored
+     *   sorted editor IDs = "singleTab:multiTab:ldif" → stored
+     *   → next time the user opens an entry, the right editor activates first
+     * </pre>
+     *
+     * @return  Always {@code true}; the preference store never rejects our writes.
      */
     public boolean performOk()
     {
@@ -452,8 +621,23 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── PALPATINE REVERTS TO THE ORIGINAL IMPERIAL CHARTER ───────────────────
+    // When Palpatine's custom orders are revoked, everything reverts to the
+    // original charter — the defaults baked in before any customization happened.
+    // We read the plugin's default preference values and reset the UI to match,
+    // then rebuild the editor list from the default priority order.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Resets the open mode and entry editor order to plugin-default values.
+     * Reads defaults from the preference store (not current values), resets the
+     * radio buttons, and calls {@link #performDefaultsEntryEditors()} to rebuild
+     * the editor table from the default priority order.
+     *
+     * <p>For example — Palpatine's orders are revoked and originals restored:</p>
+     * <pre>
+     *   default openMode = HISTORICAL_BEHAVIOR → historicalBehaviorButton selected
+     *   default useUserPriority = false → sortEntryEditorsByDefaultPriority called
+     * </pre>
      */
     protected void performDefaults()
     {
@@ -477,8 +661,24 @@ public class EntryEditorsPreferencePage extends PreferencePage implements IWorkb
     }
 
 
+    // ── PALPATINE RESETS JUST THE EDITOR PRIORITY LIST ───────────────────────
+    // Sometimes only the deployment order needs resetting, not the open-mode
+    // directive — so Palpatine resets just the priority matrix to its default.
+    // We reset the useUserPriority flag and rebuild the table from default or
+    // user priority depending on what the defaults say.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Restore defaults to the entry editors part of the UI.
+     * Resets only the entry editors priority list to its default state.
+     * Called both from {@link #performDefaults()} and from the "Restore Defaults"
+     * button in the Entry Editors group.
+     * Reads the default value of the use-user-priority flag, then rebuilds the
+     * sorted editor list and refreshes the Up/Down button states.
+     *
+     * <p>For example — only the clone priority ranking is reset, not the open mode:</p>
+     * <pre>
+     *   default useUserPriority = false → sortEntryEditorsByDefaultPriority()
+     *   button states recalculated for the newly selected first row
+     * </pre>
      */
     private void performDefaultsEntryEditors()
     {

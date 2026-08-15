@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs.overlays;
 
@@ -49,9 +49,19 @@ import org.apache.directory.studio.openldap.config.editor.dialogs.OverlayDialog;
 import org.apache.directory.studio.openldap.config.model.overlay.OlcRefintConfig;
 
 
+// Like the Imperial construction crews assembling the referential-integrity
+// enforcement module onto the second Death Star — wiring up the attributes
+// roster that must stay consistent across deletes and renames, the placeholder
+// DN that replaces dangling references, and the modifier-name identity used
+// when the overlay writes its housekeeping changes — we build the configuration
+// block that governs how the Referential Integrity overlay keeps the directory clean.
 /**
- * This class implements a block for the configuration of the Referential Integrity overlay.
- * 
+ * This class implements the configuration block for the Referential Integrity
+ * overlay. We present a table of watched attributes (with Add and Delete
+ * buttons), a placeholder-value DN picker for replacing stale references, and
+ * a modifier-name DN picker, and we read/write all of these to and from the
+ * {@link OlcRefintConfig} model object on refresh and save.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ReferentialIntegrityOverlayConfigurationBlock extends
@@ -73,7 +83,7 @@ public class ReferentialIntegrityOverlayConfigurationBlock extends
     // Listeners
     private ISelectionChangedListener attributesTableViewerSelectionChangedListener =  event ->
         deleteAttributeButton.setEnabled( !attributesTableViewer.getSelection().isEmpty() );
-        
+
     private SelectionListener addAttributeButtonSelectionListener = new SelectionAdapter()
     {
         @Override
@@ -111,6 +121,17 @@ public class ReferentialIntegrityOverlayConfigurationBlock extends
     };
 
 
+    // Like the crew initializing a fresh referential-integrity module with
+    // no watched attributes, no placeholder DN, and the default modifier
+    // name — ready to be configured by the administrator — we create the
+    // block with a new empty OlcRefintConfig and an empty attributes list.
+    /**
+     * Creates a new ReferentialIntegrityOverlayConfigurationBlock with a fresh,
+     * empty {@link OlcRefintConfig} as the backing model and an empty attributes list.
+     *
+     * @param dialog the parent OverlayDialog that hosts this block
+     * @param connection the browser connection used for schema and DN lookups
+     */
     public ReferentialIntegrityOverlayConfigurationBlock( OverlayDialog dialog, IBrowserConnection connection )
     {
         super( dialog, connection );
@@ -118,11 +139,24 @@ public class ReferentialIntegrityOverlayConfigurationBlock extends
     }
 
 
+    // Like the crew installing a pre-configured referential-integrity module
+    // that already knows which attributes to watch and which placeholder DN
+    // to substitute for broken references, we accept an existing config and
+    // store it — falling back to a fresh one if null was passed.
+    /**
+     * Creates a new ReferentialIntegrityOverlayConfigurationBlock backed by the
+     * given {@link OlcRefintConfig}. If {@code overlay} is {@code null} we
+     * create a fresh default config instead.
+     *
+     * @param dialog the parent OverlayDialog that hosts this block
+     * @param connection the browser connection used for schema and DN lookups
+     * @param overlay the existing referential-integrity overlay config to edit, or {@code null}
+     */
     public ReferentialIntegrityOverlayConfigurationBlock( OverlayDialog dialog, IBrowserConnection connection,
         OlcRefintConfig overlay )
     {
         super( dialog, connection );
-        
+
         if ( overlay == null )
         {
             setOverlay( new OlcRefintConfig() );
@@ -134,8 +168,16 @@ public class ReferentialIntegrityOverlayConfigurationBlock extends
     }
 
 
+    // Like the construction crew building the referential-integrity module's
+    // control panel — an attributes roster with Add and Delete buttons, a
+    // DN picker for the placeholder value that fills in for deleted entries,
+    // and a DN picker for the modifier name identity — we create all the widgets.
     /**
-     * {@inheritDoc}
+     * Creates the block content area with an attributes {@link TableViewer}
+     * (with Add and Delete buttons), a "Placeholder Value" DN entry widget,
+     * and a "Modifier's Name" DN entry widget.
+     *
+     * @param parent the parent composite to attach our content to
      */
     public void createBlockContent( Composite parent )
     {
@@ -189,8 +231,16 @@ public class ReferentialIntegrityOverlayConfigurationBlock extends
     }
 
 
+    // Like the crew reading the referential-integrity module's current settings
+    // out of the configuration record and populating the control panel —
+    // loading watched attributes into the roster, setting the placeholder DN,
+    // and defaulting the modifier name to the standard overlay identity —
+    // we push each overlay value into its corresponding widget.
     /**
-     * {@inheritDoc}
+     * Refreshes the block widgets from the current {@link OlcRefintConfig},
+     * populating the attributes table, the placeholder-value DN, and the
+     * modifier-name DN. When the modifier name is absent we default it to
+     * {@value #DEFAULT_MODIFIER_NAME}.
      */
     public void refresh()
     {
@@ -243,8 +293,15 @@ public class ReferentialIntegrityOverlayConfigurationBlock extends
     }
 
 
+    // Like the crew writing the updated referential-integrity settings back
+    // into the station's configuration record — saving the attributes list,
+    // the placeholder DN, and the modifier name (clearing fields that match
+    // the empty or default values so the overlay uses its built-in defaults) —
+    // we persist every widget value into the OlcRefintConfig model.
     /**
-     * {@inheritDoc}
+     * Saves the current widget values back into the {@link OlcRefintConfig},
+     * writing the attributes list, the placeholder-value DN (cleared if empty),
+     * and the modifier-name DN (cleared if empty or equal to the default).
      */
     public void save()
     {

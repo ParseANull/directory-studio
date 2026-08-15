@@ -36,9 +36,25 @@ import org.apache.directory.studio.schemaeditor.Activator;
 import org.apache.directory.studio.schemaeditor.model.Project;
 
 
+// ── CLASS: SchemaEditorSchemaLoader — C-3PO Reads the Schema Editor's Dialect ─
+// C-3PO bridges two worlds: the schema editor's internal model (Project →
+// SchemaHandler → Schema objects) and the Apache Directory API's schema registry
+// (AbstractSchemaLoader → DefaultSchemaManager).  He reads each schema object
+// from the currently open project, converts it to the LDAP Entry format the API
+// expects, and hands the entries back to the DefaultSchemaManager one type at
+// a time.  Comparators, normalizers, and syntax checkers are not stored in the
+// schema editor's model, so those methods return empty lists.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Loads schema data from schema files (OpenLDAP and XML formats).
- * 
+ * Feeds the currently open project's schema objects into Apache Directory API's
+ * schema validation engine ({@link org.apache.directory.api.ldap.schema.manager.impl.DefaultSchemaManager}).
+ * <p>
+ * Extends {@link AbstractSchemaLoader} and overrides the {@code loadXxx} methods
+ * to return {@link Entry} representations built by {@link SchemaEditorSchemaLoaderUtils}.
+ * Methods for schema object types the editor doesn't model
+ * (comparators, normalizers, syntax checkers, matching rule uses, name forms,
+ * DIT content rules, DIT structure rules) return empty lists.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
@@ -47,10 +63,17 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     private Project project;
 
 
+    // ── C-3PO Opens His Vocabulary List ──────────────────────────────────────
+    // The constructor snaps a reference to the currently open project and
+    // pre-populates the superclass's schemaMap so the loader knows which
+    // schemas exist before any loadXxx call is made.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SchemaEditorSchemaLoader.
+     * Creates a new SchemaEditorSchemaLoader and immediately calls
+     * {@link #initializeSchemas()} to register the open project's schemas
+     * in the superclass's schema map.
      *
-     * @throws Exception
+     * @throws Exception  propagated from AbstractSchemaLoader (none expected in practice)
      */
     public SchemaEditorSchemaLoader()
     {
@@ -58,8 +81,15 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO Catalogues All Known Dialects ───────────────────────────────────
+    // Fetches the open project, iterates its schemas, and registers each one in
+    // the inherited schemaMap keyed by name.  The DefaultSchemaManager uses
+    // schemaMap to resolve schema dependencies.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initialize schemas.
+     * Populates the inherited {@code schemaMap} from the currently open project.
+     * Each schema from the project's schema handler is registered by name so the
+     * DefaultSchemaManager can resolve cross-schema dependencies.
      */
     private void initializeSchemas()
     {
@@ -76,6 +106,9 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO: "Comparators? I'm Afraid We Don't Stock That Dialect" ─────────
+    // The schema editor doesn't model comparator definitions; return empty list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -85,6 +118,9 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO: "Syntax Checkers? Also Not in My Lexicon" ─────────────────────
+    // The schema editor doesn't model syntax checker definitions; return empty.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -94,6 +130,9 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO: "Normalizers? Not a Word in Any of My Six Million Languages" ───
+    // The schema editor doesn't model normalizer definitions; return empty.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -103,6 +142,10 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO Translates Each Matching Rule into Entry Format ────────────────
+    // For each requested schema, C-3PO fetches the matching rules from the
+    // schema handler and delegates conversion to SchemaEditorSchemaLoaderUtils.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -133,6 +176,10 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO Translates Each Syntax into Entry Format ────────────────────────
+    // For each requested schema, C-3PO fetches the syntaxes from the schema
+    // handler and converts each to an Entry via the utils class.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -163,6 +210,10 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO Translates Each Attribute Type into Entry Format ───────────────
+    // For each requested schema, C-3PO fetches the attribute types from the
+    // schema handler and converts each to an Entry via the utils class.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -193,6 +244,9 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO: "Matching Rule Uses? Not in This Schema, Sir" ─────────────────
+    // The schema editor doesn't model matching rule uses; return empty list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -202,6 +256,9 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO: "Name Forms? Also Absent from the Vocabulary" ─────────────────
+    // The schema editor doesn't model name forms; return empty list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -211,6 +268,9 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO: "DIT Content Rules? Beyond My Translation Capacity" ───────────
+    // The schema editor doesn't model DIT content rules; return empty list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -220,6 +280,9 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO: "DIT Structure Rules? I'm Sorry, I Don't Speak That" ──────────
+    // The schema editor doesn't model DIT structure rules; return empty list.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -229,6 +292,10 @@ public class SchemaEditorSchemaLoader extends AbstractSchemaLoader
     }
 
 
+    // ── C-3PO Translates Each Object Class into Entry Format ─────────────────
+    // For each requested schema, C-3PO fetches the object classes from the
+    // schema handler and converts each to an Entry via the utils class.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */

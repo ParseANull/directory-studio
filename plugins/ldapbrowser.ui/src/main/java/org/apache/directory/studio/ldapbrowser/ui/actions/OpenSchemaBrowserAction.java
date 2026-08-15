@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.actions;
@@ -37,8 +37,24 @@ import org.apache.directory.studio.ldapbrowser.ui.editors.schemabrowser.SchemaBr
 import org.eclipse.jface.resource.ImageDescriptor;
 
 
+// ── CLASS: OpenSchemaBrowserAction — LUKE'S BINARY SUNSET ────────────────────
+// Luke stands at the edge of the Tatooine desert, gazing at the twin suns sinking
+// below the horizon.  For a moment he can see the whole landscape at once — the
+// scope of the world he lives in, the rules that govern it.  An LDAP schema is
+// exactly that: the full landscape of object classes, attribute types, matching
+// rules, and syntaxes that define what entries can exist and what they can contain.
+// OpenSchemaBrowserAction opens the Schema Browser editor so the user can stand at
+// that vantage point and take in the whole picture.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This Action opens the Schema Browser 
+ * Opens the Schema Browser editor and optionally navigates it to a specific schema
+ * element (object class, attribute type, matching rule, or syntax) based on the
+ * current selection and the {@code mode} field.
+ * The schema tells you the rules of the directory: what object classes exist, what
+ * attributes they require or allow, how values are compared.  This action is the
+ * gateway to browsing all of that.
+ * Think of this class as Luke's binary sunset moment — we're opening the panoramic
+ * view of everything the directory schema defines.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -82,8 +98,15 @@ public class OpenSchemaBrowserAction extends BrowserAction
     protected int mode;
 
 
+    // ── Luke Wanders To The Ridge With No Target ─────────────────────────────────
+    // Sometimes Luke just strolled out to the ridge — no specific destination in
+    // mind, just to see the sunset.  The no-arg constructor sets mode to MODE_NONE,
+    // meaning we open the schema browser without navigating to any specific element.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of OpenSchemaBrowserAction.
+     * Creates an OpenSchemaBrowserAction in MODE_NONE.
+     * When run, this will open the schema browser on the connected server's schema
+     * without pre-selecting any specific element — a general overview.
      */
     public OpenSchemaBrowserAction()
     {
@@ -92,11 +115,20 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Luke Walks Out To See A Specific Constellation ──────────────────────────
+    // Some evenings Luke went out specifically to watch a particular constellation
+    // rise.  This constructor lets callers pass a mode constant so that when run()
+    // fires, the schema browser opens directly to the right element type.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of OpenSchemaBrowserAction.
+     * Creates an OpenSchemaBrowserAction in a specific display mode.
+     * The mode determines which schema element type the browser will navigate to
+     * based on the current selection — use one of the {@code MODE_*} constants.
      *
-     * @param mode
-     *      the display mode
+     * @param mode  one of {@link #MODE_NONE}, {@link #MODE_OBJECTCLASS},
+     *              {@link #MODE_ATTRIBUTETYPE}, {@link #MODE_EQUALITYMATCHINGRULE},
+     *              {@link #MODE_SUBSTRINGMATCHINGRULE}, {@link #MODE_ORDERINGMATCHINGRULE},
+     *              or {@link #MODE_SYNTAX}
      */
     public OpenSchemaBrowserAction( int mode )
     {
@@ -105,8 +137,18 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Luke Takes In The Full Landscape ────────────────────────────────────────
+    // Luke's gaze sweeps across the whole horizon — or locks onto one specific
+    // constellation depending on his mood.  run() calls SchemaBrowserManager.setInput()
+    // with either null (for the general overview) or a specific schema element
+    // extracted from the current selection based on our mode.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Opens the Schema Browser and navigates it according to our mode setting.
+     * In MODE_NONE we open the browser without focusing on any specific element.
+     * In other modes we extract the relevant schema element from the current selection
+     * (object class name from a value, attribute type from an attribute, etc.) and
+     * pass it to the browser so it opens directly to that item.
      */
     public void run()
     {
@@ -145,8 +187,17 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Horizon Label Changes With The View ──────────────────────────────────────
+    // Luke might describe the scene differently depending on what he's looking at:
+    // "just the sunset" vs. "the twin moons rising."  getText() returns a mode-
+    // specific label so the menu item clearly describes what it will open.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the display label for this action, adapted to the current mode.
+     * Each mode gets a distinct label — "Open Schema Browser" for the general case,
+     * or "Object Class Description", "Attribute Description", etc. for specific modes.
+     *
+     * @return the localised, mode-specific label string
      */
     public String getText()
     {
@@ -185,8 +236,16 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Each View Has Its Own Icon ───────────────────────────────────────────────
+    // The binary sunset looks different from the constellation — different icon per
+    // mode so the toolbar buttons are visually distinct and instantly recognisable.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the image descriptor for this action's icon, adapted to the current mode.
+     * Each mode maps to a distinct icon in the plugin's image registry (the schema
+     * browser icon for MODE_NONE, and type-specific icons for the other modes).
+     *
+     * @return the mode-specific image descriptor, or the schema browser icon as fallback
      */
     public ImageDescriptor getImageDescriptor()
     {
@@ -225,8 +284,15 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── No Standard Rebel Broadcast Code ────────────────────────────────────────
+    // Luke's private sunsets had no Alliance command code — they were personal moments.
+    // This action has no registered Eclipse command ID.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the Eclipse command ID for keybinding.
+     * No global command ID is registered for this action.
+     *
+     * @return always null
      */
     public String getCommandId()
     {
@@ -234,8 +300,17 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Can Luke See The Sunset From Here ───────────────────────────────────────
+    // Luke can only enjoy the binary sunset if he's actually on Tatooine — if he's
+    // in hyperspace the view doesn't exist.  isEnabled() checks that the right kind
+    // of schema element is available in the current selection for the given mode.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Reports whether this action is available for the current selection.
+     * For MODE_NONE we just need a non-null connection; for the element-specific
+     * modes we need the corresponding schema element to be derivable from the selection.
+     *
+     * @return true if the preconditions for the current mode are met
      */
     public boolean isEnabled()
     {
@@ -275,11 +350,18 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Finding The Syntax Star ──────────────────────────────────────────────────
+    // Luke knew that the binary stars followed a predictable path; he could trace the
+    // path of one star to the other.  getLsd() walks from the selected attribute type
+    // to its associated LDAP syntax description via the schema's OID registry.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the LDAP Syntax Description.
+     * Derives the LDAP syntax description for the attribute type in the current selection.
+     * We walk from the selected attribute to its syntax OID (following the inheritance
+     * chain transitively) and then look that OID up in the schema.
      *
-     * @return
-     *      the LDAP Syntax Description
+     * @return the {@link LdapSyntax} for the selected attribute, or null if there is
+     *         no connection, no selected attribute, or no matching syntax in the schema
      */
     private LdapSyntax getLsd()
     {
@@ -299,11 +381,18 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Reading The Constellation Name ──────────────────────────────────────────
+    // Luke would look up at a constellation and name it — he'd been taught the
+    // names as a kid.  getOcd() does the same: it reads the object class name from
+    // the selected objectClass attribute value and looks up the matching schema entry.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Object Class Description.
+     * Derives the object class description from the current selection.
+     * We look for a single selected value on an objectClass attribute, extract its
+     * string value (the object class name), and look it up in the server's schema.
      *
-     * @return
-     *      the Object Class Description
+     * @return the {@link ObjectClass} for the selected value, or null if the selection
+     *         isn't a single objectClass value or the class isn't in the schema
      */
     private ObjectClass getOcd()
     {
@@ -324,11 +413,18 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Identifying The Star Type ────────────────────────────────────────────────
+    // Luke could tell a white dwarf from a red giant at a glance — he knew the types.
+    // getAtd() resolves the attribute type description from whatever is selected:
+    // a single value, a single attribute, or a single attribute hierarchy.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Attribute Type Description.
+     * Derives the attribute type description from the current selection.
+     * We handle three selection forms: a single value, a single attribute, and a
+     * single attribute hierarchy (all three ultimately lead to one attribute type).
      *
-     * @return
-     *      the Attribute Type Description
+     * @return the {@link AttributeType} for the selection, or null if the selection
+     *         doesn't resolve to exactly one attribute type
      */
     private AttributeType getAtd()
     {
@@ -355,10 +451,18 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Tracing The Light Back To Its Source ─────────────────────────────────────
+    // Luke traced the light of the twin suns back to their source — he knew which
+    // star was which.  getConnection() traces the selected object back to its
+    // IBrowserConnection, walking through all the possible selection types.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the connection.
+     * Derives the browser connection from the current selection.
+     * We check — in priority order — values, attributes, attribute hierarchies,
+     * direct connection selections, entry selections, search-result selections,
+     * bookmark selections, and search selections until we find a connection.
      *
-     * @return the connection
+     * @return the {@link IBrowserConnection} for the selection, or null if none can be found
      */
     private IBrowserConnection getConnection()
     {
@@ -408,11 +512,17 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Spotting The Equality Star ───────────────────────────────────────────────
+    // Some constellations are defined by the equality of their stars' brightness.
+    // getEmrd() walks from the attribute type to its equality matching rule using
+    // the schema's transitive lookup — following the inheritance chain if needed.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Equality Matching Rule Description.
+     * Derives the equality matching rule description from the selected attribute type.
+     * We walk transitively through the attribute type's inheritance chain to find
+     * the effective equality matching rule, then look it up in the schema.
      *
-     * @return
-     *      the Equality Matching Rule Description
+     * @return the equality {@link MatchingRule}, or null if none applies to the selection
      */
     private MatchingRule getEmrd()
     {
@@ -433,11 +543,15 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Spotting The Substring Star ──────────────────────────────────────────────
+    // The substring stars are the faint ones — partial matches in the constellation.
+    // getSmrd() resolves the substring matching rule for the selected attribute type.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Substring Matching Rule Description.
+     * Derives the substring matching rule description from the selected attribute type.
+     * Substring matching rules define how partial-string searches work for an attribute.
      *
-     * @return
-     *      the Substring Matching Rule Description
+     * @return the substring {@link MatchingRule}, or null if none applies
      */
     private MatchingRule getSmrd()
     {
@@ -458,11 +572,15 @@ public class OpenSchemaBrowserAction extends BrowserAction
     }
 
 
+    // ── Spotting The Ordering Star ───────────────────────────────────────────────
+    // The ordering star rises before its companion — it defines which comes first.
+    // getOmrd() resolves the ordering matching rule for the selected attribute type.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Ordering Matching Rule Description.
+     * Derives the ordering matching rule description from the selected attribute type.
+     * Ordering matching rules define how range and sort comparisons work for an attribute.
      *
-     * @return
-     *      the Ordering Matching Rule Description
+     * @return the ordering {@link MatchingRule}, or null if none applies
      */
     private MatchingRule getOmrd()
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.ldapservers.views;
 
@@ -29,8 +29,18 @@ import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
 
 
+// ── CLASS: ServersViewLabelProvider — THE CLOUD CITY STATUS DISPLAY PANEL ────────────────
+// Cloud City's control room has a big status board: each row shows a facility name (left)
+// and an animated status icon with text (right).  A blinking animation cycles through three
+// states — one dot, two dots, three dots — for anything in-progress.
+// This class is that display panel: it supplies column text and column images for the Servers
+// view, including animated frames for STARTING, STOPPING, and REPAIRING states.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the label provider for the Servers view.
+ * Provides text and images for each cell in the Servers view's two-column tree.
+ * Column 0: server name and server icon.
+ * Column 1: animated status text ("Starting...") and animated status icon.
+ * Think of it as Cloud City's animated status display panel.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -45,8 +55,25 @@ public class ServersViewLabelProvider extends LabelProvider implements ITableLab
     private int dotsCount = 1;
 
 
+    // ── Reading The Name And Status Off The Status Board ─────────────────────────────────────
+    // The board's left column shows the facility name; the right column shows the current status
+    // in plain text.  For in-progress states (STARTING, STOPPING, REPAIRING) the text animates
+    // with a trailing dot sequence to signal ongoing work.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the display text for a cell.
+     * Column 0 returns the server's name; column 1 returns the localised status string.
+     * In-progress states append a dot sequence that cycles with each animation tick.
+     *
+     * <p>For example — the board shows "My ApacheDS" | "Starting...":</p>
+     * <pre>
+     *   getColumnText(server, 0) → "My ApacheDS"
+     *   getColumnText(server, 1) → "Starting..."  (or ".." or "." depending on frame)
+     * </pre>
+     *
+     * @param element      the element (expected to be an {@link LdapServer})
+     * @param columnIndex  0 for name, 1 for status text
+     * @return the text to display in the cell
      */
     public String getColumnText( Object element, int columnIndex )
     {
@@ -83,11 +110,15 @@ public class ServersViewLabelProvider extends LabelProvider implements ITableLab
     }
 
 
+    // ── Getting The Right Number Of Dots For The Animation Frame ─────────────────────────────
+    // The animation thread calls animate() every 200 ms, advancing dotsCount from 1 to 3.
+    // getDots() converts that counter to ".", "..", or "..." for the trailing status text.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the dotted string, based on the current dotsCount.
+     * Returns the dot string (".","..","...") corresponding to the current animation frame.
+     * Used by {@link #getColumnText} for in-progress statuses.
      *
-     * @return
-     *      the dotted string, based on the current dotsCount
+     * @return the dot suffix for the current animation frame
      */
     private String getDots()
     {
@@ -106,8 +137,19 @@ public class ServersViewLabelProvider extends LabelProvider implements ITableLab
     }
 
 
+    // ── Picking The Right Status Icon For This Frame ─────────────────────────────────────────
+    // Column 0 always gets the generic server icon; column 1 gets a status icon.
+    // For STARTING/STOPPING/REPAIRING, three different image variants cycle with the animation
+    // to give a spinning or blinking effect.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the icon image for a cell.
+     * Column 0 returns the generic server icon.
+     * Column 1 returns the status icon — animated (three frames) for STARTING/STOPPING/REPAIRING.
+     *
+     * @param element      the element (expected to be an {@link LdapServer})
+     * @param columnIndex  0 for server icon, 1 for status icon
+     * @return the image to display in the cell
      */
     public Image getColumnImage( Object element, int columnIndex )
     {
@@ -162,8 +204,13 @@ public class ServersViewLabelProvider extends LabelProvider implements ITableLab
     }
 
 
+    // ── Advancing The Animation Frame ────────────────────────────────────────────────────────
+    // The animation thread fires every 200 ms and calls this to advance the frame counter.
+    // It wraps from 3 back to 1 so the dots cycle: ".", "..", "...", ".", "..", "..."
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Increase the counter of the animation.
+     * Advances the animation dot counter by one, wrapping back to 1 after 3.
+     * Called by {@link ServersTableViewer}'s animation thread every 200 ms for in-progress servers.
      */
     public void animate()
     {

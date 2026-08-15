@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.schemabrowser;
@@ -47,9 +47,25 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 
 
+// ── CLASS: AttributeTypeDescriptionDetailsPage — The Most Detailed Blueprint ─────
+// This is the longest chapter in the Death Star manual.  Every attribute type
+// carries an OID, human names, a description, a usage category, four boolean
+// flags (single-valued, read-only, collective, obsolete), a wire syntax with
+// optional max length, three matching-rule hyperlinks, extra matching rules,
+// the object classes that require or permit it, a supertype, and derived subtypes.
+// R2-D2 projects all of it in one tall scrollable panel whenever an attribute
+// type entry is selected in the left-hand list.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The AttributeTypeDescriptionDetailsPage displays the details of an
- * attribute type description.
+ * The detail page that displays the full specification of a selected attribute
+ * type description on the right-hand side of the schema browser.
+ * It is the most comprehensive detail page in the schema browser, covering:
+ * OID, names, description, and usage in a fixed "Details" section;
+ * four colored flag labels (single-valued, read-only, collective, obsolete);
+ * a fixed "Syntax" section with OID hyperlink, description, and max length;
+ * a fixed "Matching Rules" section with equality, substring, and ordering links;
+ * and six collapsible sections for other matching rules, used-as-must object classes,
+ * used-as-may object classes, supertype, subtypes, and the raw LDIF footer.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -125,11 +141,15 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
     private Section subtypesSection;
 
 
+    // ── R2 Loads The Attribute-Type Blueprint Module ───────────────────────────────
+    // R2 slots the attribute-type detail module into his projection system, linking
+    // it to the master page and toolkit so it can build controls when asked.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AttributeTypeDescriptionDetailsPage.
+     * Creates the attribute type details page linked to the given master schema page.
      *
-     * @param schemaPage the master schema page
-     * @param toolkit the toolkit used to create controls
+     * @param schemaPage  the master schema page that owns this detail page
+     * @param toolkit     the JFace forms toolkit used to create controls
      */
     public AttributeTypeDescriptionDetailsPage( SchemaPage schemaPage, FormToolkit toolkit )
     {
@@ -137,8 +157,19 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Assembles The Full Attribute-Type Blueprint Panel ───────────────────────
+    // R2 builds the complete display: a fixed Details section, four flag labels in
+    // a Flags row, a fixed Syntax section, a fixed Matching Rules section, and then
+    // six collapsible appendices — other matching rules, used-as-must, used-as-may,
+    // supertype, subtypes — capped by the standard raw LDIF footer.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the SWT layout for this detail page inside the given form.
+     * Creates all fixed and collapsible sections.
+     * The flag labels are created here once; their foreground color is updated on
+     * every {@link #setInput(Object)} call to indicate enabled/disabled state.
+     *
+     * @param detailForm  the scrolled form that parents all sections
      */
     protected void createContents( final ScrolledForm detailForm )
     {
@@ -337,13 +368,32 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Projects The Full Attribute-Type Specification ─────────────────────────
+    // "Show everything about 'cn'."  R2 fills in all eleven sections: the header
+    // fields, the four colored flag indicators, syntax OID and length, the three
+    // matching-rule hyperlinks, and rebuilds the six collapsible appendices.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Updates all sections to display the given attribute type description.
+     * Rebuilds dynamic sections and reflowing the form on every call.
+     * Fixed-content sections (flags, syntax, matching rules) are updated in-place;
+     * dynamic sections are fully disposed and recreated.
+     *
+     * <p>For example — R2 projects the full "cn" attribute spec:</p>
+     * <pre>
+     *   setInput(cnAttributeType);
+     *   // Details: OID, "cn" / "commonName", userApplications
+     *   // Flags: single-valued=disabled, read-only=disabled, ...
+     *   // Syntax: DirectoryString (hyperlink), length = 32768
+     *   // Matching Rules: caseIgnoreMatch, caseIgnoreSubstringsMatch, -
+     * </pre>
+     *
+     * @param input  the {@link AttributeType} to display; null clears the pane
      */
     public void setInput( Object input )
     {
         AttributeType atd = null;
-        
+
         if ( input instanceof AttributeType )
         {
             atd = ( AttributeType ) input;
@@ -395,19 +445,19 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
         String lsdOid = null;
         LdapSyntax lsd = null;
         long lsdLength = 0;
-        
+
         if ( atd != null )
         {
             lsdOid = SchemaUtils.getSyntaxNumericOidTransitive( atd, getSchema() );
-            
+
             if ( lsdOid != null && getSchema().hasLdapSyntaxDescription( lsdOid ) )
             {
                 lsd = getSchema().getLdapSyntaxDescription( lsdOid );
             }
-            
+
             lsdLength = SchemaUtils.getSyntaxLengthTransitive( atd, getSchema() );
         }
-        
+
         syntaxLink.setText( getNonNullString( lsd != null ? lsd.getOid() : lsdOid ) );
         syntaxLink.setHref( lsd );
         syntaxLink.setUnderlined( lsd != null );
@@ -419,17 +469,17 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
         // set matching rules content
         String emrOid = null;
         MatchingRule emr = null;
-        
+
         if ( atd != null )
         {
             emrOid = SchemaUtils.getEqualityMatchingRuleNameOrNumericOidTransitive( atd, getSchema() );
-            
+
             if ( emrOid != null && getSchema().hasMatchingRuleDescription( emrOid ) )
             {
                 emr = getSchema().getMatchingRuleDescription( emrOid );
             }
         }
-        
+
         equalityLink.setText( getNonNullString( emr != null ? SchemaUtils.toString( emr ) : emrOid ) );
         equalityLink.setHref( emr );
         equalityLink.setUnderlined( emr != null );
@@ -437,17 +487,17 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
 
         String smrOid = null;
         MatchingRule smr = null;
-        
+
         if ( atd != null )
         {
             smrOid = SchemaUtils.getSubstringMatchingRuleNameOrNumericOidTransitive( atd, getSchema() );
-            
+
             if ( smrOid != null && getSchema().hasMatchingRuleDescription( smrOid ) )
             {
                 smr = getSchema().getMatchingRuleDescription( smrOid );
             }
         }
-        
+
         substringLink.setText( getNonNullString( smr != null ? SchemaUtils.toString( smr ) : smrOid ) );
         substringLink.setHref( smr );
         substringLink.setUnderlined( smr != null );
@@ -455,17 +505,17 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
 
         String omrOid = null;
         MatchingRule omr = null;
-        
+
         if ( atd != null )
         {
             omrOid = SchemaUtils.getOrderingMatchingRuleNameOrNumericOidTransitive( atd, getSchema() );
-            
+
             if ( omrOid != null && getSchema().hasMatchingRuleDescription( omrOid ) )
             {
                 omr = getSchema().getMatchingRuleDescription( omrOid );
             }
         }
-        
+
         orderingLink.setText( getNonNullString( omr != null ? SchemaUtils.toString( omr ) : omrOid ) );
         orderingLink.setHref( omr );
         orderingLink.setUnderlined( omr != null );
@@ -484,18 +534,36 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Looks Up A Named Color ──────────────────────────────────────────────────
+    // R2 translates a symbolic color name (DEFAULT_COLOR or DISABLED_COLOR) into
+    // an SWT Color object by asking the shared plugin registry.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Returns the SWT Color registered under the given symbolic name.
+     * Used to paint flag labels enabled (dark) or disabled (grey).
+     *
+     * @param color  a color constant from {@link CommonUIConstants}
+     * @return       the registered Color object
+     */
     private Color getColor( String color )
     {
         return CommonUIPlugin.getDefault().getColor( color );
     }
 
 
+    // ── R2 Fills The Header Identification Fields ──────────────────────────────────
+    // R2 populates the top section of the attribute blueprint: OID, human display
+    // names, a potentially multi-line description, and the usage category
+    // (userApplications, directoryOperation, etc.).  Rebuilt fresh every time
+    // so multi-line descriptions get proper layout space.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the main section. It is newly created
-     * on every input change to ensure a proper layout of 
-     * multilined descriptions. 
+     * Recreates the "Details" section content with OID, names, description, and
+     * usage fields for the given attribute type.
+     * Disposing and recreating on every call ensures multi-line descriptions
+     * properly resize the section.
      *
-     * @param atd the attribute type description
+     * @param atd  the attribute type to display; null leaves the section empty
      */
     private void createMainContent( AttributeType atd )
     {
@@ -547,12 +615,17 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists Matching Rules Beyond The Main Three ─────────────────────────────
+    // Besides equality, substring, and ordering, an attribute type may declare
+    // additional matching rules.  R2 collects those extras and lists them as
+    // hyperlinks in this collapsible section — a dash if there are none.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the other matching rules section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Other Matching Rules" section with hyperlinks to every
+     * matching rule beyond equality, substring, and ordering.
+     * Rebuilt on every input change.
      *
-     * @param atd the attribute type description
+     * @param atd  the attribute type whose extra matching rules to list; null clears
      */
     private void createOtherMatchContent( AttributeType atd )
     {
@@ -567,7 +640,7 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
         otherMatchClient.setLayout( new GridLayout() );
         otherMatchSection.setClient( otherMatchClient );
 
-        // create new content, either links to other matching rules 
+        // create new content, either links to other matching rules
         // or a dash if no other matching rules exist.
         if ( atd != null )
         {
@@ -618,12 +691,17 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Follows The Supertype Chain Upward ────────────────────────────────────
+    // R2 checks whether this attribute type declares a SUP (superior) attribute —
+    // its parent in the inheritance hierarchy — and if so, renders a single
+    // clickable hyperlink to it so the user can navigate up the chain.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the supertype section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Supertype" section with a hyperlink to this attribute type's
+     * declared superior, or a dash if it has no supertype.
+     * Rebuilt on every input change.
      *
-     * @param atd the attribute type description
+     * @param atd  the attribute type whose supertype to display; null clears
      */
     private void createSupertypeContent( AttributeType atd )
     {
@@ -684,12 +762,17 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists All Derived Attribute Types ─────────────────────────────────────
+    // R2 scans every attribute type in the schema and collects those that declare
+    // the current type as their SUP — the derived subtypes — then renders them as
+    // clickable hyperlinks so the user can navigate down the inheritance tree.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the subtypes. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Subtypes" section with hyperlinks to every attribute type
+     * that declares this one as its superior.
+     * Rebuilt on every input change.
      *
-     * @param atd the attribute type description
+     * @param atd  the attribute type whose subtypes to list; null clears
      */
     private void createSubtypesContent( AttributeType atd )
     {
@@ -745,12 +828,17 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists Object Classes That Require This Attribute ───────────────────────
+    // R2 scans the schema for every object class whose MUST list includes this
+    // attribute type (either directly or via superclass inheritance) and renders
+    // them as clickable hyperlinks — the "required by" cross-reference.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the used as must section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Used As Must" section with hyperlinks to every object class
+     * that requires this attribute type.
+     * Rebuilt on every input change.
      *
-     * @param atd the attribute type description
+     * @param atd  the attribute type to cross-reference; null clears
      */
     private void createUsedAsMustContent( AttributeType atd )
     {
@@ -805,12 +893,17 @@ public class AttributeTypeDescriptionDetailsPage extends SchemaDetailsPage
     }
 
 
+    // ── R2 Lists Object Classes That Permit This Attribute ────────────────────────
+    // R2 scans the schema for every object class whose MAY list includes this
+    // attribute type (directly or via superclass inheritance) and renders them
+    // as clickable hyperlinks — the "permitted by" cross-reference.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the content of the used as may section. 
-     * It is newly created on every input change because the content
-     * of this section is dynamic.
+     * Recreates the "Used As May" section with hyperlinks to every object class
+     * that optionally permits this attribute type.
+     * Rebuilt on every input change.
      *
-     * @param atd the attribute type description
+     * @param atd  the attribute type to cross-reference; null clears
      */
     private void createUsedAsMayContent( AttributeType atd )
     {

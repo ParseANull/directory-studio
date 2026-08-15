@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.editors.attributetype;
 
@@ -34,15 +34,55 @@ import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 
 
+// ── CLASS: ATEUsedByMandatoryTableContentProvider — R2-D2 PLUGGING INTO DEATH STAR ──
+// R2-D2 jacks into the Death Star's computer network on Leia's behalf and queries the
+// entire facility: "Which rooms require a keycard with her ID to enter?"  He scans
+// every door, every security profile, looks for her name in the mandatory-access lists,
+// compiles the results, and sorts them so they're easy to present.
+// This content provider does exactly that for LDAP schema: given an attribute type, it
+// scans every object class in the schema and returns only those that list this attribute
+// type in their MUST (mandatory) attribute list — i.e. the classes that require this
+// attribute on every entry.
+// ─────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class is the Content Provider for the Mandatory Table of the Attribute Type Editor (Used By Page).
+ * JFace IStructuredContentProvider that populates the "Used As Mandatory Attribute" table
+ * on the Attribute Type Editor's "Used By" page.
+ * Given an {@link AttributeType} as the input element, we scan every {@link ObjectClass}
+ * in the schema and collect those whose MUST list contains this attribute type's name
+ * (matched case-insensitively, because LDAP names are case-insensitive).  The collected
+ * classes are sorted alphabetically by first name before being returned.
+ * Think of R2-D2: he searches the entire database, applies a precise filter, and hands
+ * back a clean, sorted result.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ATEUsedByMandatoryTableContentProvider implements IStructuredContentProvider
 {
+    // ── R2 Runs the Mandatory-Access Query ──────────────────────────────────────────
+    // R2 plugs in and executes the query: "Which object classes have this attribute
+    // type in their MUST list?"  He normalises all names to lowercase for comparison,
+    // collects every matching class, sorts them, and returns the array.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns an alphabetically sorted array of object classes that mandate the given
+     * attribute type (i.e. the attribute type appears in their MUST list).
+     * We normalise all names to lowercase before comparing so that "cn" matches "CN"
+     * and any other capitalisation variant — LDAP is case-insensitive for attribute names.
+     * Returns null if the input element isn't an {@link AttributeType} (the JFace
+     * convention for "nothing to display").
+     *
+     * <p>For example — R2's mandatory-access scan:</p>
+     * <pre>
+     *   // Attribute type: "cn"
+     *   // Scans all object classes → finds "person" has MUST: [sn, cn]
+     *   //                          → finds "organizationalPerson" also has "cn" in MUST
+     *   // Returns sorted: [organizationalPerson, person]
+     * </pre>
+     *
+     * @param inputElement  the {@link AttributeType} to search for in MUST lists; any
+     *                      other type yields null
+     * @return              a sorted Object[] of {@link ObjectClass} instances whose MUST
+     *                      list includes this attribute type, or null if input is wrong type
      */
     public Object[] getElements( Object inputElement )
     {
@@ -108,16 +148,30 @@ public class ATEUsedByMandatoryTableContentProvider implements IStructuredConten
     }
 
 
+    // ── R2 Disconnects from the Terminal ─────────────────────────────────────────────
+    // R2 unplugs from the network when done — nothing to clean up, he doesn't hold
+    // any resources of his own.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the viewer is disposed; nothing to release here — we don't
+     * hold any resources ourselves, just delegate to the schema handler on each call.
      */
     public void dispose()
     {
     }
 
 
+    // ── R2 Notes That the Query Target Changed ───────────────────────────────────────
+    // If the editor swaps in a different attribute type as the query target, R2 notes
+    // the change but doesn't re-run the query until explicitly asked.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the viewer's input changes; no action needed — the next
+     * {@link #getElements} call will run against the new input automatically.
+     *
+     * @param viewer    the TableViewer whose input changed
+     * @param oldInput  the previous AttributeType (now superseded)
+     * @param newInput  the new AttributeType to query against on the next getElements call
      */
     public void inputChanged( Viewer viewer, Object oldInput, Object newInput )
     {

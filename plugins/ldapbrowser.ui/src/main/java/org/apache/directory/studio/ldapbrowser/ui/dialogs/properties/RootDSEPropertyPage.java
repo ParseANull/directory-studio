@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.dialogs.properties;
@@ -43,8 +43,24 @@ import org.eclipse.ui.IWorkbenchPropertyPage;
 import org.eclipse.ui.dialogs.PropertyPage;
 
 
+// ── CLASS: RootDSEPropertyPage — LUKE'S BINARY SUNSET ON TATOOINE ─────────────
+// The Root DSE is the topmost entry in an LDAP directory — the horizon from which
+// every branch of the tree descends.  Luke stands at his viewpoint and sees the
+// whole horizon: what kind of server is out there (directory type), what LDAP
+// versions it speaks, what authentication mechanisms it supports, which controls
+// and extensions it advertises, and which optional features it can handle.
+// This property page is that horizon view — four tabs covering Info, Controls,
+// Extensions, and Features — all read directly from the Root DSE attributes.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This page shows some info about the Root DSE.
+ * Eclipse property page that displays Root DSE metadata for an LDAP connection.
+ * The Root DSE (DSA-Specific Entry) is the virtual top of the directory tree;
+ * it advertises the server's capabilities via operational attributes.
+ * This page shows those capabilities organized into four tabs: Info (server
+ * type, vendor, LDAP versions, SASL mechanisms), Controls (supported control
+ * OIDs), Extensions (supported extended operation OIDs), and Features.
+ * Think of this page as Luke's binary sunset — the complete horizon of what a
+ * connected LDAP server knows how to do.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -66,8 +82,19 @@ public class RootDSEPropertyPage extends PropertyPage implements IWorkbenchPrope
     private TabItem featuresTab;
 
 
+    // ── LUKE STEPS UP TO THE HORIZON VIEWPOINT ────────────────────────────────
+    // Luke walks out to the rim of the moisture farm and removes all clutter:
+    // no Apply, no Defaults — just the horizon to observe.
+    // This is a pure read-only information page; we hide the apply/default buttons.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of RootDSEPropertyPage.
+     * Creates the property page and suppresses the Default and Apply buttons.
+     * The Root DSE page is informational only; there's nothing to apply or reset.
+     *
+     * <p>For example — Luke clears the viewpoint of distractions:</p>
+     * <pre>
+     *   noDefaultAndApplyButton() → clean tabbed information display
+     * </pre>
      */
     public RootDSEPropertyPage()
     {
@@ -76,13 +103,27 @@ public class RootDSEPropertyPage extends PropertyPage implements IWorkbenchPrope
     }
 
 
+    // ── LUKE IDENTIFIES THE PLANET HE'S LOOKING AT ────────────────────────────
+    // Before Luke can take in the horizon, he needs to confirm this is actually
+    // Tatooine — he asks the element adapter for the IBrowserConnection that
+    // represents the LDAP server he's connected to.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the browser connection, or null if the given element
-     * isn't adaptable to a browser connection.
-     * 
-     * @param element the element
-     * 
-     * @return the browser connection
+     * Extracts the {@link IBrowserConnection} from the given Eclipse selection element.
+     * Tries the direct {@link IBrowserConnection} adapter first; if that fails, tries
+     * to get a raw {@link Connection} and look up its browser counterpart via the
+     * connection manager.
+     * Returns {@code null} if neither approach yields a connection.
+     *
+     * <p>For example — Luke confirms this is his home system:</p>
+     * <pre>
+     *   element.getAdapter(IBrowserConnection.class) → connection found → tabs populated
+     *   element.getAdapter(IBrowserConnection.class) → null →
+     *     element.getAdapter(Connection.class) → look up browser connection
+     * </pre>
+     *
+     * @param element  The Eclipse selection element; typically a connection node.
+     * @return         The {@link IBrowserConnection} to display, or {@code null}.
      */
     static IBrowserConnection getConnection( Object element )
     {
@@ -101,8 +142,32 @@ public class RootDSEPropertyPage extends PropertyPage implements IWorkbenchPrope
     }
 
 
+    // ── LUKE SCANS THE FULL HORIZON IN FOUR SWEEPS ────────────────────────────
+    // Luke turns slowly, taking in the full panorama in four sweeps: general
+    // server info, the control OIDs the server speaks, the extended operations
+    // it supports, and the optional features it advertises.
+    // We build four tabs, each pulling specific Root DSE attributes and rendering
+    // them as labeled text widgets.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the property page UI as a four-tab folder: Info, Controls, Extensions,
+     * and Features.
+     * The Info tab shows directory type (auto-detected), vendor info, LDAP versions,
+     * and SASL mechanisms.  The other three tabs each call {@link #addOidInfo} to
+     * list the relevant OID attributes from the Root DSE with their human-readable
+     * descriptions where known.
+     *
+     * <p>For example — Luke's four-sweep horizon scan:</p>
+     * <pre>
+     *   Info: ApacheDS 2.0.0, vendorName=Apache, supportedLDAPVersion=[2,3]
+     *   Controls:   1.2.840.113556.1.4.319  (Paged Results)
+     *               2.16.840.1.113730.3.4.2 (ManageDsaIT)
+     *   Extensions: 1.3.6.1.4.1.1466.20037 (StartTLS)
+     *   Features:   (empty for many servers)
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse's property dialog.
+     * @return        The tab folder control.
      */
     protected Control createContents( Composite parent )
     {
@@ -190,7 +255,7 @@ public class RootDSEPropertyPage extends PropertyPage implements IWorkbenchPrope
         infoTab.setText( Messages.getString( "RootDSEPropertyPage.Info" ) ); //$NON-NLS-1$
         infoTab.setControl( infoComposite );
 
-        // Controls tab 
+        // Controls tab
         Composite controlsComposite = new Composite( tabFolder, SWT.NONE );
         controlsComposite.setLayout( new GridLayout() );
         Composite controlsComposite2 = BaseWidgetUtils.createColumnContainer( controlsComposite, 2, 1 );
@@ -221,13 +286,28 @@ public class RootDSEPropertyPage extends PropertyPage implements IWorkbenchPrope
     }
 
 
+    // ── LUKE READS EACH STAR'S OID NUMBER AND ITS COMMON NAME ─────────────────
+    // Luke sees each control or extension as a star: a numeric OID on the left
+    // (its catalog number) and a human-readable description on the right (its
+    // common name from the RFC catalog).  If the OID isn't in the catalog, the
+    // description is left blank rather than showing an error.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds text fields to the composite. The text fields contain
-     * the OID values of the given attribute and the OID description.
-     * 
-     * @param browserConnection the browser connection
-     * @param composite the composite
-     * @param attributeType the attribute type
+     * Reads all values of the given multi-valued Root DSE attribute and adds a row
+     * of two labeled text widgets per value: the raw OID and its human-readable
+     * description (looked up via {@link Utils#getOidDescription}).
+     * Silently swallows any exception (e.g. attribute absent from the Root DSE).
+     *
+     * <p>For example — Luke reads each control OID and its catalog description:</p>
+     * <pre>
+     *   "1.2.840.113556.1.4.319" → "Simple Paged Results"
+     *   "2.16.840.1.113730.3.4.2" → "ManageDsaIT"
+     *   "9.9.9.9.9.9" → "" (not in catalog)
+     * </pre>
+     *
+     * @param browserConnection  The connection whose Root DSE we're reading.
+     * @param composite          The 2-column composite to add label pairs into.
+     * @param attributeType      The Root DSE attribute name to read (e.g. "supportedControl").
      */
     private void addOidInfo( final IBrowserConnection browserConnection, Composite composite, String attributeType )
     {
@@ -251,14 +331,29 @@ public class RootDSEPropertyPage extends PropertyPage implements IWorkbenchPrope
     }
 
 
+    // ── LUKE READS A LABELED ATTRIBUTE FROM THE HORIZON ───────────────────────
+    // For the Info tab, each piece of data has a human-readable label (like
+    // "Vendor Name:") alongside the attribute's value(s).  Luke reads the attribute,
+    // joins multiple values with line separators, and places the result next to
+    // the label.  If the attribute is absent, he writes a dash.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Adds an text field to the composite. It contains the given label and
-     * the values of the given attribute.
-     * 
-     * @param browserConnection the browser connection
-     * @param composite the composite
-     * @param attributeType the attribute type
-     * @param labelName the label name
+     * Reads all values of the given Root DSE attribute, joins them with line
+     * separators, and adds a label+text pair to the composite.
+     * If the attribute is absent or throws, displays {@code "-"} in the text field.
+     *
+     * <p>For example — Luke reads the vendor name from the horizon:</p>
+     * <pre>
+     *   "vendorName" = ["Apache Software Foundation"] →
+     *     label "Vendor Name:" | text "Apache Software Foundation"
+     *   "vendorName" absent →
+     *     label "Vendor Name:" | text "-"
+     * </pre>
+     *
+     * @param browserConnection  The connection whose Root DSE to read.
+     * @param composite          The 2-column composite to add the label+text pair into.
+     * @param attributeType      The Root DSE attribute name to read.
+     * @param labelName          The human-readable label to display on the left.
      */
     private void addInfo( final IBrowserConnection browserConnection, Composite composite, String attributeType,
         String labelName )

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core.model.filter;
@@ -29,8 +29,26 @@ import org.apache.directory.studio.ldapbrowser.core.BrowserCoreMessages;
 import org.apache.directory.studio.ldapbrowser.core.model.filter.parser.LdapFilterToken;
 
 
+// ── CLASS: LdapFilter — C-3PO PARSING ONE COMPLETE JAWA SENTENCE ─────────────
+// C-3PO hears "({filter-body})" and knows that's a complete thought: an opening
+// parenthesis, a filter expression in the middle, and a closing parenthesis.
+// If any of those three pieces is missing, the sentence is broken and C-3PO
+// flags it as invalid.  He can also point to sub-sentences nested inside: when
+// the body is another AND/OR/NOT cluster, each child becomes its own sentence
+// for C-3PO to recurse into.
+// LdapFilter is the top-level AST node for one LDAP filter clause: a '(' start
+// token, a filter component (AND/OR/NOT/item), and a ')' stop token.  The
+// parser builds a tree of these to represent the full filter string.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The LdapFilter class represents an LDAP filter.
+ * Represents one LDAP filter clause in the AST — the unit bounded by a pair
+ * of parentheses.  Contains a start {@code (} token, a {@link LdapFilterComponent}
+ * that provides the logic (AND, OR, NOT, item, or extensible), and a stop {@code )}
+ * token.  Any unexpected tokens are recorded in the "other tokens" list and
+ * cause {@link #isValid()} to return {@code false}.
+ *
+ * <p>Think of this as C-3PO parsing one complete Jawa sentence: open paren = start
+ * word, filter body = meaning, close paren = sentence-end marker.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -46,6 +64,9 @@ public class LdapFilter
     private List<LdapFilterToken> otherTokens;
 
 
+    // ── C-3PO Opens A Fresh Sentence Slot ─────────────────────────────────────────
+    // "New sentence template: waiting for opening paren, body, and closing paren."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Creates a new instance of LdapFilter.
      */
@@ -58,12 +79,15 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Marks The Opening Parenthesis ──────────────────────────────────────
+    // "Opening paren received and recorded.  Ready for the body."
+    // Only accepts an LPAR token, and only if no start token is set yet.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Sets the start token.
-     * 
-     * @param startToken the start token
-     * 
-     * @return true, if setting the start token was successful, false otherwise
+     *
+     * @param startToken the start token (must be type {@link LdapFilterToken#LPAR})
+     * @return {@code true} if setting the start token was successful, {@code false} otherwise
      */
     public boolean setStartToken( LdapFilterToken startToken )
     {
@@ -79,12 +103,14 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Slots In The Filter Body ───────────────────────────────────────────
+    // "Body received.  Start token must be set first, and body must be non-null."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Sets the filter component.
-     * 
+     *
      * @param filterComponent the filter component
-     * 
-     * @return true, if setting the filter component was successful, false otherwise
+     * @return {@code true} if setting the filter component was successful, {@code false} otherwise
      */
     public boolean setFilterComponent( LdapFilterComponent filterComponent )
     {
@@ -100,12 +126,14 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Marks The Closing Parenthesis ──────────────────────────────────────
+    // "Closing paren received.  Start token must already be set."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Sets the stop token.
-     * 
-     * @param stopToken the stop token
-     * 
-     * @return true, if setting the stop token was successful, false otherwise
+     *
+     * @param stopToken the stop token (must be type {@link LdapFilterToken#RPAR})
+     * @return {@code true} if setting the stop token was successful, {@code false} otherwise
      */
     public boolean setStopToken( LdapFilterToken stopToken )
     {
@@ -122,9 +150,12 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Records A Stray Token He Cannot Classify ───────────────────────────
+    // "Unknown token in the sentence — I'll track it so validity fails."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Adds another token.
-     * 
+     *
      * @param otherToken the other token
      */
     public void addOtherToken( LdapFilterToken otherToken )
@@ -133,10 +164,11 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Reads The Opening Paren Token ──────────────────────────────────────
     /**
      * Gets the start token.
-     * 
-     * @return the start token, or null if not set
+     *
+     * @return the start token, or {@code null} if not set
      */
     public LdapFilterToken getStartToken()
     {
@@ -144,10 +176,11 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Reads The Filter Body ───────────────────────────────────────────────
     /**
      * Gets the filter component.
-     * 
-     * @return the filter component, or null if not set
+     *
+     * @return the filter component, or {@code null} if not set
      */
     public LdapFilterComponent getFilterComponent()
     {
@@ -155,10 +188,11 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Reads The Closing Paren Token ──────────────────────────────────────
     /**
      * Gets the stop token.
-     * 
-     * @return the stop token or null if not set
+     *
+     * @return the stop token or {@code null} if not set
      */
     public LdapFilterToken getStopToken()
     {
@@ -166,9 +200,12 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Collects All Tokens In Order ────────────────────────────────────────
+    // "Give me every token in this sentence tree, sorted by position."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Gets all the tokens.
-     * 
+     *
      * @return the tokens
      */
     public LdapFilterToken[] getTokens()
@@ -198,10 +235,14 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Verifies The Sentence Is Grammatically Complete ────────────────────
+    // "Start paren? Check.  Body? Check and valid?  Check.  Close paren? Check.
+    // No stray tokens? Check.  Sentence is grammatically correct."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Checks if this filter and all its subfilters are valid.
-     * 
-     * @return true, if this filter and all its subfilters is valid
+     *
+     * @return {@code true} if this filter and all its subfilters are valid
      */
     public boolean isValid()
     {
@@ -210,9 +251,13 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Lists All The Invalid Sub-Sentences ────────────────────────────────
+    // "Here are all the broken parts I found — either this whole sentence or
+    // the bad sub-sentences inside the body."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Gets the invalid filters. This may be this filter itself or any of the subfilters.
-     * 
+     *
      * @return an array of invalid filters or an empty array if all subfilters
      *         are valid.
      */
@@ -230,13 +275,15 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Finds Which Sentence Is At A Given Character Position ──────────────
+    // "At cursor position 12, which filter clause is the user editing?"
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Gets the filter at the given offset. This may be this filter
      * or one of the subfilters.
-     * 
+     *
      * @param offset the offset
-     * 
-     * @return the filter at the given offset or null is offset is out of
+     * @return the filter at the given offset or {@code null} if offset is out of
      *         range.
      */
     public LdapFilter getFilter( int offset )
@@ -272,10 +319,13 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Explains Why The Sentence Failed Validation ────────────────────────
+    // "The closing parenthesis is missing — that's why this sentence is broken."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Gets the invalid cause.
-     * 
-     * @return the invalid cause, or null if this filter is valid.
+     *
+     * @return the invalid cause, or {@code null} if this filter is valid.
      */
     public String getInvalidCause()
     {
@@ -294,8 +344,11 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Prints The Clean Canonical Form Of The Sentence ────────────────────
+    // "Invalid tokens and whitespace stripped — only valid filter text remains."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the string representation of this LDAP filter. Invalid tokens and 
+     * Gets the string representation of this LDAP filter. Invalid tokens and
      * white spaces are removed, but incomplete filter parts are kept.
      */
     public String toString()
@@ -314,9 +367,12 @@ public class LdapFilter
     }
 
 
+    // ── C-3PO Echoes Back Exactly What The User Typed ────────────────────────────
+    // "Original user input preserved — spaces, typos, and all."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Gets the string representation of this LDAP filter, as provided by the user.
-     * It may contain white spaces and invalid tokens. 
+     * It may contain white spaces and invalid tokens.
      */
     public String toUserProvidedString()
     {

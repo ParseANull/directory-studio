@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.filtereditor;
@@ -33,9 +33,21 @@ import org.eclipse.jface.text.IAutoEditStrategy;
 import org.eclipse.jface.text.IDocument;
 
 
+// ── CLASS: FilterAutoEditStrategy — R2-D2 SEALS BLAST DOORS ──────────────────
+// Aboard the Death Star, R2-D2 intercepts corridor commands in real time and
+// automatically seals the blast doors the moment a droid passes through, keeping
+// every corridor balanced and sealed without any crew intervention.
+// That is exactly what we do here: we intercept every keystroke in the filter
+// editor and auto-insert or auto-delete the matching parenthesis so the filter
+// stays balanced at all times.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The FilterAutoEditStrategy implements the IAutoEditStrategy for the filter editor widget.
- * It provides smart parentesis handling when typing the filter.
+ * Provides smart auto-editing for the LDAP filter editor — specifically, it
+ * keeps parentheses balanced as the user types.
+ * When you type {@code (}, we automatically add the closing {@code )}; when you
+ * delete the last character inside a pair of parentheses, we remove both of
+ * them. Think of this class as R2-D2 sealing blast doors: every opening gets a
+ * matching close, hands-free.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -49,10 +61,20 @@ public class FilterAutoEditStrategy extends DefaultIndentLineAutoEditStrategy im
     private LdapFilterParser parser;
 
 
+    // ── R2 WIRES INTO THE CORRIDOR CONTROL PANEL ──────────────────────────────
+    // On the Death Star, R2-D2 plugs into the computer interface port to gain
+    // control of all blast-door operations in the corridor network.
+    // He needs to know the layout before he can start sealing doors intelligently.
+    // We store the parser here so every later auto-edit decision is informed by
+    // the current state of the parsed filter tree.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of FilterAutoEditStrategy.
-     * 
-     * @param parser the filter parser
+     * Constructs a new {@code FilterAutoEditStrategy} wired to the given parser.
+     * We need the parser so we can inspect the live filter model and decide
+     * whether a given keystroke warrants an auto-inserted parenthesis.
+     *
+     * @param parser  the filter parser that holds the current parse tree —
+     *                we call it every time the document changes
      */
     public FilterAutoEditStrategy( LdapFilterParser parser )
     {
@@ -60,8 +82,31 @@ public class FilterAutoEditStrategy extends DefaultIndentLineAutoEditStrategy im
     }
 
 
+    // ── R2 INTERCEPTS THE DOOR COMMAND ────────────────────────────────────────
+    // The Death Star's door controller sends a raw command (open door X).
+    // R2-D2 intercepts it, augments it with the matching close command, and
+    // forwards the modified instruction back into the system transparently.
+    // Eclipse calls this method for every edit command before it hits the
+    // document — we translate the raw command into our smarter version.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @see org.eclipse.jface.text.DefaultIndentLineAutoEditStrategy#customizeDocumentCommand(org.eclipse.jface.text.IDocument, org.eclipse.jface.text.DocumentCommand)
+     * Eclipse calls this method before every document edit so we can intercept
+     * and modify the command. We delegate the heavy logic to
+     * {@link #customizeAutoEditParameters} and then copy the results back into
+     * the Eclipse {@link DocumentCommand}.
+     *
+     * <p>For example — R2 intercepts a raw door signal and upgrades it:</p>
+     * <pre>
+     *   User types '(' at offset 5
+     *   R2 intercepts: raw command = { text:"(", offset:5 }
+     *   R2 augments:   command     = { text:"()", offset:5, caretOffset:6 }
+     *   Door seals behind the droid automatically.
+     * </pre>
+     *
+     * @param d  the document being edited — we call {@code d.get()} to read the
+     *           current filter string
+     * @param c  the pending edit command — we mutate its fields in place to
+     *           inject our auto-edit behaviour
      */
     public void customizeDocumentCommand( IDocument d, DocumentCommand c )
     {
@@ -76,11 +121,37 @@ public class FilterAutoEditStrategy extends DefaultIndentLineAutoEditStrategy im
     }
 
 
+    // ── R2 DECIDES WHICH DOORS TO SEAL ────────────────────────────────────────
+    // With the corridor map in memory, R2 looks at where each droid is standing
+    // and decides which blast doors to seal: doors before unprotected gaps get
+    // closed, orphaned open doors get paired, and already-sealed corridors are
+    // left alone.
+    // This is our core logic: given the current filter text and an edit, we
+    // figure out exactly what auto-insert or auto-delete is needed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Customizes auto edit parameters.
-     * 
-     * @param currentFilter the current filter
-     * @param aep the auto edit parameters
+     * Core auto-edit logic — inspects the current filter string and the pending
+     * edit, then adjusts the {@link AutoEditParameters} to auto-insert or
+     * auto-delete parentheses as needed.
+     * <p>
+     * We handle three main cases: typing {@code (} auto-appends {@code )},
+     * typing a logical operator ({@code &}, {@code |}, {@code !}) auto-appends
+     * {@code ()}, and deleting the last character inside {@code (…)} removes
+     * the surrounding parens too.
+     * </p>
+     *
+     * <p>For example — R2 checks the corridor map:</p>
+     * <pre>
+     *   currentFilter = "(cn=J"
+     *   aep.text = ")" (user typed closing paren manually)
+     *   R2 sees the filter is already balanced — no extra seal needed.
+     *   aep unchanged; Eclipse inserts exactly what the user typed.
+     * </pre>
+     *
+     * @param currentFilter  the full filter string currently in the editor —
+     *                       we parse it to build the filter tree
+     * @param aep            the mutable edit parameters we adjust in place;
+     *                       offsets, lengths, and text may all change
      */
     public void customizeAutoEditParameters( String currentFilter, AutoEditParameters aep )
     {
@@ -239,8 +310,19 @@ public class FilterAutoEditStrategy extends DefaultIndentLineAutoEditStrategy im
         }
     }
 
+    // ── CLASS: AutoEditParameters — R2'S DOOR COMMAND PACKET ─────────────────
+    // R2-D2 bundles every door command into a compact packet: which door, what
+    // operation, where to leave the crew after. Passing it as a single object
+    // lets him hand the packet off cleanly without losing any field.
+    // We use this simple value-object to pass all the mutable edit parameters
+    // through our logic without fighting Eclipse's final DocumentCommand fields.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Helper class.
+     * A simple mutable value object that carries all the parameters of a pending
+     * edit. We use it instead of mutating an Eclipse {@link DocumentCommand}
+     * directly (some fields are final). Think of it as R2-D2's door-command
+     * packet: one clean bundle that gets adjusted as it flows through the
+     * auto-edit logic.
      *
      * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
      */
@@ -263,14 +345,25 @@ public class FilterAutoEditStrategy extends DefaultIndentLineAutoEditStrategy im
         public boolean shiftsCaret;
 
 
+        // ── R2 INITIALISES THE COMMAND PACKET ─────────────────────────────────
+        // Before sealing any doors, R2 assembles a fresh command packet from the
+        // raw signal he intercepted off the Death Star's corridor control bus.
+        // He copies every field into the packet so nothing gets lost in transit.
+        // We mirror that: snapshot all incoming edit parameters into this object
+        // so downstream logic can freely mutate them without touching the original.
+        // ───────────────────────────────────────────────────────────────────────
         /**
-         * Creates a new instance of AutoEditParameters.
-         * 
-         * @param text the text
-         * @param offset the offset
-         * @param length the length
-         * @param caretOffset the caret offset
-         * @param shiftsCaret the shifts caret flag
+         * Constructs a new {@code AutoEditParameters} by snapshotting all fields
+         * from the incoming edit event. We copy everything so the auto-edit logic
+         * can freely mutate these values without touching Eclipse's own objects.
+         *
+         * @param text         the text the user is inserting (may be empty for a delete)
+         * @param offset       character offset in the document where the edit happens
+         * @param length       number of characters being replaced (0 for a pure insert)
+         * @param caretOffset  where Eclipse should place the caret after the edit;
+         *                     -1 means "let Eclipse decide"
+         * @param shiftsCaret  whether Eclipse should shift the caret normally after
+         *                     applying the command
          */
         public AutoEditParameters( String text, int offset, int length, int caretOffset, boolean shiftsCaret )
         {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.core.io.api;
@@ -76,31 +76,58 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 
 
+// ── CLASS: LdifModificationLogger — THE FALCON'S WRITE-OPERATION BLACK BOX ───
+// R2's black box doesn't just record flight telemetry — it also logs every
+// modification to the ship's manifest: adds, deletes, modify, renameEntry.
+// This logger does the same for LDAP write operations.  Each operation is
+// formatted as a proper LDIF change record (changetype: add/delete/modify/moddn),
+// annotated with a result comment (#!RESULT OK or ERROR), connection URL,
+// timestamp, and error message if any.
+// The log rotates between N files of K kb each, one per connection, using the
+// Java util.logging FileHandler.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The LdifModificationLogger is used to log modifications in LDIF format into a file.
+ * {@link ILdapLogger} implementation that records LDAP write operations
+ * (add, delete, modify, modDN) to per-connection rotating LDIF log files.
+ * Each log entry includes LDIF comment headers ({@code #!RESULT}, {@code #!CONNECTION},
+ * {@code #!DATE}) followed by the change record in canonical LDIF format.
+ * Attribute values whose names appear in {@link #getMaskedAttributes()} are
+ * replaced with {@code "**********"} to avoid logging sensitive data.
+ * The number and size of log files are configurable via Eclipse preferences
+ * ({@code PREFERENCE_MODIFICATIONLOGS_FILE_COUNT} and {@code _FILE_SIZE}).
+ * Think of this as the Falcon's black box for write operations: every time
+ * Han fires a torpedo (modifies an entry), R2 records it — result, target, and
+ * timestamp.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LdifModificationLogger implements ILdapLogger
 {
 
-    /** The ID. */
+    /** Extension point ID of this logger instance. */
     private String id;
 
-    /** The name. */
+    /** Human-readable name of this logger instance. */
     private String name;
 
-    /** The description. */
+    /** Description of this logger instance. */
     private String description;
 
-    /** The file handlers. */
+    /** Per-connection FileHandlers keyed by connection UUID. */
     private Map<String, FileHandler> fileHandlers = new HashMap<String, FileHandler>();
 
-    /** The loggers. */
+    /** Per-connection java.util.logging.Loggers keyed by connection UUID. */
     private Map<String, Logger> loggers = new HashMap<String, Logger>();
 
+
+    // ── CONSTRUCTOR — WIRE UP THE PREFERENCE CHANGE LISTENER ──────────────────────
+    // When the user changes the log file count or size in preferences, we need to
+    // close all existing handlers and clean up files that are now beyond the new
+    // count limit.  We listen for those two preference keys and react.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of LdifModificationLogger.
+     * Creates a new {@link LdifModificationLogger} and registers a preference change
+     * listener that resets all file handlers when the log file count or size changes.
      */
     public LdifModificationLogger()
     {
@@ -144,8 +171,17 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── INIT MODIFICATION LOGGER — CREATE LOGGER + FILE HANDLER ─────────────────
+    // We create an anonymous logger (no name collisions with other loggers),
+    // attach a rotating FileHandler with our simple passthrough formatter,
+    // and register both in our per-connection maps.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Inits the modification logger.
+     * Initialises the per-connection logger on first use.
+     * Creates a rotating {@link FileHandler} that writes to the connection's
+     * modification log file pattern.
+     *
+     * @param connection  The connection to initialise logging for.
      */
     private void initModificationLogger( Connection connection )
     {
@@ -178,10 +214,15 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── DISPOSE — CLOSE HANDLERS AND DELETE LOG FILES ─────────────────────────────
+    // When a connection is deleted, we close its logger's file handlers and remove
+    // the log files from disk so orphaned logs don't pile up.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Disposes the modification logger of the given connection.
-     * 
-     * @param connection the connection
+     * Closes all file handlers for the given connection and deletes its log files.
+     * Called when a connection is removed from the connection manager.
+     *
+     * @param connection  The connection being disposed.
      */
     public void dispose( Connection connection )
     {
@@ -205,6 +246,18 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── LOG — WRITE A FORMATTED LDIF RECORD + HEADERS TO THE FILE ─────────────────
+    // We prepend #!RESULT, #!CONNECTION, and #!DATE comment lines, then append
+    // the LDIF change record text.  If there's an error, we also add #!ERROR.
+    // ────────────────────────────────────────────────────────────────────────────────
+    /**
+     * Writes a formatted modification log entry to the connection's log file.
+     * Initialises the logger on first use.
+     *
+     * @param text        The pre-formatted LDIF change record string.
+     * @param ex          The exception, or {@code null} if the operation succeeded.
+     * @param connection  The connection that performed the modification.
+     */
     private void log( String text, StudioLdapException ex, Connection connection )
     {
         String id = connection.getId();
@@ -256,8 +309,14 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── LOG CHANGETYPE ADD — RECORD AN LDAP ADD OPERATION ─────────────────────────
+    // Han adds a new entry to the directory — we record it as changetype: add
+    // with all the attributes, masking any sensitive ones.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Logs an LDAP add operation as a {@code changetype: add} LDIF record.
+     * Sensitive attribute values are replaced with {@code "**********"}.
      */
     public void logChangetypeAdd( Connection connection, final Entry entry, final Control[] controls,
         StudioLdapException ex )
@@ -300,8 +359,12 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── LOG CHANGETYPE DELETE — RECORD AN LDAP DELETE OPERATION ──────────────────
+    // Han fires a torpedo at the target entry — we record it as changetype: delete.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Logs an LDAP delete operation as a {@code changetype: delete} LDIF record.
      */
     public void logChangetypeDelete( Connection connection, final Dn dn, final Control[] controls,
         StudioLdapException ex )
@@ -321,8 +384,14 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── LOG CHANGETYPE MODIFY — RECORD AN LDAP MODIFY OPERATION ──────────────────
+    // Han modifies the entry's cargo manifest — we record every modification
+    // as an add/delete/replace modSpec, masking sensitive attribute values.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Logs an LDAP modify operation as a {@code changetype: modify} LDIF record.
+     * Sensitive attribute values are replaced with {@code "**********"}.
      */
     public void logChangetypeModify( Connection connection, final Dn dn,
         final Collection<Modification> modifications, final Control[] controls, StudioLdapException ex )
@@ -383,8 +452,13 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── LOG CHANGETYPE MODDN — RECORD AN LDAP RENAME/MOVE OPERATION ───────────────
+    // Han moves an entry to new coordinates — we record it as changetype: moddn
+    // with the new RDN, delete-old-rdn flag, and newsuperior.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     * Logs an LDAP modDN (rename/move) operation as a {@code changetype: moddn} LDIF record.
      */
     public void logChangetypeModDn( Connection connection, final Dn oldDn, final Dn newDn,
         final boolean deleteOldRdn, final Control[] controls, StudioLdapException ex )
@@ -410,11 +484,16 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── ADD CONTROL LINES — APPEND LDIF CONTROL LINES TO THE RECORD ───────────────
+    // We convert each LDAP control (OID + criticality + encoded value) into a
+    // proper LDIF "control:" line and add it to the change record.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Adds control lines to the record
+     * Appends LDIF {@code control:} lines to the given change record for each
+     * LDAP control in the array.
      *
-     * @param record the recored
-     * @param controls the controls
+     * @param record    The LDIF change record to annotate.
+     * @param controls  The LDAP controls to add (may be {@code null}).
      */
     private static void addControlLines( LdifChangeRecord record, Control[] controls )
     {
@@ -432,12 +511,17 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── GET FILES — EXPOSE LOG FILES TO THE UI ─────────────────────────────────────
+    // The UI (Modification Logs view) calls this to get the log file paths so it can
+    // display or open them.  We lazy-init the logger if needed.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the files.
-     * 
-     * @param connection the connection
-     * 
-     * @return the files
+     * Returns the log files for the given connection.
+     * Initialises the logger if it has not been created yet.
+     * Returns an empty array if no files are found.
+     *
+     * @param connection  The connection whose log files to retrieve.
+     * @return  An array of log {@link File}s, sorted by name.
      */
     public File[] getFiles( Connection connection )
     {
@@ -461,12 +545,17 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── GET LOG FILES — PATTERN MATCH FILES IN THE LOG DIRECTORY ──────────────────
+    // Java's FileHandler uses %g (generation) and %u (unique) placeholders in
+    // the file name pattern.  We replace those with regex wildcards and match
+    // all rotation files in the directory.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the log files.
-     * 
-     * @param fileHandler the file handler
-     * 
-     * @return the log files
+     * Returns all rotation log files matching the given connection's modification log
+     * file name pattern.
+     *
+     * @param connection  The connection whose log files to list.
+     * @return  Sorted array of matching {@link File}s.
      */
     private static File[] getLogFiles( Connection connection )
     {
@@ -482,10 +571,11 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── IS MODIFICATION LOG ENABLED — CHECK THE PREFERENCE ────────────────────────
     /**
-     * Checks if modification log is enabled.
-     * 
-     * @return true, if modification log is enabled
+     * Returns {@code true} if the modification log is enabled in Eclipse preferences.
+     *
+     * @return  {@code true} if logging is enabled.
      */
     private boolean isModificationLogEnabled()
     {
@@ -494,10 +584,11 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── GET FILE COUNT — READ THE ROTATION FILE COUNT PREFERENCE ──────────────────
     /**
-     * Gets the number of log files to use.
-     * 
-     * @return the number of log files to use
+     * Returns the number of log rotation files to maintain per connection.
+     *
+     * @return  The configured file count (default: 10).
      */
     private int getFileCount()
     {
@@ -506,10 +597,11 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    // ── GET FILE SIZE IN KB — READ THE MAX FILE SIZE PREFERENCE ───────────────────
     /**
-     * Gets the maximum file size in kB.
-     * 
-     * @return the maximum file size in kB
+     * Returns the maximum size per log file in kilobytes.
+     *
+     * @return  The configured maximum file size in kB (default: 100).
      */
     private int getFileSizeInKb()
     {
@@ -518,36 +610,54 @@ public class LdifModificationLogger implements ILdapLogger
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public String getId()
     {
         return id;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public void setId( String id )
     {
         this.id = id;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public String getName()
     {
         return name;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public void setName( String name )
     {
         this.name = name;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public String getDescription()
     {
         return description;
     }
 
 
+    /**
+     * {@inheritDoc}
+     */
     public void setDescription( String description )
     {
         this.description = description;

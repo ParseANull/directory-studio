@@ -21,9 +21,23 @@
 package org.apache.directory.studio.connection.core.event;
 
 
+// ── CLASS: EventRunnable — HAN'S ENCODED MISSION DISPATCH ─────────────────────
+// When Rebel command needs to transmit an order to Han's crew, they encode the
+// complete action into a self-contained dispatch packet: "do this exact thing
+// when you receive it."  The dispatch is runnable — you just execute it.
+// This interface is that dispatch packet: a {@link Runnable} that, when
+// executed, notifies a specific listener about a specific connection event.
+// The {@link EventRunner} decides which thread runs the dispatch.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An <code>EventRunnable</code> is used to notify a listener
- * about an event.
+ * A tagging interface that marks a {@link Runnable} as a connection event notification.
+ * Each {@code EventRunnable} is created by an {@link EventRunnableFactory} and captures
+ * a specific listener and a specific event (e.g. "call
+ * {@link ConnectionUpdateListener#connectionOpened(org.apache.directory.studio.connection.core.Connection)}
+ * on this listener").
+ * The {@link EventRunner} then decides which thread invokes {@link #run()}.
+ * Think of this as Han's encoded mission dispatch: a self-contained task that
+ * carries everything needed to notify one listener about one event.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */

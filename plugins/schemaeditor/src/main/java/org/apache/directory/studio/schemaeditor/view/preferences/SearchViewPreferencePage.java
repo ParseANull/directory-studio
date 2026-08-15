@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.preferences;
 
@@ -42,9 +42,27 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: SearchViewPreferencePage — PALPATINE ISSUING ORDER 66 ─────────────
+// Palpatine opens a third command channel — this one directed at the Search
+// View battalion. Just as he configured the Schema View troopers to label
+// nodes a certain way, he now issues the same style of directives specifically
+// for the Search Results display: which label format to use, how long labels
+// may be, whether secondary labels appear beneath each result, and whether the
+// schema name shows alongside every hit.
+// The administrator adjusts the controls on this page and clicks Apply; the
+// search results view reconfigures itself exactly as directed.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Preference page for the Search View
- * 
+ * The Eclipse preference page that controls how schema elements are labelled
+ * in the Search View results list — label format (first alias, all aliases,
+ * or OID), maximum label length, secondary label options, and schema name
+ * visibility.
+ * It extends {@link PreferencePage} and implements
+ * {@link IWorkbenchPreferencePage} so Eclipse registers it under
+ * Window → Preferences → Schema Editor → Search View.
+ * Think of this as Palpatine's Search View command panel: every setting here
+ * is an Order that the Search View executes the moment Apply is pressed.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SearchViewPreferencePage extends PreferencePage implements IWorkbenchPreferencePage
@@ -63,8 +81,24 @@ public class SearchViewPreferencePage extends PreferencePage implements IWorkben
     private Button schemaLabelButtonDisplay;
 
 
+    // ── PALPATINE OPENS THE SEARCH VIEW COMMAND CHANNEL ──────────────────────
+    // Palpatine activates a dedicated holocomm frequency for the Search View
+    // battalion — separate from the Schema View and Hierarchy View channels —
+    // and wires it to the correct preference store before the page opens.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SchemaViewPreferencePage.
+     * Creates a new {@link SearchViewPreferencePage} and wires it to the
+     * plugin's preference store.
+     * Eclipse instantiates this via the preferences extension point; we call
+     * {@code super()} to initialise the JFace preference-page machinery, then
+     * attach our store and set the description shown at the top of the page.
+     *
+     * <p>For example — Palpatine activates the Search View comm channel:</p>
+     * <pre>
+     *   new SearchViewPreferencePage()
+     *   // wired to plugin preference store
+     *   // description: "General settings for the Search View."
+     * </pre>
      */
     public SearchViewPreferencePage()
     {
@@ -74,8 +108,34 @@ public class SearchViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE LAYS OUT THE SEARCH VIEW CONTROL PANELS ────────────────────
+    // Palpatine arranges the Search View controls in front of him: primary
+    // label format, truncation dial, secondary label toggle, and the schema
+    // name visibility switch — everything the Search View battalion needs to
+    // know about how to display search results.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the preference page UI inside the provided parent composite.
+     * Eclipse calls this when the user navigates to this preference page; we
+     * construct four groups of controls: primary label, secondary label,
+     * schema-label visibility, and their accompanying length text fields.
+     * We also attach verify listeners to keep the length fields numeric-only,
+     * load current values, and wire up change listeners.
+     *
+     * <p>For example — Palpatine's Search View war room is prepared:</p>
+     * <pre>
+     *   Label Group:
+     *     Use [First Name | All Aliases | OID] as label
+     *     [ ] Limit label length to [___] characters
+     *   Secondary Label Group:
+     *     [ ] Display secondary label
+     *     Use [First Name | All Aliases | OID] as secondary label
+     *   Schema Label Group:
+     *     [ ] Display schema label
+     * </pre>
+     *
+     * @param parent  the SWT composite Eclipse provides as the parent container
+     * @return        the outermost control we created, handed back to Eclipse
      */
     protected Control createContents( Composite parent )
     {
@@ -268,8 +328,26 @@ public class SearchViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE REVIEWS THE SEARCH VIEW STATUS REPORT ──────────────────────
+    // Palpatine reads the Search View battalion's current disposition: which
+    // label format they are using, whether results are being truncated, what
+    // secondary information is being displayed.
+    // We read those values from the preference store and populate every UI
+    // control so the page opens showing the current live configuration.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the fields from the preferences store.
+     * Reads all Search View preferences from the plugin's preference store and
+     * pushes those values into the UI controls so the page opens in a state
+     * that accurately reflects what is currently configured.
+     * We also update dependent widget enablement so the page is consistent
+     * the moment the user first sees it.
+     *
+     * <p>For example — Palpatine reads the Search View status report:</p>
+     * <pre>
+     *   store: label=OID, abbreviate=true, maxLength="15", secondaryDisplay=false
+     *   → labelCombo selects index 2, limitButton checked, lengthText="15",
+     *     secondaryLabel controls all disabled
+     * </pre>
      */
     private void initFieldsFromPreferences()
     {
@@ -305,8 +383,25 @@ public class SearchViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE'S SEARCH VIEW COMLINKS GO LIVE ─────────────────────────────
+    // Each Search View trooper's comlink lights up, ready to receive and act
+    // on real-time directive changes as the administrator interacts with the
+    // preference page controls.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Initializes the listeners.
+     * Attaches selection listeners to the checkbox buttons so they can enable
+     * or disable dependent widgets in real time as the user interacts with
+     * the preference page.
+     * For example, when the user unchecks "Display secondary label," all the
+     * secondary label controls grey out immediately without requiring Apply.
+     *
+     * <p>For example — comlinks respond to directive changes:</p>
+     * <pre>
+     *   limitButton checked   → lengthText enabled
+     *   secondaryLabelButtonDisplay unchecked
+     *     → secondaryLabelCombo, secondaryLabelLimitButton,
+     *        secondaryLabelLengthText all disabled
+     * </pre>
      */
     private void initListeners()
     {
@@ -347,8 +442,24 @@ public class SearchViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE RECALLS THE SEARCH VIEW BASE PLAN ──────────────────────────
+    // When a directive revision is needed, Palpatine recalls every Search View
+    // trooper to the original factory configuration — the defaults that were
+    // baked in when the plugin was first installed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Resets all UI controls to the plugin's default Search View preference
+     * values when the user clicks "Restore Defaults."
+     * We read defaults from the preference store (not hard-coded here) and
+     * update dependent widget enablement so the page is consistent after the
+     * reset, then delegate to the parent class for any remaining JFace work.
+     *
+     * <p>For example — Palpatine recalls the Search View base plan:</p>
+     * <pre>
+     *   Default: label=FIRST_NAME, no abbreviation, no secondary label,
+     *            schema label hidden
+     *   → All controls snap back when the user clicks "Restore Defaults"
+     * </pre>
      */
     protected void performDefaults()
     {
@@ -387,8 +498,27 @@ public class SearchViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE TRANSMITS THE SEARCH VIEW ORDERS ───────────────────────────
+    // Palpatine presses the final control and the Search View battalion
+    // receives its directives: display format locked, truncation configured,
+    // secondary label and schema name visibility set exactly as specified.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Persists all current UI control values to the plugin's preference store
+     * when the user clicks OK or Apply.
+     * We translate combo selections back to their integer preference constants
+     * and write everything — label format, abbreviation, secondary label
+     * settings, schema label visibility — in one pass.
+     * The Search View listens for preference change events and will refresh
+     * its display automatically once the store is updated.
+     *
+     * <p>For example — Palpatine transmits the Search View order:</p>
+     * <pre>
+     *   user selected "OID", limit=false, schemaLabel=true
+     *   → store: LABEL=OID, ABBREVIATE=false, SCHEMA_LABEL_DISPLAY=true
+     * </pre>
+     *
+     * @return  {@code true} always; we write everything to the store successfully
      */
     public boolean performOk()
     {
@@ -446,8 +576,17 @@ public class SearchViewPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE'S SEARCH VIEW COMMAND ROOM NEEDS NO WORKBENCH BRIEFING ─────
+    // Palpatine doesn't need anything from the workbench to configure the
+    // Search View. Everything this page requires comes directly from the
+    // plugin's preference store.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the workbench initialises this preference page;
+     * we have nothing to do here because all state comes from the preference
+     * store, not from the workbench instance.
+     *
+     * @param workbench  the current Eclipse workbench instance; not used here
      */
     public void init( IWorkbench workbench )
     {

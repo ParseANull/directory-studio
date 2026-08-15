@@ -61,8 +61,18 @@ import org.apache.directory.studio.ldapbrowser.core.model.SearchParameter;
 import org.apache.directory.studio.ldapbrowser.core.utils.JNDIUtils;
 
 
+// ── CLASS: ExportDsmlRunnable — CLONE TROOPER FILING XML DSML DISPATCH ORDERS ─
+// Order 66: collect matching LDAP entries and encode them as DSML XML, either
+// as a batch-response (search results) or a batch-request (add operations).
+// Referral entries are identified and emitted as SearchResultReference elements
+// rather than SearchResultEntry elements, keeping the XML semantically correct.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable for Exporting a part of a LDAP Server into a DSML File.
+ * Runnable for exporting a part of an LDAP server into a DSML file.
+ *
+ * <p>Think of this as a clone trooper executing Order 66 to harvest directory
+ * entries and encode them in XML DSML format — either as a search-response
+ * batch or as an add-request batch, depending on the mission type.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -107,15 +117,18 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Receives DSML Mission Orders And Ensures 'ref' Is Requested ─
+    // Stores the target filename, connection, search parameters, and export type.
+    // Automatically adds 'ref' attribute name and OID to the returning-attributes
+    // list so referral entries can be detected and serialised correctly.
+    // Both REQUEST and RESPONSE export types are supported.
     /**
      * Creates a new instance of ExportDsmlRunnable.
      *
-     * @param exportDsmlFilename
-     *          the name of the DSML file to export to
-     * @param connection
-     *          the connection to use
-     * @param searchParameter
-     *          the Search Parameter of the export
+     * @param exportDsmlFilename the name of the DSML file to export to
+     * @param connection the connection to use
+     * @param searchParameter the search parameter of the export
+     * @param type the export type (RESPONSE or REQUEST)
      */
     public ExportDsmlRunnable( String exportDsmlFilename, IBrowserConnection connection,
         SearchParameter searchParameter, ExportDsmlJobType type )
@@ -135,6 +148,8 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Reports The LDAP Connection This Mission Uses ───────────────
+    // Returns the single connection required by the job scheduler.
     /**
      * {@inheritDoc}
      */
@@ -145,6 +160,8 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Reports The Human-Readable DSML Mission Name ────────────────
+    // Returns the localised job name shown in the Eclipse progress dialog.
     /**
      * {@inheritDoc}
      */
@@ -154,6 +171,8 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Locks The Target DSML File Against Concurrent Missions ─────
+    // A SHA hash of the filename combined with the connection URL forms the lock.
     /**
      * {@inheritDoc}
      */
@@ -165,6 +184,8 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Returns The Error Message If The DSML Mission Fails ────────
+    // Han shoots first: if the mission fails, return a localised error message.
     /**
      * {@inheritDoc}
      */
@@ -174,6 +195,10 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Executes Order 66: Search And Write DSML To Disk ───────────
+    // Searches the directory via SearchRunnable.search(), processes results as
+    // either a DSML response or request batch, then writes the XML string to file.
+    // Uses a dummy monitor to separate search errors from file-write errors.
     /**
      * {@inheritDoc}
      */
@@ -233,13 +258,17 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Wraps Search Results In A DSML BatchResponse Envelope ──────
+    // Creates a BatchResponseDsml, delegates to the public static overload,
+    // then serialises the result to a DSML XML string.
+    // This is the RESPONSE export type: what the server returned, in XML.
     /**
      * Processes the {@link StudioSearchResultEnumeration} as a DSML response.
      *
      * @param sre the search result enumeration
      * @param monitor the monitor
-     * @return the associated DSML
-     * @throws LdapException
+     * @return the associated DSML string
+     * @throws LdapException if a DSML conversion error occurs
      */
     private String processAsDsmlResponse( StudioSearchResultEnumeration sre, StudioProgressMonitor monitor ) throws LdapException
     {
@@ -253,17 +282,20 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Populates An Existing BatchResponse With All Result Rows ───
+    // Streams every search result through convertSearchResultToDsml() and adds
+    // the DSML decorator to a SearchResponseDsml.  Size-limit LDAP codes are
+    // tolerated; a SearchResultDone element is appended regardless of outcome.
+    // Public and static so ImportDsmlRunnable can reuse it during round-trip tests.
     /**
-     * Processes the {@link StudioSearchResultEnumeration} as a DSML response.
+     * Processes the {@link StudioSearchResultEnumeration} as a DSML response,
+     * populating the given {@link BatchResponseDsml}.
      *
-     * @param sre
-     *      the search result enumeration
-     * @param monitor 
-     *      the monitor
-     * @param searchParameter 
-     *      the search parameter
-     * @throws LdapURLEncodingException 
-     * @throws org.apache.directory.api.ldap.model.exception.LdapException
+     * @param sre the search result enumeration
+     * @param batchResponse the batch response to populate
+     * @param monitor the monitor
+     * @param searchParameter the search parameter
+     * @throws LdapException if a DSML conversion error occurs
      */
     public static void processAsDsmlResponse( StudioSearchResultEnumeration sre, BatchResponseDsml batchResponse,
         StudioProgressMonitor monitor, SearchParameter searchParameter ) throws LdapException
@@ -329,12 +361,17 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Decides Whether An Entry Is A Referral Or A Regular Entry ──
+    // Referral entries emit a SearchResultReferenceDsml with 'ref' URLs collected.
+    // Regular entries emit a SearchResultEntryDsml with the full entry attached.
+    // This is Han shooting first: decide type before writing the DSML element.
     /**
-     * Converts the given {@link SearchResult} to a {@link SearchResultEntryDsml}.
+     * Converts the given entry to a {@link SearchResultEntryDsml} or
+     * {@link SearchResultReferenceDsml} depending on whether it is a referral.
      *
-     * @param entry2 the search result
-     * @return the associated search result entry DSML
-     * @throws org.apache.directory.api.ldap.model.exception.LdapException
+     * @param entry the entry to convert
+     * @return the associated DSML decorator
+     * @throws LdapException if conversion fails
      */
     private static DsmlDecorator<? extends Response> convertSearchResultToDsml( Entry entry )
         throws LdapException
@@ -374,13 +411,15 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Checks An Entry's objectClass For The 'referral' Value ─────
+    // Mace Windu confronts Palpatine: the check is done both by name and OID
+    // to handle schemas that may return either form.  Returns true only if the
+    // 'referral' objectClass is present, signalling that this is a reference.
     /**
      * Indicates if the given entry is a referral.
      *
-     * @param entry
-     *      the entry
-     * @return
-     *      <code>true</code> if the given entry is a referral, <code>false</code> if not
+     * @param entry the entry to inspect
+     * @return {@code true} if the entry is a referral, {@code false} otherwise
      */
     private static boolean isReferral( Entry entry )
     {
@@ -406,16 +445,17 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Converts Search Results Into DSML Add-Request Operations ───
+    // Instead of a search response, each entry becomes an AddRequest DSML element
+    // inside a BatchRequest — suitable for replaying entries on another server.
+    // Size-limit LDAP codes are tolerated; the batch is serialised at the end.
     /**
      * Processes the {@link StudioSearchResultEnumeration} as a DSML request.
      *
-     * @param sre
-     *      the search result enumeration
-     * @param monitor 
-     *      the monitor
-     * @return
-     *      the associated DSML
-     * @throws LdapException
+     * @param sre the search result enumeration
+     * @param monitor the monitor
+     * @return the associated DSML string
+     * @throws LdapException if conversion fails
      */
     private String processAsDsmlRequest( StudioSearchResultEnumeration sre, StudioProgressMonitor monitor )
         throws LdapException
@@ -461,14 +501,15 @@ public class ExportDsmlRunnable implements StudioConnectionRunnableWithProgress
     }
 
 
+    // ── Clone Trooper Wraps One Entry As An AddRequestDsml Operation ─────────────
+    // Creates a new AddRequestDsml, attaches the full entry, and returns it
+    // ready to be added to the batch-request document.
     /**
-     * Converts the given {@link SearchResult} to an {@link AddRequestDsml}.
+     * Converts the given entry to an {@link AddRequestDsml}.
      *
-     * @param entry2
-     *      the {@link SearchResult}
-     * @return
-     *      the associated {@link AddRequestDsml}
-     * @throws LdapException
+     * @param entry the entry to convert
+     * @return the associated {@link AddRequestDsml}
+     * @throws LdapException if the entry cannot be attached
      */
     private AddRequestDsml convertToAddRequestDsml( Entry entry )
         throws LdapException

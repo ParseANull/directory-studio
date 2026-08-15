@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.dialogs.properties;
@@ -43,9 +43,23 @@ import org.eclipse.ui.IWorkbenchPropertyPage;
 import org.eclipse.ui.dialogs.PropertyPage;
 
 
+// ── CLASS: AttributePropertyPage — LUKE'S BINARY SUNSET ON TATOOINE ──────────
+// Luke stands on the moisture farm at dusk, watching the twin suns set over the
+// desert horizon.  In that moment he sees the complete picture — both suns, the
+// whole sky, the full sweep of Tatooine — before deciding where his life goes.
+// This property page does the same for an LDAP attribute: it displays the complete
+// picture — name, type, value count, byte size, schema OID, matching rules, syntax
+// description — all laid out so the user can understand everything about that
+// attribute before deciding what to do with it.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This page shows some info about the selected Attribute.
- * 
+ * Eclipse property page that displays all metadata for a selected LDAP attribute.
+ * Shows the attribute's name, value count, byte size, schema OID, alternative
+ * names, description, usage, flags (single-valued, collective, obsolete, read-only),
+ * syntax OID and description, and all three matching rule names.
+ * Think of this page as Luke's binary sunset — the full panoramic view of an
+ * attribute so users understand exactly what they're looking at.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class AttributePropertyPage extends PropertyPage implements IWorkbenchPropertyPage
@@ -106,8 +120,21 @@ public class AttributePropertyPage extends PropertyPage implements IWorkbenchPro
     private Text syntaxLengthText;
 
 
+    // ── LUKE FINDS HIS VIEWING SPOT ON THE MOISTURE FARM ─────────────────────
+    // Luke walks out to his usual spot, removes all distractions (no Apply
+    // button, no defaults button — just read-only information to absorb), and
+    // prepares to take in the full scene.
+    // We call noDefaultAndApplyButton() because this is a read-only info page;
+    // there's nothing to apply or reset.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of AttributePropertyPage.
+     * Creates a new {@code AttributePropertyPage} and hides the Default and Apply
+     * buttons because this page is read-only — it shows information, not a form.
+     *
+     * <p>For example — Luke strips away distractions before watching the sunset:</p>
+     * <pre>
+     *   no "Apply" button → no "Restore Defaults" button → pure information display
+     * </pre>
      */
     public AttributePropertyPage()
     {
@@ -116,8 +143,35 @@ public class AttributePropertyPage extends PropertyPage implements IWorkbenchPro
     }
 
 
+    // ── LUKE TAKES IN THE COMPLETE PANORAMA ───────────────────────────────────
+    // Luke gazes at both suns, the desert horizon, the clouds — the full picture
+    // laid out in front of him.  We build the equivalent UI: main facts at the
+    // top, schema details in a group below, flags in a row, syntax in another
+    // group, and matching rules at the bottom — the complete attribute portrait.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the property page UI: a header section (name, type, value count, byte
+     * size), an Attribute Type Definition group (OID, names, description, usage), a
+     * Flags group (single-valued, read-only, collective, obsolete checkboxes), a
+     * Syntax group (OID, description, max length), and a Matching Rules group
+     * (equality, substring, ordering).
+     * All fields are read-only labeled text widgets; the checkboxes toggle themselves
+     * back immediately on click to stay read-only while looking like real checkboxes.
+     * If the attribute's schema type is unknown, all the schema-derived fields are
+     * left at their default empty values.
+     *
+     * <p>For example — Luke sees the complete sunset panorama:</p>
+     * <pre>
+     *   attribute "cn" selected →
+     *     Name: cn, Type: String, Values: 1, Size: 5 bytes
+     *     ATD OID: 2.5.4.3, Names: cn commonName, Usage: userApplications
+     *     Flags: [ ] single-valued, [ ] read-only, [ ] collective, [ ] obsolete
+     *     Syntax: 1.3.6.1.4.1.1466.115.121.1.15 (Directory String), no length limit
+     *     Equality: caseIgnoreMatch, Substring: caseIgnoreSubstringsMatch, Ordering: -
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse's property dialog framework.
+     * @return        The parent composite (we add our widgets to it, then return it).
      */
     protected Control createContents( Composite parent )
     {
@@ -328,12 +382,27 @@ public class AttributePropertyPage extends PropertyPage implements IWorkbenchPro
     }
 
 
+    // ── LUKE IDENTIFIES THE STAR HE'S LOOKING AT ──────────────────────────────
+    // Luke doesn't have a catalog — he looks at the glowing orb and works out
+    // which sun it is based on what the element adapter tells him.
+    // We extract the {@link IAttribute} from the Eclipse selection element by
+    // asking for its {@link IAttribute} adapter, which the browser model provides.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the attribute.
-     * 
-     * @param element the element
-     * 
-     * @return the attribute
+     * Extracts the {@link IAttribute} from the given Eclipse selection element by
+     * using the {@link IAdaptable} adapter mechanism.
+     * Returns {@code null} if the element doesn't adapt to {@link IAttribute}.
+     *
+     * <p>For example — Luke identifies which sun he's watching:</p>
+     * <pre>
+     *   element.getAdapter(IAttribute.class) → "cn" attribute → populated
+     *   element.getAdapter(IAttribute.class) → null → page stays empty
+     * </pre>
+     *
+     * @param element  The Eclipse selection element; typically an
+     *                 {@link IAdaptable} wrapping an LDAP attribute node.
+     * @return         The {@link IAttribute} for the selected attribute, or
+     *                 {@code null} if the element doesn't expose one.
      */
     private static IAttribute getAttribute( Object element )
     {

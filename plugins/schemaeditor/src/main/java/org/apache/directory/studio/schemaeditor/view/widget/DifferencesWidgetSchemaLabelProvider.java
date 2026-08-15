@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.widget;
 
@@ -36,8 +36,22 @@ import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
 
 
+// ── CLASS: DifferencesWidgetSchemaLabelProvider — LUKE SEES THE BIG PICTURE ──
+// Standing on the edge of the Lars homestead at dusk, Luke watches the twin suns
+// set over Tatooine and sees, for the first time, the full scope of what lies ahead.
+// Our label provider does something similar: for every tree node it looks at the
+// full context — the element type, the difference type, the label preferences, the
+// optional secondary label — and assembles a complete, human-readable view of each
+// schema difference, including the optional secondary identifier in brackets.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the LabelProvider for the SchemaView.
+ * A JFace {@link LabelProvider} for the left-panel tree inside {@link DifferencesWidget}.
+ * It receives tree nodes ({@link SchemaDifference}, {@link AttributeTypeDifference},
+ * {@link ObjectClassDifference}, {@link Folder}) and returns the display text and icon
+ * for each. The text format respects the user's label and abbreviation preferences:
+ * primary label (first name / all aliases / OID), optional secondary label, and
+ * abbreviation cut-off. Think of it as Luke's binary-sunset perspective: every element
+ * is seen in its full context before we decide how to present it.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -47,8 +61,15 @@ public class DifferencesWidgetSchemaLabelProvider extends LabelProvider
     private IPreferenceStore store;
 
 
+    // ── LUKE TAKES HIS POSITION AT THE HOMESTEAD RIDGE ───────────────────────────
+    // Before Luke can appreciate the big picture, he has to be in the right place.
+    // We grab the preference store here so getText() can consult the user's label
+    // preferences on every call without going back to the activator each time.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DifferencesWidgetSchemaLabelProvider.
+     * Constructs a new label provider, caching the plugin's preference store so
+     * every {@link #getText(Object)} call can read the current label and abbreviation
+     * settings without having to look them up from scratch.
      */
     public DifferencesWidgetSchemaLabelProvider()
     {
@@ -56,9 +77,34 @@ public class DifferencesWidgetSchemaLabelProvider extends LabelProvider
     }
 
 
+    // ── READING THE HORIZON: COMPOSING THE DISPLAY TEXT ──────────────────────────
+    // Luke does not just glance at Tatooine — he takes in the twin suns, the desert,
+    // the haze on the horizon, the secondary details. Our getText() reads all the
+    // display preferences (primary label, secondary label, abbreviation) and assembles
+    // a full text string that gives the user as much or as little detail as they asked for.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the display text for a tree node. The format varies by node type and
+     * by the user's label preferences:
+     * <ul>
+     *   <li>{@link SchemaDifference}: returns the schema name from source or destination.</li>
+     *   <li>{@link AttributeTypeDifference} / {@link ObjectClassDifference}: returns the
+     *       primary label (first name, all aliases, or OID), possibly abbreviated, with
+     *       an optional secondary label appended in brackets.</li>
+     *   <li>{@link Folder}: returns the folder name plus a child count.</li>
+     * </ul>
+     *
+     * <p>For example — Luke reads the whole sunset, not just one part:</p>
+     * <pre>
+     *   pref = FIRST_NAME, secondary = OID  →  "cn  [2.5.4.3]"
+     *   pref = ALL_ALIASES, abbreviate=true  →  "commonName, cn..."
+     *   Folder(ATTRIBUTE_TYPE, 12 items)     →  "Attribute Types (12)"
+     * </pre>
+     *
+     * @param element  the tree node to label
+     * @return         a formatted display string; never null, may be empty
      */
+    @Override
     public String getText( Object element )
     {
         String label = ""; //$NON-NLS-1$
@@ -357,9 +403,29 @@ public class DifferencesWidgetSchemaLabelProvider extends LabelProvider
     }
 
 
+    // ── COLORING WHAT LUKE SEES ON THE HORIZON ────────────────────────────────────
+    // The twin suns paint the sky in different colors — red for danger, calm gold for
+    // unchanged. We pick the icon that tells the user at a glance whether a schema,
+    // attribute type, object class, or folder is added, modified, removed, or unchanged.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the icon for a tree node. The image communicates the change type
+     * (ADDED / MODIFIED / REMOVED / IDENTICAL) for schemas, attribute types, and
+     * object classes, and a type-specific folder icon for {@link Folder} nodes.
+     * Unknown element types return {@code null}.
+     *
+     * <p>For example — the twin suns color the horizon:</p>
+     * <pre>
+     *   SchemaDifference(ADDED)             →  IMG_DIFFERENCE_SCHEMA_ADD
+     *   AttributeTypeDifference(MODIFIED)   →  IMG_DIFFERENCE_ATTRIBUTE_TYPE_MODIFY
+     *   ObjectClassDifference(REMOVED)      →  IMG_DIFFERENCE_OBJECT_CLASS_REMOVE
+     *   Folder(ATTRIBUTE_TYPE)              →  IMG_FOLDER_AT
+     * </pre>
+     *
+     * @param element  the tree node to iconify
+     * @return         the appropriate {@link Image}, or {@code null} for unknown types
      */
+    @Override
     public Image getImage( Object element )
     {
         if ( element instanceof SchemaDifference )

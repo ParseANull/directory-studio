@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -45,11 +45,19 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.TcpBufferWrap
 import org.apache.directory.studio.openldap.config.editor.wrappers.TcpBufferWrapper.TcpTypeEnum;
 
 
+// Like Princess Leia's hologram transmitting the precise buffer size and
+// listener URL the Rebellion's relay station needs to handle incoming traffic,
+// we present a focused dialog where the administrator enters a TCP buffer
+// size, selects whether it applies to reads, writes, or both, and optionally
+// binds it to a specific listener URI — watching the composed result appear
+// in real time below.
 /**
- * The TcpBufferDialog is used to edit a TcpBuffer, which can contain an URL and a type of TCP buffer,
- * plus the size.<br/>
- * The dialog overlay is like :
- * 
+ * The TcpBufferDialog is used to edit a TcpBuffer entry, which consists of
+ * a buffer size, an optional read/write type flag, and an optional listener
+ * URI. We validate the size and URI as the operator types, color the result
+ * red for invalid input, and disable the OK button until all fields are valid.
+ *
+ * <p>The dialog overlay is like:
  * <pre>
  * +---------------------------------------+
  * |  TcpBuffer                            |
@@ -58,14 +66,13 @@ import org.apache.directory.studio.openldap.config.editor.wrappers.TcpBufferWrap
  * | | URL  : [                        ] | |
  * | '-----------------------------------' |
  * | .-----------------------------------. |
- * | | TcpBuffer : <///////////////////> | |
+ * | | TcpBuffer : &lt;///////////////////&gt; | |
  * | '-----------------------------------' |
  * |                                       |
  * |  (cancel)                       (OK)  |
  * +---------------------------------------+
- * 
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
@@ -76,22 +83,26 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
     // UI widgets
     /** The Size Text */
     private Text sizeText;
-    
+
     /** The Read and Write checkboxes */
     private Button readCheckbox;
     private Button writeCheckbox;
-    
+
     /** The Listener text */
     private Text listenerText;
-    
+
     /** The resulting TcpBuffer Text, or an error message */
     private Text tcpBufferText;
 
 
+    // Like Leia setting up the hologram projector with the RESIZE flag
+    // so the operator can widen the window to read long listener URIs,
+    // we create the dialog with a resizable shell style.
     /**
-     * Create a new instance of the TcpBufferDialog
-     * 
-     * @param parentShell The parent Shell
+     * Creates a new TcpBufferDialog with no pre-loaded value.
+     * The RESIZE style lets the operator expand the dialog for long URIs.
+     *
+     * @param parentShell the parent shell
      */
     public TcpBufferDialog( Shell parentShell )
     {
@@ -107,7 +118,7 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
         {
             Display display = tcpBufferText.getDisplay();
             Button okButton = getButton( IDialogConstants.OK_ID );
-            
+
             // This button might be null when the dialog is called.
             if ( okButton == null )
             {
@@ -127,11 +138,11 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
                     okButton.setEnabled( false );
                     return;
                 }
-                
+
                 sizeText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 getEditedElement().setSize( sizeValue );
                 tcpBufferText.setText( getEditedElement().toString() );
-                
+
                 if ( TcpBufferWrapper.isValid( sizeText.getText(), listenerText.getText() ) )
                 {
                     tcpBufferText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
@@ -152,8 +163,8 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
                 okButton.setEnabled( false );
             }
         };
-    
-    
+
+
     /**
      * The listener for the URL Text
      */
@@ -161,7 +172,7 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
         {
             Display display = tcpBufferText.getDisplay();
             Button okButton = getButton( IDialogConstants.OK_ID );
-            
+
             // This button might be null when the dialog is called.
             if ( okButton == null )
             {
@@ -175,7 +186,7 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
                 getEditedElement().setListener( newUri );
                 listenerText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
                 tcpBufferText.setText( getEditedElement().toString() );
-                
+
                 if ( TcpBufferWrapper.isValid( sizeText.getText(), listenerText.getText() ) )
                 {
                     tcpBufferText.setForeground( display.getSystemColor( SWT.COLOR_BLACK ) );
@@ -210,7 +221,7 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
 
             if ( readCheckbox.getSelection() )
             {
-                if ( writeCheckbox.getSelection())
+                if ( writeCheckbox.getSelection() )
                 {
                     getEditedElement().setTcpType( TcpTypeEnum.BOTH );
                 }
@@ -234,7 +245,7 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
             {
                 getEditedElement().setTcpType( TcpTypeEnum.BOTH );
             }
-            
+
             // Set the TcpBuffer into the text box
             tcpBufferText.setText( getEditedElement().toString() );
 
@@ -251,9 +262,14 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
         }
     };
 
-    
+
+    // Like labeling the hologram channel "TcpBuffer" so the operator knows
+    // they're configuring a TCP buffer entry, we stamp the shell title
+    // before the dialog opens.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to "TcpBuffer".
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -263,8 +279,13 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
     }
 
 
+    // Like Leia's hologram projecting both the editable size/type/URL inputs
+    // and a live result display below so the operator always sees the composed
+    // TcpBuffer string, we build two groups: the input panel and the result panel.
     /**
-     * Create the Dialog for TcpBuffer :
+     * Builds the dialog content area with a TcpBuffer input group and a
+     * read-only result group showing the composed TcpBuffer string.
+     *
      * <pre>
      * +---------------------------------------+
      * |  TcpBuffer                            |
@@ -273,13 +294,15 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
      * | | URL  : [                        ] | |
      * | '-----------------------------------' |
      * | .-----------------------------------. |
-     * | | TcpBuffer : <///////////////////> | |
+     * | | TcpBuffer : &lt;///////////////////&gt; | |
      * | '-----------------------------------' |
      * |                                       |
      * |  (cancel)                       (OK)  |
      * +---------------------------------------+
      * </pre>
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -293,25 +316,29 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
 
         initDialog();
         addListeners();
-        
+
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // Like the hologram crew laying out the buffer configuration panel with
+    // size, read/write toggles, and listener URI in a six-column grid so
+    // the operator can see all options at once, we build the input group here.
     /**
-     * Creates the TcpBuffer input group. This is the part of the dialog
-     * where one can insert the TcpBuffer size and URL
-     * 
+     * Creates the TcpBuffer input group with a size text field, read and write
+     * checkboxes, and a listener URI text field arranged in a six-column grid.
+     *
      * <pre>
-     *  TcpBuffer Input
+     * TcpBuffer Input
      * .-----------------------------------.
      * | Size : [    ]    () read () write |
      * | URL  : [                        ] |
      * '-----------------------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent the parent composite to attach the input group to
      */
     private void createTcpBufferEditGroup( Composite parent )
     {
@@ -339,17 +366,21 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
     }
 
 
+    // Like adding the mission status board to the operations room so
+    // commanders always see the composed TcpBuffer string — valid in black,
+    // invalid in red — without having to mentally assemble the fields,
+    // we create the read-only result display group.
     /**
-     * Creates the TcpBuffer show group. This is the part of the dialog
-     * where the real TcpBuffer is shown, or an error message if the TcpBuffer
-     * is invalid.
-     * 
+     * Creates the TcpBuffer display group showing the composed TcpBuffer
+     * string (or an error indicator in red) as the operator types.
+     *
      * <pre>
      * .-----------------------------------.
-     * | TcpBuffer : <///////////////////> |
+     * | TcpBuffer : &lt;///////////////////&gt; |
      * '-----------------------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent the parent composite to attach the display group to
      */
     private void createTcpBufferShowGroup( Composite parent )
     {
@@ -366,19 +397,24 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
     }
 
 
+    // Like loading the current TcpBuffer data into the hologram panel before
+    // opening it so the operator starts from the right baseline, we
+    // pre-populate the size, listener URI, and result text fields from
+    // the existing TcpBufferWrapper.
     /**
-     * Initializes the UI from the TcpBuffer
+     * Initializes the dialog fields from the current {@link TcpBufferWrapper},
+     * pre-populating size, listener URI, and the result display text.
      */
     protected void initDialog()
     {
         TcpBufferWrapper editedElement = getEditedElement();
-        
+
         if ( editedElement != null )
         {
             sizeText.setText( Long.toString( editedElement.getSize() ) );
-            
-            URI listener =  editedElement.getListener();
-            
+
+            URI listener = editedElement.getListener();
+
             if ( listener == null )
             {
                 listenerText.setText( "" );
@@ -387,23 +423,33 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
             {
                 listenerText.setText( listener.toString() );
             }
-            
+
             tcpBufferText.setText( editedElement.toString() );
         }
     }
 
 
+    // Like Leia starting a brand-new buffer transmission from a blank
+    // template when no prior configuration exists, we seed the dialog
+    // with an empty TcpBufferWrapper so the operator fills in a fresh entry.
     /**
-     * Add a new Element that will be edited
+     * Seeds the dialog with a new empty {@link TcpBufferWrapper} when the
+     * operator is adding a brand-new TCP buffer entry.
      */
     public void addNewElement()
     {
         setEditedElement( new TcpBufferWrapper( "" ) );
     }
-    
 
+
+    // Like handing the operator an existing buffer configuration to edit
+    // and resend, we clone the given wrapper and set the clone as the
+    // edited element so changes don't affect the original until confirmed.
     /**
-     * Add a new Element that will be edited
+     * Seeds the dialog with a clone of the given {@link TcpBufferWrapper}
+     * so the operator's edits don't affect the original until they confirm.
+     *
+     * @param editedElement the existing TCP buffer wrapper to clone
      */
     protected void addNewElement( TcpBufferWrapper editedElement )
     {
@@ -411,9 +457,13 @@ public class TcpBufferDialog extends AddEditDialog<TcpBufferWrapper>
         setEditedElement( newElement );
     }
 
-    
+
+    // Like wiring the read/write toggle buttons to the live result display
+    // so every checkbox click updates the composed TcpBuffer string immediately,
+    // we attach the checkbox selection listener to both read and write buttons.
     /**
-     * Adds listeners.
+     * Attaches the checkbox selection listener to the read and write buttons
+     * so the dialog updates the TcpType and the result display on every click.
      */
     private void addListeners()
     {

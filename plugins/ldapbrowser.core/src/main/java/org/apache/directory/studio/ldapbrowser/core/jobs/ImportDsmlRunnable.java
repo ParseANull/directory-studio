@@ -80,8 +80,19 @@ import org.apache.directory.studio.ldapbrowser.core.model.IEntry;
 import org.apache.directory.studio.ldapbrowser.core.model.SearchParameter;
 
 
+// ── CLASS: ImportDsmlRunnable — CLONE TROOPER EXECUTING DSML ATTACK ORDERS ───
+// The Empire transmits attack orders as a DSML XML batch request file.
+// This runnable parses the file, dispatches each operation (add, delete,
+// modify, modifyDN, search, bind, compare, extended) to the live LDAP server,
+// and optionally writes a DSML batch-response file logging every result.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * Runnable to import a DSML File into a LDAP server
+ * Runnable to import a DSML file into an LDAP server.
+ *
+ * <p>Think of this as a clone trooper executing Order 66 from a DSML XML
+ * battle plan — each operation in the batch is dispatched to the live server,
+ * the result captured in a DSML response batch, and any errors tallied so the
+ * commanding officer (user) knows how many operations failed.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -103,17 +114,16 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     private LdapApiService codec = LdapApiServiceFactory.getSingleton();
 
 
+    // ── Clone Trooper Receives Full DSML Import Orders With Response File ────────
+    // Stores the LDAP connection, the DSML request file, and the optional
+    // response file path.  When responseFile is non-null a DSML batch-response
+    // is written after the mission so every operation result is logged.
     /**
      * Creates a new instance of ImportDsmlRunnable.
      *
-     * @param connection
-     *          The connection to use
-     * @param dsmlFile
-     *          The DSML file to read from
-     * @param saveFile
-     *          The Save file to use
-     * @param continueOnError
-     *          The ContinueOnError flag
+     * @param connection the connection to use
+     * @param dsmlFile the DSML file to read from
+     * @param saveFile the file to write the DSML response to (may be {@code null})
      */
     public ImportDsmlRunnable( IBrowserConnection connection, File dsmlFile, File saveFile )
     {
@@ -123,15 +133,14 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Receives DSML Import Orders Without A Response File ────────
+    // Convenience overload that delegates to the three-argument constructor
+    // with a null response file — results are not persisted after the mission.
     /**
-     * Creates a new instance of ImportDsmlRunnable.
+     * Creates a new instance of ImportDsmlRunnable without a response file.
      *
-     * @param connection
-     *          The Connection to use
-     * @param dsmlFile
-     *          The DSML file to read from
-     * @param continueOnError
-     *          The ContinueOnError flag
+     * @param connection the connection to use
+     * @param dsmlFile the DSML file to read from
      */
     public ImportDsmlRunnable( IBrowserConnection connection, File dsmlFile )
     {
@@ -139,6 +148,7 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Reports The LDAP Connection This Mission Uses ───────────────
     /**
      * {@inheritDoc}
      */
@@ -149,6 +159,7 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Reports The Human-Readable DSML Import Mission Name ────────
     /**
      * {@inheritDoc}
      */
@@ -158,6 +169,7 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Locks The DSML File Against Concurrent Import Missions ─────
     /**
      * {@inheritDoc}
      */
@@ -169,6 +181,7 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Returns The Error Message If The DSML Import Mission Fails ─
     /**
      * {@inheritDoc}
      */
@@ -178,6 +191,10 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Executes Order 66: Parse And Execute All DSML Operations ───
+    // Parses the DSML file with Dsmlv2Parser, iterates each request in the batch,
+    // dispatches via processRequest(), tallies errors, and optionally writes the
+    // batch-response file.  A dummy monitor is used to isolate per-request errors.
     /**
      * {@inheritDoc}
      */
@@ -255,6 +272,9 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Fires A Bulk-Modification Event After The Mission ──────────
+    // Obi-Wan senses a disturbance in the Force: the EventRegistry notifies all
+    // listeners that bulk modifications occurred on this connection.
     /**
      * {@inheritDoc}
      */
@@ -264,15 +284,18 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Routes Each DSML Request To Its Specialist Handler ─────────
+    // Han shoots first: a switch on the request type dispatches immediately to
+    // the correct processXxx() method.  Unknown request types throw immediately
+    // rather than silently failing.
     /**
-     * Processes the request.
+     * Dispatches the given DSML request to the appropriate handler.
      *
-     * @param request
-     *      the request
-     * @param batchResponseDsml
-     *      the DSML batch response (can be <code>null</code>)
-     * @throws org.apache.directory.api.ldap.model.exception.LdapURLEncodingException
-     * @throws LdapException
+     * @param request the DSML request to process
+     * @param batchResponseDsml the DSML batch response (may be {@code null})
+     * @param monitor the progress monitor
+     * @throws LdapURLEncodingException if a URL in the request is invalid
+     * @throws LdapException if an LDAP error occurs
      */
     private void processRequest( DsmlDecorator<? extends Request> request, BatchResponseDsml batchResponseDsml,
         StudioProgressMonitor monitor )
@@ -312,13 +335,15 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Responds With UNWILLING_TO_PERFORM For Bind Requests ───────
+    // The Empire does not support bind re-negotiation mid-batch — Han shoots first
+    // and returns an UNWILLING_TO_PERFORM result rather than attempting the bind.
     /**
-     * Processes an bind request.
-     * 
-     * @param request
-     *      the request
-     * @param batchResponseDsml
-     *      the DSML batch response (can be <code>null</code>)
+     * Processes a bind request (currently unsupported — returns UNWILLING_TO_PERFORM).
+     *
+     * @param request the bind request
+     * @param batchResponseDsml the DSML batch response (may be {@code null})
+     * @param monitor the progress monitor
      */
     private void processBindRequest( BindRequest request, BatchResponseDsml batchResponseDsml,
         StudioProgressMonitor monitor )
@@ -338,13 +363,15 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Executes An LDAP Add Operation And Invalidates The Cache ───
+    // Sends the entry to the server via createEntry(), then marks the new entry's
+    // parent as un-initialised so the browser re-fetches children on next view.
     /**
      * Processes an add request.
-     * 
-     * @param request
-     *      the request
-     * @param batchResponseDsml
-     *      the DSML batch response (can be <code>null</code>)
+     *
+     * @param request the add request
+     * @param batchResponseDsml the DSML batch response (may be {@code null})
+     * @param monitor the progress monitor
      */
     private void processAddRequest( AddRequest request, BatchResponseDsml batchResponseDsml,
         StudioProgressMonitor monitor )
@@ -382,13 +409,14 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Declines A Compare Request With UNWILLING_TO_PERFORM ───────
+    // Like bind, compare requests are unsupported in this importer.
     /**
-     * Processes a compare request.
+     * Processes a compare request (currently unsupported — returns UNWILLING_TO_PERFORM).
      *
-     * @param request
-     *      the request
-     * @param batchResponseDsml
-     *      the DSML batch response (can be <code>null</code>)
+     * @param request the compare request
+     * @param batchResponseDsml the DSML batch response (may be {@code null})
+     * @param monitor the progress monitor
      */
     private void processCompareRequest( CompareRequest request, BatchResponseDsml batchResponseDsml,
         StudioProgressMonitor monitor )
@@ -408,13 +436,15 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Executes An LDAP Delete And Purges The Entry From Cache ────
+    // Sends the delete to the server, marks the entry and its parent as
+    // un-initialised, then removes the entry from the in-memory cache tree.
     /**
-     * Processes a del request.
+     * Processes a delete request.
      *
-     * @param request
-     *      the request
-     * @param batchResponseDsml
-     *      the DSML batch response (can be <code>null</code>)
+     * @param request the delete request
+     * @param batchResponseDsml the DSML batch response (may be {@code null})
+     * @param monitor the progress monitor
      */
     private void processDelRequest( DeleteRequest request, BatchResponseDsml batchResponseDsml,
         StudioProgressMonitor monitor )
@@ -450,13 +480,14 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Declines An Extended Request With UNWILLING_TO_PERFORM ─────
+    // Extended requests are beyond the current connection wrapper's capabilities.
     /**
-     * Processes an extended request.
+     * Processes an extended request (currently unsupported — returns UNWILLING_TO_PERFORM).
      *
-     * @param request
-     *      the request
-     * @param batchResponseDsml
-     *      the DSML batch response (can be <code>null</code>)
+     * @param request the extended request
+     * @param batchResponseDsml the DSML batch response (may be {@code null})
+     * @param monitor the progress monitor
      */
     private void processExtendedRequest( ExtendedRequest request, BatchResponseDsml batchResponseDsml,
         StudioProgressMonitor monitor )
@@ -476,13 +507,15 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Executes An LDAP Modify And Invalidates The Cached Entry ───
+    // Sends the modifications to the server via modifyEntry(), then marks the
+    // affected cache entry as un-initialised so attributes are refreshed.
     /**
      * Processes a modify request.
      *
-     * @param request
-     *      the request
-     * @param batchResponseDsml
-     *      the DSML batch response (can be <code>null</code>)
+     * @param request the modify request
+     * @param batchResponseDsml the DSML batch response (may be {@code null})
+     * @param monitor the progress monitor
      */
     private void processModifyRequest( ModifyRequest request, BatchResponseDsml batchResponseDsml,
         StudioProgressMonitor monitor )
@@ -512,13 +545,15 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Executes An LDAP ModifyDN (Rename Or Move) Operation ───────
+    // Constructs the new DN (move or rename), calls renameEntry(), then invalidates
+    // the old entry, its parent, and the new superior entry in the cache.
     /**
-     * Processes a modify Dn request.
-     * 
-     * @param request
-     *      the request
-     * @param batchResponseDsml
-     *      the DSML batch response (can be <code>null</code>)
+     * Processes a modifyDN request.
+     *
+     * @param request the modifyDN request
+     * @param batchResponseDsml the DSML batch response (may be {@code null})
+     * @param monitor the progress monitor
      */
     private void processModifyDNRequest( ModifyDnRequest request, BatchResponseDsml batchResponseDsml,
         StudioProgressMonitor monitor )
@@ -583,15 +618,18 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Executes An LDAP Search And Encodes Results As DSML ────────
+    // Only executed when a response file is requested (optimisation — no point
+    // searching if results won't be recorded).  Delegates result encoding to
+    // ExportDsmlRunnable.processAsDsmlResponse().
     /**
      * Processes a search request.
-     * 
-     * @param request
-     *      the request
-     * @param batchResponseDsml
-     *      the DSML batch response (can be <code>null</code>)
-     * @throws org.apache.directory.api.ldap.model.exception.LdapURLEncodingException
-     * @throws org.apache.directory.api.ldap.model.exception.LdapException
+     *
+     * @param request the search request
+     * @param batchResponseDsml the DSML batch response (may be {@code null})
+     * @param monitor the progress monitor
+     * @throws LdapURLEncodingException if a URL in the results is invalid
+     * @throws LdapException if an LDAP error occurs
      */
     private void processSearchRequest( SearchRequest request, BatchResponseDsml batchResponseDsml,
         StudioProgressMonitor monitor ) throws LdapURLEncodingException, LdapException
@@ -614,13 +652,14 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Translates DSML Search Parameters Into JNDI SearchControls ─
+    // Maps the DSML scope (OBJECT/ONELEVEL/SUBTREE), returning attributes, count
+    // limit, and time limit onto a JNDI SearchControls object.
     /**
-     * Returns the {@link SearchControls} object associated with the request.
+     * Translates the given {@link SearchRequest} into a JNDI {@link SearchControls}.
      *
-     * @param request
-     *      the search request
-     * @return
-     *      the associated {@link SearchControls} object
+     * @param request the search request
+     * @return the equivalent SearchControls
      */
     private SearchControls getSearchControls( SearchRequest request )
     {
@@ -669,13 +708,14 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Maps DSML Alias Dereferencing Mode To Studio Enum ─────────
+    // Translates the DSML DerefAliasesEnum to the Studio AliasDereferencingMethod
+    // enum used by the connection wrapper.
     /**
-     * Returns the {@link AliasDereferencingMethod} object associated with the request.
+     * Translates the alias-dereferencing mode in the given {@link SearchRequest}.
      *
-     * @param request
-     *      the search request
-     * @return
-     *      the associated {@link AliasDereferencingMethod} object
+     * @param request the search request
+     * @return the equivalent {@link AliasDereferencingMethod}
      */
     private AliasDereferencingMethod getAliasDereferencingMethod( SearchRequest request )
     {
@@ -695,6 +735,9 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Extracts LDAP Controls From A DSML Request Message ─────────
+    // Returns the request's attached controls as an array, or null if empty,
+    // ready for passing to the connection wrapper.
     private Control[] getControls( Message request ) {
         Collection<Control> controls = request.getControls().values();
         if ( controls != null ) {
@@ -704,13 +747,15 @@ public class ImportDsmlRunnable implements StudioConnectionBulkRunnableWithProgr
     }
 
 
+    // ── Clone Trooper Records The Operation Outcome In An LdapResult ─────────────
+    // Han shoots first: if no errors, result code is SUCCESS; otherwise the
+    // exception's best-estimate result code and diagnostic message are set.
     /**
-     * Get the LDAP Result corresponding to the given monitor
+     * Populates the given {@link LdapResult} with values derived from the monitor.
      *
-     * @param monitor
-     *      the progress monitor
-     * @return
-     *      the corresponding LDAP Result
+     * @param ldapResult the result object to populate
+     * @param monitor the progress monitor
+     * @param messageType the message type used to estimate the result code on failure
      */
     private void setLdapResultValuesFromMonitor( LdapResult ldapResult, StudioProgressMonitor monitor,
         MessageTypeEnum messageType )

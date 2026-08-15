@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core;
@@ -25,18 +25,41 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
 
 
+// ── CLASS: BrowserCoreConstants — LANDO'S CLOUD CITY OPERATIONS BOARD ────────
+// Lando Calrissian runs Cloud City from a central operations board that lists
+// every protocol, every frequency, every docking bay designation — all the
+// canonical names and codes that keep the city running smoothly.
+// This class is that board: every magic string and integer the browser core
+// needs is defined here once so nothing is hardcoded anywhere else.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class contains all the constants used by the Browser Core Plugin
- * Final reference -> class shouldn't be extended
+ * Holds every named constant used across the Browser Core plugin.
+ * Centralizing constants here means we never scatter magic strings or numbers
+ * through the codebase — change one value here and it propagates everywhere.
+ * Think of this class as Lando's operations board: the single authoritative
+ * source for every code name and setting in Cloud City.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public final class BrowserCoreConstants
 {
+    // ── Lando Seals The Operations Board ────────────────────────────────────────
+    // Lando locks the operations board so no uninvited administrator can tamper
+    // with the canonical codes — "These settings are not up for negotiation."
+    // We do the same: a private constructor blocks instantiation because this
+    // class is purely a namespace for constants, not an object to be created.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     *  Ensures no construction of this class, also ensures there is no need for final keyword above
-     *  (Implicit super constructor is not visible for default constructor),
-     *  but is still self documenting.
+     * Prevents instantiation of this utility-constants class.
+     * There is nothing to construct here — every constant is static.
+     * We follow the private-constructor pattern to make that intention explicit
+     * and to satisfy tools like PMD that flag implicit public constructors.
+     *
+     * <p>For example — Lando tells his staff:</p>
+     * <pre>
+     *   "Nobody touches the operations board directly.
+     *    You look at the readouts; you don't own the console."
+     * </pre>
      */
     private BrowserCoreConstants()
     {

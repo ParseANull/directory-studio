@@ -21,6 +21,21 @@
 package org.apache.directory.studio.ldapbrowser.core.propertypageproviders;
 
 
+// ── CLASS: ValuePropertyPageProvider — JEDI BADGE FOR VALUE OBJECTS ─────────
+// A single data slot on a Death Star blueprint panel holds one value — and that
+// value must show its access badge before the detailed inspection panel opens.
+// ValuePropertyPageProvider is that badge for IValue objects: implementing it
+// tells the Eclipse property-page framework that this object should expose value
+// property pages.  No methods — the interface is a pure marker.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Marker interface that tags a class as a provider of value property pages.
+ *
+ * <p>Think of this as a data-slot access badge: an object implementing this
+ * interface announces "I am an LDAP value — show my property pages."</p>
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public interface ValuePropertyPageProvider
 {
 

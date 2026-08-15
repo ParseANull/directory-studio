@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.apacheds.configuration.actions;
@@ -46,8 +46,19 @@ import org.eclipse.ui.model.WorkbenchContentProvider;
 import org.eclipse.ui.model.WorkbenchLabelProvider;
 
 
+// ── CLASS: EditorImportConfigurationAction — REBEL COURIER DELIVERS NEW PLANS TO THE EDITOR
+// A Rebel agent retrieves a different set of plans from another source and brings them into
+// the engineering room.  The old plans are discarded after a confirmation; the new ones replace
+// them and the editor reloads with the imported configuration.
+// This action opens a file-selection dialog (workspace tree in IDE mode, native file dialog in
+// RCP mode), asks for confirmation, reads the selected file, and resets the editor's configuration.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the create connection action for an ApacheDS 2.0 server.
+ * Toolbar/menu action in the {@link ServerConfigurationEditor} that imports a configuration
+ * from a user-chosen LDIF file, replacing the editor's current configuration.
+ * Handles both IDE (workspace file picker) and RCP (native file dialog) environments.
+ * Logs and displays an error dialog if the operation fails.
+ * Think of it as the Rebel courier delivering a replacement set of plans.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -60,10 +71,13 @@ public class EditorImportConfigurationAction extends Action
     private ServerConfigurationEditor editor;
 
 
+    // ── Wiring Up The Action To Its Editor ────────────────────────────────────────────────────
+    // The action needs a reference to the editor to check for unsaved changes and reset config.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of EditorImportConfigurationAction.
+     * Creates the import action and stores a reference to its owning editor.
      *
-     * @param editor the associated editor
+     * @param editor  the configuration editor that owns this action
      */
     public EditorImportConfigurationAction( ServerConfigurationEditor editor )
     {
@@ -71,8 +85,13 @@ public class EditorImportConfigurationAction extends Action
     }
 
 
+    // ── Returning The Import Icon ─────────────────────────────────────────────────────────────
+    // The import icon appears on the toolbar button for this action.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the import icon image descriptor.
+     *
+     * @return the image descriptor for the import toolbar icon
      */
     public ImageDescriptor getImageDescriptor()
     {
@@ -81,8 +100,13 @@ public class EditorImportConfigurationAction extends Action
     }
 
 
+    // ── Returning The Action's Menu Label ────────────────────────────────────────────────────
+    // The localised label appears in the editor's toolbar dropdown and context menu.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the localised action label ("Import Configuration").
+     *
+     * @return the action text
      */
     public String getText()
     {
@@ -90,8 +114,26 @@ public class EditorImportConfigurationAction extends Action
     }
 
 
+    // ── Running The Import ────────────────────────────────────────────────────────────────────
+    // When the engineer clicks "Import":
+    //   1. If the editor has unsaved changes, ask for confirmation before discarding them.
+    //   2. Open a file-selection dialog (IDE: workspace tree; RCP: native dialog).
+    //   3. Ask for final confirmation that the existing configuration will be overwritten.
+    //   4. Read the selected file as a Configuration object.
+    //   5. Reset the editor to display the new configuration.
+    // Logs and shows an error dialog if anything goes wrong.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Runs the import flow: checks for unsaved changes, prompts for file selection, confirms
+     * the overwrite, reads the configuration file, and resets the editor.
+     * Logs and displays an error dialog on failure.
+     *
+     * <p>For example — importing a backup configuration:</p>
+     * <pre>
+     *   run() → confirm discard if dirty → file dialog → confirm overwrite
+     *         → LoadConfigurationRunnable.readConfiguration(file)
+     *         → editor.resetConfiguration(configuration)
+     * </pre>
      */
     public void run()
     {
@@ -117,17 +159,17 @@ public class EditorImportConfigurationAction extends Action
 
             // detect IDE or RCP:
             boolean isIDE = CommonUIUtils.isIDEEnvironment();
-            
+
             if ( isIDE )
             {
                 // Opening a dialog for file selection
                 ElementTreeSelectionDialog dialog = createWorkspaceFileSelectionDialog();
-                
+
                 if ( dialog.open() == Dialog.OK )
                 {
                     // Getting the input stream for the selected file
                     Object firstResult = dialog.getFirstResult();
-                    
+
                     if ( firstResult instanceof IFile )
                     {
                         file = ( ( IFile ) firstResult ).getLocation().toFile();
@@ -146,7 +188,7 @@ public class EditorImportConfigurationAction extends Action
                 dialog.setText( DIALOG_TITLE );
                 dialog.setFilterPath( System.getProperty( "user.home" ) ); //$NON-NLS-1$
                 String filePath = dialog.open();
-                
+
                 if ( filePath == null )
                 {
                     // Cancel button has been clicked
@@ -155,7 +197,7 @@ public class EditorImportConfigurationAction extends Action
 
                 // Checking the file
                 file = new File( filePath );
-                
+
                 if ( !file.exists() || !file.isFile() || !file.canRead() )
                 {
                     // This is not a valid file
@@ -188,8 +230,8 @@ public class EditorImportConfigurationAction extends Action
         }
         catch ( Exception e )
         {
-            ApacheDS2ConfigurationPlugin.getDefault().getLog().log( 
-                new Status( Status.ERROR, "org.apache.directory.studio.apacheds.configuration", 
+            ApacheDS2ConfigurationPlugin.getDefault().getLog().log(
+                new Status( Status.ERROR, "org.apache.directory.studio.apacheds.configuration", //$NON-NLS-1$
                     e.getMessage() ) );
 
             MessageDialog
@@ -204,10 +246,15 @@ public class EditorImportConfigurationAction extends Action
     }
 
 
+    // ── Building The IDE-Mode Workspace File Selection Dialog ─────────────────────────────────
+    // In IDE mode we use an Eclipse ElementTreeSelectionDialog that shows the full workspace
+    // tree.  The validator ensures only an IFile (not a folder) can be selected.
+    // ────────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a {@link Dialog} to select a single file in the workspace.
+     * Creates an Eclipse workspace file-selection dialog restricted to single file selection.
+     * The built-in validator rejects folders and empty selections (OK stays disabled for those).
      *
-     * @return a {@link Dialog} to select a single file in the workspace
+     * @return the configured dialog (not yet opened)
      */
     private ElementTreeSelectionDialog createWorkspaceFileSelectionDialog()
     {

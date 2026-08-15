@@ -6,23 +6,41 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.core.model.filter.parser;
 
 
+// ── CLASS: LdapFilterToken — C-3PO'S INDIVIDUAL JAWA WORD CARD ───────────────
+// When C-3PO scans a Jawa phrase word by word, each word gets its own small card:
+// "This word is an AND operator."  "This word is an attribute name starting at
+// character 3."  "This word is unknown — flag it."  Each card has three fields:
+// the type code (what kind of word), the raw text, and the start position in
+// the original phrase.  C-3PO uses these cards to sort and reassemble the parse
+// tree in the correct order.
+// LdapFilterToken is that word card: an immutable value holder for a single
+// lexical token produced by {@link LdapFilterScanner}.  The type constants
+// identify every kind of token the scanner can produce.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The LdapFilterToken is used to exchange tokens from the scanner to the parser.
+ * Represents a single lexical token produced by {@link LdapFilterScanner}.
+ * Each token carries its type code (one of the {@code static final int} constants
+ * defined here), the raw text value it was scanned from, and its byte offset
+ * in the original filter string.  Tokens are {@link Comparable} by offset so
+ * they can be sorted back into source order.
+ *
+ * <p>Think of this as C-3PO's individual Jawa word card — type, text, and
+ * position on one small record that the parser slots into the AST.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -114,12 +132,15 @@ public class LdapFilterToken implements Comparable<LdapFilterToken>
     private String value;
 
 
+    // ── C-3PO Fills Out A Word Card ───────────────────────────────────────────────
+    // "Type: ATTRIBUTE (31).  Text: 'cn'.  Position: 1."
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * Creates a new instance of LdapFilterToken.
-     * 
-     * @param type the type
-     * @param value the value
-     * @param offset the offset
+     *
+     * @param type   the token type (one of the constants defined in this class).
+     * @param value  the raw text of this token.
+     * @param offset the zero-based start position in the original filter string.
      */
     public LdapFilterToken( int type, String value, int offset )
     {
@@ -129,10 +150,11 @@ public class LdapFilterToken implements Comparable<LdapFilterToken>
     }
 
 
+    // ── C-3PO Reads The Position Field ───────────────────────────────────────────
     /**
      * Returns the start position of the token in the original filter
-     * 
-     * @return the start positon of the token
+     *
+     * @return the start position of the token
      */
     public int getOffset()
     {
@@ -140,9 +162,10 @@ public class LdapFilterToken implements Comparable<LdapFilterToken>
     }
 
 
+    // ── C-3PO Measures The Word Length ───────────────────────────────────────────
     /**
      * Returns the length of the token in the original filter
-     * 
+     *
      * @return the length of the token
      */
     public int getLength()
@@ -151,9 +174,10 @@ public class LdapFilterToken implements Comparable<LdapFilterToken>
     }
 
 
+    // ── C-3PO Reads The Type Code ─────────────────────────────────────────────────
     /**
      * Gets the token type.
-     * 
+     *
      * @return the token type
      */
     public int getType()
@@ -162,9 +186,10 @@ public class LdapFilterToken implements Comparable<LdapFilterToken>
     }
 
 
+    // ── C-3PO Reads The Raw Word Text ─────────────────────────────────────────────
     /**
      * Gets the value of the token in the original filter.
-     * 
+     *
      * @return the value of the token
      */
     public String getValue()
@@ -173,6 +198,7 @@ public class LdapFilterToken implements Comparable<LdapFilterToken>
     }
 
 
+    // ── C-3PO Prints The Token's Full Card Details ───────────────────────────────
     /**
      * @see java.lang.Object#toString()
      */
@@ -182,6 +208,9 @@ public class LdapFilterToken implements Comparable<LdapFilterToken>
     }
 
 
+    // ── C-3PO Compares Two Cards By Position ──────────────────────────────────────
+    // "Which word came first in the original phrase?"
+    // ────────────────────────────────────────────────────────────────────────────
     /**
      * @see java.lang.Comparable#compareTo(java.lang.Object)
      */

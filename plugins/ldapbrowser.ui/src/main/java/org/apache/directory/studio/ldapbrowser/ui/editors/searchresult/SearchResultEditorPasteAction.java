@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.editors.searchresult;
@@ -31,16 +31,36 @@ import org.apache.directory.studio.ldapbrowser.core.model.impl.Value;
 import org.apache.directory.studio.ldapbrowser.core.utils.CompoundModification;
 
 
+// ── CLASS: SearchResultEditorPasteAction — Clone Troopers Executing Order 66 ──
+// Commander Cody receives the order from Palpatine: "Execute Order 66."
+// He doesn't question it — he just carries it out, precisely and immediately.
+// The clones transfer the right payload (IValues from the clipboard) to the
+// right target (the selected attribute cell) and write it to the in-memory model.
+// No LDAP network call yet — that happens separately when the entryUpdateListener
+// detects the in-memory change.  The clones just move the cargo.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the paste action for the search result editor. 
- * It copies the value af a copied attribute-value to another attribute.
- * It does not invoke an UpdateEntryRunnable but only updates the model.
+ * The paste action for the search result editor.
+ * It reads {@link IValue} objects from the clipboard and writes them to the
+ * currently selected attribute in the search result table.
+ * Unlike a generic paste, we only modify the in-memory model here — the
+ * {@code SearchResultEditor.entryUpdateListener} detects the change and dispatches
+ * the actual LDAP update to the server.
+ * Think of the clones executing Order 66: fast, precise, no hesitation, but the
+ * real consequence (saving to the directory) comes a moment later.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class SearchResultEditorPasteAction extends PasteAction
 {
 
+    // ── Clone Trooper Reports for Duty ────────────────────────────────────────
+    // The trooper is instantiated and stands ready.  No setup needed — the
+    // superclass handles everything until the order arrives.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SearchResultEditorPasteAction.
+     * Creates a new paste action.
+     * Delegates fully to the superclass constructor.
      */
     public SearchResultEditorPasteAction()
     {
@@ -48,8 +68,17 @@ public class SearchResultEditorPasteAction extends PasteAction
     }
 
 
+    // ── Clone Trooper Reports the Order Name ──────────────────────────────────
+    // The action label tells the user what they're about to do.  If there's one
+    // value on the clipboard it says "Paste Value"; multiple → "Paste Values";
+    // nothing → just "Paste" (and the action will be disabled anyway).
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the label for this action.
+     * The label is plural when multiple values are on the clipboard, singular
+     * for one, and generic "Paste" when nothing pasteable is found.
+     *
+     * @return the action label string; never null
      */
     public String getText()
     {
@@ -63,8 +92,16 @@ public class SearchResultEditorPasteAction extends PasteAction
     }
 
 
+    // ── Clone Trooper Checks His Orders ───────────────────────────────────────
+    // Before acting, the trooper checks whether the order is valid — is there
+    // actually something pasteable on the clipboard for the current selection?
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code true} if there are {@link IValue} objects on the clipboard
+     * that can be pasted into the currently selected attribute.
+     * The full eligibility check is in {@link #getValuesToPaste()}.
+     *
+     * @return {@code true} if the paste operation is valid right now
      */
     public boolean isEnabled()
     {
@@ -77,8 +114,18 @@ public class SearchResultEditorPasteAction extends PasteAction
     }
 
 
+    // ── Clone Trooper Executes the Order ──────────────────────────────────────
+    // The order comes: take the clipboard values, wrap them with the target
+    // attribute, and write them to the in-memory model via CompoundModification.
+    // The actual directory write happens later — we just move the cargo here.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Pastes the clipboard values into the currently selected attribute.
+     * We wrap each clipboard {@link IValue} with the target {@link IAttribute}
+     * to produce new values, then call {@link CompoundModification#createValues}
+     * to update the in-memory model.
+     * The actual LDAP save is triggered by {@code SearchResultEditor.entryUpdateListener}
+     * when it sees the resulting {@code ValueAddedEvent}.
      */
     public void run()
     {
@@ -101,12 +148,23 @@ public class SearchResultEditorPasteAction extends PasteAction
     }
 
 
+    // ── Clone Trooper Checks the Cargo Bay ────────────────────────────────────
+    // A private helper: confirm that exactly one search result and one single-valued
+    // attribute are selected, and that the clipboard holds IValues.  If all checks
+    // pass, return the values; otherwise return null to signal "not ready".
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
+     * Returns the {@link IValue} array to paste, or {@code null} if the selection
+     * or clipboard state doesn't meet the required conditions.
      * Conditions:
-     * <li> an search result and a mv-attribute are selected
-     * <li> there are IValues in clipboard.
-     * 
-     * @return the values to paste
+     * <ul>
+     *   <li>Exactly one search result is selected</li>
+     *   <li>Exactly one attribute hierarchy (with exactly one attribute) is selected</li>
+     *   <li>No other object types (entries, bookmarks, values, etc.) are selected</li>
+     *   <li>The clipboard contains an {@code IValue[]} via {@link ValuesTransfer}</li>
+     * </ul>
+     *
+     * @return the values to paste, or {@code null} if conditions are not met
      */
     private IValue[] getValuesToPaste()
     {

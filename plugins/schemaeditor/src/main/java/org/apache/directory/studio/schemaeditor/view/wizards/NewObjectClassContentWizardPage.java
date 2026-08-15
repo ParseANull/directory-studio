@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.wizards;
 
@@ -53,11 +53,20 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Table;
 
 
+// ── CLASS: NewObjectClassContentWizardPage — Palpatine Issues The Death Star Blueprints ─
+// Palpatine stands in the Imperial Senate chamber and issues the structural blueprint for
+// the Death Star: which previous stations this new one inherits from (superiors), what kind
+// of station it is (structural, abstract, auxiliary), and whether it's already decommissioned
+// (obsolete). These aren't the attribute details — they're the architectural meta-decisions.
+// This page captures the same thing for a new LDAP object class: its superclass hierarchy,
+// its class type, and the obsolete flag.
+// ──────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class represents the Content WizardPage of the ObjectClassWizard.
- * <p>
- * It is used to let the user enter content information about the
- * attribute type he wants to create (superiors, class type, and properties).
+ * The second wizard page in the New Object Class wizard, covering structural content.
+ * We collect the object class's superior classes (what it inherits from), its type
+ * (structural, abstract, or auxiliary), and the obsolete flag.
+ * Think of Palpatine finalizing the structural blueprint: which previous Imperial stations
+ * this one inherits from, what kind of weapon platform it is, and whether to retire it.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -79,8 +88,16 @@ public class NewObjectClassContentWizardPage extends WizardPage
     private Button obsoleteCheckbox;
 
 
+    // ── Palpatine Opens The Blueprint Session With Full Ceremony ─────────────────────
+    // Palpatine formally opens the Imperial design session: title announced, purpose stated,
+    // the crest of the Empire displayed behind him. The bureaucracy is initialized.
+    // We set the page title, description, and image here, and initialize an empty list
+    // for the superior object classes the user will pick.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of NewAttributeTypeContentWizardPage.
+     * Constructs this wizard page and sets its title, description, and image.
+     * We also initialize the empty {@code superiorsList} that will hold whatever
+     * parent object classes the user selects.
      */
     protected NewObjectClassContentWizardPage()
     {
@@ -92,8 +109,18 @@ public class NewObjectClassContentWizardPage extends WizardPage
     }
 
 
+    // ── Palpatine Lays Out The Structural Design Tables ──────────────────────────────
+    // Palpatine spreads the architectural drawings across three tables: one for the
+    // predecessor stations (superiors), one for the station classification (class type),
+    // one for decommission status (properties). Each table has its own purpose.
+    // We create the three SWT groups with their widgets and listeners here.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds all SWT widgets for this page: a Superiors table, a Class Type radio group,
+     * and a Properties section with the Obsolete checkbox.
+     * Eclipse calls this once when the page is first shown.
+     *
+     * @param parent  the parent composite Eclipse provides — we embed our layout inside it.
      */
     public void createControl( Composite parent )
     {
@@ -244,9 +271,17 @@ public class NewObjectClassContentWizardPage extends WizardPage
     }
 
 
+    // ── Palpatine Calls In A Predecessor Station For Inspection ──────────────────────
+    // Palpatine summons an existing Imperial platform to the blueprint table and adds it
+    // to the lineage record — the new Death Star inherits from it.
+    // We open the ObjectClass selection dialog; if the user picks one, we add it to
+    // the superiors list and refresh the table.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the "Add" button of the superiors 
-     * table is selected.
+     * Opens a dialog so the user can pick a superior object class, then adds the selection
+     * to our superiors list and refreshes the table.
+     * Superiors in LDAP are like parent classes — the new object class inherits all their
+     * required and optional attributes.
      */
     private void addSuperiorObjectClass()
     {
@@ -260,9 +295,16 @@ public class NewObjectClassContentWizardPage extends WizardPage
     }
 
 
+    // ── Palpatine Scratches A Predecessor Off The Blueprint ───────────────────────────
+    // Palpatine crosses out one of the predecessor stations from the design record —
+    // "We no longer inherit from that platform."
+    // We remove the currently selected object class from the superiors list and refresh.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * This method is called when the "Remove" button of the superiors 
-     * table is selected.
+     * Removes the currently selected object class from the superiors list and refreshes
+     * the table viewer.
+     * Does nothing if no row is selected (the button should be disabled in that case, but
+     * we guard defensively).
      */
     private void removeSuperiorObjectClass()
     {
@@ -275,8 +317,15 @@ public class NewObjectClassContentWizardPage extends WizardPage
     }
 
 
+    // ── Palpatine Re-Files The Predecessor List In Alphabetical Order ─────────────────
+    // After every change to the lineage record, Palpatine re-sorts the predecessor stations
+    // alphabetically and re-displays the table to keep everything orderly.
+    // We sort the superiors list by first name and tell the viewer to refresh.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Updates the superiors table
+     * Sorts the superiors list alphabetically by the object class's first name, then tells
+     * the table viewer to repaint.
+     * We call this after every add or remove to keep the list consistently ordered.
      */
     private void updateSuperiorsTable()
     {
@@ -301,11 +350,17 @@ public class NewObjectClassContentWizardPage extends WizardPage
     }
 
 
+    // ── Palpatine Reads Back The Full Predecessor Lineage ────────────────────────────
+    // "We inherit from these platforms — read the names aloud for the record."
+    // The wizard calls this at Finish time to set the superiorOids on the new object class.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the value of the superiors.
+     * Returns the names (or OIDs) of all the superior object classes the user selected.
+     * The wizard uses this list at finish time to set the superiorOids on the new
+     * {@link ObjectClass}.
+     * We return the first alias name for each, falling back to the OID if no names exist.
      *
-     * @return
-     *      the value of the superiors
+     * @return  a list of superior object class name or OID strings; may be empty.
      */
     public List<String> getSuperiorsNameValue()
     {
@@ -328,11 +383,19 @@ public class NewObjectClassContentWizardPage extends WizardPage
     }
 
 
+    // ── Palpatine Declares The Station Classification ─────────────────────────────────
+    // "This station is Structural — a real weapon platform, not a template or an add-on."
+    // The class type is one of three options: Structural (a real LDAP entry class),
+    // Abstract (a template that can't be used directly), or Auxiliary (an add-on mixin).
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the class type value.
+     * Returns the object class type the user selected via the radio buttons.
+     * The type is one of STRUCTURAL (entries can be of this class directly), ABSTRACT
+     * (template only, can't be instantiated), or AUXILIARY (mixin — can be added to entries
+     * that are already of another structural class).
+     * Defaults to STRUCTURAL if no radio has been clicked.
      *
-     * @return
-     *      the class type value
+     * @return  the selected {@link ObjectClassTypeEnum} value — never null.
      */
     public ObjectClassTypeEnum getClassTypeValue()
     {
@@ -340,11 +403,17 @@ public class NewObjectClassContentWizardPage extends WizardPage
     }
 
 
+    // ── Palpatine Marks The Station As Decommissioned In The Record ───────────────────
+    // "Mark it obsolete in the archives — this design is retired but must remain on file."
+    // An obsolete object class is still in the schema for backward compatibility but
+    // signals that no new entries should be created with it.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the 'Obsolete' value.
+     * Returns whether the user checked the "Obsolete" checkbox.
+     * An obsolete object class is preserved in the schema for backward compatibility but
+     * is flagged so implementations know not to use it for new entries.
      *
-     * @return
-     *      the 'Obsolete' value
+     * @return  true if the user marked this object class as obsolete.
      */
     public boolean getObsoleteValue()
     {

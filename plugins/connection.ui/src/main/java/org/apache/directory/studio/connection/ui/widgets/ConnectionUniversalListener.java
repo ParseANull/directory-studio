@@ -33,23 +33,54 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 
 
+// ── CLASS: ConnectionUniversalListener — REBEL BASE HANGAR CONTROL TOWER ─────────
+// The control tower at the Rebel base keeps the status board up-to-date whenever a
+// ship launches, lands, explodes, or changes callsign.  It also handles the hangar
+// bay doors: double-clicking a sector label opens or closes it.
+// ConnectionUniversalListener is that control tower for the connection tree.  It
+// listens for all ConnectionUpdateListener events and calls viewer.refresh() on
+// every one.  It also installs a double-click listener on the tree so that
+// double-clicking a ConnectionFolder expands or collapses it.
+// On dispose() it de-registers itself from ConnectionEventRegistry so no phantom
+// refresh calls happen after the view is closed.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * The ConnectionUniversalListener manages all events for the connection widget.
+ * {@link ConnectionUpdateListener} that keeps the connection tree viewer in sync
+ * with the connection registry.
+ *
+ * <p>On every connection/folder add, remove, open, close, or update event we call
+ * {@link TreeViewer#refresh()} to redraw the tree.  We also:</p>
+ * <ul>
+ *   <li>Select the newly added connection or folder after an add event, so it is
+ *       visible in the viewport.</li>
+ *   <li>Install a double-click listener that expands or collapses a
+ *       {@link ConnectionFolder} when double-clicked.</li>
+ * </ul>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ConnectionUniversalListener implements ConnectionUpdateListener
 {
-    /** The tree viewer */
+    // ── FIELDS ────────────────────────────────────────────────────────────────────
+
+    /** The tree viewer we keep in sync. */
     protected TreeViewer viewer;
 
-    /** This listener expands/collapses a connection folder when double clicking */
+    /**
+     * Double-click listener: expands a collapsed folder or collapses an expanded
+     * one.  Ignored for plain Connection elements (those are opened by
+     * OpenConnectionAction).
+     */
     private IDoubleClickListener viewerDoubleClickListener = event ->
     {
         if ( event.getSelection() instanceof IStructuredSelection )
         {
             Object obj = ( ( IStructuredSelection ) event.getSelection() ).getFirstElement();
 
+            // ── TOGGLE FOLDER EXPANSION ───────────────────────────────────────────
+            // Only act on folders — plain connections have their own double-click
+            // action wired up by ConnectionActionGroup.
+            // ──────────────────────────────────────────────────────────────────────
             if ( obj instanceof ConnectionFolder )
             {
                 if ( viewer.getExpandedState( obj ) )
@@ -65,10 +96,16 @@ public class ConnectionUniversalListener implements ConnectionUpdateListener
     };
 
 
+    // ── CONSTRUCTOR ───────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ConnectionUniversalListener.
+     * Creates a new {@link ConnectionUniversalListener} and attaches it to the
+     * given tree viewer.
      *
-     * @param viewer the tree viewer
+     * <p>Registers this listener with the {@link ConnectionEventRegistry} using
+     * the plugin's event runner, and installs the folder double-click listener on
+     * the viewer.</p>
+     *
+     * @param viewer The {@link TreeViewer} to keep in sync.
      */
     public ConnectionUniversalListener( TreeViewer viewer )
     {
@@ -79,8 +116,12 @@ public class ConnectionUniversalListener implements ConnectionUpdateListener
     }
 
 
+    // ── DISPOSE ───────────────────────────────────────────────────────────────────
     /**
-     * Disposes this universal listener.
+     * Disposes this listener.
+     *
+     * <p>De-registers from the {@link ConnectionEventRegistry} and nulls the
+     * viewer reference so no further refreshes can occur.</p>
      */
     public void dispose()
     {
@@ -92,9 +133,16 @@ public class ConnectionUniversalListener implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION UPDATED ────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionUpdated(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     *
+     * <p>Refreshes the tree viewer.  This is the common implementation called by
+     * all other event callbacks — any change to any connection causes a full
+     * refresh so labels and icons stay current.</p>
+     *
+     * @param connection The connection that changed (may be {@code null} for
+     *                   folder events).
      */
     public void connectionUpdated( Connection connection )
     {
@@ -105,9 +153,14 @@ public class ConnectionUniversalListener implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION ADDED ──────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionAdded(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     *
+     * <p>Refreshes the tree and then selects the newly added connection so it is
+     * visible in the viewport.</p>
+     *
+     * @param connection The connection that was added.
      */
     public void connectionAdded( Connection connection )
     {
@@ -120,9 +173,13 @@ public class ConnectionUniversalListener implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION REMOVED ────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionRemoved(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     *
+     * <p>Refreshes the tree to remove the deleted connection's row.</p>
+     *
+     * @param connection The connection that was removed.
      */
     public void connectionRemoved( Connection connection )
     {
@@ -130,9 +187,13 @@ public class ConnectionUniversalListener implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION OPENED ─────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionOpened(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     *
+     * <p>Refreshes the tree so the icon changes from disconnected to connected.</p>
+     *
+     * @param connection The connection that was opened.
      */
     public void connectionOpened( Connection connection )
     {
@@ -140,9 +201,13 @@ public class ConnectionUniversalListener implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION CLOSED ─────────────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionClosed(org.apache.directory.studio.connection.core.Connection)
+     * {@inheritDoc}
+     *
+     * <p>Refreshes the tree so the icon changes back to disconnected.</p>
+     *
+     * @param connection The connection that was closed.
      */
     public void connectionClosed( Connection connection )
     {
@@ -150,9 +215,13 @@ public class ConnectionUniversalListener implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION FOLDER MODIFIED ────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionFolderModified(org.apache.directory.studio.connection.core.ConnectionFolder)
+     * {@inheritDoc}
+     *
+     * <p>Refreshes the tree after a folder rename or reorder.</p>
+     *
+     * @param connectionFolder The folder that was modified.
      */
     public void connectionFolderModified( ConnectionFolder connectionFolder )
     {
@@ -160,9 +229,14 @@ public class ConnectionUniversalListener implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION FOLDER ADDED ───────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionFolderAdded(org.apache.directory.studio.connection.core.ConnectionFolder)
+     * {@inheritDoc}
+     *
+     * <p>Refreshes the tree and then selects the new folder so it is visible
+     * in the viewport.</p>
+     *
+     * @param connectionFolder The folder that was added.
      */
     public void connectionFolderAdded( ConnectionFolder connectionFolder )
     {
@@ -174,9 +248,13 @@ public class ConnectionUniversalListener implements ConnectionUpdateListener
     }
 
 
+    // ── CONNECTION FOLDER REMOVED ─────────────────────────────────────────────────
     /**
-     * @see org.apache.directory.studio.connection.core.event.ConnectionUpdateListener#
-     *          connectionFolderRemoved(org.apache.directory.studio.connection.core.ConnectionFolder)
+     * {@inheritDoc}
+     *
+     * <p>Refreshes the tree to remove the deleted folder's row.</p>
+     *
+     * @param connectionFolder The folder that was removed.
      */
     public void connectionFolderRemoved( ConnectionFolder connectionFolder )
     {

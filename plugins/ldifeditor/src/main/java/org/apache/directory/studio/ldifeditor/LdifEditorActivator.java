@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.ldifeditor;
 
@@ -43,8 +43,23 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
 
+// ── CLASS: LdifEditorActivator — REBEL BASE COMING ONLINE ────────────────────
+// Before the Battle of Yavin the Rebel Alliance flips switches in the
+// Great Temple, powers up communications, loads the star-chart templates,
+// and registers every colour in the war-room display.
+// This activator does the same thing for the LDIF editor: it wires up
+// colours, template context types, and the template store at plugin start,
+// and tears them all down cleanly when Eclipse shuts the bundle.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The activator class controls the plug-in life cycle
+ * OSGi {@link AbstractUIPlugin} activator for the LDIF Editor plugin.
+ * Owns the shared {@link ColorRegistry}, {@link ContributionTemplateStore},
+ * and {@link ContributionContextTypeRegistry} for the five LDIF template context
+ * types (file, attr-val, modification-record, modification-item, moddn).
+ * Think of this as the Rebel Base coming online: registers every resource the
+ * editor needs, then shuts them down cleanly when Eclipse leaves.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LdifEditorActivator extends AbstractUIPlugin
 {
@@ -67,8 +82,14 @@ public class LdifEditorActivator extends AbstractUIPlugin
     private PropertyResourceBundle properties;
 
 
+    // ── CONSTRUCT THE ACTIVATOR ───────────────────────────────────────────────
+    // The Rebel commanders arrive at the Great Temple before dawn.
+    // They set themselves as the on-duty officer and load the message codebook.
+    // We do the same: store the singleton reference and load the resource bundle.
     /**
-     * The constructor
+     * Stores the singleton reference and loads the message resource bundle.
+     * If the bundle is missing we continue without it (all {@code getString}
+     * calls will return the key name instead of a translated string).
      */
     public LdifEditorActivator()
     {
@@ -85,8 +106,16 @@ public class LdifEditorActivator extends AbstractUIPlugin
     }
 
 
+    // ── POWER UP THE PLUGIN ───────────────────────────────────────────────────
+    // Alliance technicians raise the shield generators and slot the star-chart
+    // templates into the briefing terminals.
+    // We initialise the colour registry, register five template context types,
+    // and load the persisted template store.
     /**
-     * {@inheritDoc} 
+     * {@inheritDoc}
+     *
+     * <p>Initialises the colour registry, registers the five LDIF template
+     * context types, and loads the persisted template store.</p>
      */
     public void start( BundleContext context ) throws Exception
     {
@@ -134,8 +163,15 @@ public class LdifEditorActivator extends AbstractUIPlugin
     }
 
 
+    // ── POWER DOWN THE PLUGIN ─────────────────────────────────────────────────
+    // When the Empire arrives the Rebels evacuate: they save their star charts,
+    // turn off the displays, and go dark.
+    // We flush the template store to disk and null out every cached resource.
     /**
-     * {@inheritDoc} 
+     * {@inheritDoc}
+     *
+     * <p>Saves the template store and releases the colour registry,
+     * context-type registry, and template store.</p>
      */
     public void stop( BundleContext context ) throws Exception
     {
@@ -167,8 +203,16 @@ public class LdifEditorActivator extends AbstractUIPlugin
     }
 
 
+    // ── RETRIEVE THE SHARED INSTANCE ──────────────────────────────────────────
+    // The adjutant fetches the on-duty officer so a message can be relayed.
+    // We return the singleton plugin instance.
     /**
-     * Returns the shared instance
+     * Returns the shared plugin instance.
+     *
+     * <p>For example — an editor component needs a colour:</p>
+     * <pre>
+     *   Color c = LdifEditorActivator.getDefault().getColor(rgb);
+     * </pre>
      *
      * @return the shared instance
      */
@@ -178,16 +222,18 @@ public class LdifEditorActivator extends AbstractUIPlugin
     }
 
 
+    // ── LOOK UP OR CREATE A COLOUR ────────────────────────────────────────────
+    // C-3PO consults the colour-wheel index and mixes the exact shade the
+    // holographic display needs, then caches it for next time.
+    // We consult the colour registry and create the SWT Color on first use.
     /**
-     * Use this method to get SWT colors. A ColorRegistry is used to manage
-     * the RGB->Color mapping.
-     * <p>
-     * Note: Don't dispose the returned color. It is disposed automatically
-     * when the plugin is stopped.
-     * 
-     * @param rgb
-     *                the rgb color data
-     * @return The SWT Color
+     * Returns the SWT {@link Color} for the given {@link RGB} triple, creating
+     * and caching it in the {@link ColorRegistry} on first request.
+     *
+     * <p>Do not dispose the returned colour — the registry owns its lifecycle.</p>
+     *
+     * @param rgb  the colour data
+     * @return     the SWT Color
      */
     public Color getColor( RGB rgb )
     {
@@ -200,13 +246,16 @@ public class LdifEditorActivator extends AbstractUIPlugin
     }
 
 
+    // ── LOAD AN IMAGE DESCRIPTOR ──────────────────────────────────────────────
+    // R2-D2 fetches the schematic from the bundle's resource path.
+    // We resolve the path relative to the plugin bundle and return a descriptor.
     /**
-     * Use this method to get SWT images. Use the IMG_ constants from
-     * LdifEditorConstants for the key.
-     * 
-     * @param key
-     *                The key (relative path to the image im filesystem)
-     * @return The image discriptor or null
+     * Returns an {@link ImageDescriptor} for the image at {@code key}
+     * (a path relative to the plugin bundle root).
+     * Use the {@code IMG_} constants from {@link LdifEditorConstants} as keys.
+     *
+     * @param key  the bundle-relative path
+     * @return     the image descriptor, or {@code null} if not found
      */
     public ImageDescriptor getImageDescriptor( String key )
     {
@@ -225,17 +274,19 @@ public class LdifEditorActivator extends AbstractUIPlugin
     }
 
 
+    // ── LOAD AN IMAGE ─────────────────────────────────────────────────────────
+    // R2-D2 retrieves the schematic, renders it, and hands it over — but keeps
+    // a copy in the droid's internal cache for next time.
+    // We load and registry-cache the SWT Image on first request.
     /**
-     * Use this method to get SWT images. Use the IMG_ constants from
-     * LdifEditorConstants for the key. A ImageRegistry is used to manage the
-     * the key->Image mapping.
-     * <p>
-     * Note: Don't dispose the returned SWT Image. It is disposed
-     * automatically when the plugin is stopped.
-     * 
-     * @param key
-     *                The key (relative path to the image im filesystem)
-     * @return The SWT Image or null
+     * Returns the SWT {@link Image} for the image at {@code key},
+     * creating and caching it in the image registry on first request.
+     * Use the {@code IMG_} constants from {@link LdifEditorConstants} as keys.
+     *
+     * <p>Do not dispose the returned image — the registry owns its lifecycle.</p>
+     *
+     * @param key  the bundle-relative path
+     * @return     the SWT Image, or {@code null} if not found
      * @see LdifEditorConstants
      */
     public Image getImage( String key )
@@ -254,9 +305,13 @@ public class LdifEditorActivator extends AbstractUIPlugin
     }
 
 
+    // ── GET THE TEMPLATE CONTEXT-TYPE REGISTRY ────────────────────────────────
+    // The briefing officer hands over the roster of known template categories.
     /**
-     * 
-     * @return The LDIF template context type registry
+     * Returns the {@link ContextTypeRegistry} holding the five LDIF template
+     * context types used by the content-assist processor.
+     *
+     * @return the LDIF template context-type registry
      */
     public ContextTypeRegistry getLdifTemplateContextTypeRegistry()
     {
@@ -264,9 +319,13 @@ public class LdifEditorActivator extends AbstractUIPlugin
     }
 
 
+    // ── GET THE TEMPLATE STORE ────────────────────────────────────────────────
+    // The briefing officer hands over the complete binder of LDIF snippets.
     /**
-     * 
-     * @return The LDIF template store
+     * Returns the {@link TemplateStore} that persists user-defined and
+     * built-in LDIF completion templates.
+     *
+     * @return the LDIF template store
      */
     public TemplateStore getLdifTemplateStore()
     {
@@ -274,9 +333,12 @@ public class LdifEditorActivator extends AbstractUIPlugin
     }
 
 
+    // ── GET THE RESOURCE BUNDLE ───────────────────────────────────────────────
+    // The communications officer hands over the signal codebook.
     /**
-     * Gets the resource bundle.
-     * 
+     * Returns the plugin's message resource bundle, or {@code null} if loading
+     * failed during construction.
+     *
      * @return the resource bundle
      */
     public ResourceBundle getResourceBundle()
@@ -285,11 +347,14 @@ public class LdifEditorActivator extends AbstractUIPlugin
     }
 
 
+    // ── GET THE PLUGIN PROPERTIES ─────────────────────────────────────────────
+    // The quartermaster retrieves the manifest that maps command IDs, wizard
+    // IDs, and editor IDs from the plugin.properties file.
     /**
-     * Gets the plugin properties.
+     * Returns the {@link PropertyResourceBundle} loaded from
+     * {@code plugin.properties}, loading it lazily on first call.
      *
-     * @return
-     *      the plugin properties
+     * @return the plugin properties bundle
      */
     public PropertyResourceBundle getPluginProperties()
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.dialogs.preferences;
@@ -36,9 +36,21 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 
+// ── CLASS: SearchLogsPreferencePage — PALPATINE CONFIGURES SEARCH MONITORING ─
+// Palpatine's intelligence apparatus separately tracked every search request
+// made against the galactic directory — who was looking for what, and what
+// results they received.  This preference page configures the equivalent:
+// whether to log outgoing search requests, whether to log the entries that
+// come back, and how large/numerous the rolling log files should be.
+// Two independent enable checkboxes because sometimes you care about the
+// request traffic but not the full response payload, or vice versa.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The search logs preference page contains settings of the 
- * search logs view.
+ * Eclipse preference page for configuring the Search Logs view behavior.
+ * Controls whether search request traffic and/or search result entries are
+ * logged, and how log file rotation works (count × size in KB).
+ * Think of this page as Palpatine's search-monitoring configuration: decide
+ * which traffic gets recorded and how long to retain the files.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -50,8 +62,21 @@ public class SearchLogsPreferencePage extends PreferencePage implements IWorkben
     private Text logFileCountText;
     private Text logFileSizeText;
 
+    // ── PALPATINE OPENS THE SEARCH MONITORING ROOM ───────────────────────────
+    // The search monitoring station gets its own labeled door and description
+    // plaque so officers know exactly what they're configuring when they enter.
+    // We wire the page to the BrowserUI preference store and set title/description.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of SearchResultEditorPreferencePage.
+     * Constructs the preference page with a localized title and description,
+     * wired to the BrowserUI plugin's preference store.
+     * Eclipse calls this when the user navigates to this page in the Preferences dialog.
+     *
+     * <p>For example — Palpatine labels the search monitoring room:</p>
+     * <pre>
+     *   title: "Search Logs"
+     *   description: "General settings for the Search Logs view"
+     * </pre>
      */
     public SearchLogsPreferencePage()
     {
@@ -61,16 +86,42 @@ public class SearchLogsPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── AIDE CONFIRMS THE ROOM IS READY ──────────────────────────────────────
+    // Required by the interface; we have nothing to initialize before the UI is
+    // built, so this is intentionally empty.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Required by {@link IWorkbenchPreferencePage} but we have nothing to do here.
+     * All initialization happens in the constructor and {@link #createContents}.
+     *
+     * @param workbench  The Eclipse workbench; ignored.
      */
     public void init( IWorkbench workbench )
     {
     }
 
 
+    // ── PALPATINE LAYS OUT THE SEARCH MONITORING CONTROLS ────────────────────
+    // The monitoring station has two independent enable switches (requests and
+    // results) plus a rotation panel.  Both numeric fields guard against non-digit
+    // input and fire validate() so the OK button stays grayed out for bad values.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Builds the preference page UI: two checkboxes (enable request logging,
+     * enable result-entry logging) and a log file rotation group with count
+     * and size text fields.
+     * Numeric-only verify listeners prevent the user from typing non-digits
+     * or a leading zero in the rotation fields.
+     *
+     * <p>For example — Palpatine configures the monitoring station:</p>
+     * <pre>
+     *   [✓] Enable search request logging
+     *   [ ] Enable search result entry logging
+     *   Log file rotation: Use [10] log files each [100] KB
+     * </pre>
+     *
+     * @param parent  The parent composite provided by Eclipse's preference dialog.
+     * @return        The root composite of our UI.
      */
     protected Control createContents( Composite parent )
     {
@@ -122,6 +173,22 @@ public class SearchLogsPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE READS THE CURRENT MONITORING CONFIGURATION ─────────────────
+    // Before the briefing, an aide loads the current monitoring configuration
+    // into the Emperor's console so everything starts from the actual live state.
+    // We populate all four widgets from the ConnectionCorePlugin's stored values.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Populates all UI widgets from currently stored preference values.
+     * Called once from {@link #createContents} and again after "Restore Defaults."
+     *
+     * <p>For example — Palpatine reads the live monitoring state:</p>
+     * <pre>
+     *   requestLogging=true → checkbox checked
+     *   resultLogging=false → checkbox unchecked
+     *   count=10, size=100 → fields populated
+     * </pre>
+     */
     private void setValues()
     {
         enableSearchRequestLogging.setSelection( ConnectionCorePlugin.getDefault().isSearchRequestLogsEnabled() );
@@ -132,14 +199,43 @@ public class SearchLogsPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE CHECKS THE ROTATION PARAMETERS ARE SENSIBLE ────────────────
+    // Palpatine cross-checks the rotation parameters before approving — a zero
+    // or blank file count would mean no rotation at all, which would fill the
+    // disk and make the intelligence network useless.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Validates that both the file count and file size fields contain valid
+     * positive integers, and enables or disables the page accordingly.
+     * Called by the modify listeners wired to both text fields.
+     *
+     * <p>For example — Palpatine checks the numbers before signing off:</p>
+     * <pre>
+     *   count="5", size="500" → setValid(true)
+     *   count=""              → setValid(false) → OK grayed out
+     * </pre>
+     */
     public void validate()
     {
         setValid( logFileCountText.getText().matches( "[0-9]+" ) && logFileSizeText.getText().matches( "[0-9]+" ) );
     }
 
 
+    // ── PALPATINE TRANSMITS THE UPDATED MONITORING DIRECTIVES ─────────────────
+    // The finalized configuration is transmitted to the instance-scope preference
+    // store and flushed so the Search Logs view picks up the new settings on next
+    // use without requiring a restart.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Saves all four monitoring settings to the instance-scoped Eclipse preferences
+     * and flushes them to disk.
+     *
+     * <p>For example — Palpatine transmits finalized monitoring directives:</p>
+     * <pre>
+     *   requestEnabled=true, resultEnabled=false, count=5, size=500 → stored + flushed
+     * </pre>
+     *
+     * @return  Always {@code true}.
      */
     public boolean performOk()
     {
@@ -157,8 +253,20 @@ public class SearchLogsPreferencePage extends PreferencePage implements IWorkben
     }
 
 
+    // ── PALPATINE'S MONITORING OVERRIDES ARE REVOKED ─────────────────────────
+    // When the custom monitoring configuration is revoked, Palpatine removes all
+    // instance-scope overrides so the system falls back to plugin defaults.
+    // We remove all four keys, flush, and repopulate the UI from the defaults.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Removes all instance-scope overrides for search logging preferences,
+     * flushes the store, then repopulates the UI from the resulting defaults.
+     *
+     * <p>For example — monitoring overrides revoked and defaults restored:</p>
+     * <pre>
+     *   four instance-scope keys removed → flushed →
+     *   setValues() reads plugin defaults → UI shows default configuration
+     * </pre>
      */
     protected void performDefaults()
     {

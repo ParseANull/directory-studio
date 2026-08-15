@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor.text;
@@ -41,25 +41,66 @@ import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITypedRegion;
 
 
+// ── CLASS: LdifDoubleClickStrategy — REBEL OPERATOR DOUBLE-TAPS THE FIELD ─────
+// The Rebel operator double-taps a field label on the console to select just
+// the semantic segment they need: the attribute name, the value-type separator,
+// or the value itself — not the whole line with its trailing newline.
+// LdifDoubleClickStrategy implements that smart selection: it parses the
+// current partition, finds which token sub-segment the caret is in, and
+// selects only that segment on double-click.  If the "LDIF double-click"
+// preference is off, it falls back to the standard word-break strategy.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Eclipse {@link ITextDoubleClickStrategy} for the LDIF editor.
+ * When the "LDIF double-click" preference is enabled, parses the current
+ * partition and selects the logical sub-segment (attribute, value-type, or
+ * value) that the caret is within.  Falls back to
+ * {@link DefaultTextDoubleClickStrategy} when the preference is off or when
+ * the caret is on a separator or invalid part.
+ * Think of this as the Rebel operator double-tapping to select a semantic field
+ * segment rather than a plain word.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class LdifDoubleClickStrategy implements ITextDoubleClickStrategy
 {
 
+    /** Index constant for the offset element of a range array. */
     private static final int OFFSET = 0;
 
+    /** Index constant for the length element of a range array. */
     private static final int LENGTH = 1;
 
     /**
-     * Default double click strategy
+     * Default double-click strategy used as fallback.
      */
     private DefaultTextDoubleClickStrategy delegateDoubleClickStrategy;
 
 
+    // ── CONSTRUCT ─────────────────────────────────────────────────────────────
+    /**
+     * Creates a new LDIF double-click strategy, also constructing the fallback
+     * {@link DefaultTextDoubleClickStrategy}.
+     */
     public LdifDoubleClickStrategy()
     {
         this.delegateDoubleClickStrategy = new DefaultTextDoubleClickStrategy();
     }
 
 
+    // ── HANDLE DOUBLE-CLICK ───────────────────────────────────────────────────
+    // If the smart-click preference is on, parse the partition and select the
+    // right sub-segment; otherwise delegate to the default strategy.
+    /**
+     * {@inheritDoc}
+     *
+     * <p>If the {@code PREFERENCE_LDIFEDITOR_DOUBLECLICK_USELDIFDOUBLECLICK}
+     * preference is {@code false}, delegates to the default strategy.
+     * Otherwise parses the current partition with a fresh {@link LdifParser},
+     * locates the {@link LdifPart} at the cursor, and selects the sub-segment
+     * (line start, value type, or value) that contains the cursor.  Falls back
+     * to the default strategy for separators, invalid parts, and EOF.</p>
+     */
     public void doubleClicked( ITextViewer viewer )
     {
 
@@ -136,6 +177,18 @@ public class LdifDoubleClickStrategy implements ITextDoubleClickStrategy
     }
 
 
+    // ── FIND THE SUB-SEGMENT RANGE ────────────────────────────────────────────
+    // Walk the sub-segment lengths in order; the first one whose cumulative
+    // end exceeds the cursor position is the one to select.
+    /**
+     * Returns the {@code [offset, length]} of the sub-segment in {@code parts}
+     * that contains {@code pos}.
+     *
+     * @param pos     the cursor position (relative to the start of the first part)
+     * @param offset  the starting offset of the first segment
+     * @param parts   the ordered segment strings (may contain {@code null})
+     * @return        {@code int[]{segOffset, segLength}}, or {@code null} if not found
+     */
     private int[] getRange( int pos, int offset, String[] parts )
     {
 

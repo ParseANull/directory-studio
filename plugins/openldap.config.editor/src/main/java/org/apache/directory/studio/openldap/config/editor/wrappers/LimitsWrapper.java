@@ -6,19 +6,29 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.wrappers;
 
+// ── CLASS: LimitsWrapper — The Death Star's Command and Access Structure ───────
+// The Death Star's command structure has a strict access hierarchy: certain
+// operations are permitted only to specific command groups (anonymous crew,
+// all users, distinguished officers, or named groups).  Each command group may
+// be subject to time and size limits on the data they can access.  LimitsWrapper
+// wraps one value of the olcLimits attribute — a numbered {n} entry containing
+// a selector (who this applies to) and a list of time/size limit tokens.  The
+// constructor parses the full BNF grammar including DN-spec type and style
+// qualifiers and group objectClass/attributeType specifiers.
+// ─────────────────────────────────────────────────────────────────────────────
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,55 +58,65 @@ import org.apache.directory.studio.openldap.common.ui.model.LimitSelectorEnum;
  * size-hard ::= limit-value | 'soft' | 'disable'
  * limit-value ::= INT | 'unlimited'
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, OrderedElement
 {
     /** Prefix, as the Limits are ordered */
     private int prefix;
-    
+
     /** The selector */
     private LimitSelectorEnum selector;
-    
+
     /** The pattern if the selector is a dnspec or a group */
     private String selectorPattern;
-    
-    /** The type if the selector is a DnSpec */ 
+
+    /** The type if the selector is a DnSpec */
     private DnSpecTypeEnum dnSpecType;
-    
-    /** The style if the selector is a DnSpec */ 
+
+    /** The style if the selector is a DnSpec */
     private DnSpecStyleEnum dnSpecStyle;
-    
+
     /** The group ObjectClass */
     private String objectClass;
-    
+
     /** The group AttributeType */
     private String attributeType;
-    
+
     /** The list of limits, as Strings */
     private List<LimitWrapper> limits = new ArrayList<>();
-    
+
     /** A flag to tell if the limits is valid or not */
     private boolean isValid = true;
-    
+
     /** A flag used when the limit is invalid */
     private static final int ERROR = -1;
 
     /** A flag used when the parsing is completed */
     private static final int EOL = Integer.MIN_VALUE;
-    
+
+
+    // ── Default Constructor — An Empty Command Entry ───────────────────────────
+    // The command clerk creates a blank limit entry before any selector or
+    // limits have been parsed or set.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Create a LimitsrWrapper instance
      */
     public LimitsWrapper()
     {
     }
-    
-    
+
+
+    // ── Constructor (String) — Parse the Full olcLimits Value ──────────────────
+    // The command clerk reads the raw olcLimits string, strips the {n} prefix,
+    // identifies the selector (*, anonymous, users, dn=..., or group=...),
+    // and then parses each space-delimited time/size limit token.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Create a LimitsrWrapper instance from a String
-     * 
+     *
      * @param limitsStr The String that contain the value
      */
     public LimitsWrapper( String limitsStr )
@@ -106,17 +126,17 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
             // use a lowercase version of the string
             String lowerCaseLimits = limitsStr.toLowerCase();
             int pos = 0;
-            
+
             // It's ordered : process the prefix
             if ( Strings.isCharASCII( lowerCaseLimits, pos, '{' ) )
             {
                 pos++;
                 prefix = 0;
-                
+
                 while ( pos < lowerCaseLimits.length() )
                 {
                     char c = lowerCaseLimits.charAt( pos );
-                    
+
                     if ( ( c >= '0' ) && ( c <= '9' ) )
                     {
                         prefix = prefix * 10 + ( c - '0' );
@@ -134,7 +154,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                     }
                 }
             }
-            
+
             if ( isValid )
             {
                 lowerCaseLimits = lowerCaseLimits.substring( pos );
@@ -158,10 +178,10 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                 {
                     selector = LimitSelectorEnum.DNSPEC;
                     pos += LimitSelectorEnum.DNSPEC.getName().length();
-                    
+
                     // parse the type
                     pos = parseDnSpec( lowerCaseLimits, pos );
-                    
+
                     if ( pos == ERROR )
                     {
                         isValid = false;
@@ -171,9 +191,9 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                 {
                     selector = LimitSelectorEnum.GROUP;
                     pos += LimitSelectorEnum.GROUP.getName().length();
-                    
+
                     pos = parseGroup( lowerCaseLimits, pos );
-                    
+
                     if ( pos == ERROR )
                     {
                         // This is an error
@@ -181,16 +201,16 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                     }
                 }
             }
-            
+
             // Process the limits, only if the selector was valid
             if ( isValid )
             {
                 boolean noLimit = true;
-                
+
                 while ( pos >= 0 )
                 {
                     pos = parseLimit( lowerCaseLimits, pos );
-                    
+
                     if ( noLimit )
                     {
                         if ( pos == EOL )
@@ -206,7 +226,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                             noLimit = false;
                         }
                     }
-                
+
                     if ( pos == ERROR )
                     {
                         isValid = false;
@@ -216,10 +236,15 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
             }
         }
     }
-    
-    
+
+
+    // ── parseDnSpec — Parse the DN Spec Selector ──────────────────────────────
+    // The command clerk reads the optional type (.self/.this) and style
+    // (.exact/.base/.one/.onelevel/.sub/.subtree/.children/.regex/.anonymous)
+    // qualifiers, then calls parsePattern to read the DN pattern.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Parse the DNSpec part : 
+     * Parse the DNSpec part :
      * <pre>
      * dnspec ::= 'dn' type-e style-e '=' pattern
      * type-e ::= '.self' | '.this' | e
@@ -239,7 +264,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
             dnSpecType = DnSpecTypeEnum.THIS;
             pos += 5;
         }
-        
+
         // The style
         if ( str.startsWith( ".exact", pos ) )
         {
@@ -286,12 +311,16 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
             dnSpecStyle = DnSpecStyleEnum.ANONYMOUS;
             pos += 10;
         }
-        
+
         // The pattern
         return parsePattern( str, pos );
     }
 
-    
+
+    // ── parseGroup — Parse the Group Selector ────────────────────────────────
+    // The command clerk reads an optional objectClass and attributeType path
+    // components (e.g. "/groupOfNames/member") and then the pattern.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Parse the group part :
      * <pre>
@@ -306,58 +335,62 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
         if ( Strings.isCharASCII( str, pos, '/' ) )
         {
             int i = pos + 1;
-            
+
             for ( ; i < str.length(); i++ )
             {
                 char c = str.charAt( i );
-                
+
                 if ( ( ( c >= 'a' ) && ( c <= 'z' ) ) || ( ( c >= 'A' ) && ( c <= 'Z' ) ) ||
                     ( ( c >= '0' ) && ( c <= '9' ) ) || ( c == '.' ) || ( c == '-' ) || ( c == '_' ) )
                 {
                     continue;
                 }
             }
-            
+
             if ( i > pos + 1 )
             {
                 // An ObjectClass
                 objectClass = str.substring( pos + 1, i );
             }
-            
+
             pos = i;
         }
-        
+
         // Check if we have an AttributeType
         if ( Strings.isCharASCII( str, pos, '/' ) )
         {
             int i = pos + 1;
-            
+
             for ( ; i < str.length(); i++ )
             {
                 char c = str.charAt( i );
-                
+
                 if ( ( ( c >= 'a' ) && ( c <= 'z' ) ) || ( ( c >= 'A' ) && ( c <= 'Z' ) ) ||
                     ( ( c >= '0' ) && ( c <= '9' ) ) || ( c == '.' ) || ( c == '-' ) || ( c == '_' ) )
                 {
                     continue;
                 }
             }
-            
+
             if ( i > pos + 1 )
             {
                 // An AttributeType
                 attributeType = str.substring( pos + 1, i );
             }
-            
+
             pos = i;
         }
-        
-        
+
+
         // The pattern
         return parsePattern( str, pos );
     }
 
-    
+
+    // ── parsePattern — Extract a Quoted DN/Regex Pattern ──────────────────────
+    // The command clerk reads the '="..."' portion of a dn= or group= selector,
+    // handling backslash-escaped quotes inside the pattern.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Search for a pattern
      */
@@ -367,18 +400,18 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
         {
             return ERROR;
         }
-        
+
         pos++;
 
         if ( !Strings.isCharASCII( str, pos, '"' ) )
         {
             return ERROR;
         }
-        
+
         pos++;
-        
+
         boolean escapeSeen = false;
-        
+
         for ( int  i = pos; i < str.length(); i++ )
         {
             if ( str.charAt( i ) == '\\' )
@@ -406,12 +439,17 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                 }
             }
         }
-        
+
         // The final '"' has not been found, this is an error.
         return ERROR;
     }
-    
-    
+
+
+    // ── parseLimit — Parse a Single time or size Token ────────────────────────
+    // The command clerk skips leading spaces, identifies whether the next token
+    // starts with "time" or "size", extracts the token up to the next space,
+    // and delegates to TimeLimitWrapper or SizeLimitWrapper.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Parses the limit.
      * <pre>
@@ -430,16 +468,16 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
         {
             pos++;
         }
-        
+
         String limitStr = str.substring( pos );
-        
+
         if ( Strings.isEmpty( limitStr ) )
         {
             return EOL;
         }
-        
+
         int i = 0;
-        
+
         if ( limitStr.startsWith( "time" ) )
         {
             // fetch the time limit (everything that goes up to a space or the end of the string
@@ -450,18 +488,18 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                     break;
                 }
             }
-            
+
             if ( i == 0 )
             {
                 return ERROR;
             }
-            
+
             TimeLimitWrapper timeLimitWrapper = new TimeLimitWrapper( limitStr.substring( 0, i ) );
-            
+
             if ( timeLimitWrapper.isValid() )
             {
                 limits.add( timeLimitWrapper );
-                return pos + i; 
+                return pos + i;
             }
             else
             {
@@ -478,18 +516,18 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                     break;
                 }
             }
-            
+
             if ( i == 0 )
             {
                 return ERROR;
             }
-            
+
             SizeLimitWrapper sizeLimitWrapper = new SizeLimitWrapper( limitStr.substring( 0, i ) );
-            
+
             if ( sizeLimitWrapper.isValid() )
             {
                 limits.add( sizeLimitWrapper );
-                return pos + i; 
+                return pos + i;
             }
             else
             {
@@ -501,11 +539,12 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
             return ERROR;
         }
     }
-    
-    
+
+
+    // ── setPrefix — Update the Ordering Prefix ────────────────────────────────
     /**
      * Sets a new prefix
-     * 
+     *
      * @param prefix the prefix to set
      */
     public void setPrefix( int prefix )
@@ -513,7 +552,8 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
         this.prefix = prefix;
     }
 
-    
+
+    // ── getPrefix — Return the Ordering Prefix ────────────────────────────────
     /**
      * @return the prefix
      */
@@ -521,8 +561,9 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     {
         return prefix;
     }
-    
-    
+
+
+    // ── decrementPrefix — Shift the Prefix Down by One ───────────────────────
     /**
      * {@inheritDoc}
      */
@@ -530,8 +571,9 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     {
         prefix--;
     }
-    
-    
+
+
+    // ── incrementPrefix — Shift the Prefix Up by One ─────────────────────────
     /**
      * {@inheritDoc}
      */
@@ -539,8 +581,9 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     {
         prefix++;
     }
-    
-    
+
+
+    // ── getSelector — Return the Access Selector ──────────────────────────────
     /**
      * @return the selector
      */
@@ -550,6 +593,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── setSelector — Update the Access Selector ──────────────────────────────
     /**
      * @param selector the selector to set
      */
@@ -559,6 +603,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── getSelectorPattern — Return the DN or Group Pattern ───────────────────
     /**
      * @return the selectorPattern
      */
@@ -568,6 +613,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── setSelectorPattern — Update the DN or Group Pattern ───────────────────
     /**
      * @param selectorPattern the selectorPattern to set
      */
@@ -577,6 +623,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── getDnSpecType — Return the DN Spec Type ───────────────────────────────
     /**
      * @return the dnSpecType
      */
@@ -586,6 +633,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── setDnSpecType — Update the DN Spec Type ───────────────────────────────
     /**
      * @param dnSpecType the dnSpecType to set
      */
@@ -595,6 +643,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── getDnSpecStyle — Return the DN Spec Style ─────────────────────────────
     /**
      * @return the dnSpecStyle
      */
@@ -604,6 +653,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── setDnSpecStyle — Update the DN Spec Style ─────────────────────────────
     /**
      * @param dnSpecStyle the dnSpecStyle to set
      */
@@ -613,6 +663,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── getObjectClass — Return the Group ObjectClass ─────────────────────────
     /**
      * @return the objectClass
      */
@@ -622,6 +673,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── setObjectClass — Update the Group ObjectClass ─────────────────────────
     /**
      * @param objectClass the objectClass to set
      */
@@ -631,6 +683,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── getAttributeType — Return the Group AttributeType ────────────────────
     /**
      * @return the attributeType
      */
@@ -640,6 +693,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── setAttributeType — Update the Group AttributeType ────────────────────
     /**
      * @param attributeType the attributeType to set
      */
@@ -649,6 +703,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── getLimits — Return the Time/Size Limit List ───────────────────────────
     /**
      * @return the limits
      */
@@ -658,6 +713,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── setLimits — Replace the Time/Size Limit List ─────────────────────────
     /**
      * @param limits the limits to set
      */
@@ -667,6 +723,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     }
 
 
+    // ── isValid — Check Whether Parsing Succeeded ─────────────────────────────
     /**
      * Tells if the Limits element is valid or not
      * @return true if the values are correct, false otherwise
@@ -675,8 +732,9 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
     {
         return isValid;
     }
-    
-    
+
+
+    // ── clone — Duplicate This Command Entry ──────────────────────────────────
     /**
      * Clone the current object
      */
@@ -691,8 +749,13 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
             return null;
         }
     }
-    
-    
+
+
+    // ── equals — Check Whether Two Entries Describe the Same Limits ───────────
+    // Two entries are equal when their prefix, selector, selector qualifiers,
+    // and limit lists all match.  For DNSPEC and GROUP selectors the appropriate
+    // pattern fields are also compared.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * LimitsWrapper are ordered objects
      * @see Object#equals(Object)
@@ -704,11 +767,11 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
         {
             return true;
         }
-        
+
         if ( that instanceof LimitsWrapper )
         {
             LimitsWrapper thatInstance = (LimitsWrapper)that;
-            
+
             // Check the prefix first
             if ( prefix != thatInstance.prefix )
             {
@@ -720,7 +783,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
             {
                 return false;
             }
-            
+
             // Same selector. Depending on the type, check the two instance
             switch ( selector )
             {
@@ -735,9 +798,9 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                     {
                         return false;
                     }
-                    
+
                     break;
-                    
+
                 case GROUP :
                     // If we have an ObjectClass, check it
                     if ( ( objectClass != null ) && ( !objectClass.equals( thatInstance.objectClass ) ) )
@@ -764,25 +827,25 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                     {
                         return false;
                     }
-                    
+
                     break;
                 case ANY :
                 case ANONYMOUS :
                 case USERS :
                     break;
             }
-            
+
             // Check the limits now
             if ( limits.size() != thatInstance.limits.size() )
             {
                 return false;
             }
-            
+
             // Iterate on both limits (they are not ordered... This is a O(n2) loop.
             for ( LimitWrapper limit : limits )
             {
                 boolean found = false;
-                
+
                 for ( LimitWrapper thatLimit : thatInstance.limits )
                 {
                     if ( limit.equals( thatLimit ) )
@@ -791,13 +854,13 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                         break;
                     }
                 }
-                
+
                 if ( !found )
                 {
                     return false;
                 }
             }
-            
+
             return true;
         }
         else
@@ -805,17 +868,18 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
             return false;
         }
     }
-    
-    
+
+
+    // ── hashCode — Hash Based on Selector, Style, Type, and Limits ────────────
     /**
      * @see Object#hashCode()
      */
     public int hashCode()
     {
         int h = 37;
-        
+
         h += h*17 + selector.hashCode();
-        
+
         // The selector
         switch ( selector )
         {
@@ -824,33 +888,34 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                 {
                     h += h*17 + dnSpecType.hashCode();
                 }
-                
+
                 if ( dnSpecStyle != null )
                 {
                     h += h*17 + dnSpecStyle.hashCode();
                 }
-                
+
                 break;
-                
+
             case GROUP :
                 if ( selectorPattern != null )
                 {
                     h += h*17 + selectorPattern.hashCode();
                 }
-                
+
                 break;
         }
-        
+
         // The limits
         for ( LimitWrapper limit : limits )
         {
             h += h*17 + limit.hashCode();
         }
-        
+
         return h;
     }
 
 
+    // ── compareTo — Sort by Ordering Prefix ───────────────────────────────────
     /**
      * @see Comparable#compareTo()
      */
@@ -860,7 +925,7 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
         {
             return 1;
         }
-        
+
         // Check the prefix
         if ( prefix < that.prefix )
         {
@@ -876,17 +941,22 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
         }
     }
 
-    
+
+    // ── toString — Serialize to the olcLimits Format ──────────────────────────
+    // The command clerk writes out the full entry: "{n}selector limit1 limit2..."
+    // with DN-spec type/style and group object-class/attribute-type qualifiers
+    // as appropriate.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * @see Object#toString()
      */
     public String toString()
     {
         StringBuilder sb = new StringBuilder();
-        
+
         sb.append( '{' ).append( prefix ).append( '}' );
         sb.append( selector.getName() );
-        
+
         // The selector
         switch ( selector )
         {
@@ -894,13 +964,13 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
             case ANONYMOUS :
             case USERS :
                 break;
-                
+
             case DNSPEC :
                 if ( dnSpecType != null )
                 {
                     sb.append( '.' ).append( dnSpecType.getName() );
                 }
-                
+
                 if ( dnSpecStyle != null )
                 {
                     sb.append( '.' ).append( dnSpecStyle.getName() );
@@ -909,34 +979,34 @@ public class LimitsWrapper implements Cloneable, Comparable<LimitsWrapper>, Orde
                 sb.append( "=\"" );
                 sb.append( selectorPattern );
                 sb.append(  '\"' );
-                
+
                 break;
-                
+
             case GROUP :
                 if ( objectClass != null )
                 {
                     sb.append( '/' ).append( objectClass );
                 }
-                
+
                 if ( attributeType != null )
                 {
                     sb.append( '/' ).append( attributeType );
                 }
-                
+
                 sb.append( "=\"" );
                 sb.append( selectorPattern );
                 sb.append(  '\"' );
-                
+
                 break;
         }
-        
+
         // The limits
         for ( LimitWrapper limit : limits )
         {
             sb.append( ' ' );
             sb.append( limit );
         }
-        
+
         return sb.toString();
     }
 }

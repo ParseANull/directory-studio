@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.actions;
@@ -40,15 +40,40 @@ import org.apache.directory.studio.ldapbrowser.core.model.IContinuation.State;
 import org.eclipse.jface.resource.ImageDescriptor;
 
 
+// ── CLASS: RefreshAction — LUKE CLEARS HIS MIND ON DAGOBAH ───────────────────
+// During his training on Dagobah, whenever Luke's connection to the Force grows
+// cloudy from effort or frustration, Yoda tells him: "Still your mind.  Breathe.
+// Reach out again."  Luke lets go of his assumptions, opens himself up fresh,
+// and reconnects with the living Force — seeing what's actually there, not what
+// he remembered.  That's Refresh in a nutshell: we drop our cached view of the
+// LDAP directory and ask the server what's really there right now.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This Action refreshes the selected item.
+ * Handles the "Refresh" action in the LDAP browser.  Depending on what's
+ * selected, we'll reload entry children, re-run searches, reload attributes, or
+ * any combination thereof — all by firing background jobs that hit the live LDAP
+ * server and flush our local cache.
+ *
+ * <p>LDAP data can change at any time (other admins, automated processes).  Refresh
+ * is how we stop trusting our stale snapshot and go ask the server: "What's
+ * actually there right now?"</p>
+ *
+ * <p>Think of this class as Luke clearing his mind on Dagobah: we throw out
+ * what we thought we knew and re-feel the Force (the live directory) from
+ * scratch.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class RefreshAction extends BrowserAction
 {
+    // ── Luke Settles into Meditation Posture ──────────────────────────────────
+    // Luke sits cross-legged in the mud, ready to clear his mind whenever the
+    // moment calls for it.  No special setup required.
+    // Our constructor is equally simple — just call the parent.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of RefreshAction.
+     * Constructs a new {@code RefreshAction}.  Delegates to the parent
+     * constructor which handles standard Eclipse action setup.
      */
     public RefreshAction()
     {
@@ -56,8 +81,25 @@ public class RefreshAction extends BrowserAction
     }
 
 
+    // ── Yoda Names the Exercise Based on the Situation ───────────────────────
+    // Yoda adapts what he calls each exercise depending on what Luke needs:
+    // "Reload your awareness," "Search again," "Perform the scan" — the label
+    // changes with the context.
+    // Our label similarly adapts: "Reload Entry," "Search Again," "Perform
+    // Search" — based on what's selected.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns a context-sensitive display label for this action.  The label
+     * adapts based on what's selected:
+     * <ul>
+     *   <li>Entries selected → "Reload Entry" / "Reload Entries"</li>
+     *   <li>Searches selected → "Search Again" or "Perform Search(es)"</li>
+     *   <li>Entry editor input → "Reload Attributes"</li>
+     *   <li>Search editor input → "Perform Search" / "Search Again"</li>
+     *   <li>Anything else → generic "Refresh"</li>
+     * </ul>
+     *
+     * @return the localized, context-sensitive action label; never {@code null}
      */
     public String getText()
     {
@@ -105,8 +147,16 @@ public class RefreshAction extends BrowserAction
     }
 
 
+    // ── Luke's Meditation Cushion Has a Recognizable Symbol ──────────────────
+    // Even in the dark swamp, you can spot the icon for "Luke meditating" —
+    // the circular refresh glyph that says "start over, see fresh."
+    // We return the refresh icon from our plugin image registry.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the icon for this action — the standard "refresh" image from the
+     * plugin's image registry.
+     *
+     * @return the {@link ImageDescriptor} for the refresh icon
      */
     public ImageDescriptor getImageDescriptor()
     {
@@ -114,8 +164,17 @@ public class RefreshAction extends BrowserAction
     }
 
 
+    // ── The Meditation Exercise Is in Eclipse's Official Logs ─────────────────
+    // The Jedi Council catalogues every technique by ID so anyone on any planet
+    // can trigger it on demand.  Ours maps to Eclipse's standard file refresh
+    // command, which is what the F5 keybinding fires.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the Eclipse command ID for this action — the standard
+     * {@code org.eclipse.ui.file.refresh} command, which maps to F5 in the
+     * default keybinding scheme.
+     *
+     * @return the refresh command ID string
      */
     public String getCommandId()
     {
@@ -123,8 +182,32 @@ public class RefreshAction extends BrowserAction
     }
 
 
+    // ── Luke Reaches Out and Reconnects ───────────────────────────────────────
+    // Luke closes his eyes, lets go of the stale impression of the swamp, and
+    // feels everything as it actually is right now — roots, creatures, water.
+    // We do the same: flush cached state and kick off background jobs to reload
+    // children, re-run searches, or reload attributes from the live server.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Executes the refresh: dispatches background jobs to reload whatever is
+     * currently selected.
+     *
+     * <ul>
+     *   <li>Entries (including search results and bookmarks) → re-initialize children</li>
+     *   <li>Searches → clear results and re-run</li>
+     *   <li>Entry editor input → reload attributes from server</li>
+     *   <li>Search editor input → clear results and re-run</li>
+     * </ul>
+     *
+     * <p>For example — Luke reaches out with fresh eyes:</p>
+     * <pre>
+     *   Luke clears the old image (flushes the cache / clears search results).
+     *   He reaches out again (fires InitializeChildrenRunnable / SearchRunnable).
+     *   The Force (the LDAP server) tells him what's really there now.
+     * </pre>
+     *
+     * <p>Continuations (paged or referral results) are resolved before
+     * reloading so the full data set is available.</p>
      */
     public void run()
     {
@@ -184,8 +267,18 @@ public class RefreshAction extends BrowserAction
     }
 
 
+    // ── Yoda Checks Whether Luke Is Ready to Clear His Mind ──────────────────
+    // Yoda won't start a meditation session if there's nothing to meditate on —
+    // Luke needs at least one entry, one search, or one input in view.
+    // We check the same: is there anything worth refreshing in the current
+    // selection or editor input?
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Checks whether this action should be enabled.  We need at least one
+     * refreshable thing in context — selected entries, selected searches, or an
+     * entry/search editor input.
+     *
+     * @return {@code true} if there is something to refresh; {@code false} otherwise
      */
     public boolean isEnabled()
     {
@@ -198,11 +291,17 @@ public class RefreshAction extends BrowserAction
     }
 
 
+    // ── Luke Gathers All the Creatures He Can Feel ───────────────────────────
+    // As Luke reaches out, he collects every living thing in his awareness:
+    // direct entries, entries behind bookmarks, entries from search results.
+    // We similarly aggregate entries from all three selection sources.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Entries
+     * Collects all the entries that should be refreshed.  We pull from three
+     * sources: directly selected entries, entries backing selected search
+     * results, and entries backing selected bookmarks.
      *
-     * @return
-     *      the entries
+     * @return a mutable list of all entries to refresh; never {@code null}
      */
     protected List<IEntry> getEntries()
     {
@@ -220,11 +319,17 @@ public class RefreshAction extends BrowserAction
     }
 
 
+    // ── Luke Senses the Searches in His Awareness ────────────────────────────
+    // Among everything Luke feels, he picks out the "searches" — the active
+    // queries humming in the background.
+    // We simply return the selected searches for the caller to re-execute.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Searches.
+     * Returns the currently selected searches that should be re-run.  This is
+     * a thin delegate to {@link #getSelectedSearches()} — subclasses can
+     * override to add filtering logic.
      *
-     * @return
-     *      the Searches
+     * @return the array of selected {@link ISearch} objects; never {@code null}
      */
     protected ISearch[] getSearches()
     {
@@ -232,11 +337,18 @@ public class RefreshAction extends BrowserAction
     }
 
 
+    // ── Luke Identifies the Entry That Is His Focus ───────────────────────────
+    // Sometimes the editor has a specific entry as its input — that's what Luke
+    // is tuned to, even if nothing is "selected" in the tree.
+    // We extract the entry from the editor input if present.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Entry Input.
+     * Returns the entry that is currently set as the editor's input object, or
+     * {@code null} if the input is not an entry.  The editor input is the
+     * entry being displayed in the entry editor panel, which may differ from
+     * the tree selection.
      *
-     * @return
-     *      the Entry Input
+     * @return the entry input, or {@code null} if the input is not an {@link IEntry}
      */
     private IEntry getEntryInput()
     {
@@ -251,11 +363,17 @@ public class RefreshAction extends BrowserAction
     }
 
 
+    // ── Luke Identifies the Search That Is His Focus ──────────────────────────
+    // Same as above, but for searches — sometimes the editor input is a search
+    // rather than an entry.
+    // We extract the search from the editor input if present.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Search Input.
+     * Returns the search that is currently set as the editor's input object, or
+     * {@code null} if the input is not a search.  Used to refresh the results
+     * panel when a search is open in the editor.
      *
-     * @return
-     *      the Search Input
+     * @return the search input, or {@code null} if the input is not an {@link ISearch}
      */
     private ISearch getSearchInput()
     {

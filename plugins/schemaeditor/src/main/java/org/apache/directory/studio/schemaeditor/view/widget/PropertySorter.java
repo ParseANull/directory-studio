@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.widget;
 
@@ -42,15 +42,48 @@ import org.apache.directory.studio.schemaeditor.model.difference.SyntaxLengthDif
 import org.apache.directory.studio.schemaeditor.model.difference.UsageDifference;
 
 
+// ── CLASS: PropertySorter — PALPATINE ISSUES ORDER 66 ────────────────────────
+// Palpatine sits on the Imperial throne and knows exactly what role every clone
+// trooper plays. When Order 66 goes out, every trooper gets a precise number that
+// determines their execution priority — no ambiguity, no discussion. Alias additions
+// go first; optional AT removals go last. The ranking is baked into the Sith plan.
+// Our PropertySorter assigns the same kind of strict numeric priority to every type
+// of PropertyDifference (aliases, descriptions, syntax, matching rules, etc.) so the
+// table always presents changes in a logical, consistent property-grouped order.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * This class is used to compare, group and sort Differences by 'Property'
+ * A {@link Comparator} that sorts {@link PropertyDifference} objects by property
+ * category, so related changes (all alias changes, then all description changes,
+ * then all syntax changes, etc.) appear together in the table. Each property type
+ * and change-direction combination is assigned a fixed numeric weight; the comparison
+ * is simply a subtraction of those weights.
+ * Think of it as Palpatine's Order 66 roster: every trooper (difference type) has a
+ * pre-assigned execution number, and we line them up in strict numeric order.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class PropertySorter implements Comparator<PropertyDifference>
 {
+    // ── PALPATINE COMPARES TWO TROOPERS' ORDERS ───────────────────────────────────
+    // The Emperor checks the order numbers of two clone troopers: whichever has the
+    // lower number executes first. We subtract the two weights and let the sign of
+    // the result determine sorting order.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Compares two {@link PropertyDifference} objects by their assigned property weight.
+     * Lower weight means the property type appears earlier in the sorted list.
+     * The actual weights are defined in {@link #getWeight(PropertyDifference)}.
+     *
+     * <p>For example — the Emperor orders his troopers:</p>
+     * <pre>
+     *   AliasDifference(ADDED) weight = 1
+     *   SyntaxDifference(ADDED) weight = 12
+     *   compare(alias, syntax)  →  1 - 12 = -11  →  alias sorts first
+     * </pre>
+     *
+     * @param diff1  the first property difference
+     * @param diff2  the second property difference
+     * @return       negative if diff1 sorts before diff2, positive if after, 0 if equal weight
      */
     public int compare( PropertyDifference diff1, PropertyDifference diff2 )
     {
@@ -58,13 +91,29 @@ public class PropertySorter implements Comparator<PropertyDifference>
     }
 
 
+    // ── READING EACH TROOPER'S ASSIGNED ORDER NUMBER ──────────────────────────────
+    // The Emperor consults his ledger and reads off each trooper's designated number.
+    // AliasDifference(ADDED) is number 1; AliasDifference(REMOVED) is number 2;
+    // all the way down to OptionalATDifference(REMOVED) at 35.
+    // Unrecognised types get weight 0 and sort to the very front.
+    // ─────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the weight of the given difference
+     * Returns the numeric sort weight for the given {@link PropertyDifference}. The
+     * weight is a fixed constant that groups changes by property type and then orders
+     * within the group by change direction (ADDED before MODIFIED before REMOVED,
+     * roughly speaking). An unknown type returns 0.
      *
-     * @param diff
-     *      the difference
-     * @return
-     *      the weight of the difference
+     * <p>For example — the Emperor reads the ledger:</p>
+     * <pre>
+     *   AliasDifference(ADDED)   →  1
+     *   AliasDifference(REMOVED) →  2
+     *   DescriptionDifference(ADDED) →  3
+     *   ...
+     *   OptionalATDifference(REMOVED) →  35
+     * </pre>
+     *
+     * @param diff  the property difference whose weight we need
+     * @return      an integer sort weight; lower means earlier in the list
      */
     private int getWeight( PropertyDifference diff )
     {

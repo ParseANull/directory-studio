@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.ui.wizards;
@@ -39,24 +39,46 @@ import org.eclipse.osgi.util.NLS;
 import org.eclipse.ui.IWorkbench;
 
 
+// ── CLASS: ExportCertificateWizard — TRANSMITTING THE REBEL BATTLE PLANS ─────────
+// When Mon Mothma needs to hand the Death Star plans to General Dodonna she can
+// choose the format: raw binary (DER) or armoured text (PEM).  Either way, the
+// plans are written to a file on the local filesystem.
+// ExportCertificateWizard does the same for X509 certificates: the user picks a
+// file path and format on the single wizard page, then Finish writes the cert.
+// DER is just the raw ASN.1 bytes; PEM is the same bytes Base64-encoded and
+// wrapped in BEGIN/END CERTIFICATE delimiters.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * The ExportCertificateWizard is used to export a certificate.
+ * Single-page wizard for exporting an {@link X509Certificate} to a local file
+ * in either DER (binary) or PEM (Base64 text) format.
+ *
+ * <p>The wizard is opened from the "Export" button in
+ * {@link org.apache.directory.studio.connection.ui.widgets.CertificateListComposite}
+ * and from the certificate-info dialog.</p>
+ *
+ * <p>On Finish, delegates to either {@link #exportAsDerFormat()} or
+ * {@link #exportAsPemFormat()} based on the user's combo selection.  Any
+ * {@link IOException} or {@link CertificateEncodingException} is caught and
+ * shown in an error dialog so the wizard stays open for retry.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ExportCertificateWizard extends Wizard
 {
-    /** The certificate */
+    // ── FIELDS ────────────────────────────────────────────────────────────────────
+
+    /** The certificate to export. */
     private X509Certificate certificate;
 
-    /** The wizard page */
+    /** The single wizard page (file-picker + format combo). */
     private ExportCertificateWizardPage page;
 
 
+    // ── CONSTRUCTOR ───────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of ExportCertificateWizard.
-     * 
-     * @param certificate the certificate
+     * Creates a new {@link ExportCertificateWizard} for the given certificate.
+     *
+     * @param certificate The {@link X509Certificate} to export.
      */
     public ExportCertificateWizard( X509Certificate certificate )
     {
@@ -67,17 +89,23 @@ public class ExportCertificateWizard extends Wizard
     }
 
 
+    // ── INIT ──────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Nothing to initialise — we don't need the workbench or selection here.
      */
     public void init( IWorkbench workbench, IStructuredSelection selection )
     {
-        // Nothing to do
+        // Nothing to do.
     }
 
 
+    // ── ADD PAGES ─────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * Adds the single {@link ExportCertificateWizardPage} to the wizard.
      */
     @Override
     public void addPages()
@@ -87,12 +115,19 @@ public class ExportCertificateWizard extends Wizard
     }
 
 
+    // ── PERFORM FINISH ────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
+     *
+     * <p>Reads the format choice from the wizard page and delegates to the
+     * appropriate export method.  On any exception, opens an error dialog and
+     * returns {@code false} so the wizard stays open.</p>
+     *
+     * @return {@code true} if the file was written successfully;
+     *         {@code false} on error (wizard remains open).
      */
     public boolean performFinish()
     {
-        // Getting the export format
         CertificateExportFormat format = page.getCertificateExportFormat();
 
         try
@@ -117,42 +152,47 @@ public class ExportCertificateWizard extends Wizard
     }
 
 
+    // ── EXPORT AS DER ─────────────────────────────────────────────────────────────
     /**
-     * Exports the certificate as DER format.
+     * Writes the certificate as raw DER (ASN.1 binary) bytes to the chosen file.
      *
-     * @return <code>true</code> if the export is successful
-     * @throws CertificateEncodingException
-     * @throws IOException
+     * @return {@code true} on success.
+     * @throws CertificateEncodingException If the certificate cannot be encoded.
+     * @throws IOException If the file cannot be written.
      */
     private boolean exportAsDerFormat() throws CertificateEncodingException, IOException
     {
-        // Getting the export file
+        // ── WRITE RAW BYTES ───────────────────────────────────────────────────────
+        // DER is just the ASN.1 binary encoding of the certificate — no armour.
+        // ──────────────────────────────────────────────────────────────────────────
         File exportFile = page.getExportFile();
-
-        // Exporting the certificate
         FileUtils.writeByteArrayToFile( exportFile, certificate.getEncoded() );
-
         return true;
     }
 
 
+    // ── EXPORT AS PEM ─────────────────────────────────────────────────────────────
     /**
-     * Exports the certificate as PEM format.
+     * Writes the certificate as PEM (Base64-encoded DER, wrapped in
+     * {@code -----BEGIN CERTIFICATE-----} / {@code -----END CERTIFICATE-----}
+     * delimiters) to the chosen file.
      *
-     * @return <code>true</code> if the export is successful
-     * @throws CertificateEncodingException
-     * @throws IOException
+     * <p>Lines within the Base64 block are wrapped at 64 characters via
+     * {@link #stripLineToNChars(String, int)}.</p>
+     *
+     * @return {@code true} on success.
+     * @throws CertificateEncodingException If the certificate cannot be encoded.
+     * @throws IOException If the file cannot be written.
      */
     private boolean exportAsPemFormat() throws CertificateEncodingException, IOException
     {
-        // Getting the export file
         File exportFile = page.getExportFile();
 
-        // Exporting the certificate
         try ( FileOutputStream fos = new FileOutputStream( exportFile ) )
         {
             try ( OutputStreamWriter osw = new OutputStreamWriter( fos, Charset.forName( "UTF-8" ) ) ) //$NON-NLS-1$
             {
+                // ── WRITE PEM HEADER + BASE64 + FOOTER ───────────────────────────
                 osw.write( "-----BEGIN CERTIFICATE-----\n" ); //$NON-NLS-1$
                 osw.write( stripLineToNChars( new String( Base64.encodeBase64( certificate.getEncoded() ),
                     Charset.forName( "UTF-8" ) ), 64 ) ); //$NON-NLS-1$
@@ -165,12 +205,16 @@ public class ExportCertificateWizard extends Wizard
     }
 
 
+    // ── STRIP LINE TO N CHARS ─────────────────────────────────────────────────────
     /**
-     * Strips the String every n specified characters
-     * 
-     * @param str the string to strip
-     * @param nbChars the number of characters
-     * @return the stripped String
+     * Inserts a newline every {@code nbChars} characters in {@code str}, producing
+     * a hard-wrapped version of the string suitable for PEM output.
+     *
+     * <p>If {@code str} is shorter than {@code nbChars} it is returned unchanged.</p>
+     *
+     * @param str     The string to wrap.
+     * @param nbChars The maximum number of characters per line (64 for PEM).
+     * @return The wrapped string.
      */
     public static String stripLineToNChars( String str, int nbChars )
     {
@@ -181,14 +225,12 @@ public class ExportCertificateWizard extends Wizard
             return str;
         }
 
-        // We will first compute the new size of the result
-        // It's at least nbChars chars plus one for \n
+        // ── COMPUTE OUTPUT SIZE ───────────────────────────────────────────────────
+        // One '\n' per full line, plus one for the last partial line.
+        // ──────────────────────────────────────────────────────────────────────────
         int charsPerLine = nbChars;
-
         int remaining = ( strLength - nbChars ) % charsPerLine;
-
         int nbLines = 1 + ( ( strLength - nbChars ) / charsPerLine ) + ( remaining == 0 ? 0 : 1 );
-
         int nbCharsTotal = strLength + nbLines + nbLines - 2;
 
         char[] buffer = new char[nbCharsTotal];
@@ -197,10 +239,12 @@ public class ExportCertificateWizard extends Wizard
         int posSrc = 0;
         int posDst = 0;
 
+        // ── COPY FIRST CHUNK ──────────────────────────────────────────────────────
         System.arraycopy( orig, posSrc, buffer, posDst, nbChars );
         posSrc += nbChars;
         posDst += nbChars;
 
+        // ── COPY SUBSEQUENT CHUNKS, EACH PRECEDED BY '\n' ────────────────────────
         for ( int i = 0; i < nbLines - 2; i++ )
         {
             buffer[posDst++] = '\n';
@@ -210,6 +254,7 @@ public class ExportCertificateWizard extends Wizard
             posDst += charsPerLine;
         }
 
+        // ── COPY FINAL PARTIAL CHUNK ──────────────────────────────────────────────
         buffer[posDst++] = '\n';
         System.arraycopy( orig, posSrc, buffer, posDst, remaining == 0 ? charsPerLine : remaining );
 

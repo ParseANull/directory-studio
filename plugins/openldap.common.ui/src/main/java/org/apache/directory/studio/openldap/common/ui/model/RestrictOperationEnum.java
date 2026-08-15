@@ -6,21 +6,31 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.common.ui.model;
 
+// ── CLASS: RestrictOperationEnum — IMPERIAL BLOCKADE OPERATION RESTRICTIONS ───
+// Picture Grand Admiral Thrawn setting the blockade rules: all traffic blocked
+// (ALL), only adds refused (ADD), searches quarantined (SEARCH), extended
+// operations like START_TLS denied (EXTENDED_START_TLS), and so on. Each
+// constant here represents one LDAP operation that the administrator can
+// forbid via the olcRestrict parameter. UNKNOWN is the fallback for any
+// unrecognized restriction code.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * An enum for the various possible value of the olcRestrict parameter. Some of
+ * We enumerate all valid values of the OpenLDAP {@code olcRestrict} parameter.
+ * Each constant carries both its wire-format name (used in configuration) and
+ * a shorter external label (used in the UI). The possible values are:
  * <ul>
  * <li>add</li>
  * <li>all</li>
@@ -39,7 +49,7 @@ package org.apache.directory.studio.openldap.common.ui.model;
  * <li>search</li>
  * <li>write</li>
  * </ul>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public enum RestrictOperationEnum
@@ -61,69 +71,104 @@ public enum RestrictOperationEnum
     RENAME( "rename", "rename" ),
     SEARCH( "search", "search" ),
     WRITE( "write", "write" );
-    
+
     /** The interned name */
     private String name;
-    
+
     /** The externalized name */
     private String externalName;
-    
+
+    // ── CONSTRUCTOR: RestrictOperationEnum — POSTING A BLOCKADE ORDER ────────
+    // Each restriction gets two labels: the full wire-format name that goes
+    // into the configuration file and a shorter external name displayed in the
+    // UI so users don't have to read raw OIDs.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * A private constructor for this enum
+     * We associate each constant with its configuration-file name and its
+     * shorter UI display name.
+     *
+     * @param name          the full olcRestrict wire-format string
+     * @param externalName  the short UI display label
      */
     private RestrictOperationEnum( String name, String externalName )
     {
         this.name = name;
         this.externalName = externalName;
     }
-    
-    
+
+
+    // ── METHOD: getName — READING THE BLOCKADE ORDER WIRE FORMAT ─────────────
+    // We return the full configuration-file string so callers can embed it
+    // directly in generated olcRestrict attribute values.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @return the name
+     * We return the full olcRestrict wire-format string for this operation
+     * (e.g., {@code "extended=1.3.6.1.4.1.1466.20037"}).
+     *
+     * @return the wire-format configuration string
      */
     public String getName()
     {
         return name;
     }
 
-    
+
+    // ── METHOD: getNames — LISTING ALL BLOCKADE ORDER WIRE FORMATS ───────────
+    // We collect all wire-format strings into an array for combo-box population.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @return An array with all the Enum value's name
+     * We return an array of all wire-format name strings in declaration order,
+     * suitable for populating combo boxes or list controls.
+     *
+     * @return an array of all enum wire-format name strings
      */
     public static String[] getNames()
     {
         String[] names = new String[values().length];
         int pos = 0;
-    
+
         for ( RestrictOperationEnum restrictOperation : values() )
         {
             names[pos] = restrictOperation.name;
             pos++;
         }
-        
+
         return names;
     }
 
-    
+
+    // ── METHOD: getExternalName — READING THE SHORT UI LABEL ─────────────────
+    // We return the human-friendly short name so the UI can display "START_TLS"
+    // instead of the full OID-qualified extended operation string.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * @return the external name
+     * We return the short UI display label for this operation
+     * (e.g., {@code "START_TLS"} or {@code "search"}).
+     *
+     * @return the external display name
      */
     public String getExternalName()
     {
         return externalName;
     }
-    
-    
+
+
+    // ── METHOD: getOperation(int) — LOOKING UP A RESTRICTION BY ORDINAL ───────
+    // When we have an ordinal index we hand back the matching constant.
+    // Out-of-range indices return UNKNOWN.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Get the RestrictOperationEnum instance from its number
-     * 
-     * @param number The number we are looking for
-     * @return The associated RestrictOperationEnum instance
+     * We return the {@link RestrictOperationEnum} at the given ordinal position
+     * in the values array. If the number is out of range we return
+     * {@link #UNKNOWN}.
+     *
+     * @param number  the ordinal index to look up
+     * @return        the matching enum constant, or {@link #UNKNOWN}
      */
     public static RestrictOperationEnum getOperation( int number )
     {
         RestrictOperationEnum[] values = RestrictOperationEnum.values();
-        
+
         if ( ( number > 0 ) && ( number < values.length ) )
         {
             return values[number];
@@ -134,12 +179,18 @@ public enum RestrictOperationEnum
         }
     }
 
-    
+
+    // ── METHOD: getRestrictOperation — IDENTIFYING A RESTRICTION FROM TEXT ────
+    // We scan all constants for a case-insensitive match on the wire-format
+    // name. An unrecognized string returns UNKNOWN.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Return an instance of RestrictOperationEnum from a String
-     * 
-     * @param name The operation's name
-     * @return The associated RestrictOperationEnum
+     * We look up a {@link RestrictOperationEnum} constant by its wire-format
+     * name string using case-insensitive comparison. We return {@link #UNKNOWN}
+     * if no constant matches.
+     *
+     * @param name  the operation name to look up
+     * @return      the matching enum constant, or {@link #UNKNOWN}
      */
     public static RestrictOperationEnum getRestrictOperation( String name )
     {
@@ -150,11 +201,15 @@ public enum RestrictOperationEnum
                 return restrictOperation;
             }
         }
-        
+
         return UNKNOWN;
     }
-    
-    
+
+
+    // ── METHOD: toString — PRINTING THE SHORT UI LABEL ───────────────────────
+    // We return the external name so this enum works naturally in list renderers
+    // and anywhere else a String is expected.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * @see Object#toString()
      */

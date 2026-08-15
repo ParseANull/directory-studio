@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.widgets.search;
@@ -34,9 +34,23 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: LimitWidget — Han Rationing Fuel for the Hyperspace Jump ──────────────────
+// Han Solo at the Millennium Falcon's fuel console in A New Hope: he can't let the
+// engines run forever. He sets a maximum entry count — how many results to retrieve —
+// and a time cap — how many seconds before the server should give up waiting.
+// The two fields mirror Han's two dials: count limit (how many parsecs of fuel) and
+// time limit (how long the hyperdrive can run before he cuts it off).
+// ─────────────────────────────────────────────────────────────────────────────────────
 /**
- * The LimitWidget could be used to select the limits of a connection
- * or search. It is composed of a group with text input fields.
+ * An SWT widget for configuring the two search-result limits that an LDAP search
+ * request can carry: the maximum number of entries the server should return, and the
+ * maximum number of seconds the server should spend on the search.
+ * Think of this class as Han Solo's fuel console: he dials in a count cap and a
+ * time cap to keep the jump from draining the ship dry.
+ *
+ * <p>Both fields accept only non-negative integers. A value of {@code 0} means
+ * "no limit" — the LDAP server default.</p>
+ * Used by {@link SearchPageWrapper} in the options section of the search form.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -65,11 +79,25 @@ public class LimitWidget extends AbstractWidget
     private Text timeLimitText;
 
 
+    // ── Han Sets His Fuel Gauges Before the Jump ──────────────────────────────────────
+    // Han knows exactly how far he needs to go: 50 entries max, 30 seconds max.
+    // He dials those values into the console before firing up the hyperdrive.
+    // We store the caller's specific limits so createWidget() can pre-populate the fields.
+    // ─────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of LimitWidget.
-     * 
-     * @param initialTimeLimit the initial time limit
-     * @param initialCountLimit the initial count limit
+     * Creates a widget pre-configured with specific count and time limits.
+     * Use this when editing an existing saved search that already has limit settings.
+     *
+     * <p>For example — Han pre-sets the gauges:</p>
+     * <pre>
+     *   fuelGauge.setMax( 50 );    // countLimit: retrieve at most 50 entries
+     *   timerGauge.setMax( 30 );   // timeLimit: give up after 30 seconds
+     * </pre>
+     *
+     * @param initialCountLimit  Maximum number of entries the server should return.
+     *                           {@code 0} means no limit.
+     * @param initialTimeLimit   Maximum seconds the server should spend on the search.
+     *                           {@code 0} means no limit.
      */
     public LimitWidget( int initialCountLimit, int initialTimeLimit )
     {
@@ -78,8 +106,21 @@ public class LimitWidget extends AbstractWidget
     }
 
 
+    // ── Han Leaves the Gauges at Zero — Full Tank, No Timer ──────────────────────────
+    // No special mission parameters this time; Han leaves both gauges at zero, meaning
+    // the server can return as many results as it wants and take as long as it needs.
+    // We default both limits to 0, which is the LDAP "no limit" sentinel value.
+    // ─────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of LimitWidget with no limits.
+     * Creates a widget with no limits pre-set (both fields default to {@code 0}).
+     * In LDAP, {@code 0} means the server applies its own default limits.
+     * Use this for brand-new search dialogs.
+     *
+     * <p>For example — Han leaves the gauges at full:</p>
+     * <pre>
+     *   fuelGauge.setMax( 0 );  // no entry-count cap
+     *   timerGauge.setMax( 0 ); // no time cap
+     * </pre>
      */
     public LimitWidget()
     {
@@ -88,10 +129,26 @@ public class LimitWidget extends AbstractWidget
     }
 
 
+    // ── Han Installs the Fuel Console Panel on the Dashboard ─────────────────────────
+    // Han bolts in a labeled group with two text fields: "Count Limit" and "Time Limit".
+    // Each field only accepts digits — non-numeric characters are blocked by a verify
+    // listener. Changing either value fires the form's change notification.
+    // ─────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
-     * 
-     * @param parent the parent
+     * Builds and lays out the SWT controls inside the given parent composite.
+     * Creates a labeled group box containing two numeric-only text fields: one for the
+     * count limit and one for the time limit. Both fields have tooltips explaining what
+     * the value means in LDAP terms, and changes to either field notify listeners.
+     * Call this exactly once after construction.
+     *
+     * <p>For example — Han installs the fuel console:</p>
+     * <pre>
+     *   panel = new Group( dashboard, "Limits" );
+     *   panel.addNumericField( "Count Limit", initialCountLimit );
+     *   panel.addNumericField( "Time Limit",  initialTimeLimit );
+     * </pre>
+     *
+     * @param parent  The SWT composite that will host this widget's group and fields.
      */
     public void createWidget( Composite parent )
     {
@@ -153,10 +210,22 @@ public class LimitWidget extends AbstractWidget
     }
 
 
+    // ── Han Dials In a New Entry-Count Cap ───────────────────────────────────────────
+    // Mid-mission, Leia calls over the comm: "Cut the fuel to 100 entries max."
+    // Han reaches over and dials the count gauge to 100.
+    // We update the stored value and push the new integer into the text field.
+    // ─────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the count limit.
-     * 
-     * @param countLimit the count limit
+     * Programmatically sets the count-limit field to a specific value.
+     * Use this when loading a saved search into the form to restore its entry cap.
+     * The value is displayed as a plain integer string in the text field.
+     *
+     * <p>For example — Han adjusts the count gauge:</p>
+     * <pre>
+     *   countGauge.dial( 100 ); // "100" appears in the field
+     * </pre>
+     *
+     * @param countLimit  The maximum number of entries to request. {@code 0} = no cap.
      */
     public void setCountLimit( int countLimit )
     {
@@ -165,10 +234,20 @@ public class LimitWidget extends AbstractWidget
     }
 
 
+    // ── Han Dials In a New Time Cap ───────────────────────────────────────────────────
+    // "Limit the jump to 60 seconds," Leia insists. Han adjusts the timer dial.
+    // We update the stored value and push the new integer into the time-limit field.
+    // ─────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the time limit.
-     * 
-     * @param timeLimit the time limit
+     * Programmatically sets the time-limit field to a specific value.
+     * Use this when loading a saved search into the form to restore its time cap.
+     *
+     * <p>For example — Han adjusts the timer dial:</p>
+     * <pre>
+     *   timerGauge.dial( 60 ); // "60" appears in the field
+     * </pre>
+     *
+     * @param timeLimit  The maximum seconds the server should search. {@code 0} = no cap.
      */
     public void setTimeLimit( int timeLimit )
     {
@@ -177,10 +256,22 @@ public class LimitWidget extends AbstractWidget
     }
 
 
+    // ── Han Reads the Current Entry-Count Gauge ───────────────────────────────────────
+    // "How many entries are we pulling, Han?" He glances at the count dial and reports.
+    // We parse the text field into an integer, defaulting to 0 if the field is blank.
+    // ─────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the count limit.
-     * 
-     * @return the count limit
+     * Reads and returns the current count-limit value from the text field.
+     * Parses the field as an integer; returns {@code 0} if the field is empty or
+     * contains non-numeric text (which shouldn't happen due to the verify listener,
+     * but we guard for it anyway).
+     *
+     * <p>For example — Han reads the count gauge:</p>
+     * <pre>
+     *   max = countGauge.read(); // e.g. 100, or 0 for "no limit"
+     * </pre>
+     *
+     * @return  The entry count limit as an integer. {@code 0} means no server-side cap.
      */
     public int getCountLimit()
     {
@@ -197,10 +288,21 @@ public class LimitWidget extends AbstractWidget
     }
 
 
+    // ── Han Reads the Current Timer Dial ──────────────────────────────────────────────
+    // "How many seconds are we giving the server?" Han checks the timer and reports back.
+    // We parse the time-limit field as an integer, defaulting to 0 if it's blank.
+    // ─────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the time limit.
-     * 
-     * @return the time limit
+     * Reads and returns the current time-limit value from the text field.
+     * Parses the field as an integer; returns {@code 0} if the field is empty or
+     * contains non-numeric text.
+     *
+     * <p>For example — Han reads the timer dial:</p>
+     * <pre>
+     *   maxSeconds = timerGauge.read(); // e.g. 30, or 0 for "no limit"
+     * </pre>
+     *
+     * @return  The time limit in seconds. {@code 0} means no server-side time cap.
      */
     public int getTimeLimit()
     {
@@ -217,10 +319,24 @@ public class LimitWidget extends AbstractWidget
     }
 
 
+    // ── Han Powers Down the Console Dials ────────────────────────────────────────────
+    // When the Falcon is docked and no one's flying, Han flips the console to standby.
+    // All the dials grey out and stop accepting input until the ship is flight-ready again.
+    // We propagate the enabled state to the group, both labels, and both text fields.
+    // ─────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the enabled state of the widget.
-     * 
-     * @param b true to enable the widget, false to disable the widget
+     * Enables or disables the entire widget in one call. When disabled, the group box,
+     * both labels, and both text fields are all greyed out and non-interactive.
+     * Useful when the search form enters a read-only or "view only" mode.
+     *
+     * <p>For example — Han powers down the console:</p>
+     * <pre>
+     *   consoleGroup.setEnabled( false );
+     *   countDial.setEnabled( false );
+     *   timerDial.setEnabled( false );
+     * </pre>
+     *
+     * @param b  {@code true} to make the controls interactive; {@code false} to grey them.
      */
     public void setEnabled( boolean b )
     {

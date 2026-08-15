@@ -20,8 +20,25 @@
 package org.apache.directory.studio.openldap.config.acl.model;
 
 
+// ── CLASS: AclWhoClauseGroup — CLOUD CITY SECURITY ROSTER: GROUP-BASED ACCESS ─
+// Lando manages Cloud City's security by putting staff into groups —
+// groupOfNames, groupOfUniqueNames, etc. — and granting access to those groups
+// rather than individual people. The "group" who-clause does the same: you
+// point to a DN pattern that names a group entry; OpenLDAP checks whether the
+// bound user's DN appears in a named attribute of that group entry. You can
+// customise which objectClass and which attribute define membership.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * 
+ * A concrete who-clause that grants access to members of an LDAP group.
+ * Written as {@code group[/oc[/attr]][.type]="pattern"}:
+ * <ul>
+ *   <li>oc — the group's objectClass (defaults to groupOfNames)</li>
+ *   <li>attr — the membership attribute (defaults to member)</li>
+ *   <li>type — how to match the group DN (exact or expand)</li>
+ * </ul>
+ * Think of this class as Lando's crew roster — membership in the named group
+ * entry determines who gets through the checkpoint.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class AclWhoClauseGroup extends AbstractAclWhoClause
@@ -39,10 +56,21 @@ public class AclWhoClauseGroup extends AbstractAclWhoClause
     private String pattern;
 
 
+    // ── Reading the Group Membership Attribute ────────────────────────────────
+    // Lando reads the name of the attribute that lists group members —
+    // typically "member" or "uniqueMember".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the attribute.
+     * Returns the name of the group membership attribute. OpenLDAP checks
+     * whether the bound user's DN appears as a value of this attribute in the
+     * group entry identified by the pattern.
      *
-     * @return the attribute
+     * <p>For example — reading Lando's roster attribute name:</p>
+     * <pre>
+     *   clause.getAttribute() // → "member"
+     * </pre>
+     *
+     * @return  The membership attribute name; may be {@code null} (OpenLDAP defaults to "member").
      */
     public String getAttribute()
     {
@@ -50,10 +78,21 @@ public class AclWhoClauseGroup extends AbstractAclWhoClause
     }
 
 
+    // ── Reading the Group ObjectClass ─────────────────────────────────────────
+    // Lando reads the objectClass that the group entry must have —
+    // typically "groupOfNames" or "groupOfUniqueNames".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the objectclass.
+     * Returns the objectClass that the referenced group entry must have.
+     * If {@code null}, OpenLDAP defaults to {@code groupOfNames}. Specifying
+     * an explicit objectClass lets you use custom group types.
      *
-     * @return the objectclass
+     * <p>For example — reading the Cloud City crew-roster schema type:</p>
+     * <pre>
+     *   clause.getObjectclass() // → "groupOfUniqueNames"
+     * </pre>
+     *
+     * @return  The group objectClass name; may be {@code null} for the default.
      */
     public String getObjectclass()
     {
@@ -61,10 +100,20 @@ public class AclWhoClauseGroup extends AbstractAclWhoClause
     }
 
 
+    // ── Reading the Group DN Pattern ──────────────────────────────────────────
+    // Lando reads the address of the group entry — the DN or regex that
+    // identifies which roster entry to check.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the pattern.
-     * 
-     * @return the pattern
+     * Returns the group entry DN pattern or regex. OpenLDAP resolves this to
+     * a group entry and then checks the membership attribute.
+     *
+     * <p>For example — reading the group DN pattern:</p>
+     * <pre>
+     *   clause.getPattern() // → "cn=CloudCityAdmins,ou=Groups,dc=galaxy,dc=far"
+     * </pre>
+     *
+     * @return  The group DN pattern; may be {@code null} if not yet set.
      */
     public String getPattern()
     {
@@ -72,10 +121,15 @@ public class AclWhoClauseGroup extends AbstractAclWhoClause
     }
 
 
+    // ── Reading the Group Match Type ──────────────────────────────────────────
+    // Lando reads the lookup mode from the roster entry — exact match or
+    // regex expansion.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the type.
-     * 
-     * @return the type
+     * Returns the type qualifier controlling how the group DN pattern is matched
+     * against actual group entries (exact or expand).
+     *
+     * @return  The {@link AclWhoClauseGroupTypeEnum}; may be {@code null}.
      */
     public AclWhoClauseGroupTypeEnum getType()
     {
@@ -83,10 +137,14 @@ public class AclWhoClauseGroup extends AbstractAclWhoClause
     }
 
 
+    // ── Stamping the Membership Attribute Name ────────────────────────────────
+    // The parser stamps the attribute name after the second "/" in "group/oc/attr".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the attribute.
+     * Sets the membership attribute name. Called by the parser when it finds
+     * the second slash-separated token in {@code group/oc/attr=...}.
      *
-     * @param attribute the attribute
+     * @param attribute  The membership attribute name.
      */
     public void setAttribute( String attribute )
     {
@@ -94,10 +152,14 @@ public class AclWhoClauseGroup extends AbstractAclWhoClause
     }
 
 
+    // ── Stamping the ObjectClass Name ─────────────────────────────────────────
+    // The parser stamps the objectClass name after the first "/" in "group/oc".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the objectclass.
+     * Sets the objectClass for the group entry. Called by the parser when it
+     * finds the first slash-separated token in {@code group/oc...}.
      *
-     * @param objectclass the objectclass
+     * @param objectclass  The group entry objectClass name.
      */
     public void setObjectclass( String objectclass )
     {
@@ -105,10 +167,14 @@ public class AclWhoClauseGroup extends AbstractAclWhoClause
     }
 
 
+    // ── Stamping the Group DN Pattern ─────────────────────────────────────────
+    // The parser stamps the quoted DN or regex string after the "=".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the pattern
-     * 
-     * @param pattern the pattern to set
+     * Sets the group entry DN pattern or regex. Called by the parser after
+     * extracting the quoted string following the {@code group...=} token.
+     *
+     * @param pattern  The group DN or regex pattern.
      */
     public void setPattern( String pattern )
     {
@@ -116,10 +182,15 @@ public class AclWhoClauseGroup extends AbstractAclWhoClause
     }
 
 
+    // ── Stamping the Match Type ───────────────────────────────────────────────
+    // The parser stamps the match type after the dot in "group.exact" or
+    // "group.expand".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the type.
-     * 
-     * @param type the type to set
+     * Sets the match type for this group who-clause. Called by the parser when
+     * it finds a dot-qualifier in the group token.
+     *
+     * @param type  The {@link AclWhoClauseGroupTypeEnum} to apply.
      */
     public void setType( AclWhoClauseGroupTypeEnum type )
     {
@@ -127,8 +198,26 @@ public class AclWhoClauseGroup extends AbstractAclWhoClause
     }
 
 
+    // ── Serialising the Group Clause to ACL Text ──────────────────────────────
+    // Lando writes the full roster entry into the security directive:
+    // "group", optional "/oc", optional "/attr", optional ".type", then ="pattern".
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Serialises this clause to OpenLDAP wire format:
+     * {@code group[/oc[/attr]][.type]="pattern"}. Only non-null optional
+     * components are included.
+     *
+     * <p>For example — writing a full group clause:</p>
+     * <pre>
+     *   clause.setObjectclass("groupOfUniqueNames");
+     *   clause.setAttribute("uniqueMember");
+     *   clause.setType(AclWhoClauseGroupTypeEnum.EXACT);
+     *   clause.setPattern("cn=Admins,ou=Groups,dc=galaxy,dc=far");
+     *   clause.toString()
+     *   // → "group/groupOfUniqueNames/uniqueMember.exact=\"cn=Admins,...\""
+     * </pre>
+     *
+     * @return  The ACL text fragment for this group who-clause.
      */
     public String toString()
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.actions;
@@ -45,8 +45,21 @@ import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
 
 
+// ── CLASS: CopyValueAction — C-3PO ENCODES THE VALUE INTO COMMON TONGUE ─────
+// C-3PO is called upon not just to translate language, but to re-encode data
+// into whatever format the situation demands — raw UTF-8 for organics, base64
+// for transmitting binary over text channels, hex for diagnostics, LDIF for
+// protocol interop. This action does the same: it takes raw attribute values
+// from the selected LDAP entry and copies them to the clipboard in whichever
+// encoding the user requested.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This Action copies values of the seleced Entry to the Clipboard.
+ * Copies the raw bytes or display text of selected LDAP attribute values to
+ * the system clipboard, re-encoded in one of several formats: UTF-8, base64,
+ * hex, LDIF attribute-value line, or the value editor's display representation.
+ * The encoding is fixed at construction time via the {@link Mode} enum.
+ * Think of this as C-3PO translating the value into whatever encoding the
+ * receiving ship's computers need — same data, different dialect.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -66,7 +79,7 @@ public class CopyValueAction extends BrowserAction
         BASE64,
 
         /**
-         * Hexadecimal Mode. 
+         * Hexadecimal Mode.
          */
         HEX,
 
@@ -86,11 +99,21 @@ public class CopyValueAction extends BrowserAction
     private ValueEditorManager valueEditorManager;
 
 
+    // ── C-3PO Sets His Encoding Dialect ──────────────────────────────────────
+    // Before C-3PO can translate, he has to know the target dialect: is this
+    // base64 for a binary channel, hex for a diagnostic readout, or UTF-8 for
+    // a human to read? He locks in the mode at construction time.
+    // We also receive the {@link ValueEditorManager} so we can call the
+    // registered value editor for DISPLAY mode translations.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of CopyValueAction.
+     * Creates a new {@code CopyValueAction} bound to the given encoding mode.
+     * Each instance produces one specific encoding — create separate instances
+     * for each encoding you want to offer in a menu.
      *
-     * @param mode
-     *      the copy Mode
+     * @param mode                the target encoding (UTF-8, base64, hex, LDIF, or display)
+     * @param valueEditorManager  the manager that resolves the current value editor for
+     *                            display-mode encoding; needed for the {@code DISPLAY} mode only
      */
     public CopyValueAction( Mode mode, ValueEditorManager valueEditorManager )
     {
@@ -99,8 +122,16 @@ public class CopyValueAction extends BrowserAction
     }
 
 
+    // ── C-3PO Announces the Encoding Mode ────────────────────────────────────
+    // C-3PO tells the crew which translation he's offering: "Copy Value as UTF-8",
+    // "Copy Value as Base64", "Copy Value as Hex", and so on — singular or plural
+    // depending on how many values are selected.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the localised menu label for this action, reflecting both the
+     * encoding mode and whether one or multiple values are selected.
+     *
+     * @return  the display name; never {@code null}
      */
     public String getText()
     {
@@ -122,8 +153,16 @@ public class CopyValueAction extends BrowserAction
     }
 
 
+    // ── C-3PO Selects the Right Encoding Badge ───────────────────────────────
+    // C-3PO picks the correct insignia for the encoding he's offering — the UTF-8
+    // badge, the base64 badge, the hex badge, and so on — so each menu entry is
+    // visually distinct.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the image descriptor for the icon representing this encoding mode.
+     * Each mode has a distinct icon registered in the plugin's image registry.
+     *
+     * @return  the appropriate {@link ImageDescriptor}, or {@code null} for unrecognised modes
      */
     public ImageDescriptor getImageDescriptor()
     {
@@ -145,8 +184,14 @@ public class CopyValueAction extends BrowserAction
     }
 
 
+    // ── C-3PO Checks His Encoding Command Registry ───────────────────────────
+    // C-3PO has no registered keyboard shortcut for this encoding operation.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code null} because this action has no registered Eclipse
+     * command ID and therefore no keyboard shortcut binding.
+     *
+     * @return  {@code null} always
      */
     public String getCommandId()
     {
@@ -154,8 +199,16 @@ public class CopyValueAction extends BrowserAction
     }
 
 
+    // ── C-3PO Confirms There's Something Worth Encoding ──────────────────────
+    // C-3PO won't transmit an empty message — he checks that at least one
+    // value is selected (or a search result whose DN we can encode instead).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns {@code true} if there is at least one attribute value in scope,
+     * or at least one search result (whose DN can be encoded in the absence of
+     * attribute values).
+     *
+     * @return  {@code true} if the action can execute with the current selection
      */
     public boolean isEnabled()
     {
@@ -163,8 +216,18 @@ public class CopyValueAction extends BrowserAction
     }
 
 
+    // ── C-3PO Encodes All Values and Copies Them ─────────────────────────────
+    // C-3PO processes each value in the set through the chosen encoding, joins
+    // them with newlines, and transmits the whole batch over the comm channel
+    // (the clipboard). If no values are found but a search result row is selected,
+    // he falls back to encoding the row's DN instead.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Encodes all selected attribute values (or the selected search result's DN
+     * if no values are in scope) in the configured mode and copies the result to
+     * the system clipboard as plain text.
+     * Multiple values are newline-separated (except LDIF mode, which produces
+     * self-separating lines).
      */
     public void run()
     {
@@ -245,11 +308,18 @@ public class CopyValueAction extends BrowserAction
     }
 
 
+    // ── C-3PO Gathers All Values He Needs to Translate ───────────────────────
+    // C-3PO walks the entire selection — attribute hierarchies, attributes, and
+    // individual values — collecting every distinct value into an ordered set
+    // before he starts encoding. Order matters: we want the output to be stable.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a Set containing all the Values
+     * Builds and returns the ordered set of {@link IValue} objects from the
+     * current selection, covering attribute hierarchies, attributes, and
+     * individually selected values.
+     * Duplicate value references are silently de-duplicated.
      *
-     * @return
-     *      a Set containing all the Values
+     * @return  a non-null, possibly empty ordered set of values to encode
      */
     protected Set<IValue> getValueSet()
     {

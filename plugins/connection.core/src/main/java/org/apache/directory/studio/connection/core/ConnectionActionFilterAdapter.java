@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.core;
@@ -24,8 +24,21 @@ package org.apache.directory.studio.connection.core;
 import org.eclipse.ui.IActionFilter;
 
 
+// ── CLASS: ConnectionActionFilterAdapter — R2-D2 SCANS THE SHIP'S TRANSPONDER ─
+// R2-D2 is plugged into the Falcon's systems; when the rebel command asks
+// "does this ship have shields set to LDAPS?" or "is this server OpenLDAP?",
+// R2 scans the transponder data and answers yes or no.
+// Eclipse uses IActionFilter the same way — it queries connection properties
+// to decide which toolbar actions or menu items to enable.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements an {@link IActionFilter} adapter for the {@link LdapServer} class.
+ * An Eclipse {@link IActionFilter} that lets plugin.xml expressions query any
+ * property of a {@link Connection} by string name.
+ * Eclipse uses this to enable or disable actions based on the selected connection's
+ * state — for example showing "Use SSL" options only if the connection doesn't
+ * already have LDAPS enabled.
+ * Think of this class as R2-D2 scanning the Falcon's transponder: every
+ * question about the ship's config gets a yes/no answer.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -62,8 +75,13 @@ public class ConnectionActionFilterAdapter implements IActionFilter
     private static ConnectionActionFilterAdapter INSTANCE = new ConnectionActionFilterAdapter();
 
 
+    // ── PRIVATE CONSTRUCTOR — R2 IS BUILT INTO THE SHIP, NOT PORTABLE ─────────────
+    // R2-D2's scanner is hard-wired into the Falcon; there's only one unit.
+    // We use the singleton pattern so Eclipse always gets the same instance.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Private constructor.
+     * Private constructor — use {@link #getInstance()} to get the singleton.
+     * Nothing to initialize; all state comes from the Connection being queried.
      */
     private ConnectionActionFilterAdapter()
     {
@@ -71,11 +89,16 @@ public class ConnectionActionFilterAdapter implements IActionFilter
     }
 
 
+    // ── GET INSTANCE — BEEP BOOP, R2 RESPONDS ─────────────────────────────────────
+    // The crew calls out to R2 and he beeps back — always the same droid.
+    // We return the singleton instance.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns an instance of {@link ConnectionActionFilterAdapter}.
+     * Returns the singleton {@link ConnectionActionFilterAdapter}.
+     * Eclipse's adapter mechanism calls this via
+     * {@link Connection#getAdapter(Class)} to obtain the filter.
      *
-     * @return
-     *      an instance of {@link ConnectionActionFilterAdapter}
+     * @return  The shared {@link ConnectionActionFilterAdapter} instance.
      */
     public static ConnectionActionFilterAdapter getInstance()
     {
@@ -83,8 +106,29 @@ public class ConnectionActionFilterAdapter implements IActionFilter
     }
 
 
+    // ── TEST ATTRIBUTE — R2 SCANS THE TRANSPONDER AND ANSWERS YES OR NO ───────────
+    // Eclipse plugin.xml expressions ask "does this connection have authMethod=SIMPLE?"
+    // or "is vendorName=OpenLDAP?" — R2 scans the connection's properties and answers.
+    // We dispatch on the attribute name and compare the connection's current value.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Tests whether the named property of the target connection equals the expected value.
+     * Eclipse calls this to evaluate {@code &lt;enablement&gt;} or
+     * {@code &lt;filter&gt;} expressions in plugin.xml.
+     * For example, {@code name="encryptionMethod" value="LDAPS"} returns {@code true}
+     * only when the selected connection uses LDAPS.
+     *
+     * <p>For example — R2 checks the transponder:</p>
+     * <pre>
+     *   testAttribute(conn, "authMethod", "SIMPLE") → true if simple-bind
+     *   testAttribute(conn, "serverType", "OPENLDAP") → true for OpenLDAP
+     * </pre>
+     *
+     * @param target  The selected object — we only handle {@link Connection} instances.
+     * @param name    The property name to check (e.g. "encryptionMethod", "authMethod").
+     * @param value   The expected string value to compare against.
+     * @return  {@code true} if the connection's property matches the expected value;
+     *          {@code false} otherwise or if target is not a Connection.
      */
     public boolean testAttribute( Object target, String name, String value )
     {

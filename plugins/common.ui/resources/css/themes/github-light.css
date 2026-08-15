@@ -1,0 +1,63 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+/* GitHub Light -- Apache Directory Studio theme (Base16 palette). */
+
+@import url("platform:/plugin/org.eclipse.ui.themes/css/e4_basestyle.css");
+
+.studio-browser-tree,
+.studio-connection-tree,
+.studio-schema-tree {
+    background-color: #F6F8FA;
+    color: #24292f;
+}
+
+.studio-entry-tree {
+    background-color: #F6F8FA;
+    color: #24292f;
+    swt-header-color: #24292f;
+    swt-header-background-color: #E6E6E6;
+}
+
+.studio-search-table,
+.MPartStack.active .studio-search-table {
+    background-color: #F6F8FA;
+    color: #24292f;
+    swt-header-color: #24292f;
+    swt-header-background-color: #E6E6E6;
+}
+
+IEclipsePreferences#org-apache-directory-studio-common-ui {
+    preferences:
+        'defaultColor=36,41,47'
+        'disabledColor=110,119,129'
+        'errorColor=207,34,46'
+        'commentColor=110,119,129'
+        'keyword1Color=130,80,223'
+        'keyword2Color=9,105,218'
+        'objectClassColor=154,103,0'
+        'attributeTypeColor=9,105,218'
+        'valueColor=17,99,41'
+        'oidColor=188,76,0'
+        'separatorColor=207,34,46'
+        'addColor=17,99,41'
+        'deleteColor=207,34,46'
+        'modifyColor=154,103,0'
+        'renameColor=9,105,218'
+}

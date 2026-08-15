@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.schemaeditor.view.editors.attributetype;
 
@@ -27,15 +27,54 @@ import org.apache.directory.api.ldap.model.schema.MatchingRule;
 import org.apache.directory.studio.schemaeditor.view.editors.NonExistingMatchingRule;
 
 
+// ── CLASS: ATEMatchingRulesComboComparator — MACE WINDU CONFRONTING PALPATINE ───────
+// When Mace Windu arrives in Palpatine's office with a squad of Jedi, he has to
+// make a judgement call: who's stronger, who outranks whom, and in what order should
+// he address the threat?  He sizes up each opponent and ranks them decisively.
+// This comparator does the same thing for matching rules: given any two items from the
+// matching-rules combo — real MatchingRule objects, NonExistingMatchingRule placeholders,
+// or a mix of both — it decides which comes first alphabetically so the list is
+// consistently ordered for the user.
+// ─────────────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Comparator used to compare elements in the Matching Rules Content Providers.
+ * Comparator that sorts the items in the matching-rules combo box of the Attribute Type
+ * Editor into alphabetical order by their first display name.
+ * The combo can contain real {@link MatchingRule} objects (loaded from the schema) and
+ * {@link NonExistingMatchingRule} placeholders (for referenced-but-missing rules), so we
+ * handle all four combinations of those two types.
+ * Think of this as Mace Windu sizing up adversaries: regardless of their origin, he
+ * ranks them in the right order before deciding how to proceed.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class ATEMatchingRulesComboComparator implements Comparator<Object>
 {
+    // ── Mace Sizes Up Two Opponents ──────────────────────────────────────────────────
+    // Mace looks at the two Jedi/Sith before him, reads their names, and determines
+    // which one ranks higher in the pecking order — purely by name, case-insensitively,
+    // across all four possible pairings of real vs. phantom opponents.
+    // ────────────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Compares two combo items by their first name, case-insensitively, so the matching
+     * rules list sorts A-Z regardless of whether each entry is a real MatchingRule or
+     * a NonExistingMatchingRule placeholder.
+     * If either object's name list is empty or null we treat them as equal (return 0)
+     * rather than blowing up — missing names are unusual but shouldn't crash the sort.
+     *
+     * <p>For example — Mace ranks two opponents:</p>
+     * <pre>
+     *   // MatchingRule("caseIgnoreMatch") vs MatchingRule("exactMatch")
+     *   //   → "caseIgnoreMatch" &lt; "exactMatch" → negative result → c comes first
+     *   // MatchingRule("xyz") vs NonExistingMatchingRule("abc")
+     *   //   → "xyz" &gt; "abc" → positive result → a comes first
+     * </pre>
+     *
+     * @param o1  the first combo item — either a {@link MatchingRule} or a
+     *            {@link NonExistingMatchingRule}
+     * @param o2  the second combo item — either a {@link MatchingRule} or a
+     *            {@link NonExistingMatchingRule}
+     * @return    a negative integer if o1 sorts before o2, zero if equal, positive if
+     *            o1 sorts after o2; returns 0 when names can't be compared
      */
     public int compare( Object o1, Object o2 )
     {

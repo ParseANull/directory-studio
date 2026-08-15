@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.actions;
@@ -52,30 +52,61 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.StructuredSelection;
 
 
+// ── CLASS: BrowserSelectionUtils — R2-D2 SCANNING THE BATTLEFIELD ─────────────
+// On the ice plains of Hoth, R2-D2 activates his sensor suite: he scans the
+// chaotic wreckage and instantly classifies every contact — that's an X-wing
+// pilot (IEntry), that's a tauntaun saddle (IAttribute), that's a power cell
+// (IValue), that's a rescue beacon (ISearch). He groups each type into the
+// right bin so the rest of the crew knows exactly what they're working with.
+// BrowserSelectionUtils is that sensor suite: given a raw JFace ISelection
+// (which is just "some objects the user clicked"), it extracts and classifies
+// them into typed arrays — entries, attributes, values, searches, bookmarks, etc.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The SelectionUtils are used to extract specific beans from the current
- * selection (org.eclipse.jface.viewers.ISelection).
+ * Utility class for extracting strongly-typed objects from a JFace
+ * {@link ISelection}. The LDAP browser's tree can contain many different types
+ * of objects — entries, searches, bookmarks, attributes, values, paged nodes,
+ * etc. — all mixed together in one selection event. This class provides static
+ * helper methods to extract each type into its own array.
+ * Think of this class as R2-D2's sensor suite: it receives a raw mixed signal
+ * and classifies it into clean, typed categories.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public abstract class BrowserSelectionUtils extends SelectionUtils
 {
 
+    // ── R2 BUILDS A PROTOTYPE SEARCH FROM WHATEVER IS IN RANGE ───────────────
+    // R2 scans whatever objects are in the selection and constructs a template
+    // search from them: if there's a saved search already, clone it; if there's
+    // an entry, use its DN as the base; if there are attribute values, build a
+    // query-by-example filter from them. He sorts by most-specific type first
+    // so the best candidate drives the prototype.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * This method creates a prototype search from the given selection.
-     * 
-     * Depended on the selected element it determines the best connection,
-     * search base and filter:
+     * Derives a prototype {@link ISearch} from whatever is currently selected.
+     * The strategy depends on the most specific selected type:
      * <ul>
-     *   <li>ISearch: all parameters are copied to the prototype search (clone)
-     *   <li>IEntry or ISearchResult or IBookmark: Dn is used as search base
-     *   <li>IEntry: children filter is used as filter
-     *   <li>IAttribute or IValue: the entry's Dn is used as search base,
-     *       the filter is built using the name-value-pairs (query by example). 
+     *   <li>ISearch → cloned directly (parameters copied)</li>
+     *   <li>IEntry/ISearchResult/IBookmark → DN used as search base</li>
+     *   <li>IEntry → children filter applied as the filter</li>
+     *   <li>IAttribute/IValue/AttributeHierarchy → DN as base, filter
+     *       built by query-by-example from the attribute values</li>
+     *   <li>Connection/IBrowserConnection → first child of the root DSE as base</li>
      * </ul>
-     * 
-     * @param selection the current selection
-     * @return a prototype search
+     * Used by the "Open Search" action to pre-populate a new search dialog
+     * with sensible defaults based on context.
+     *
+     * <p>For example — R2 assembling a rescue vector from the debris field:</p>
+     * <pre>
+     *   ISearch proto = BrowserSelectionUtils.getExampleSearch( selection );
+     *   // proto.getSearchBase() = selected entry's DN
+     *   // proto.getFilter()     = filter built from selected attribute values
+     * </pre>
+     *
+     * @param selection  the current JFace selection to derive a prototype from.
+     * @return a prototype {@link ISearch} with best-effort parameters set;
+     *         never null, but may have null connection if nothing useful was selected.
      */
     public static ISearch getExampleSearch( ISelection selection )
     {
@@ -255,11 +286,18 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE CATEGORY CONTACTS ─────────────────────────────────────
+    // R2's sensors pick out the browser category nodes (DIT, Searches,
+    // Bookmarks) from the mixed selection — like identifying the base stations
+    // among all the ships on the sensor sweep.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the BrowserCategory beans contained in the given selection.
+     * Extracts all {@link BrowserCategory} objects from the given selection.
+     * Browser categories are the top-level grouping nodes in the LDAP browser
+     * tree (DIT, Searches, Bookmarks).
      *
-     * @param selection the selection
-     * @return an array with BrowserCategory beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of BrowserCategory objects; may be empty but not null.
      */
     public static BrowserCategory[] getBrowserViewCategories( ISelection selection )
     {
@@ -268,11 +306,16 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE VALUE CONTACTS ────────────────────────────────────────
+    // R2 picks out the individual attribute values from the scan — the finest-
+    // grained LDAP objects, like specific power-cell readings from a single ship.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the IValue beans contained in the given selection.
+     * Extracts all {@link IValue} objects from the given selection.
+     * An IValue is a single value within a single LDAP attribute.
      *
-     * @param selection the selection
-     * @return an array with IValue beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of IValue objects; may be empty but not null.
      */
     public static IValue[] getValues( ISelection selection )
     {
@@ -281,11 +324,16 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE ATTRIBUTE CONTACTS ────────────────────────────────────
+    // R2 classifies the attribute-level objects — like identifying whole sensor
+    // banks rather than individual readings.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the IAttribute beans contained in the given selection.
+     * Extracts all {@link IAttribute} objects from the given selection.
+     * An IAttribute represents one named field (e.g., "mail") on an LDAP entry.
      *
-     * @param selection the selection
-     * @return an array with IAttribute beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of IAttribute objects; may be empty but not null.
      */
     public static IAttribute[] getAttributes( ISelection selection )
     {
@@ -294,11 +342,17 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE ATTRIBUTE HIERARCHY CONTACTS ──────────────────────────
+    // Attribute hierarchies group related attributes — R2 picks out the grouped
+    // sensor cluster contacts from the noise.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the AttributeHierarchy beans contained in the given selection.
+     * Extracts all {@link AttributeHierarchy} objects from the given selection.
+     * An AttributeHierarchy groups an attribute with its sub-type variants
+     * as defined by the LDAP schema.
      *
-     * @param selection the selection
-     * @return an array with AttributeHierarchy beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of AttributeHierarchy objects; may be empty but not null.
      */
     public static AttributeHierarchy[] getAttributeHierarchie( ISelection selection )
     {
@@ -307,11 +361,16 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE STRING PROPERTY CONTACTS ─────────────────────────────
+    // Sometimes the selection contains plain String objects — property page IDs.
+    // R2 filters those out separately from the richer model objects.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the Strings contained in the given selection.
+     * Extracts all {@link String} objects from the given selection.
+     * Used by the properties action to find property page IDs in the selection.
      *
-     * @param selection the selection
-     * @return an array with Strings, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of Strings; may be empty but not null.
      */
     public static String[] getProperties( ISelection selection )
     {
@@ -320,11 +379,17 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE SCHEMA ATTRIBUTE TYPE CONTACTS ────────────────────────
+    // AttributeType objects come from the schema browser — like the technical
+    // spec sheets for each type of sensor reading.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the AttributeTypeDescription beans contained in the given selection.
+     * Extracts all {@link AttributeType} objects from the given selection.
+     * AttributeType objects represent LDAP schema definitions for attribute types,
+     * selected in the schema browser view.
      *
-     * @param selection the selection
-     * @return an array with AttributeTypeDescription beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of AttributeType objects; may be empty but not null.
      */
     public static AttributeType[] getAttributeTypeDescription( ISelection selection )
     {
@@ -333,11 +398,17 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE ENTRY CONTACTS ────────────────────────────────────────
+    // Entries are the main directory objects — the ships themselves on the
+    // sector map. R2 pulls them out from the mixed selection.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the IEntry beans contained in the given selection.
+     * Extracts all {@link IEntry} objects from the given selection.
+     * An IEntry is a single node in the LDAP directory tree, identified
+     * by its DN.
      *
-     * @param selection the selection
-     * @return an array with IEntry beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of IEntry objects; may be empty but not null.
      */
     public static IEntry[] getEntries( ISelection selection )
     {
@@ -346,11 +417,16 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE BOOKMARK CONTACTS ─────────────────────────────────────
+    // Bookmarks are saved coordinates — named shortcuts to entries the user
+    // cares about. R2 filters them into their own category.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the IBookmark beans contained in the given selection.
+     * Extracts all {@link IBookmark} objects from the given selection.
+     * Bookmarks are named shortcuts to specific LDAP entries.
      *
-     * @param selection the selection
-     * @return an array with IBookmark beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of IBookmark objects; may be empty but not null.
      */
     public static IBookmark[] getBookmarks( ISelection selection )
     {
@@ -359,11 +435,17 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE SEARCH RESULT CONTACTS ────────────────────────────────
+    // Search results are entries that came back from a search operation —
+    // like ships identified by a specific scan. R2 classifies them separately.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the ISearchResult beans contained in the given selection.
+     * Extracts all {@link ISearchResult} objects from the given selection.
+     * An ISearchResult wraps an IEntry that was returned by a specific
+     * LDAP search operation.
      *
-     * @param selection the selection
-     * @return an array with ISearchResult beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of ISearchResult objects; may be empty but not null.
      */
     public static ISearchResult[] getSearchResults( ISelection selection )
     {
@@ -372,21 +454,31 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2'S CORE CLASSIFICATION ALGORITHM ────────────────────────────────────
+    // This is R2's underlying sensor logic: given a selection and a type class,
+    // it walks every object in the structured selection and keeps only those
+    // that are instances of the requested type. Simple, fast, and reused by
+    // every public "get" method above.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets all beans of the requested type contained in the given selection.
+     * Generic helper that filters a structured selection to objects of the
+     * given type. Returns an empty list if the selection is not structured.
+     * Used internally by all the public extraction methods.
      *
-     * @param selection the selection
-     * @param type the requested type
-     * @return a list containing beans of the requested type
+     * @param selection  the JFace selection to filter.
+     * @param type       the Class to filter for — only instances of this class
+     *                   are included in the result.
+     * @return a list of objects from the selection that are instances of {@code type};
+     *         never null, may be empty.
      */
     private static List<Object> getTypes( ISelection selection, Class<?> type )
     {
         List<Object> list = new ArrayList<Object>();
-        
+
         if ( selection instanceof IStructuredSelection )
         {
             IStructuredSelection structuredSelection = ( IStructuredSelection ) selection;
-            
+
             for ( Object element : structuredSelection.toArray() )
             {
                 if ( type.isInstance( element ) )
@@ -395,16 +487,21 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
                 }
             }
         }
-        
+
         return list;
     }
 
 
+    // ── R2 ISOLATES THE SAVED SEARCH CONTACTS ─────────────────────────────────
+    // Saved searches are like standing patrol orders stored in the nav computer
+    // — distinct from the results those patrols return.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the ISearch beans contained in the given selection.
+     * Extracts all {@link ISearch} objects from the given selection.
+     * An ISearch is a saved LDAP search definition (not its results).
      *
-     * @param selection the selection
-     * @return an array with ISearch beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of ISearch objects; may be empty but not null.
      */
     public static ISearch[] getSearches( ISelection selection )
     {
@@ -413,11 +510,17 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE ENTRY PAGE CONTACTS ───────────────────────────────────
+    // Entry pages are the paging nodes shown when a parent entry has too many
+    // children to display at once — like fleet page dividers on the sector map.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the BrowserEntryPage beans contained in the given selection.
+     * Extracts all {@link BrowserEntryPage} objects from the given selection.
+     * These are virtual paging nodes shown in the browser tree when an entry
+     * has more children than the folding threshold allows.
      *
-     * @param selection the selection
-     * @return an array with BrowserEntryPage beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of BrowserEntryPage objects; may be empty but not null.
      */
     public static BrowserEntryPage[] getBrowserEntryPages( ISelection selection )
     {
@@ -426,11 +529,17 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 ISOLATES THE SEARCH RESULT PAGE CONTACTS ───────────────────────────
+    // Same paging concept for search results — R2 identifies the search-result
+    // page dividers in the sensor sweep.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the BrowserSearchResultPage beans contained in the given selection.
+     * Extracts all {@link BrowserSearchResultPage} objects from the given selection.
+     * These are virtual paging nodes shown in the browser tree when a search
+     * returns more results than the folding threshold.
      *
-     * @param selection the selection
-     * @return an array with BrowserSearchResultPage beans, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of BrowserSearchResultPage objects; may be empty but not null.
      */
     public static BrowserSearchResultPage[] getBrowserSearchResultPages( ISelection selection )
     {
@@ -439,11 +548,17 @@ public abstract class BrowserSelectionUtils extends SelectionUtils
     }
 
 
+    // ── R2 RETURNS THE FULL UNCLASSIFIED CONTACT LIST ─────────────────────────
+    // Sometimes the caller just wants everything R2 found — no classification,
+    // just the raw list of whatever's in the selection.
+    // ──────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the objects contained in the given selection.
+     * Extracts all objects from the given selection without type filtering.
+     * Returns every element in the structured selection as an Object array.
+     * Useful when the caller needs to handle all types uniformly.
      *
-     * @param selection the selection
-     * @return an array with object, may be empty.
+     * @param selection  the JFace selection to scan.
+     * @return an array of all selected objects; may be empty but not null.
      */
     public static Object[] getObjects( ISelection selection )
     {

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.dialogs;
 
@@ -39,21 +39,17 @@ import org.eclipse.swt.widgets.Shell;
 import org.apache.directory.studio.openldap.common.ui.model.PasswordHashEnum;
 
 
+// Like Princess Leia transmitting the list of approved encryption
+// methods to Rebellion security officers, we project a hologram
+// of password hash options and let the administrator pick the one
+// they want to add to the server's accepted hash list.
 /**
- * The PasswordHashDialog is used to select one hash method. The possible
- * hash methods are :
- * <ul>
- * <li>{CLEARTEXT}</li>
- * <li>{CRYPT}</li>
- * <li>{LANMAN}</li>
- * <li>{MD5}</li>
- * <li>{SMD5}</li>
- * <li>{SHA}</li>
- * <li>{SSHA}</li>
- * <li>{UNIX}</li>
- * 
- * The dialog overlay is like :
- * 
+ * A dialog for selecting a single password hash method to add to the
+ * OpenLDAP configuration. We present checkboxes for each supported
+ * hash ({CLEARTEXT}, {CRYPT}, {LANMAN}, {MD5}, {SMD5}, {SHA}, {SSHA},
+ * {UNIX}) and let the operator pick one per dialog invocation.
+ *
+ * <p>The dialog layout looks like this:
  * <pre>
  * +-----------------------------------------+
  * | Password hash                           |
@@ -67,31 +63,43 @@ import org.apache.directory.studio.openldap.common.ui.model.PasswordHashEnum;
  * |  (Cancel)                         (OK)  |
  * +-----------------------------------------+
  * </pre>
- * 
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class PasswordHashDialog extends AddEditDialog<PasswordHashEnum>
 {
     /** The array of buttons */
     private Button[] passwordHashCheckboxes = new Button[9];
-    
+
     /** The already selected hashes */
     List<PasswordHashEnum> hashes = new ArrayList<>();
-    
+
+    // Like Leia keying up the hologram transmission with the RESIZE flag
+    // so the security briefing window can be expanded for readability,
+    // we create the dialog with resizable shell style so the operator
+    // can see all the hash names clearly.
     /**
-     * Create a new instance of the PasswordHashDialog
-     * 
-     * @param parentShell The parent Shell
+     * Creates a new PasswordHashDialog attached to the given parent shell.
+     * We apply the RESIZE style so the operator can enlarge the window
+     * if the hash names are hard to read at the default size.
+     *
+     * @param parentShell the parent shell this dialog belongs to
      */
     public PasswordHashDialog( Shell parentShell )
     {
         super( parentShell );
         super.setShellStyle( super.getShellStyle() | SWT.RESIZE );
     }
-    
-    
+
+
+    // Like labeling the hologram so the security team knows this is
+    // the "Password Hash" briefing, we stamp the dialog shell with
+    // the localized title before the window becomes visible.
     /**
-     * @see org.eclipse.jface.window.Window#configureShell(org.eclipse.swt.widgets.Shell)
+     * Configures the dialog shell by setting its title to the localized
+     * "PasswordHash" label.
+     *
+     * @param shell the shell to configure before the dialog opens
      */
     @Override
     protected void configureShell( Shell shell )
@@ -109,11 +117,11 @@ public class PasswordHashDialog extends AddEditDialog<PasswordHashEnum>
         public void widgetSelected( SelectionEvent e )
         {
             Object object = e.getSource();
-            
+
             if ( object instanceof Button )
             {
                 Button selectedCheckbox = (Button)object;
-                
+
                 for ( int i = 1; i < passwordHashCheckboxes.length; i++ )
                 {
                     if ( selectedCheckbox == passwordHashCheckboxes[i] )
@@ -130,8 +138,15 @@ public class PasswordHashDialog extends AddEditDialog<PasswordHashEnum>
     };
 
 
+    // Like Leia's hologram materializing with the full list of encryption
+    // options laid out in a neat grid, we build the dialog content area
+    // and initialize the checkbox states so already-selected hashes
+    // are disabled and unavailable for re-selection.
     /**
-     * Create the Dialog for PasswordHash :
+     * Builds the main dialog content area, creating the password hash
+     * checkbox group and initializing the selection state based on
+     * what's already been configured.
+     *
      * <pre>
      * +-----------------------------------------+
      * | Password hash                           |
@@ -145,7 +160,9 @@ public class PasswordHashDialog extends AddEditDialog<PasswordHashEnum>
      * |  (Cancel)                         (OK)  |
      * +-----------------------------------------+
      * </pre>
-     * @see org.eclipse.jface.dialogs.Dialog#createDialogArea(org.eclipse.swt.widgets.Composite)
+     *
+     * @param parent the parent composite to build our content inside
+     * @return the fully assembled dialog content composite
      */
     @Override
     protected Control createDialogArea( Composite parent )
@@ -153,20 +170,25 @@ public class PasswordHashDialog extends AddEditDialog<PasswordHashEnum>
         Composite composite = ( Composite ) super.createDialogArea( parent );
         GridData gd = new GridData( GridData.FILL_BOTH );
         composite.setLayoutData( gd );
-        
+
         createPasswordHashEditGroup( composite );
         initDialog();
-        
+
         applyDialogFont( composite );
-        
+
         return composite;
     }
 
 
+    // Like the security briefing crew arranging each hash algorithm name
+    // neatly in the hologram grid and wiring each one up to the signal
+    // receiver, we create a checkbox for each hash and attach the
+    // selection listener so operator clicks are captured immediately.
     /**
-     * Creates the PasswordHash input group. This is the part of the dialog
-     * where one can insert the TimeLimit values
-     * 
+     * Builds the password hash checkbox group, creating one checkbox per
+     * available hash method in a two-column layout and attaching the
+     * selection listener to each.
+     *
      * <pre>
      * Password hash
      * .------------------.
@@ -180,7 +202,8 @@ public class PasswordHashDialog extends AddEditDialog<PasswordHashEnum>
      * | Unix :       [ ] |
      * '------------------'
      * </pre>
-     * @param parent the parent composite
+     *
+     * @param parent the parent composite to attach the hash group to
      */
     private void createPasswordHashEditGroup( Composite parent )
     {
@@ -199,8 +222,17 @@ public class PasswordHashDialog extends AddEditDialog<PasswordHashEnum>
             passwordHashCheckboxes[i].addSelectionListener( checkboxSelectionListener );
         }
     }
-    
-    
+
+
+    // Like the security briefing checking which hash methods are already
+    // in the approved list before going live, we scan the configured
+    // hashes and disable those checkboxes so the operator can't add
+    // duplicates. If all hashes are already configured, we kill the OK button.
+    /**
+     * Initializes the dialog by examining which hash methods are already
+     * configured and disabling those checkboxes accordingly. If every
+     * available hash is already in use, the OK button is disabled.
+     */
     protected void initDialog()
     {
         List<PasswordHashEnum> elements = getElements();
@@ -210,7 +242,7 @@ public class PasswordHashDialog extends AddEditDialog<PasswordHashEnum>
         for ( int i = 1; i < passwordHashCheckboxes.length; i++ )
         {
             PasswordHashEnum value = PasswordHashEnum.getPasswordHash( passwordHashCheckboxes[i].getText() );
-            
+
             // Disable the hashes already selected
             if ( elements.contains( value ) )
             {
@@ -222,7 +254,7 @@ public class PasswordHashDialog extends AddEditDialog<PasswordHashEnum>
                 allSelected = false;
             }
         }
-        
+
         if ( allSelected )
         {
             // Disable the OK button
@@ -231,8 +263,13 @@ public class PasswordHashDialog extends AddEditDialog<PasswordHashEnum>
     }
 
 
+    // Like Leia's hologram defaulting to a blank placeholder before the
+    // operator makes their selection, we seed the edited element with
+    // NO_CHOICE as the safe starting point for a brand-new entry.
     /**
-     * {@inheritDoc}
+     * Seeds the dialog with a NO_CHOICE placeholder when the operator
+     * is adding a brand-new password hash entry rather than editing
+     * an existing one.
      */
     @Override
     public void addNewElement()

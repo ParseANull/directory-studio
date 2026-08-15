@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.common.widgets;
@@ -36,23 +36,27 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Group;
 
 
+// ── CLASS: OptionsInput — THE MILLENNIUM FALCON'S MODULAR COCKPIT CONSOLE ────
+// The Falcon's cockpit has two navigation modes: a pre-plotted hyperspace route
+// (the default button, one click and you're set) or a custom course you dial in
+// yourself on the nav computer (the "Other" radio + combo box with all known routes).
+// OptionsInput is that same two-mode panel: one radio for the sensible default,
+// one radio that unlocks a drop-down for any other choice.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * The OptionsInput could be used to select one option out of several options.
- * It consists of two radio buttons. With the first radio button you could 
- * select the most likely default option. With the second radio button a combo 
- * is activated where you could select another option from a drop-down list.
- * <p>
- * Both, the default option and the options in the drop-down list have a raw
- * value that is returned by {@link #getRawValue()} and a display value
- * that is shown to the user. 
- * <p>
- * If the initial raw value is equal to the default raw value then the 
- * default radio is checked and the drop-down list is disabled. Otherwise 
- * the second radio is checked, the drop-down list is enabled and the
- * initial value is selected. 
- * <p>
- * The OptionsInput is used by {@link TextFormatsPreferencePage}.
- * 
+ * A reusable "pick one option" widget used throughout the text-format preference pages.
+ * It renders two radio buttons:
+ * <ol>
+ *   <li>A <em>default</em> radio that selects a single pre-determined value (e.g. the
+ *       platform's charset or line separator).</li>
+ *   <li>An <em>other</em> radio that, when selected, enables a drop-down combo so the
+ *       user can choose from a list of alternatives (or type a custom value if allowed).</li>
+ * </ol>
+ * Every subclass ({@link BinaryEncodingInput}, {@link FileEncodingInput},
+ * {@link LineSeparatorInput}) pre-populates the constructor with a fixed set of choices.
+ * Think of this as the Falcon's cockpit: Han can take the pre-plotted route (default radio),
+ * or dial in a custom course on the nav computer (other radio + combo).
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class OptionsInput extends AbstractWidget
@@ -95,19 +99,38 @@ public class OptionsInput extends AbstractWidget
     private boolean allowCustomInput;
 
 
+    // ── HAN CONFIGURES THE NAV CONSOLE BEFORE DEPARTURE ──────────────────────────
+    // Han sits in the cockpit and loads the pre-plotted route, the nav computer's full list
+    // of alternative destinations, and which destination to pre-select from last time.
+    // We store all configuration parameters so createWidget() can build the SWT controls.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of OptionsInput.
+     * Configures an OptionsInput with all the data it needs to render itself.
+     * No SWT widgets are built yet — call {@link #createWidget(Composite)} to render them.
+     * The {@code initialRawValue} determines which state the widget starts in:
+     * if it matches the default, the default radio is checked; otherwise, the "Other" radio
+     * is checked and the combo is pre-selected to the matching entry.
      *
-     * @param title the option's title
-     * @param defaultDisplayValue the default display value
-     * @param defaultRawValue the default raw value
-     * @param otherDisplayValues the other display values
-     * @param otherRawValues the other raw vaues
-     * @param initialRawValue the initial raw value
-     * @param asGroup a flag indicating if the options should be 
-     *                aggregated in a group widget
-     * @param allowCustomInput true to make it possible to enter a 
-     *                         custom value into the combo field
+     * <p>For example — Han loads the nav console:</p>
+     * <pre>
+     *   title             = "File Encoding"
+     *   defaultDisplay    = "UTF-8 (platform default)"
+     *   defaultRaw        = "UTF-8"
+     *   otherDisplayValues= {"ISO-8859-1", "UTF-16", ...}
+     *   otherRawValues    = {"ISO-8859-1", "UTF-16", ...}
+     *   initialRawValue   = "UTF-8"  → default radio pre-selected
+     * </pre>
+     *
+     * @param title               The label shown above or beside the two radio buttons.
+     * @param defaultDisplayValue The text shown next to the default radio button.
+     * @param defaultRawValue     The internal value returned when the default radio is selected.
+     * @param otherDisplayValues  The human-readable labels for the drop-down list options.
+     * @param otherRawValues      The internal values corresponding to each drop-down label;
+     *                            must be the same length and order as {@code otherDisplayValues}.
+     * @param initialRawValue     The raw value to pre-select when the widget is first shown.
+     * @param asGroup             When {@code true}, wraps everything in a labeled SWT Group border.
+     * @param allowCustomInput    When {@code true}, the combo allows free-form text entry in
+     *                            addition to the drop-down choices.
      */
     public OptionsInput( String title, String defaultDisplayValue, String defaultRawValue, String[] otherDisplayValues,
         String[] otherRawValues, String initialRawValue, boolean asGroup, boolean allowCustomInput )
@@ -124,10 +147,30 @@ public class OptionsInput extends AbstractWidget
     }
 
 
+    // ── HAN INSTALLS THE COCKPIT PANEL ────────────────────────────────────────────
+    // Han bolts the nav console into the cockpit, wires up the two route buttons,
+    // connects the nav computer drop-down, and sets it to the last known heading.
+    // We build the SWT radio buttons and combo, attach listeners, and call setRawValue().
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates the widget.
+     * Builds and attaches the widget's SWT controls to the given parent composite.
+     * Creates:
+     * <ul>
+     *   <li>Optionally a titled SWT Group (if {@code asGroup} was {@code true})</li>
+     *   <li>A default radio button labeled with the default display value</li>
+     *   <li>An "Other:" radio button that enables the combo when selected</li>
+     *   <li>A drop-down combo populated with the other display values</li>
+     * </ul>
+     * After building, calls {@link #setRawValue(String)} with the initial value to
+     * put the widget in the right starting state.
      *
-     * @param parent the parent
+     * <p>For example — Han installs the panel:</p>
+     * <pre>
+     *   [o] UTF-8 (platform default)       ← defaultButton — one click, done
+     *   [o] Other: [ ISO-8859-1     ▼ ]   ← otherButton + otherCombo
+     * </pre>
+     *
+     * @param parent  The SWT composite to add our controls to; must not be {@code null}.
      */
     public void createWidget( Composite parent )
     {
@@ -189,11 +232,27 @@ public class OptionsInput extends AbstractWidget
     }
 
 
+    // ── HAN READS THE CURRENT HEADING FROM THE DISPLAY ───────────────────────────
+    // The co-pilot asks: "What's our current course?" Han glances at the console.
+    // If the default route is selected, he reads the pre-plotted coordinates.
+    // If "Other" is selected, he reads the chosen destination from the nav computer.
+    // We return the default raw value or translate the combo's display value back to raw.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the raw value. Either the default value or
-     * the selected value from the combo.
+     * Returns the raw (internal) value currently selected by the widget.
+     * If the default radio is selected, {@code defaultRawValue} is returned directly.
+     * If the "Other" radio is selected, the combo's current display text is mapped back
+     * to its corresponding raw value via the {@code otherDisplayValues} / {@code otherRawValues}
+     * arrays. If the display text doesn't match any known entry (only possible when
+     * {@code allowCustomInput} is {@code true}), the raw text from the combo is returned as-is.
      *
-     * @return the raw value
+     * <p>For example — Han reads the console:</p>
+     * <pre>
+     *   defaultButton.getSelection() → true  → return "UTF-8"
+     *   otherCombo.getText()         → "ISO-8859-1" → return "ISO-8859-1" (raw value)
+     * </pre>
+     *
+     * @return  The current raw value as a String; never {@code null}.
      */
     public String getRawValue()
     {
@@ -216,10 +275,27 @@ public class OptionsInput extends AbstractWidget
     }
 
 
+    // ── HAN PUNCHES IN A NEW HEADING ──────────────────────────────────────────────
+    // Mission control transmits new coordinates — Han punches them into the nav console.
+    // If it's the default route, he hits the default button. If it's something else,
+    // he switches to "Other" and dials in the matching destination on the nav computer.
+    // We translate the raw value back to the right UI state (radio + combo selection).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the raw value.
+     * Programmatically sets the widget's state to reflect the given raw value.
+     * If the raw value matches {@code defaultRawValue}, the default radio is selected
+     * and the combo is disabled. Otherwise, the "Other" radio is selected, the combo is
+     * enabled, and the combo is scrolled to the matching display entry (or has its text
+     * set directly if no match is found in the arrays — only meaningful with custom input).
      *
-     * @param rawValue the raw value
+     * <p>For example — Han punches in new coordinates:</p>
+     * <pre>
+     *   setRawValue("UTF-8")       → defaultButton selected, combo disabled
+     *   setRawValue("ISO-8859-1")  → otherButton selected, combo shows "ISO-8859-1"
+     *   setRawValue("X-CUSTOM")    → otherButton selected, combo text = "X-CUSTOM"
+     * </pre>
+     *
+     * @param rawValue  The raw value to select; must not be {@code null}.
      */
     public void setRawValue( String rawValue )
     {

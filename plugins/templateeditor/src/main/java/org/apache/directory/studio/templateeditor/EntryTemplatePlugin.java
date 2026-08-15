@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.templateeditor;
 
@@ -32,8 +32,23 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+// ── CLASS: EntryTemplatePlugin — GRAND ADMIRAL THRAWN COMMANDING THE FLEET ───────
+// Grand Admiral Thrawn stands on the bridge of the Chimaera — he coordinates every
+// resource, every squad, every piece of intelligence the Empire has. Nothing moves
+// without going through him. This class is the OSGi activator (the "plugin class")
+// for the Template Editor: Eclipse calls start() and stop() to bring the plugin to
+// life or shut it down. From here we bootstrap the TemplatesManager and hand out
+// images to every corner of the plugin. Every other class reaches back to
+// getDefault() when it needs the shared instance, just as officers look to Thrawn
+// for orders.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
- * The activator class controls the plug-in life cycle.
+ * OSGi bundle activator and singleton access point for the Entry Template plugin.
+ * Eclipse calls {@link #start(BundleContext)} when the plugin loads and
+ * {@link #stop(BundleContext)} when it unloads. All shared resources — the
+ * {@link TemplatesManager}, the image registry, and plugin properties — live here.
+ * Think of this class as Grand Admiral Thrawn on the Chimaera bridge: every other
+ * component defers to {@link #getDefault()} to reach the shared command center.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -49,16 +64,40 @@ public class EntryTemplatePlugin extends AbstractUIPlugin
     private TemplatesManager templatesManager;
 
 
+    // ── CONSTRUCTOR: THRAWN TAKES COMMAND OF THE BRIDGE ─────────────────────────
+    // Thrawn boards the Chimaera — no fanfare, no ceremony. The ship is already
+    // waiting; OSGi will call start() momentarily to bring everything online.
+    // The constructor itself does nothing because Eclipse manages the lifecycle.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * The constructor
+     * No-arg constructor required by the OSGi framework — Eclipse instantiates
+     * this class reflectively. Actual initialization happens in
+     * {@link #start(BundleContext)}.
      */
     public EntryTemplatePlugin()
     {
     }
 
 
+    // ── START: THRAWN BRINGS THE FLEET TO BATTLE READINESS ───────────────────────
+    // Thrawn strides onto the bridge, the crew snaps to attention, and every
+    // station powers up in sequence: navigation, weapons, intelligence. Here we
+    // save the shared instance and create the TemplatesManager so it can load
+    // all templates before the first entry editor ever opens.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the plugin bundle is activated. We stash the shared
+     * instance and bring the {@link TemplatesManager} online so it can begin
+     * loading templates from extension points and the user's disk.
+     *
+     * <p>For example — Thrawn powers up the fleet:</p>
+     * <pre>
+     *   plugin = this;                                  // "I have the bridge."
+     *   templatesManager = new TemplatesManager(...);   // Fleet brought to readiness.
+     * </pre>
+     *
+     * @param context  the OSGi bundle context supplied by the framework
+     * @throws Exception  if the superclass start fails
      */
     public void start( BundleContext context ) throws Exception
     {
@@ -70,8 +109,22 @@ public class EntryTemplatePlugin extends AbstractUIPlugin
     }
 
 
+    // ── STOP: THRAWN ORDERS AN ORDERLY RETREAT ───────────────────────────────────
+    // When the battle is lost, Thrawn gives the order to withdraw — no panic, no
+    // wasted resources. The shared instance is nulled so the GC can clean up,
+    // and the superclass handles the rest of the teardown.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Called by Eclipse when the plugin bundle is deactivated (workbench shutdown
+     * or deliberate unload). We release the shared reference so the GC can clean up.
+     *
+     * <p>For example — Thrawn orders the retreat:</p>
+     * <pre>
+     *   plugin = null;   // "Chimaera, withdraw."
+     * </pre>
+     *
+     * @param context  the OSGi bundle context supplied by the framework
+     * @throws Exception  if the superclass stop fails
      */
     public void stop( BundleContext context ) throws Exception
     {
@@ -80,10 +133,23 @@ public class EntryTemplatePlugin extends AbstractUIPlugin
     }
 
 
+    // ── GET DEFAULT: OFFICERS LOOK TO THE BRIDGE ─────────────────────────────────
+    // Any officer who needs Thrawn's orders walks to the bridge and asks. This
+    // static method is the code equivalent — every other class calls getDefault()
+    // to reach the single shared plugin instance.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the shared instance
+     * Returns the one shared plugin instance. Any component in the plugin that
+     * needs shared resources (templates, images, preferences) goes through this.
      *
-     * @return the shared instance
+     * <p>For example — an officer reports to the bridge:</p>
+     * <pre>
+     *   EntryTemplatePlugin.getDefault().getTemplatesManager();
+     *   // "Admiral, which templates should we use for this entry?"
+     * </pre>
+     *
+     * @return the shared plugin instance; {@code null} if the plugin has not yet
+     *         been started or has already been stopped
      */
     public static EntryTemplatePlugin getDefault()
     {
@@ -91,11 +157,23 @@ public class EntryTemplatePlugin extends AbstractUIPlugin
     }
 
 
+    // ── GET TEMPLATES MANAGER: THRAWN HANDS OVER THE INTELLIGENCE DOSSIER ────────
+    // Thrawn's intelligence officer maintains detailed dossiers on every template
+    // available to the fleet. When a component needs to know which templates exist
+    // or which one is the default, it requests the dossier here.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the templates manager.
+     * Returns the plugin-wide {@link TemplatesManager} that owns the registry of
+     * all loaded templates. Created during {@link #start(BundleContext)} and lives
+     * for the plugin's entire lifetime.
      *
-     * @return
-     *      the templates manager
+     * <p>For example — an officer checks the intelligence dossier:</p>
+     * <pre>
+     *   TemplatesManager mgr = EntryTemplatePlugin.getDefault().getTemplatesManager();
+     *   Template def = mgr.getDefaultTemplate("inetOrgPerson");
+     * </pre>
+     *
+     * @return the shared {@link TemplatesManager}; never {@code null} after start
      */
     public TemplatesManager getTemplatesManager()
     {
@@ -103,20 +181,34 @@ public class EntryTemplatePlugin extends AbstractUIPlugin
     }
 
 
+    // ── GET IMAGE DESCRIPTOR: THRAWN REQUESTS AN INTELLIGENCE PHOTOGRAPH ─────────
+    // Thrawn's aide fetches a photograph from the archive by its path. If the
+    // photograph exists, the aide hands it over. If it's missing, they return
+    // nothing rather than crash the briefing.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Use this method to get SWT images. Use the IMG_ constants from
-     * PluginConstants for the key.
+     * Looks up an {@link ImageDescriptor} by its bundle-relative path (the same
+     * constant strings defined in {@link EntryTemplatePluginConstants}).
+     * Use the {@code IMG_*} constants as keys. Returns {@code null} rather than
+     * crashing if the path doesn't resolve.
      *
-     * @param key
-     *                The key (relative path to the image in filesystem)
-     * @return The image descriptor or null
+     * <p>For example — Thrawn's aide retrieves a photograph:</p>
+     * <pre>
+     *   ImageDescriptor icon =
+     *       EntryTemplatePlugin.getDefault().getImageDescriptor(
+     *           EntryTemplatePluginConstants.IMG_TEMPLATE);
+     * </pre>
+     *
+     * @param key  the bundle-relative image path (e.g. {@code "resources/icons/template.gif"})
+     * @return the {@link ImageDescriptor}, or {@code null} if the key is {@code null}
+     *         or the resource cannot be found
      */
     public ImageDescriptor getImageDescriptor( String key )
     {
         if ( key != null )
         {
             URL url = FileLocator.find( getBundle(), new Path( key ), null );
-            
+
             if ( url != null )
             {
                 return ImageDescriptor.createFromURL( url );
@@ -133,41 +225,69 @@ public class EntryTemplatePlugin extends AbstractUIPlugin
     }
 
 
+    // ── GET IMAGE: THRAWN RETRIEVES AND CACHES A HOLOGRAPHIC DISPLAY ─────────────
+    // Thrawn's archive keeps a cached copy of every hologram it has ever displayed.
+    // The first request fetches and stores it; every subsequent request returns the
+    // cached copy instantly. Don't dispose the image yourself — Thrawn's archive
+    // handles cleanup when the bridge shuts down.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Use this method to get SWT images. Use the IMG_ constants from
-     * PluginConstants for the key. A ImageRegistry is used to manage the
-     * the key->Image mapping.
-     * <p>
-     * Note: Don't dispose the returned SWT Image. It is disposed
-     * automatically when the plugin is stopped.
+     * Returns a cached SWT {@link Image} for the given bundle-relative key.
+     * The image registry is used so each image is created at most once and
+     * disposed automatically when the plugin stops.
      *
-     * @param key The key (relative path to the image in filesystem)
-     * @return The SWT Image or null
+     * <p><strong>Do not dispose the returned image</strong> — it is shared and
+     * will be disposed by the plugin's image registry when the workbench shuts down.</p>
+     *
+     * <p>For example — Thrawn's archive caches the hologram:</p>
+     * <pre>
+     *   Image img = EntryTemplatePlugin.getDefault()
+     *       .getImage(EntryTemplatePluginConstants.IMG_SWITCH_TEMPLATE);
+     *   // First call creates and caches it. Later calls return the cached copy.
+     * </pre>
+     *
+     * @param key  the bundle-relative image path; use {@code IMG_*} constants
+     * @return the SWT {@link Image}, or {@code null} if the key cannot be resolved
      */
     public Image getImage( String key )
     {
         Image image = getImageRegistry().get( key );
-        
+
         if ( image == null )
         {
             ImageDescriptor id = getImageDescriptor( key );
-            
+
             if ( id != null )
             {
                 image = id.createImage();
                 getImageRegistry().put( key, image );
             }
         }
-        
+
         return image;
     }
 
 
+    // ── GET PLUGIN PROPERTIES: THRAWN CONSULTS THE IMPERIAL CODEBOOK ─────────────
+    // Every operation has a codebook — ship names, version numbers, protocol IDs.
+    // Thrawn reads it from the archive on first request and keeps it handy. If the
+    // codebook can't be opened, the error is logged so the fleet knows something
+    // is wrong without crashing the entire ship.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the plugin properties.
+     * Returns the plugin's {@code plugin.properties} file parsed into a
+     * {@link PropertyResourceBundle}. The file is loaded lazily on first call and
+     * cached. Any load error is logged but does not throw — the method returns
+     * {@code null} on failure so callers must null-check.
      *
-     * @return
-     *      the plugin properties
+     * <p>For example — Thrawn opens the codebook:</p>
+     * <pre>
+     *   PropertyResourceBundle props =
+     *       EntryTemplatePlugin.getDefault().getPluginProperties();
+     *   String version = props.getString("Bundle-Version");
+     * </pre>
+     *
+     * @return the plugin properties bundle, or {@code null} if the file failed to load
      */
     public PropertyResourceBundle getPluginProperties()
     {

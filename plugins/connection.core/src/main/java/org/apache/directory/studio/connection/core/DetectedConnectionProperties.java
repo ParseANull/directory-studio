@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.connection.core;
@@ -24,9 +24,23 @@ package org.apache.directory.studio.connection.core;
 import java.util.List;
 
 
+// ── CLASS: DetectedConnectionProperties — R2-D2 REPORTS BACK FROM HIS SCAN ───
+// After R2-D2 plugs into an unknown ship's computer, he runs a full scan and
+// comes back with a report: "it's an X-Wing, Mark IV, supports these shields
+// and these weapons systems."
+// This class holds the results of that scan — everything we auto-discover about
+// a server by reading its rootDSE after we connect: vendor name, server type,
+// supported LDAP controls, extensions, and features.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class contains all the properties that were detected for a connection
- * during the first connection.
+ * Holds server properties that we auto-detect by reading the rootDSE immediately
+ * after connecting.
+ * The rootDSE is the LDAP server's "about me" entry — it advertises supported
+ * controls, extensions, features, vendor info, and LDAP version.
+ * We cache all of this in the connection's extended properties map so it persists
+ * across sessions without requiring a fresh scan every time.
+ * Think of this class as R2-D2's scan report: he connects, reads the ship's
+ * manifest, and files a structured report that the crew can query.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -60,10 +74,18 @@ public class DetectedConnectionProperties
     public Connection connection;
 
 
+    // ── CONSTRUCTOR — R2 INITIALIZES HIS SCAN LOG FOR THIS SHIP ──────────────────
+    // R2-D2 opens a fresh scan log for the target ship, ready to record whatever
+    // his sensors find when he plugs in.
+    // We store a reference to the connection so we can read/write its extended
+    // properties as our persistence layer.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DetectedConnectionProperties.
+     * Creates a new {@link DetectedConnectionProperties} for the given connection.
+     * We store data in the connection's extended-properties map rather than in separate
+     * fields so everything persists together in connections.xml.
      *
-     * @param connection the associated connection
+     * @param connection  The connection whose rootDSE properties we represent.
      */
     public DetectedConnectionProperties( Connection connection )
     {
@@ -71,10 +93,18 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── GET SERVER TYPE — R2 IDENTIFIES THE SHIP CLASS ────────────────────────────
+    // R2 reads the ship-class identifier out of the scan log and translates it
+    // into a known type from his database.
+    // We parse the stored string back to a ConnectionServerType enum constant.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the server type.
+     * Returns the auto-detected server type.
+     * We read the stored string from the extended properties map and parse it back
+     * to a {@link ConnectionServerType} enum constant.
+     * Returns {@link ConnectionServerType#UNKNOWN} if the value is missing or unrecognizable.
      *
-     * @return the server type
+     * @return  The detected {@link ConnectionServerType}.
      */
     public ConnectionServerType getServerType()
     {
@@ -99,10 +129,16 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── GET SUPPORTED CONTROLS — R2 LISTS THE SHIP'S WEAPON SYSTEMS ──────────────
+    // R2 reads the scan log entry for supported weapon systems (LDAP control OIDs).
+    // We return the list of OID strings stored in the extended properties.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the supported controls.
+     * Returns the list of LDAP control OIDs advertised by the server in its rootDSE.
+     * Controls are extensions to LDAP operations — for example paged results (1.2.840.113556.1.4.319).
+     * We read the semicolon-delimited list from extended properties.
      *
-     * @return the supported controls
+     * @return  A list of OID strings, or {@code null} if not detected yet.
      */
     public List<String> getSupportedControls()
     {
@@ -111,10 +147,16 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── GET SUPPORTED EXTENSIONS — R2 LISTS THE SHIP'S DOCKING EXTENSIONS ─────────
+    // R2 reads which extended docking protocols the ship supports.
+    // We return the list of LDAP extension OIDs.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the supported extensions.
+     * Returns the list of LDAP extended-operation OIDs advertised by the server.
+     * Extended operations are custom commands beyond the standard LDAP set —
+     * for example StartTLS (1.3.6.1.4.1.1466.20037) or password modify.
      *
-     * @return the supported extensions
+     * @return  A list of OID strings, or {@code null} if not detected yet.
      */
     public List<String> getSupportedExtensions()
     {
@@ -123,10 +165,15 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── GET SUPPORTED FEATURES — R2 LISTS THE SHIP'S OPTIONAL CAPABILITIES ────────
+    // R2 reads which optional fleet capabilities the ship has enabled.
+    // We return the list of LDAP feature OIDs.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the supported features.
+     * Returns the list of LDAP feature OIDs advertised by the server.
+     * Features are optional RFC capabilities like "modify-increment" or "pre/post-read".
      *
-     * @return the supported features
+     * @return  A list of OID strings, or {@code null} if not detected yet.
      */
     public List<String> getSupportedFeatures()
     {
@@ -135,10 +182,16 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── GET SUPPORTED LDAP VERSIONS — R2 READS THE PROTOCOL VERSION LIST ──────────
+    // R2 reads which versions of the LDAP protocol the server speaks.
+    // We return the list of version strings (typically ["3"]).
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the supported LDAP versions.
+     * Returns the LDAP protocol versions supported by the server.
+     * Virtually every modern server will return just {@code ["3"]}, but it's worth
+     * checking.
      *
-     * @return the supported LDAP versions
+     * @return  A list of version strings, or {@code null} if not detected yet.
      */
     public List<String> getSupportedLdapVersions()
     {
@@ -147,10 +200,16 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── GET SUPPORTED SASL MECHANISMS — R2 LISTS THE AUTH HANDSHAKE TYPES ─────────
+    // R2 reads which authentication protocols the ship's security system accepts.
+    // We return the list of SASL mechanism names.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the supported SASL mechanisms.
+     * Returns the SASL mechanisms advertised by the server.
+     * Common values: PLAIN, DIGEST-MD5, GSSAPI, EXTERNAL.
+     * We use this to know which SASL auth methods are actually available.
      *
-     * @return the supported SASL mechanisms
+     * @return  A list of SASL mechanism name strings, or {@code null} if not detected.
      */
     public List<String> getSupportedSaslMechanisms()
     {
@@ -159,10 +218,15 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── GET VENDOR NAME — R2 READS THE MANUFACTURER PLATE ────────────────────────
+    // R2 scans the manufacturer's plate on the ship's hull: "OpenLDAP Foundation."
+    // We return the vendorName attribute from the rootDSE.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the vendor name.
+     * Returns the server's vendor name as reported in its rootDSE.
+     * For example: {@code "Apache Software Foundation"} or {@code "Microsoft Corporation"}.
      *
-     * @return the vendor name
+     * @return  The vendor name string, or {@code null} if the server didn't report one.
      */
     public String getVendorName()
     {
@@ -170,10 +234,15 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── GET VENDOR VERSION — R2 READS THE FIRMWARE VERSION ───────────────────────
+    // R2 reads the firmware version sticker: "OpenLDAP 2.6.3."
+    // We return the vendorVersion attribute from the rootDSE.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets the vendor version.
+     * Returns the server's vendor version string as reported in its rootDSE.
+     * For example: {@code "2.6.3"} or {@code "6.3.1"}.
      *
-     * @return the vendor version
+     * @return  The vendor version string, or {@code null} if not reported.
      */
     public String getVendorVersion()
     {
@@ -181,10 +250,16 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── SET SERVER TYPE — R2 STAMPS THE SHIP CLASS IN THE LOG ────────────────────
+    // R2 finishes his scan, identifies the ship class, and stamps it in the log.
+    // We persist the server type as a string in the extended properties.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the server type.
+     * Stores the detected server type.
+     * We call this after probing the rootDSE and matching it against known server signatures.
      *
-     * @param serverType the server type
+     * @param serverType  The detected {@link ConnectionServerType} (passed as Object so
+     *                    callers can use the enum without a cast).
      */
     public void setServerType( Object serverType )
     {
@@ -193,10 +268,14 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── SET SUPPORTED CONTROLS — R2 RECORDS THE WEAPON SYSTEM LIST ───────────────
+    // R2 writes the list of supported weapon systems (control OIDs) into the log.
+    // We persist the list as a semicolon-delimited string in extended properties.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the supported controls.
+     * Stores the list of LDAP control OIDs supported by the server.
      *
-     * @param supportedControls the supported controls
+     * @param supportedControls  The list of OID strings to store.
      */
     public void setSupportedControls( List<String> supportedControls )
     {
@@ -206,10 +285,14 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── SET SUPPORTED EXTENSIONS — R2 RECORDS THE DOCKING EXTENSION LIST ──────────
+    // R2 records which extended docking protocols this ship supports.
+    // We persist the list as a semicolon-delimited string.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the supported extensions.
+     * Stores the list of LDAP extended-operation OIDs supported by the server.
      *
-     * @param supportedExtensions the supported extensions
+     * @param supportedExtensions  The list of OID strings to store.
      */
     public void setSupportedExtensions( List<String> supportedExtensions )
     {
@@ -219,10 +302,14 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── SET SUPPORTED FEATURES — R2 RECORDS THE OPTIONAL CAPABILITY LIST ──────────
+    // R2 records which optional fleet capabilities this ship has enabled.
+    // We persist the list as a semicolon-delimited string.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the supported features.
+     * Stores the list of LDAP feature OIDs supported by the server.
      *
-     * @param supportedFeatures the supported features
+     * @param supportedFeatures  The list of OID strings to store.
      */
     public void setSupportedFeatures( List<String> supportedFeatures )
     {
@@ -232,10 +319,14 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── SET SUPPORTED LDAP VERSIONS — R2 RECORDS THE PROTOCOL VERSION LIST ────────
+    // R2 records which LDAP protocol versions this server speaks.
+    // We persist the list as a semicolon-delimited string.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the supported LDAP versions.
+     * Stores the list of LDAP protocol versions supported by the server.
      *
-     * @param supportedLdapVersions the supported LDAP versions
+     * @param supportedLdapVersions  The list of version strings to store.
      */
     public void setSupportedLdapVersions( List<String> supportedLdapVersions )
     {
@@ -245,11 +336,14 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── SET SUPPORTED SASL MECHANISMS — R2 RECORDS THE AUTH PROTOCOL LIST ─────────
+    // R2 records which authentication handshake types the security system accepts.
+    // We persist the list as a semicolon-delimited string.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the supported SASL mechanisms.
+     * Stores the list of SASL mechanisms supported by the server.
      *
-     * @param supportedSaslMechanisms
-     *      the supported SASL mechanisms
+     * @param supportedSaslMechanisms  The list of SASL mechanism name strings to store.
      */
     public void setSupportedSaslMechanisms( List<String> supportedSaslMechanisms )
     {
@@ -259,10 +353,14 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── SET VENDOR NAME — R2 STAMPS THE MANUFACTURER ON THE LOG ──────────────────
+    // R2 writes the manufacturer's name into the scan log.
+    // We store the vendor name in the extended properties.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the vendor name.
+     * Stores the server's vendor name.
      *
-     * @param vendorName the vendor name
+     * @param vendorName  The vendor name string from the rootDSE.
      */
     public void setVendorName( String vendorName )
     {
@@ -270,10 +368,14 @@ public class DetectedConnectionProperties
     }
 
 
+    // ── SET VENDOR VERSION — R2 STAMPS THE FIRMWARE VERSION ON THE LOG ────────────
+    // R2 writes the firmware version into the scan log.
+    // We store the vendor version in the extended properties.
+    // ────────────────────────────────────────────────────────────────────────────────
     /**
-     * Sets the vendor version.
+     * Stores the server's vendor version string.
      *
-     * @param vendorVersion the vendor version
+     * @param vendorVersion  The vendor version string from the rootDSE.
      */
     public void setVendorVersion( String vendorVersion )
     {

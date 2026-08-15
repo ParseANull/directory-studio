@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.acl.sourceeditor;
 
@@ -40,9 +40,24 @@ import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.texteditor.ITextEditorActionDefinitionIds;
 
 
+// ── CLASS: DialogContentAssistant — C-3PO OFFERING PHRASE COMPLETIONS AT THE TERMINAL
+// C-3PO stands at Cassian's terminal, ready to suggest completions the moment
+// the officer starts typing. When the control gains focus C-3PO registers the
+// Ctrl+Space handler so the officer can invoke completions at any time. When the
+// control loses focus C-3PO deregisters the handler so other parts of the UI
+// can claim the keyboard shortcut. He also tracks whether the completion popup
+// is currently showing — if it is, he swallows the ESC key so it closes the
+// popup instead of dismissing the dialog.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements the Content Assistant Dialog used in the ACI Item 
- * Source Editor for displaying proposals
+ * A {@link SubjectControlContentAssistant} that registers and deregisters the
+ * Ctrl+Space content-assist keyboard handler when the associated control gains
+ * or loses focus. Can be installed on {@link Text} widgets, {@link Combo}
+ * widgets, or an {@link ITextViewer}. Also swallows ESC key traversal while
+ * the completion popup is visible to prevent accidentally closing the dialog.
+ *
+ * <p>Think of this class as C-3PO's completion service: he activates it when
+ * you focus the ACL text field and steps back when you tab away.</p>
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -55,8 +70,13 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     private boolean possibleCompletionsVisible;
 
 
+    // ── Constructing the Content Assistant ────────────────────────────────────
+    // C-3PO powers up his phrase database and sets the popup-visible flag to false
+    // because no completion popup is open yet.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of DialogContentAssistant.
+     * Creates a new DialogContentAssistant with the completion popup initially
+     * hidden and no handler registered.
      */
     public DialogContentAssistant()
     {
@@ -65,11 +85,16 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── Installing on a Text Widget ────────────────────────────────────────────
+    // C-3PO plugs into a Text widget: he stores the reference, adds himself as
+    // a focus listener, and delegates to the super-class using a TextContentAssistSubjectAdapter.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Installs content assist support on the given subject.
+     * Installs content assist support on the given {@link Text} widget. Registers
+     * this instance as a focus listener so the Ctrl+Space handler is activated
+     * only when the text field has focus.
      *
-     * @param text
-     *      the one who requests content assist
+     * @param text  The text widget to install content assist on.
      */
     public void install( Text text )
     {
@@ -79,11 +104,16 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── Installing on a Combo Widget ──────────────────────────────────────────
+    // C-3PO plugs into a Combo widget in the same way as a Text widget, but
+    // uses a ComboContentAssistSubjectAdapter to wrap it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Installs content assist support on the given subject.
+     * Installs content assist support on the given {@link Combo} widget. Registers
+     * this instance as a focus listener and wraps the combo in a
+     * {@link ComboContentAssistSubjectAdapter}.
      *
-     * @param combo
-     *      the one who requests content assist
+     * @param combo  The combo widget to install content assist on.
      */
     public void install( Combo combo )
     {
@@ -93,8 +123,19 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── Installing on a Source Viewer ─────────────────────────────────────────
+    // C-3PO plugs into a source viewer's underlying text widget and also adds a
+    // traverse listener that swallows ESC while the completion popup is open.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Installs content assist support on the given {@link ITextViewer}. In addition
+     * to focus handling, adds a {@link TraverseListener} that intercepts ESC key
+     * traversal while the completion popup is visible — preventing ESC from closing
+     * the parent dialog while the user is navigating completion proposals.
+     *
      * {@inheritDoc}
+     *
+     * @param viewer  The text viewer to install content assist on.
      */
     public void install( ITextViewer viewer )
     {
@@ -117,7 +158,15 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── Uninstalling and Cleaning Up ──────────────────────────────────────────
+    // C-3PO powers down: deregisters the keyboard handler, removes the focus
+    // listener, and calls the super-class uninstall.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Uninstalls content assist support. Deregisters the Ctrl+Space handler
+     * activation (if still active), removes the focus listener, then delegates
+     * to the super-class.
+     *
      * {@inheritDoc}
      */
     public void uninstall()
@@ -139,8 +188,17 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── Tracking the Popup Opening (for ESC suppression) ─────────────────────
+    // C-3PO notes that the completion popup is now visible so the traverse
+    // listener knows to swallow ESC key events.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Sets the {@code possibleCompletionsVisible} flag to {@code true} then
+     * delegates to the super-class to restore the popup size.
+     *
      * {@inheritDoc}
+     *
+     * @return  The restored popup size.
      */
     protected Point restoreCompletionProposalPopupSize()
     {
@@ -149,8 +207,16 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── Showing the Completion Popup ──────────────────────────────────────────
+    // C-3PO opens the phrase suggestion popup and notes that it is now visible.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Shows the possible completions popup and marks it as visible so ESC
+     * traversal is swallowed while it remains open.
+     *
      * {@inheritDoc}
+     *
+     * @return  An error message or {@code null} on success.
      */
     public String showPossibleCompletions()
     {
@@ -159,7 +225,14 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── Tracking the Popup Closing ─────────────────────────────────────────────
+    // C-3PO notes that the popup has closed so ESC traversal is no longer
+    // swallowed.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Clears the {@code possibleCompletionsVisible} flag then delegates to the
+     * super-class. Called automatically by the framework when the popup is dismissed.
+     *
      * {@inheritDoc}
      */
     protected void possibleCompletionsClosed()
@@ -169,8 +242,18 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── Registering the Ctrl+Space Handler on Focus Gained ────────────────────
+    // When the officer clicks into the ACL text field, C-3PO registers a handler
+    // for Ctrl+Space so the officer can invoke completions from the keyboard.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Called when the control gains focus. Registers a keyboard handler for the
+     * {@link ITextEditorActionDefinitionIds#CONTENT_ASSIST_PROPOSALS} command
+     * (Ctrl+Space) so the user can trigger completions from the keyboard.
+     *
      * {@inheritDoc}
+     *
+     * @param e  The focus event.
      */
     public void focusGained( FocusEvent e )
     {
@@ -192,8 +275,17 @@ public class DialogContentAssistant extends SubjectControlContentAssistant imple
     }
 
 
+    // ── Deregistering the Ctrl+Space Handler on Focus Lost ────────────────────
+    // When the officer tabs away from the field, C-3PO deregisters the handler
+    // so other widgets can reclaim Ctrl+Space.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
+     * Called when the control loses focus. Deregisters the Ctrl+Space keyboard
+     * handler that was activated in {@link #focusGained(FocusEvent)}.
+     *
      * {@inheritDoc}
+     *
+     * @param e  The focus event.
      */
     public void focusLost( FocusEvent e )
     {

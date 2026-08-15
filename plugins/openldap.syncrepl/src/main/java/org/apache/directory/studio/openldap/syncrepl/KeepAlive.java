@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.syncrepl;
 
@@ -25,10 +25,27 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
+// ── CLASS: KeepAlive — The Empire's Persistent Channel Heartbeat ─────────────
+// The sector command keeps its connection to Imperial HQ open at all times.
+// To prevent the HoloNet link from silently dying during quiet periods, the
+// communications droid sends a heartbeat: after N seconds of idle silence,
+// it sends up to P probe packets, one every I seconds.  If none of the probes
+// receive a response the link is declared dead and the sector command must
+// reconnect.
+// This class models that heartbeat config — the syncrepl "keepalive" parameter
+// in "idle:probes:interval" format — for an OpenLDAP LDAP replication link.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * This class implements a keep alive.
- * <p>
- * Format: "&lt;idle&gt;:&lt;probes&gt;:&lt;interval&gt;"
+ * Models the syncrepl {@code keepalive} parameter.
+ * Controls TCP keep-alive behaviour on the replication connection.
+ * Format: {@code "<idle>:<probes>:<interval>"} where all three are integers
+ * (seconds for idle and interval, count for probes).
+ * For example — {@code "60:3:10"} means: after 60 s of idle, send up to
+ * 3 probes spaced 10 s apart before considering the connection dead.
+ * Think of this as the Imperial communications droid's heartbeat protocol
+ * for the sector command's HoloNet link.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class KeepAlive
 {
@@ -45,20 +62,29 @@ public class KeepAlive
     private int interval;
 
 
+    // ── Blank Heartbeat Config — Fill In the Values Later ────────────────────
+    // Creates a keep-alive object with all fields at 0; the caller populates
+    // them via setters or via the full constructor.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of KeepAlive.
+     * Creates a zero-valued keep-alive configuration.
+     * Use setters or the three-argument constructor to provide actual values.
      */
     public KeepAlive()
     {
     }
 
 
+    // ── All Three Heartbeat Parameters Specified Upfront ──────────────────────
+    // The communications droid is configured with all three values at once:
+    // idle time, probe count, and probe interval.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Creates a new instance of KeepAlive.
+     * Creates a keep-alive configuration with all three parameters.
      *
-     * @param idle the idle
-     * @param probes the probes
-     * @param interval the interval
+     * @param idle      seconds of idle time before the first probe is sent.
+     * @param probes    maximum number of probe packets to send.
+     * @param interval  seconds between consecutive probe packets.
      */
     public KeepAlive( int idle, int probes, int interval )
     {
@@ -68,11 +94,16 @@ public class KeepAlive
     }
 
 
+    // ── Copy the Heartbeat Config for Another Sector Command ──────────────────
+    // Each sector command gets its own copy of the keep-alive configuration
+    // so they can adjust settings independently.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a copy of a KeepAlive object.
+     * Returns a deep copy of the given keep-alive configuration, or {@code null}
+     * if the input is {@code null}.
      *
-     * @param syncRepl the initial KeepAlive object
-     * @return a copy of the given KeepAlive object
+     * @param keepAlive  the keep-alive to copy.
+     * @return           a new {@link KeepAlive} with identical field values.
      */
     public static KeepAlive copy( KeepAlive keepAlive )
     {
@@ -91,10 +122,13 @@ public class KeepAlive
     }
 
 
+    // ── Copy This Heartbeat Config ────────────────────────────────────────────
+    // Convenience instance method delegating to the static copy().
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Gets a copy of the KeepAlive object.
+     * Returns a deep copy of this keep-alive configuration.
      *
-     * @return a copy of the KeepAlive object
+     * @return  a new {@link KeepAlive} with the same values.
      */
     public KeepAlive copy()
     {
@@ -102,12 +136,18 @@ public class KeepAlive
     }
 
 
+    // ── Decode the Heartbeat Config from the Configuration String ─────────────
+    // The syncrepl directive stores the keep-alive as "idle:probes:interval" —
+    // we split on ':' using a regex and parse each integer from the captured groups.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * Parses a keep alive string.
+     * Parses a keep-alive string in {@code "<idle>:<probes>:<interval>"} format.
+     * All three components must be non-negative integers.
      *
-     * @param s the string
-     * @return a keep alive
-     * @throws ParseException if an error occurs during parsing
+     * @param s  the keep-alive string, e.g. {@code "60:3:10"}.
+     * @return   the parsed {@link KeepAlive}.
+     * @throws ParseException  if the string doesn't match the expected format
+     *                         or any component can't be parsed as an integer.
      */
     public static KeepAlive parse( String s ) throws ParseException
     {
@@ -165,44 +205,81 @@ public class KeepAlive
     }
 
 
+    /**
+     * Returns the idle time in seconds before the first probe is sent.
+     *
+     * @return  the idle seconds.
+     */
     public int getIdle()
     {
         return idle;
     }
 
 
+    /**
+     * Returns the maximum number of probe packets to send.
+     *
+     * @return  the probe count.
+     */
     public int getProbes()
     {
         return probes;
     }
 
 
+    /**
+     * Returns the interval in seconds between consecutive probe packets.
+     *
+     * @return  the probe interval seconds.
+     */
     public int getInterval()
     {
         return interval;
     }
 
 
+    /**
+     * Sets the idle time in seconds.
+     *
+     * @param idle  seconds of idle before the first probe.
+     */
     public void setIdle( int idle )
     {
         this.idle = idle;
     }
 
 
+    /**
+     * Sets the maximum number of probe packets.
+     *
+     * @param probes  the probe count.
+     */
     public void setProbes( int probes )
     {
         this.probes = probes;
     }
 
 
+    /**
+     * Sets the interval between probe packets in seconds.
+     *
+     * @param interval  the probe interval seconds.
+     */
     public void setInterval( int interval )
     {
         this.interval = interval;
     }
 
 
+    // ── Write the Heartbeat Config Back into the Directive ────────────────────
+    // We format the three integers separated by colons to produce the token
+    // that goes into the OpenLDAP syncrepl configuration.
+    // ────────────────────────────────────────────────────────────────────────────
     /**
-     * {@inheritDoc}
+     * Returns the keep-alive as an {@code "<idle>:<probes>:<interval>"} string
+     * for use in the OpenLDAP syncrepl directive.
+     *
+     * @return  the formatted keep-alive string.
      */
     public String toString()
     {

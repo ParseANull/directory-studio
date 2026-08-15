@@ -6,35 +6,44 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 package org.apache.directory.studio.openldap.config.editor.wrappers;
 
-import org.apache.directory.studio.common.ui.TableDecorator;
-import org.apache.directory.studio.common.ui.wrappers.StringValueWrapper;
-import org.apache.directory.studio.openldap.config.editor.dialogs.StringValueDialog;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.widgets.Shell;
-
+// ── CLASS: StringValueDecorator — The Protocol Droid Rendering Plain Strings ──
+// C-3PO is always ready to read a plain text attribute aloud in whatever
+// language is needed.  StringValueDecorator does the same for plain string
+// attribute values: it wires the table to the StringValueDialog, renders each
+// entry by returning the raw value string, and optionally shows an icon
+// alongside it.
+// ─────────────────────────────────────────────────────────────────────────────
 /**
- * A decorator for a String Value table.
- *  
+ * A {@link TableDecorator} for a table of plain string attribute values.
+ * It connects the table to {@link StringValueDialog} and renders each
+ * {@link StringValueWrapper} by returning its raw value.  An optional image
+ * can be set via {@link #setImage}.
+ *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
 public class StringValueDecorator extends TableDecorator<StringValueWrapper>
 {
     /** The associated image, if any */
     private Image image;
-    
+
+
+    // ── Constructor — C-3PO Loads the String Dialog ───────────────────────────
+    // C-3PO boots up and connects to the string editing dialog for the named
+    // attribute type.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Create a new instance of StringValueDecorator
      * @param parentShell The parent Shell
@@ -44,10 +53,13 @@ public class StringValueDecorator extends TableDecorator<StringValueWrapper>
     {
         setDialog( new StringValueDialog( parentShell, attributeName ) );
     }
-    
-    
-    /** 
-     * Adds an Image to this decorator 
+
+
+    // ── setImage — Give C-3PO an Icon to Display ──────────────────────────────
+    // We hand C-3PO an icon to show next to each string value in the table.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Adds an Image to this decorator
      * @param image The Image
      */
     public void setImage( Image image )
@@ -55,6 +67,10 @@ public class StringValueDecorator extends TableDecorator<StringValueWrapper>
         this.image = image;
     }
 
+
+    // ── getText — C-3PO Reads the String Aloud ────────────────────────────────
+    // C-3PO reads the raw string value from the wrapper.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Construct the label for a String.
      * @param element the Element for which we want the value
@@ -72,9 +88,12 @@ public class StringValueDecorator extends TableDecorator<StringValueWrapper>
     }
 
 
+    // ── getImage — Return the Configured Icon ─────────────────────────────────
+    // C-3PO holds up the icon we gave him (or nothing if none was set).
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * Get the image. Here, We have none
-     * 
+     *
      * @param element The element for which we want the image
      * @return The associated Image, or Null
      */
@@ -84,7 +103,10 @@ public class StringValueDecorator extends TableDecorator<StringValueWrapper>
         return image;
     }
 
-    
+
+    // ── compare — Sort Strings by Their Natural Ordering ──────────────────────
+    // C-3PO sorts the strings; null entries trail.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
      * {@inheritDoc}
      */

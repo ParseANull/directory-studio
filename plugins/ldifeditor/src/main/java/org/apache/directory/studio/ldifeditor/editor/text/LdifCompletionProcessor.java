@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldifeditor.editor.text;
@@ -63,31 +63,75 @@ import org.eclipse.jface.text.templates.TemplateContextType;
 import org.eclipse.swt.graphics.Image;
 
 
+// ── CLASS: LdifCompletionProcessor — R2-D2 SUGGESTS ESCAPE ROUTES ────────────
+// R2-D2 scans the current corridor context (which container type are we in?
+// what mod-spec are we inside? what prefix has the operator typed?) and then
+// pops up a ranked list of the best routes forward: changetype keywords,
+// attribute names from the schema, mod-spec attribute completions, and template
+// snippets.
+// LdifCompletionProcessor extends TemplateCompletionProcessor to provide all of
+// that: context-specific proposals assembled from the parsed LDIF model and the
+// connected schema, merged with template proposals and a comment prefix.
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Eclipse {@link TemplateCompletionProcessor} for the LDIF editor.
+ * Computes {@link ICompletionProposal}s based on the parsed model context at the
+ * caret offset:
+ * <ul>
+ *   <li>changetype keywords ({@code add}, {@code modify}, {@code delete},
+ *       {@code moddn}) when inside a record that lacks a changetype;</li>
+ *   <li>mod-dn field names ({@code newrdn}, {@code deleteoldrdn},
+ *       {@code newsuperior}) when inside a {@link LdifChangeModDnRecord};</li>
+ *   <li>the mod-spec attribute name when inside a {@link LdifModSpec};</li>
+ *   <li>schema attribute names when inside a content or add record;</li>
+ *   <li>a comment prefix when the caret is at the start of a line;</li>
+ *   <li>template proposals from the plugin's template store.</li>
+ * </ul>
+ * Think of this as R2-D2 scanning the surrounding context and presenting ranked
+ * escape routes.
+ *
+ * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
+ */
 public class LdifCompletionProcessor extends TemplateCompletionProcessor
 {
 
     // private final static String Dn = "dn: ";
+    /** changetype: add keyword + line separator. */
     private final static String CT_ADD = "changetype: add" + BrowserCoreConstants.LINE_SEPARATOR; //$NON-NLS-1$
 
+    /** changetype: modify keyword + line separator. */
     private final static String CT_MODIFY = "changetype: modify" + BrowserCoreConstants.LINE_SEPARATOR; //$NON-NLS-1$
 
+    /** changetype: delete keyword + line separator. */
     private final static String CT_DELETE = "changetype: delete" + BrowserCoreConstants.LINE_SEPARATOR; //$NON-NLS-1$
 
+    /** changetype: moddn keyword + line separator. */
     private final static String CT_MODDN = "changetype: moddn" + BrowserCoreConstants.LINE_SEPARATOR; //$NON-NLS-1$
 
+    /** newrdn: field prefix. */
     private final static String MD_NEWRDN = "newrdn: "; //$NON-NLS-1$
 
+    /** deleteoldrdn: 1 field. */
     private final static String MD_DELETEOLDRDN_TRUE = "deleteoldrdn: 1"; //$NON-NLS-1$
 
-    // private final static String MD_DELETEOLDRDN_FALSE = "deleteoldrdn:
-    // 0";
+    // private final static String MD_DELETEOLDRDN_FALSE = "deleteoldrdn: 0";
+    /** newsuperior: field prefix. */
     private final static String MD_NEWSUPERIOR = "newsuperior: "; //$NON-NLS-1$
 
+    /** The LDIF editor whose model and connection we use. */
     private final ILdifEditor editor;
 
+    /** The content assistant that drives auto-insert behaviour. */
     private final ContentAssistant contentAssistant;
 
 
+    // ── CONSTRUCT ─────────────────────────────────────────────────────────────
+    /**
+     * Creates a new completion processor for {@code editor}.
+     *
+     * @param editor            the LDIF editor
+     * @param contentAssistant  the content assistant (used to toggle auto-insert)
+     */
     public LdifCompletionProcessor( ILdifEditor editor, ContentAssistant contentAssistant )
     {
         this.editor = editor;
@@ -95,6 +139,16 @@ public class LdifCompletionProcessor extends TemplateCompletionProcessor
     }
 
 
+    // ── COMPUTE PROPOSALS ────────────────────────────────────────────────────
+    // R2 scans the context, assembles candidate routes, and returns the list.
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Re-reads auto-insert, auto-activation, and delay preferences before
+     * computing proposals.  Merges template proposals, changetype keywords,
+     * moddn fields, mod-spec attribute, schema attribute names, and a comment
+     * prefix into a single array.</p>
+     */
     public ICompletionProposal[] computeCompletionProposals( ITextViewer viewer, int offset )
     {
 
@@ -274,6 +328,13 @@ public class LdifCompletionProcessor extends TemplateCompletionProcessor
     }
 
 
+    // ── EXTRACT THE LINE PREFIX ───────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns the text from the start of the line containing {@code offset}
+     * to {@code offset}, which is the full prefix typed so far on that line.</p>
+     */
     protected String extractPrefix( ITextViewer viewer, int offset )
     {
 
@@ -295,12 +356,25 @@ public class LdifCompletionProcessor extends TemplateCompletionProcessor
     }
 
 
+    // ── CONTEXT INFORMATION ───────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns {@code null} — context information is not provided.</p>
+     */
     public IContextInformation[] computeContextInformation( ITextViewer viewer, int offset )
     {
         return null;
     }
 
 
+    // ── AUTO-ACTIVATION CHARACTERS ───────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns all 52 ASCII letters plus {@code ':'} as auto-activation
+     * characters so content assist triggers on any letter or colon keystroke.</p>
+     */
     public char[] getCompletionProposalAutoActivationCharacters()
     {
 
@@ -315,24 +389,50 @@ public class LdifCompletionProcessor extends TemplateCompletionProcessor
     }
 
 
+    // ── CONTEXT-INFORMATION AUTO-ACTIVATION ───────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns {@code null} — context-information auto-activation is not
+     * used.</p>
+     */
     public char[] getContextInformationAutoActivationCharacters()
     {
         return null;
     }
 
 
+    // ── ERROR MESSAGE ─────────────────────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns {@code null} — no error message is shown.</p>
+     */
     public String getErrorMessage()
     {
         return null;
     }
 
 
+    // ── CONTEXT-INFORMATION VALIDATOR ─────────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns {@code null} — context-information validation is not used.</p>
+     */
     public IContextInformationValidator getContextInformationValidator()
     {
         return null;
     }
 
 
+    // ── RETURN TEMPLATES FOR CONTEXT TYPE ────────────────────────────────────
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns templates from the plugin's template store for
+     * {@code contextTypeId}.</p>
+     */
     protected Template[] getTemplates( String contextTypeId )
     {
         Template[] templates = LdifEditorActivator.getDefault().getLdifTemplateStore().getTemplates( contextTypeId );
@@ -340,6 +440,23 @@ public class LdifCompletionProcessor extends TemplateCompletionProcessor
     }
 
 
+    // ── DETERMINE THE TEMPLATE CONTEXT TYPE ──────────────────────────────────
+    // R2 figures out where the caret is and picks the matching template bucket.
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Maps the current caret context to one of the LDIF template context
+     * type IDs:
+     * <ul>
+     *   <li>{@code LDIF_FILE_TEMPLATE_ID} — top-level / separator context;</li>
+     *   <li>{@code LDIF_MODIFICATION_RECORD_TEMPLATE_ID} — inside a modify
+     *       record but not in a mod-spec;</li>
+     *   <li>{@code LDIF_MODIFICATION_ITEM_TEMPLATE_ID} — inside a mod-spec;</li>
+     *   <li>{@code LDIF_MODDN_RECORD_TEMPLATE_ID} — inside a moddn record;</li>
+     *   <li>{@code null} — no template context applies.</li>
+     * </ul>
+     * </p>
+     */
     protected TemplateContextType getContextType( ITextViewer viewer, IRegion region )
     {
 
@@ -414,6 +531,16 @@ public class LdifCompletionProcessor extends TemplateCompletionProcessor
     }
 
 
+    // ── ICON FOR A TEMPLATE ───────────────────────────────────────────────────
+    // The icon of a template proposal depends on what changetype keyword or
+    // operation type appears in its body.
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns an image based on the first changetype or mod-op keyword found
+     * in the template pattern (add/modify/delete/moddn/dn), or the generic
+     * template icon if none is found.</p>
+     */
     protected Image getImage( Template template )
     {
 

@@ -6,16 +6,16 @@
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
- *  
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
- *  under the License. 
- *  
+ *  under the License.
+ *
  */
 
 package org.apache.directory.studio.ldapbrowser.ui.dialogs;
@@ -53,23 +53,21 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 
+// ── CLASS: PasswordModifyExtendedOperationDialog — MACE WINDU CONFRONTS PALPATINE ──
+// Mace Windu storms into Palpatine's office, lightsaber drawn, and demands the
+// Chancellor reveal himself and submit to Jedi authority or face the consequences.
+// Every option is laid out plainly: use bind identity or specify a different user?
+// Provide the old password or declare it unavailable?  Generate a new one or enter
+// it explicitly?  Like Mace, this dialog doesn't close until someone makes a
+// definitive choice — and the OK button stays disabled until all inputs are valid.
+// ─────────────────────────────────────────────────────────────────────────────────
 /**
-` * The PasswordModifyExtendedOperationDialog is used to ask for input for the RFC 3062 LDAP Password Modify Extended Operation.
- * <pre>
- * .------------------------------------------------- -.
- * |        Password Modify Extended Operation         |
- * +---------------------------------------------------+
- * | User identity: [                                ] |
- * |                [ ] Use bind user identity         |
- * | Old password:  [                                ] |
- * |                [ ] Old password not available     |
- * | New password:  [                                ] |
- * |                [ ] Generate new password          |
- * |                [ ] Show passwords                 |
- * |                                                   |
- * |                                 (Cancel) (  OK  ) |
- * .___________________________________________________.
- * </pre>
+ * Dialog implementing the RFC 3062 LDAP Password Modify Extended Operation.
+ * It collects user identity, old password, and new password (with checkboxes for
+ * "use bind identity", "old password not available", and "let server generate new
+ * password"), then executes the extended operation against the LDAP server.
+ * Think of this dialog as Mace Windu's confrontation — high stakes, every option
+ * on the table, and the OK button only lights up when all inputs check out.
  *
  * @author <a href="mailto:dev@directory.apache.org">Apache Directory Project</a>
  */
@@ -91,6 +89,30 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
     private Button showPasswordsCheckbox;
 
 
+    // ── MACE ARRIVES AT PALPATINE'S OFFICE ────────────────────────────────────
+    // Mace Windu walks in with three other Masters — Agen Kolar, Saesee Tiin,
+    // Kit Fisto — each representing a different check: who is the user, what was
+    // the old password, what should the new one be?
+    // We record the connection and entry upfront so every subsequent method knows
+    // whose password we're modifying without having to pass those around again.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Creates the dialog with a reference to the LDAP connection and the entry
+     * whose password we're changing.
+     * We pre-populate the user identity from the entry's DN so the dialog opens
+     * with the right target already filled in — the user just has to supply passwords.
+     *
+     * <p>For example — Mace assembles his team with clear intent:</p>
+     * <pre>
+     *   Masters arrive → each assigned a role (identity check, old-pw check, new-pw check)
+     *   new Dialog(shell, conn, entry) → userIdentity = entry.getDn()
+     * </pre>
+     *
+     * @param parentShell  The Eclipse shell that owns this dialog.
+     * @param connection   The LDAP connection against which the operation will run.
+     * @param entry        The directory entry whose password is being changed; may be
+     *                     null, in which case the user must supply the identity manually.
+     */
     public PasswordModifyExtendedOperationDialog( Shell parentShell, IBrowserConnection connection, IEntry entry )
     {
         super( parentShell );
@@ -103,6 +125,25 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
     }
 
 
+    // ── MACE LABELS THE CONFRONTATION ─────────────────────────────────────────
+    // Before the confrontation begins, Mace announces why they're here — "In the
+    // name of the Galactic Senate, you are under arrest, Chancellor."
+    // We set the shell title so the user knows this dialog is specifically for
+    // the RFC 3062 Password Modify extended operation.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Sets the dialog window title to the localized "Password Modify Extended Operation" string.
+     * Eclipse calls this during dialog initialization; it's purely cosmetic but important
+     * for users to understand what they're looking at.
+     *
+     * <p>For example — Mace states his authority before drawing his lightsaber:</p>
+     * <pre>
+     *   "In the name of the Senate…" → everyone knows the stakes immediately
+     *   configureShell → shell.setText("Password Modify Extended Operation")
+     * </pre>
+     *
+     * @param shell  The SWT Shell whose title bar we're populating.
+     */
     @Override
     protected void configureShell( Shell shell )
     {
@@ -112,6 +153,31 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
     }
 
 
+    // ── MACE FORCES A DECISION ────────────────────────────────────────────────
+    // Palpatine must choose: yield to the Jedi or reveal himself as a Sith.
+    // Once OK is pressed, Mace collects the user's choices, builds the RFC 3062
+    // request, fires it at the LDAP server, and handles every outcome — error,
+    // success, or generated password — before finally closing the dialog.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Handles OK and Cancel button presses.
+     * On OK we assemble the {@link PasswordModifyRequest} from the dialog's inputs,
+     * execute it via a {@link ProgressMonitorDialog}, display any server-generated
+     * password in a follow-up dialog, and then close.
+     * On Cancel we null out all the stored credential fields — the caller can check
+     * {@link #getUserIdentity()} for null to know if the user bailed.
+     *
+     * <p>For example — Mace forces the Chancellor's hand:</p>
+     * <pre>
+     *   OK clicked → request assembled → server called → response inspected →
+     *     if error: dialog stays open (like Palpatine fighting back)
+     *     if server generated password: shown to user → dialog closes
+     *   Cancel clicked → userIdentity = null → caller treats as no-op
+     * </pre>
+     *
+     * @param buttonId  The JFace button ID ({@code IDialogConstants.OK_ID} or
+     *                  {@code IDialogConstants.CANCEL_ID}).
+     */
     @Override
     protected void buttonPressed( int buttonId )
     {
@@ -257,13 +323,34 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
             }
             else
             {
-                oldPasswordText.setEchoChar( '\u2022' );
-                newPasswordText.setEchoChar( '\u2022' );
+                oldPasswordText.setEchoChar( '•' );
+                newPasswordText.setEchoChar( '•' );
             }
         }
     };
 
 
+    // ── MACE CHECKS WHETHER EVERYONE IS IN POSITION ───────────────────────────
+    // Before Mace makes his move, he glances at each Master to confirm they're
+    // ready — Kolar on the left, Tiin on the right, Fisto behind.  Only when
+    // everyone is positioned does he give the signal.
+    // We call validate() right after the UI is built so the OK button starts in
+    // the right state (disabled if inputs are blank).
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Overrides JFace's {@code createContents} to run an initial validation pass
+     * immediately after the full dialog UI (including buttons) is assembled.
+     * Without this, the OK button could briefly appear enabled before the first
+     * user interaction triggers a validate call.
+     *
+     * <p>For example — Mace confirms all Masters are in position before acting:</p>
+     * <pre>
+     *   dialog opens → createContents called → validate() → OK disabled if empty
+     * </pre>
+     *
+     * @param parent  The parent composite provided by JFace.
+     * @return        The root control of the dialog content area.
+     */
     @Override
     protected Control createContents( Composite parent )
     {
@@ -273,6 +360,30 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
     }
 
 
+    // ── MACE LAYS OUT THE TERMS OF THE CONFRONTATION ──────────────────────────
+    // Mace specifies exactly what Palpatine must provide: his true identity, proof
+    // of his previous authority, and a declaration of what he intends to become.
+    // We build the form here: user identity widget, old-password field with its
+    // "not available" escape hatch, new-password field with its "generate" option,
+    // and show-passwords toggle — each with its own listener wired up.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Builds the dialog's main content area: identity entry widget, old password
+     * text field, new password text field, and four checkboxes for the various
+     * shortcut options.
+     * The widget layout uses a 3-column grid so labels, inputs, and secondary
+     * checkboxes line up cleanly.
+     *
+     * <p>For example — Mace presents the three demands:</p>
+     * <pre>
+     *   "State your identity" → EntryWidget (user DN field)
+     *   "Prove your past"     → oldPasswordText (masked, •)
+     *   "Declare your future" → newPasswordText (masked, or server-generated)
+     * </pre>
+     *
+     * @param parent  The parent composite provided by JFace's dialog framework.
+     * @return        The composite containing all the form widgets.
+     */
     @Override
     protected Control createDialogArea( Composite parent )
     {
@@ -306,7 +417,7 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
         BaseWidgetUtils.createLabel( composite,
             Messages.getString( "PasswordModifyExtendedOperationDialog.OldPassword" ), 1 ); //$NON-NLS-1$
         oldPasswordText = BaseWidgetUtils.createText( composite, oldPassword, 2 );
-        oldPasswordText.setEchoChar( '\u2022' );
+        oldPasswordText.setEchoChar( '•' );
         oldPasswordText.addModifyListener( event -> validate() );
 
         // No old password checkbox
@@ -319,7 +430,7 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
         BaseWidgetUtils.createLabel( composite,
             Messages.getString( "PasswordModifyExtendedOperationDialog.NewPassword" ), 1 ); //$NON-NLS-1$
         newPasswordText = BaseWidgetUtils.createText( composite, newPassword, 2 );
-        newPasswordText.setEchoChar( '\u2022' );
+        newPasswordText.setEchoChar( '•' );
         newPasswordText.addModifyListener( event -> validate() );
 
         // Generate new password checkbox
@@ -340,6 +451,27 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
     }
 
 
+    // ── MACE CHECKS IF PALPATINE'S ANSWERS ARE SUFFICIENT ────────────────────
+    // Mace checks each Master's signal: is the identity valid? Is the old password
+    // present or waived? Is the new password specified or delegated to the server?
+    // Only when all three signals are green does he allow the operation to proceed.
+    // We enable the OK button only when all three input groups are in a valid state.
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Evaluates whether all required inputs are in a valid state and enables or
+     * disables the OK button accordingly.
+     * Called after every checkbox toggle and text field modification.
+     * There are three independent validity conditions, each with a "bypass" checkbox
+     * (use bind identity / old password not available / let server generate new pw).
+     *
+     * <p>For example — Mace checks three conditions before acting:</p>
+     * <pre>
+     *   identity valid?    → useBindIdentity checked OR entryWidget has a non-empty DN
+     *   old password ok?   → noOldPassword checked OR oldPasswordText non-empty
+     *   new password ok?   → generateNewPassword checked OR newPasswordText non-empty
+     *   all three true → OK button enabled → Mace gives the signal
+     * </pre>
+     */
     private void validate()
     {
         if ( getButton( IDialogConstants.OK_ID ) != null )
@@ -356,10 +488,23 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
     }
 
 
+    // ── MACE RETRIEVES THE CONFIRMED IDENTITY ─────────────────────────────────
+    // After the confrontation ends, the other Jedi ask Mace: "Who was it?"
+    // He hands them the DN — the definitive answer — or null if the user
+    // escaped by cancelling.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the user identity.
-     * 
-     * @return the user identity, may be null if dialog was canceled
+     * Returns the user identity DN collected from the dialog.
+     * The caller uses this to know whose password was changed.
+     * If the user cancelled the dialog this returns null.
+     *
+     * <p>For example — Mace reports the confirmed identity:</p>
+     * <pre>
+     *   "It was Palpatine — uid=palpatine,ou=sith,dc=galaxy,dc=com"
+     * </pre>
+     *
+     * @return  The {@link Dn} of the user whose password was changed, or
+     *          {@code null} if the dialog was cancelled.
      */
     public Dn getUserIdentity()
     {
@@ -367,10 +512,24 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
     }
 
 
+    // ── MACE PRODUCES THE OLD CREDENTIAL ─────────────────────────────────────
+    // Mace hands over the old lightsaber configuration — the proof of what the
+    // user held before the change — so the server can verify continuity.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the old password.
-     * 
-     * @return the old password, may be empty, null if dialog was canceled
+     * Returns the old password as entered by the user.
+     * The caller passes this to the RFC 3062 request so the server can verify
+     * the user knew the previous credential.
+     * Returns an empty string if the "old password not available" checkbox was
+     * checked, and {@code null} if the dialog was cancelled.
+     *
+     * <p>For example — Mace presents the previous credential for verification:</p>
+     * <pre>
+     *   "This is what he held before" → server validates → change authorized
+     * </pre>
+     *
+     * @return  The old password string, empty string if waived, or {@code null}
+     *          if the dialog was cancelled.
      */
     public String getOldPassword()
     {
@@ -378,10 +537,23 @@ public class PasswordModifyExtendedOperationDialog extends Dialog
     }
 
 
+    // ── MACE DECLARES THE NEW ORDER ──────────────────────────────────────────
+    // Mace specifies what authority the new order will carry — the new credential
+    // that replaces the old one, or null if the server is delegated to generate it.
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     * Returns the new password.
-     * 
-     * @return the new password, may be empty, null if dialog was canceled
+     * Returns the new password as entered by the user.
+     * If the "generate new password" checkbox was checked this will be an empty
+     * string — the server picks the password and returns it in the response.
+     * Returns {@code null} if the dialog was cancelled.
+     *
+     * <p>For example — Mace declares the new authority credential:</p>
+     * <pre>
+     *   "The new order begins with this" → server stores it → operation complete
+     * </pre>
+     *
+     * @return  The new password string, empty string if server-generated was
+     *          requested, or {@code null} if the dialog was cancelled.
      */
     public String getNewPassword()
     {
