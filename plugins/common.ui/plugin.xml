@@ -36,12 +36,265 @@
 
   <extension point="org.eclipse.e4.ui.css.swt.theme">
     <stylesheet uri="resources/css/dark.css">
-      <themeid refid="org.eclipse.e4.ui.css.theme.e4_dark">
-      </themeid>
+      <themeid refid="org.eclipse.e4.ui.css.theme.e4_dark"/>
     </stylesheet>
     <stylesheet uri="resources/css/default.css">
-      <themeid refid="org.eclipse.e4.ui.css.theme.e4_default">
-      </themeid>
+      <themeid refid="org.eclipse.e4.ui.css.theme.e4_default"/>
+    </stylesheet>
+
+    <!-- Solarized Dark -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.solarized-dark"
+           label="Solarized Dark"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.solarized-dark"
+           label="Solarized Dark"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.solarized-dark"
+           label="Solarized Dark"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/solarized-dark.css">
+      <themeid refid="org.apache.directory.studio.theme.solarized-dark"/>
+    </stylesheet>
+
+    <!-- Solarized Light -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_win.css"
+           id="org.apache.directory.studio.theme.solarized-light"
+           label="Solarized Light"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_gtk.css"
+           id="org.apache.directory.studio.theme.solarized-light"
+           label="Solarized Light"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_mac.css"
+           id="org.apache.directory.studio.theme.solarized-light"
+           label="Solarized Light"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/solarized-light.css">
+      <themeid refid="org.apache.directory.studio.theme.solarized-light"/>
+    </stylesheet>
+
+    <!-- Monokai -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.monokai"
+           label="Monokai"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.monokai"
+           label="Monokai"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.monokai"
+           label="Monokai"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/monokai.css">
+      <themeid refid="org.apache.directory.studio.theme.monokai"/>
+    </stylesheet>
+
+    <!-- Nord -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.nord"
+           label="Nord"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.nord"
+           label="Nord"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.nord"
+           label="Nord"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/nord.css">
+      <themeid refid="org.apache.directory.studio.theme.nord"/>
+    </stylesheet>
+
+    <!-- One Dark -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.one-dark"
+           label="One Dark"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.one-dark"
+           label="One Dark"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.one-dark"
+           label="One Dark"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/one-dark.css">
+      <themeid refid="org.apache.directory.studio.theme.one-dark"/>
+    </stylesheet>
+
+    <!-- Gruvbox Dark -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.gruvbox-dark"
+           label="Gruvbox Dark"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.gruvbox-dark"
+           label="Gruvbox Dark"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.gruvbox-dark"
+           label="Gruvbox Dark"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/gruvbox-dark.css">
+      <themeid refid="org.apache.directory.studio.theme.gruvbox-dark"/>
+    </stylesheet>
+
+    <!-- Gruvbox Light -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_win.css"
+           id="org.apache.directory.studio.theme.gruvbox-light"
+           label="Gruvbox Light"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_gtk.css"
+           id="org.apache.directory.studio.theme.gruvbox-light"
+           label="Gruvbox Light"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_mac.css"
+           id="org.apache.directory.studio.theme.gruvbox-light"
+           label="Gruvbox Light"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/gruvbox-light.css">
+      <themeid refid="org.apache.directory.studio.theme.gruvbox-light"/>
+    </stylesheet>
+
+    <!-- Tomorrow Night -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.tomorrow-night"
+           label="Tomorrow Night"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.tomorrow-night"
+           label="Tomorrow Night"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.tomorrow-night"
+           label="Tomorrow Night"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/tomorrow-night.css">
+      <themeid refid="org.apache.directory.studio.theme.tomorrow-night"/>
+    </stylesheet>
+
+    <!-- Tomorrow -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_win.css"
+           id="org.apache.directory.studio.theme.tomorrow"
+           label="Tomorrow"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_gtk.css"
+           id="org.apache.directory.studio.theme.tomorrow"
+           label="Tomorrow"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_mac.css"
+           id="org.apache.directory.studio.theme.tomorrow"
+           label="Tomorrow"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/tomorrow.css">
+      <themeid refid="org.apache.directory.studio.theme.tomorrow"/>
+    </stylesheet>
+
+    <!-- Dracula -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.dracula"
+           label="Dracula"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.dracula"
+           label="Dracula"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.dracula"
+           label="Dracula"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/dracula.css">
+      <themeid refid="org.apache.directory.studio.theme.dracula"/>
+    </stylesheet>
+
+    <!-- GitHub Dark -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.github-dark"
+           label="GitHub Dark"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.github-dark"
+           label="GitHub Dark"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.github-dark"
+           label="GitHub Dark"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/github-dark.css">
+      <themeid refid="org.apache.directory.studio.theme.github-dark"/>
+    </stylesheet>
+
+    <!-- GitHub Light -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_win.css"
+           id="org.apache.directory.studio.theme.github-light"
+           label="GitHub Light"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_gtk.css"
+           id="org.apache.directory.studio.theme.github-light"
+           label="GitHub Light"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4_default_mac.css"
+           id="org.apache.directory.studio.theme.github-light"
+           label="GitHub Light"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/github-light.css">
+      <themeid refid="org.apache.directory.studio.theme.github-light"/>
+    </stylesheet>
+
+    <!-- Catppuccin Mocha -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.catppuccin-mocha"
+           label="Catppuccin Mocha"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.catppuccin-mocha"
+           label="Catppuccin Mocha"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.catppuccin-mocha"
+           label="Catppuccin Mocha"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/catppuccin-mocha.css">
+      <themeid refid="org.apache.directory.studio.theme.catppuccin-mocha"/>
+    </stylesheet>
+
+    <!-- Rosé Pine -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.rose-pine"
+           label="Ros&#233; Pine"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.rose-pine"
+           label="Ros&#233; Pine"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.rose-pine"
+           label="Ros&#233; Pine"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/rose-pine.css">
+      <themeid refid="org.apache.directory.studio.theme.rose-pine"/>
+    </stylesheet>
+
+    <!-- Tokyo Night -->
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_win.css"
+           id="org.apache.directory.studio.theme.tokyo-night"
+           label="Tokyo Night"
+           os="win32"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_linux.css"
+           id="org.apache.directory.studio.theme.tokyo-night"
+           label="Tokyo Night"
+           os="linux"/>
+    <theme basestylesheeturi="platform:/plugin/org.eclipse.ui.themes/css/e4-dark_mac.css"
+           id="org.apache.directory.studio.theme.tokyo-night"
+           label="Tokyo Night"
+           os="macosx"/>
+    <stylesheet uri="resources/css/themes/tokyo-night.css">
+      <themeid refid="org.apache.directory.studio.theme.tokyo-night"/>
     </stylesheet>
   </extension>
 

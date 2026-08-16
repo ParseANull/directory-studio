@@ -1,0 +1,40 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+/* Rosé Pine — Base16 color scheme */
+
+IEclipsePreferences#org-apache-directory-studio-common-ui {
+	preferences:
+		'defaultColor=224,222,244'
+		'disabledColor=110,106,134'
+		'errorColor=235,111,146'
+		'commentColor=110,106,134'
+		'keyword1Color=196,167,231'
+		'keyword2Color=156,207,216'
+		'objectClassColor=246,193,119'
+		'attributeTypeColor=156,207,216'
+		'oidColor=246,193,119'
+		'separatorColor=235,111,146'
+		'valueColor=49,116,143'
+		'addColor=49,116,143'
+		'deleteColor=235,111,146'
+		'modifyColor=246,193,119'
+		'renameColor=156,207,216'
+}

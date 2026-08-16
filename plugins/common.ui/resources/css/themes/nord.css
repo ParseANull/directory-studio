@@ -1,0 +1,40 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+/* Nord — Base16 color scheme */
+
+IEclipsePreferences#org-apache-directory-studio-common-ui {
+	preferences:
+		'defaultColor=216,222,233'
+		'disabledColor=76,86,106'
+		'errorColor=191,97,106'
+		'commentColor=76,86,106'
+		'keyword1Color=180,142,173'
+		'keyword2Color=129,161,193'
+		'objectClassColor=235,203,139'
+		'attributeTypeColor=129,161,193'
+		'oidColor=208,135,112'
+		'separatorColor=191,97,106'
+		'valueColor=163,190,140'
+		'addColor=163,190,140'
+		'deleteColor=191,97,106'
+		'modifyColor=235,203,139'
+		'renameColor=129,161,193'
+}

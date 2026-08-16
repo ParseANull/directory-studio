@@ -1,0 +1,40 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+/* One Dark — Base16 color scheme */
+
+IEclipsePreferences#org-apache-directory-studio-common-ui {
+	preferences:
+		'defaultColor=171,178,191'
+		'disabledColor=92,99,112'
+		'errorColor=224,108,117'
+		'commentColor=92,99,112'
+		'keyword1Color=198,120,221'
+		'keyword2Color=97,175,239'
+		'objectClassColor=229,192,123'
+		'attributeTypeColor=97,175,239'
+		'oidColor=209,154,102'
+		'separatorColor=224,108,117'
+		'valueColor=152,195,121'
+		'addColor=152,195,121'
+		'deleteColor=224,108,117'
+		'modifyColor=229,192,123'
+		'renameColor=97,175,239'
+}

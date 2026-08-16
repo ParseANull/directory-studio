@@ -1,0 +1,40 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+/* Gruvbox Light — Base16 color scheme */
+
+IEclipsePreferences#org-apache-directory-studio-common-ui {
+	preferences:
+		'defaultColor=60,56,54'
+		'disabledColor=146,131,116'
+		'errorColor=204,36,29'
+		'commentColor=146,131,116'
+		'keyword1Color=177,98,134'
+		'keyword2Color=69,133,136'
+		'objectClassColor=215,153,33'
+		'attributeTypeColor=69,133,136'
+		'oidColor=214,93,14'
+		'separatorColor=204,36,29'
+		'valueColor=152,151,26'
+		'addColor=152,151,26'
+		'deleteColor=204,36,29'
+		'modifyColor=215,153,33'
+		'renameColor=69,133,136'
+}
