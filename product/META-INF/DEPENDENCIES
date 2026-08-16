@@ -19,6 +19,90 @@ From: 'an unknown organization'
     License: LGPL-2.1-or-later  (https://www.gnu.org/licenses/old-licenses/lgpl-2.1)
     License: Apache-2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
 
+  - Apache Directory Studio ACI Item Editor  org.apache.directory.studio:org.apache.directory.studio.aciitemeditor:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio ApacheDS Configuration  org.apache.directory.studio:org.apache.directory.studio.apacheds.configuration:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio ApacheDS Feature  org.apache.directory.studio:org.apache.directory.studio.apacheds.feature:pom:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio Apache DS Help  org.apache.directory.studio:org.apache.directory.studio.apacheds.help:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio Common Core  org.apache.directory.studio:org.apache.directory.studio.common.core:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio Common UI  org.apache.directory.studio:org.apache.directory.studio.common.ui:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio Connection Core  org.apache.directory.studio:org.apache.directory.studio.connection.core:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio Connection UI  org.apache.directory.studio:org.apache.directory.studio.connection.ui:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio eDirectory  org.apache.directory.studio:org.apache.directory.studio.edirectory:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDAP Browser Common  org.apache.directory.studio:org.apache.directory.studio.ldapbrowser.common:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDAP Browser Core  org.apache.directory.studio:org.apache.directory.studio.ldapbrowser.core:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDAP Browser Feature  org.apache.directory.studio:org.apache.directory.studio.ldapbrowser.feature:pom:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDAP Browser Help  org.apache.directory.studio:org.apache.directory.studio.ldapbrowser.help:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDAP Browser UI  org.apache.directory.studio:org.apache.directory.studio.ldapbrowser.ui:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDAP Servers  org.apache.directory.studio:org.apache.directory.studio.ldapservers:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio ApacheDS LDAP Server Adapter  org.apache.directory.studio:org.apache.directory.studio.ldapservers.apacheds:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDIF Editor  org.apache.directory.studio:org.apache.directory.studio.ldifeditor:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDIF Editor Feature  org.apache.directory.studio:org.apache.directory.studio.ldifeditor.feature:pom:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDIF Editor Help  org.apache.directory.studio:org.apache.directory.studio.ldifeditor.help:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDIF Parser  org.apache.directory.studio:org.apache.directory.studio.ldifparser:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio National Language Support Feature  org.apache.directory.studio:org.apache.directory.studio.nls.feature:pom:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio OpenLDAP Common UI  org.apache.directory.studio:org.apache.directory.studio.openldap.common.ui:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio OpenLDAP ACL Configuration Editor  org.apache.directory.studio:org.apache.directory.studio.openldap.config.acl.editor:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio OpenLDAP Configuration Editor  org.apache.directory.studio:org.apache.directory.studio.openldap.config.editor:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio OpenLDAP Feature  org.apache.directory.studio:org.apache.directory.studio.openldap.feature:pom:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio OpenLDAP Syncrepl  org.apache.directory.studio:org.apache.directory.studio.openldap.syncrepl:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio RCP  org.apache.directory.studio:org.apache.directory.studio.rcp:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio RCP Feature  org.apache.directory.studio:org.apache.directory.studio.rcp.feature:pom:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio RCP Help  org.apache.directory.studio:org.apache.directory.studio.rcp.help:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio Schema Editor  org.apache.directory.studio:org.apache.directory.studio.schemaeditor:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio Schema Editor Feature  org.apache.directory.studio:org.apache.directory.studio.schemaeditor.feature:pom:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio Schema Editor Help  org.apache.directory.studio:org.apache.directory.studio.schemaeditor.help:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio SCIM Client  org.apache.directory.studio:org.apache.directory.studio.scim.client:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio SCIM Core  org.apache.directory.studio:org.apache.directory.studio.scim.core:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio SCIM Feature  org.apache.directory.studio:org.apache.directory.studio.scim.feature:pom:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio SCIM Provider Azure AD  org.apache.directory.studio:org.apache.directory.studio.scim.provider.azure:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio SCIM Provider Generic  org.apache.directory.studio:org.apache.directory.studio.scim.provider.generic:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio SCIM Provider Okta  org.apache.directory.studio:org.apache.directory.studio.scim.provider.okta:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio SCIM Provider OneLogin  org.apache.directory.studio:org.apache.directory.studio.scim.provider.onelogin:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio SCIM UI  org.apache.directory.studio:org.apache.directory.studio.scim.ui:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio SLF4J to Eclipse Log Binding  org.apache.directory.studio:org.apache.directory.studio.slf4j-eclipselog:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio Value Editors  org.apache.directory.studio:org.apache.directory.studio.valueeditors:jar:2026.8.14-SNAPSHOT
+
   - Bouncy Castle OpenPGP APIs (https://www.bouncycastle.org/download/bouncy-castle-java/) org.bouncycastle:bcpg-jdk18on:jar:1.84
     License: Bouncy Castle Licence  (https://www.bouncycastle.org/licence.html)
     License: Apache Software License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)

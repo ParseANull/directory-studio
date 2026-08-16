@@ -19,11 +19,11 @@ From: 'an unknown organization'
     License: LGPL-2.1-or-later  (https://www.gnu.org/licenses/old-licenses/lgpl-2.1)
     License: Apache-2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
 
-  - Apache Directory Studio RCP  org.apache.directory.studio:org.apache.directory.studio.rcp:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio RCP  org.apache.directory.studio:org.apache.directory.studio.rcp:jar:2026.8.14-SNAPSHOT
 
-  - Apache Directory Studio RCP Help  org.apache.directory.studio:org.apache.directory.studio.rcp.help:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio RCP Help  org.apache.directory.studio:org.apache.directory.studio.rcp.help:jar:2026.8.14-SNAPSHOT
 
-  - Apache Directory Studio SLF4J to Eclipse Log Binding  org.apache.directory.studio:org.apache.directory.studio.slf4j-eclipselog:jar:2.0.0-SNAPSHOT
+  - Apache Directory Studio SLF4J to Eclipse Log Binding  org.apache.directory.studio:org.apache.directory.studio.slf4j-eclipselog:jar:2026.8.14-SNAPSHOT
 
   - Bouncy Castle OpenPGP APIs (https://www.bouncycastle.org/download/bouncy-castle-java/) org.bouncycastle:bcpg-jdk18on:jar:1.84
     License: Bouncy Castle Licence  (https://www.bouncycastle.org/licence.html)

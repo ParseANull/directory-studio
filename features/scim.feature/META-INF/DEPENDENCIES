@@ -19,9 +19,17 @@ From: 'an unknown organization'
     License: LGPL-2.1-or-later  (https://www.gnu.org/licenses/old-licenses/lgpl-2.1)
     License: Apache-2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
 
+  - Apache Directory Studio Common Core  org.apache.directory.studio:org.apache.directory.studio.common.core:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio Common UI  org.apache.directory.studio:org.apache.directory.studio.common.ui:jar:2026.8.14-SNAPSHOT
+
   - Apache Directory Studio Connection Core  org.apache.directory.studio:org.apache.directory.studio.connection.core:jar:2026.8.14-SNAPSHOT
 
   - Apache Directory Studio Connection UI  org.apache.directory.studio:org.apache.directory.studio.connection.ui:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDAP Browser Core  org.apache.directory.studio:org.apache.directory.studio.ldapbrowser.core:jar:2026.8.14-SNAPSHOT
+
+  - Apache Directory Studio LDIF Parser  org.apache.directory.studio:org.apache.directory.studio.ldifparser:jar:2026.8.14-SNAPSHOT
 
   - Apache Directory Studio SCIM Client  org.apache.directory.studio:org.apache.directory.studio.scim.client:jar:2026.8.14-SNAPSHOT
 
